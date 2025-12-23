@@ -38,7 +38,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
               <Monitor className="w-4 h-4 text-blue-400" />
               <span>Desktop</span>
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[160px]">
+            <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[180px]" sideOffset={8}>
               <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
                 <FileText className="w-4 h-4 text-blue-400" />
                 <span>Files</span>
