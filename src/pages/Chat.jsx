@@ -190,11 +190,11 @@ export default function Chat() {
   };
 
   return (
-    <>
+    <div className="fixed inset-0 flex flex-col bg-[#0a1628]">
       <StarfieldBackground />
       
       {/* Header - Fixed Top */}
-      <div className="fixed top-0 left-0 right-0 z-30 bg-[#0a1628]">
+      <div className="flex-none z-30 bg-[#0a1628]">
         <ChatHeader 
           user={user}
           onNewThread={handleNewThread}
@@ -204,9 +204,9 @@ export default function Chat() {
         />
       </div>
 
-      {/* Messages Area - With padding for header/input */}
-      <div className="pt-20 pb-32 min-h-screen">
-        <div className="max-w-2xl mx-auto px-4">
+      {/* Messages Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
             {messages.map((message) => (
@@ -240,7 +240,7 @@ export default function Chat() {
       </div>
 
       {/* Input - Fixed Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-[100] bg-[#0a1628] border-t border-white/10">
+      <div className="flex-none z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
@@ -266,6 +266,6 @@ export default function Chat() {
         user={user}
       />
 
-    </>
+    </div>
   );
 }
