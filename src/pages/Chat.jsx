@@ -174,7 +174,11 @@ User message: ${content || 'User sent file(s)'}`,
         </ScrollArea>
         
         {/* Input */}
-        <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
+        <ChatInput 
+          onSend={handleSendMessage} 
+          isLoading={isLoading}
+          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+        />
       </div>
 
       {/* Thread List Sidebar */}

@@ -1,10 +1,10 @@
-import Welcome from './pages/Welcome';
 import Chat from './pages/Chat';
+import Welcome from './pages/Welcome';
 
 
 export const PAGES = {
-    "Welcome": Welcome,
     "Chat": Chat,
+    "Welcome": Welcome,
 }
 
 export const pagesConfig = {
