@@ -207,6 +207,8 @@ export default function Chat() {
       {/* Messages Area - With padding for header/input */}
       <div className="pt-20 pb-32 min-h-screen">
         <div className="max-w-2xl mx-auto px-4">
+            {messages.length === 0 && !isLoading && <WelcomeGreeting />}
+            
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -238,12 +240,14 @@ export default function Chat() {
       </div>
 
       {/* Input - Fixed Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
-        <ChatInput 
-          onSend={handleSendMessage} 
-          isLoading={isLoading}
-          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-        />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10 pb-safe">
+        <div className="max-w-2xl mx-auto">
+          <ChatInput 
+            onSend={handleSendMessage} 
+            isLoading={isLoading}
+            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          />
+        </div>
       </div>
 
       {/* Thread List Sidebar */}
