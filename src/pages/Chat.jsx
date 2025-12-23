@@ -236,22 +236,21 @@ export default function Chat() {
             )}
 
             <div ref={messagesEndRef} />
-            </div>
-            </ScrollArea>
-            </div>
-            </div>
+          </div>
+        </ScrollArea>
+        </div>
+      </div>
 
-            {/* Input - Fixed at Bottom */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
-            <div className="max-w-2xl mx-auto">
-            <ChatInput 
+      {/* Input - Fixed at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
+        <div className="max-w-2xl mx-auto">
+          <ChatInput 
             onSend={handleSendMessage} 
             isLoading={isLoading}
             lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-            />
-            </div>
-            </div>
-            </>
+          />
+        </div>
+      </div>
 
       {/* Thread List Sidebar */}
       <ThreadList
