@@ -240,15 +240,6 @@ export default function Chat() {
         </ScrollArea>
       </div>
 
-      {/* Input - Fixed at Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 w-full bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2 pb-safe">
-        <ChatInput 
-          onSend={handleSendMessage} 
-          isLoading={isLoading}
-          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-        />
-      </div>
-
       {/* Thread List Sidebar */}
       <ThreadList
         isOpen={showThreads}
