@@ -19,8 +19,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
       const rect = range.getBoundingClientRect();
       
       setSelectedText(text);
+      
+      // Check if there's enough space below, otherwise position above
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const menuHeight = 200; // Approximate menu height
+      
       setMenuPosition({
-        top: rect.bottom + window.scrollY + 8,
+        top: spaceBelow < menuHeight 
+          ? rect.top + window.scrollY - menuHeight - 8 
+          : rect.bottom + window.scrollY + 8,
         left: rect.left + window.scrollX,
       });
       setShowSelectionMenu(true);
