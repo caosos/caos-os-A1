@@ -38,6 +38,9 @@ export default function Chat() {
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => base44.entities.Conversation.list('-created_date'),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
   });
 
   // Fetch messages for current conversation
@@ -47,6 +50,9 @@ export default function Chat() {
       ? base44.entities.Message.filter({ conversation_id: currentConversationId }, 'created_date')
       : Promise.resolve([]),
     enabled: !!currentConversationId,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
   });
 
   // Track last message for smart scrolling

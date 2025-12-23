@@ -36,7 +36,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
   };
 
   const handleReact = (text, emoji) => {
-    const reactions = message.reactions || [];
+    const reactions = Array.isArray(message.reactions) ? [...message.reactions] : [];
     reactions.push({ emoji, selected_text: text });
     onUpdateMessage(message.id, { reactions });
   };
@@ -48,7 +48,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
       add_context_from_internet: false,
     });
 
-    const replies = message.replies || [];
+    const replies = Array.isArray(message.replies) ? [...message.replies] : [];
     replies.push({ 
       selected_text: text, 
       user_reply: replyContent,
