@@ -64,7 +64,7 @@ export default function ThreadList({
                       `}
                     >
                       <div 
-                        className="cursor-pointer"
+                        className="cursor-pointer pr-14"
                         onClick={() => {
                           if (editingId !== conv.id) {
                             onSelectConversation(conv.id);
