@@ -115,16 +115,16 @@ export default function ThreadList({
                       
                       {/* Action buttons at bottom */}
                       {editingId !== conv.id && (
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex gap-1.5 mt-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="flex-1 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-all text-white font-medium text-xs flex items-center justify-center gap-1.5"
+                            className="flex-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 transition-all text-white text-[10px] flex items-center justify-center gap-1"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3 h-3" />
                             Rename
                           </button>
                           <button
@@ -134,9 +134,9 @@ export default function ThreadList({
                                 onDeleteConversation(conv.id);
                               }
                             }}
-                            className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition-all text-white font-medium text-xs flex items-center justify-center gap-1.5"
+                            className="flex-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 transition-all text-white text-[10px] flex items-center justify-center gap-1"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                             Delete
                           </button>
                         </div>
