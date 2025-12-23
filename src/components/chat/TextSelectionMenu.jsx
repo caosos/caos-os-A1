@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X } from 'lucide-react';
+import { MessageSquare, X, Volume2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,7 @@ export default function TextSelectionMenu({
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const handleReply = () => {
     if (replyText.trim()) {
@@ -22,6 +23,20 @@ export default function TextSelectionMenu({
       setReplyText('');
       setShowReplyInput(false);
       onClose();
+    }
+  };
+
+  const handleReadAloud = () => {
+    if ('speechSynthesis' in window) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      } else {
+        const utterance = new SpeechSynthesisUtterance(selectedText);
+        utterance.onend = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+      }
     }
   };
 
@@ -65,13 +80,22 @@ export default function TextSelectionMenu({
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setShowReplyInput(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600/30 hover:bg-blue-600/50 rounded-lg transition-colors text-white text-sm"
-            >
-              <MessageSquare className="w-4 h-4" />
-              Reply to this
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={handleReadAloud}
+                className="w-full flex items-center gap-2 px-3 py-2 bg-purple-600/30 hover:bg-purple-600/50 rounded-lg transition-colors text-white text-sm"
+              >
+                <Volume2 className="w-4 h-4" />
+                {isSpeaking ? 'Stop Reading' : 'Read Aloud'}
+              </button>
+              <button
+                onClick={() => setShowReplyInput(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600/30 hover:bg-blue-600/50 rounded-lg transition-colors text-white text-sm"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Reply to this
+              </button>
+            </div>
           </>
         ) : (
           <div className="space-y-2">
