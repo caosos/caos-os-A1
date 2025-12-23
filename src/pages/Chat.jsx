@@ -146,7 +146,7 @@ User message: ${content || 'User sent file(s)'}`,
         
         {/* Messages Area */}
         <ScrollArea className="flex-1 px-4">
-          <div className="py-4">
+          <div className="py-4 pb-6">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -176,12 +176,14 @@ User message: ${content || 'User sent file(s)'}`,
           </div>
         </ScrollArea>
         
-        {/* Input */}
-        <ChatInput 
-          onSend={handleSendMessage} 
-          isLoading={isLoading}
-          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-        />
+        {/* Input - Sticky */}
+        <div className="sticky bottom-0 z-20 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2">
+          <ChatInput 
+            onSend={handleSendMessage} 
+            isLoading={isLoading}
+            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          />
+        </div>
       </div>
 
       {/* Thread List Sidebar */}
