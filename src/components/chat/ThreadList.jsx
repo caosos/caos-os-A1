@@ -113,7 +113,7 @@ export default function ThreadList({
                             {moment(conv.last_message_time || conv.created_date).fromNow()}
                           </p>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
