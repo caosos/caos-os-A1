@@ -71,12 +71,17 @@ export default function Chat() {
     }
     // Delete the conversation
     await base44.entities.Conversation.delete(id);
-    
+
     if (currentConversationId === id) {
       setCurrentConversationId(null);
     }
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
     queryClient.invalidateQueries({ queryKey: ['messages'] });
+  };
+
+  const handleRenameConversation = async (id, newTitle) => {
+    await base44.entities.Conversation.update(id, { title: newTitle });
+    queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
@@ -228,6 +233,7 @@ export default function Chat() {
         currentConversationId={currentConversationId}
         onSelectConversation={setCurrentConversationId}
         onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
       />
 
       {/* Profile Panel */}
