@@ -114,7 +114,7 @@ export default function Chat() {
 
     User message: ${content || 'User sent file(s)'}`,
       file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-      add_context_from_internet: true,
+      add_context_from_internet: fileUrls.length === 0,
     });
 
     // Save AI response
