@@ -144,13 +144,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
           <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
         </button>
         
-        <input
-          type="text"
+        <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2"
+          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none max-h-32 overflow-y-auto"
           disabled={isLoading}
+          rows={1}
+          onInput={(e) => {
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+          }}
         />
         
         <button
