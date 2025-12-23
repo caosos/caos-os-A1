@@ -193,9 +193,9 @@ export default function Chat() {
     <>
       <StarfieldBackground />
       
-      <div className="fixed inset-0 flex flex-col">
+      <div className="fixed inset-0 flex flex-col overflow-hidden">
         {/* Header - Sticky at Top */}
-        <div className="flex-shrink-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
+        <div className="flex-shrink-0 z-30 bg-[#0a1628]">
           <ChatHeader 
             user={user}
             onNewThread={handleNewThread}
@@ -206,8 +206,8 @@ export default function Chat() {
         </div>
 
         {/* Messages Area - Scrollable Middle */}
-        <div className="flex-1 overflow-y-auto px-4">
-          <div className="max-w-2xl mx-auto py-4 pb-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -239,14 +239,12 @@ export default function Chat() {
         </div>
 
         {/* Input - Fixed at Bottom */}
-        <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
-          <div className="max-w-2xl mx-auto">
-            <ChatInput 
-              onSend={handleSendMessage} 
-              isLoading={isLoading}
-              lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-            />
-          </div>
+        <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10 pb-4">
+          <ChatInput 
+            onSend={handleSendMessage} 
+            isLoading={isLoading}
+            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          />
         </div>
       </div>
 
