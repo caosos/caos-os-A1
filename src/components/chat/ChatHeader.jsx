@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Settings, MoreHorizontal, MessageSquare, FolderOpen, Monitor, User, Shield, LogOut, Plus } from 'lucide-react';
+import { ChevronDown, Settings, MessageSquare, FolderOpen, Monitor, User, Shield, LogOut, Plus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import {
   DropdownMenu,
@@ -64,9 +64,6 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       <div className="flex items-center gap-2">
         <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
           <Settings className="w-5 h-5 text-white/70 hover:text-white" />
-        </button>
-        <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-          <MoreHorizontal className="w-5 h-5 text-white/70 hover:text-white" />
         </button>
       </div>
     </div>
