@@ -9,6 +9,10 @@ export default function ChatBubble({ message, isUser }) {
     return (match && match[7].length === 11) ? match[7] : null;
   };
 
+  const formatDateTime = (timestamp) => {
+    return moment(timestamp).format('MMM D, YYYY • h:mm A');
+  };
+
   const renderContent = () => {
     let content = message.content;
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
@@ -71,10 +75,13 @@ export default function ChatBubble({ message, isUser }) {
             }
           `}
         >
+          {!isUser && (
+            <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
+          )}
           {renderContent()}
           {message.timestamp && (
             <p className={`text-xs mt-1.5 ${isUser ? 'text-white/60' : 'text-white/40'}`}>
-              {moment(message.timestamp).format('h:mm A')}
+              {formatDateTime(message.timestamp)}
             </p>
           )}
         </div>

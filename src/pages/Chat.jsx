@@ -145,8 +145,6 @@ User message: ${content || 'User sent file(s)'}`,
         {/* Messages Area */}
         <ScrollArea className="flex-1 px-4">
           <div className="py-4">
-            <WelcomeGreeting />
-            
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
