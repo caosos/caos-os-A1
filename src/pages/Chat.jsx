@@ -216,7 +216,7 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto z-20 pb-32">
+      <div className="relative flex-1 overflow-y-auto z-20 pb-64">
         <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
