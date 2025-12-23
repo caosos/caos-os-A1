@@ -3,11 +3,12 @@ import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon } from 'lucid
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 
-export default function ChatInput({ onSend, isLoading }) {
+export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -36,6 +37,26 @@ export default function ChatInput({ onSend, isLoading }) {
 
   const removeFile = (index) => {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  const toggleReadAloud = () => {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in your browser');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      if (lastAssistantMessage) {
+        const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+      }
+    }
   };
 
   const toggleVoiceRecording = () => {
@@ -147,9 +168,11 @@ export default function ChatInput({ onSend, isLoading }) {
         
         <button
           type="button"
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          onClick={toggleReadAloud}
+          disabled={!lastAssistantMessage}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
         >
-          <Volume2 className="w-5 h-5 text-white/70" />
+          <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-blue-500 animate-pulse' : 'text-white/70'}`} />
         </button>
         
         <input
