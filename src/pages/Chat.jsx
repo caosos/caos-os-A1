@@ -193,21 +193,20 @@ export default function Chat() {
     <>
       <StarfieldBackground />
       
-      <div className="fixed inset-0 flex flex-col overflow-hidden">
-        {/* Header - Sticky at Top */}
-        <div className="flex-shrink-0 z-30 bg-[#0a1628]">
-          <ChatHeader 
-            user={user}
-            onNewThread={handleNewThread}
-            onShowThreads={() => setShowThreads(true)}
-            onShowProfile={() => setShowProfile(true)}
-            currentConversation={conversations.find(c => c.id === currentConversationId)}
-          />
-        </div>
+      {/* Header - Fixed Top */}
+      <div className="fixed top-0 left-0 right-0 z-30 bg-[#0a1628]">
+        <ChatHeader 
+          user={user}
+          onNewThread={handleNewThread}
+          onShowThreads={() => setShowThreads(true)}
+          onShowProfile={() => setShowProfile(true)}
+          currentConversation={conversations.find(c => c.id === currentConversationId)}
+        />
+      </div>
 
-        {/* Messages Area - Scrollable Middle */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-4">
+      {/* Messages Area - With padding for header/input */}
+      <div className="pt-20 pb-32 min-h-screen">
+        <div className="max-w-2xl mx-auto px-4">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -234,18 +233,17 @@ export default function Chat() {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
-          </div>
+          <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Input - Fixed at Bottom */}
-        <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10 pb-4">
-          <ChatInput 
-            onSend={handleSendMessage} 
-            isLoading={isLoading}
-            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-          />
-        </div>
+      {/* Input - Fixed Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
+        <ChatInput 
+          onSend={handleSendMessage} 
+          isLoading={isLoading}
+          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+        />
       </div>
 
       {/* Thread List Sidebar */}
