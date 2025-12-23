@@ -23,6 +23,21 @@ export default function Chat() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100vh';
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, []);
+
+  useEffect(() => {
     const loadUser = () => {
       const storedUser = localStorage.getItem('caos_user');
       if (storedUser) {
@@ -205,7 +220,7 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="pt-16 pb-32">
+      <div className="fixed top-16 bottom-24 left-0 right-0 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
