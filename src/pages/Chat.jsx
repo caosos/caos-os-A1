@@ -251,7 +251,7 @@ export default function Chat() {
       </div>
 
       {/* Input - Fixed at bottom */}
-      <div className="flex-shrink-0 w-full z-50 bg-red-500 border-t border-white/10 py-4" style={{ minHeight: '80px' }}>
+      <div className="flex-shrink-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
