@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import TextSelectionMenu from './TextSelectionMenu';
 
-export default function ChatBubble({ message, isUser, onUpdateMessage, onReplyToText }) {
+export default function ChatBubble({ message, isUser, onUpdateMessage }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -41,10 +41,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, onReplyTo
   };
 
   const handleReply = (text, replyContent) => {
-    // Send as a new message to CAOS instead of just storing locally
-    if (onReplyToText) {
-      onReplyToText(text, replyContent);
-    }
+    const replies = message.replies || [];
+    replies.push({ 
+      selected_text: text, 
+      reply_content: replyContent,
+      timestamp: new Date().toISOString()
+    });
+    onUpdateMessage(message.id, { replies });
   };
   const getYouTubeId = (url) => {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;

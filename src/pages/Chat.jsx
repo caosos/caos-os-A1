@@ -89,12 +89,6 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
   };
 
-  const handleReplyToText = async (selectedText, replyContent) => {
-    // Send the reply as a new message to the AI
-    const fullMessage = `Regarding: "${selectedText}"\n\n${replyContent}`;
-    await handleSendMessage(fullMessage);
-  };
-
   const handleSendMessage = async (content, fileUrls = []) => {
     setIsLoading(true);
     
@@ -203,7 +197,6 @@ export default function Chat() {
                 message={message} 
                 isUser={message.role === 'user'}
                 onUpdateMessage={handleUpdateMessage}
-                onReplyToText={handleReplyToText}
               />
             ))}
 
