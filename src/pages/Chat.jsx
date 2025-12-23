@@ -190,24 +190,25 @@ export default function Chat() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <StarfieldBackground />
+    <>
+      <div className="min-h-screen flex flex-col relative pb-24">
+        <StarfieldBackground />
 
-      {/* Header - Sticky, Full Width */}
-      <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
-        <ChatHeader 
-          user={user}
-          onNewThread={handleNewThread}
-          onShowThreads={() => setShowThreads(true)}
-          onShowProfile={() => setShowProfile(true)}
-          currentConversation={conversations.find(c => c.id === currentConversationId)}
-        />
-      </div>
+        {/* Header - Sticky, Full Width */}
+        <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
+          <ChatHeader 
+            user={user}
+            onNewThread={handleNewThread}
+            onShowThreads={() => setShowThreads(true)}
+            onShowProfile={() => setShowProfile(true)}
+            currentConversation={conversations.find(c => c.id === currentConversationId)}
+          />
+        </div>
 
-      {/* Messages Area - Centered */}
-      <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
-        <ScrollArea className="flex-1 px-4">
-          <div className="py-4 pb-32">
+        {/* Messages Area - Centered */}
+        <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
+          <ScrollArea className="flex-1 px-4">
+            <div className="py-4 pb-6">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -265,6 +266,15 @@ export default function Chat() {
         onClose={() => setShowProfile(false)}
         user={user}
       />
-    </div>
+
+      {/* Input - Fixed at Bottom, Outside Main Container */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2">
+        <ChatInput 
+          onSend={handleSendMessage} 
+          isLoading={isLoading}
+          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+        />
+      </div>
+    </>
   );
 }
