@@ -237,7 +237,8 @@ export default function Chat() {
 
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </div>
 
       {/* Thread List Sidebar */}
