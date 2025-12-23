@@ -216,8 +216,8 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto z-20">
-        <div className="max-w-2xl mx-auto px-4 py-4 pb-4">
+      <div className="relative flex-1 overflow-y-auto z-20 min-h-0">
+        <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
             {messages.map((message) => (
