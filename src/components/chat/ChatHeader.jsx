@@ -51,14 +51,14 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           </DropdownMenuSub>
           <DropdownMenuItem 
             onClick={onNewThread}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10"
+            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10"
           >
             <Plus className="w-4 h-4 text-blue-400" />
             <span>New Thread</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={onShowThreads}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10"
+            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10"
           >
             <FolderOpen className="w-4 h-4 text-blue-400" />
             <span>Previous Threads</span>
@@ -66,7 +66,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={onShowProfile}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10"
+            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10"
           >
             <User className="w-4 h-4 text-blue-400" />
             <span>Profile</span>
@@ -74,7 +74,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10"
+            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10"
           >
             <LogOut className="w-4 h-4 text-blue-400" />
             <span>Log Out</span>
