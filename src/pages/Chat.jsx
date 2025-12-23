@@ -216,7 +216,7 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto z-20 min-h-0">
+      <div className="relative flex-1 overflow-y-auto z-20 pb-32">
         <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
@@ -250,8 +250,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Input - Fixed at bottom */}
-      <div className="flex-shrink-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
+      {/* Input - Absolutely positioned at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
