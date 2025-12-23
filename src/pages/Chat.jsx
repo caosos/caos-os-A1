@@ -250,8 +250,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Input - Fixed slightly above bottom */}
-      <div className="fixed bottom-20 left-0 right-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
+      {/* Input - Fixed higher up for mobile browser UI */}
+      <div className="fixed bottom-32 left-0 right-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
