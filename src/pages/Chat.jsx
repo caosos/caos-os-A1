@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
@@ -9,6 +10,7 @@ import ChatInput from '@/components/chat/ChatInput';
 import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
+import { createPageUrl } from '@/utils';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
@@ -18,14 +20,19 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const loadUser = async () => {
-      const userData = await base44.auth.me();
-      setUser(userData);
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('caos_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        navigate(createPageUrl('Login'));
+      }
     };
     loadUser();
-  }, []);
+  }, [navigate]);
 
   // Fetch conversations
   const { data: conversations = [] } = useQuery({

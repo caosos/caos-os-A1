@@ -14,7 +14,8 @@ import {
 
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile }) {
   const handleLogout = () => {
-    base44.auth.logout();
+    localStorage.removeItem('caos_user');
+    window.location.href = '/';
   };
 
   return (
