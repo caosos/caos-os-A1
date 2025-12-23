@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Volume2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,15 @@ export default function TextSelectionMenu({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Stop speech when menu closes
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const handleReply = () => {
     if (replyText.trim()) {
@@ -62,7 +71,12 @@ export default function TextSelectionMenu({
         <div className="flex items-center justify-between mb-2 px-2">
           <span className="text-white/70 text-xs">React or reply</span>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+              }
+              onClose();
+            }}
             className="p-1 hover:bg-white/10 rounded transition-colors"
           >
             <X className="w-3 h-3 text-white/50" />
