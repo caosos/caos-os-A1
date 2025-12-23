@@ -13,7 +13,7 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 
-export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile }) {
+export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
   const handleLogout = () => {
     localStorage.removeItem('caos_user');
     window.location.href = '/';
@@ -91,10 +91,17 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
 
         {/* Center - CAOS branding */}
         <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
-        <h1 className="text-white font-bold text-xl">CAOS</h1>
-        <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+          <h1 className="text-white font-bold text-xl">CAOS</h1>
+          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
         </div>
 
+        {/* Right - Thread Title */}
+        {currentConversation && (
+          <div className="text-right">
+            <p className="text-white/90 text-sm font-medium">{currentConversation.title}</p>
+            <p className="text-white/50 text-xs">Thread ID: {currentConversation.id.slice(0, 8)}</p>
+          </div>
+        )}
         </div>
         );
         }

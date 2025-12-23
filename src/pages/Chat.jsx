@@ -184,6 +184,7 @@ export default function Chat() {
           onNewThread={handleNewThread}
           onShowThreads={() => setShowThreads(true)}
           onShowProfile={() => setShowProfile(true)}
+          currentConversation={conversations.find(c => c.id === currentConversationId)}
         />
       </div>
 
