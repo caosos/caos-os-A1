@@ -113,14 +113,14 @@ export default function ThreadList({
                             {moment(conv.last_message_time || conv.created_date).fromNow()}
                           </p>
                         </div>
-                        <div className="flex gap-1 flex-shrink-0">
+                        <div className="flex gap-1 flex-shrink-0 items-start">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-blue-500/20 transition-all"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-blue-500/30 transition-all border border-white/10"
                           >
                             <Edit2 className="w-4 h-4 text-blue-400" />
                           </button>
@@ -129,7 +129,7 @@ export default function ThreadList({
                               e.stopPropagation();
                               onDeleteConversation(conv.id);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-red-500/20 transition-all"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-red-500/30 transition-all border border-white/10"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" />
                           </button>
