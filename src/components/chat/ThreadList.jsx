@@ -114,29 +114,31 @@ export default function ThreadList({
                       </div>
                       
                       {/* Action buttons - bottom right */}
-                      <div className="absolute bottom-3 right-3 flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditTitle(conv.title);
-                            setEditingId(conv.id);
-                          }}
-                          className="p-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/40 transition-all border border-blue-400/30"
-                          title="Rename"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 text-blue-300" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteConversation(conv.id);
-                          }}
-                          className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 transition-all border border-red-400/30"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-300" />
-                        </button>
-                      </div>
+                      {editingId !== conv.id && (
+                        <div className="absolute bottom-2 right-2 flex gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditTitle(conv.title);
+                              setEditingId(conv.id);
+                            }}
+                            className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 transition-all shadow-lg"
+                            title="Rename"
+                          >
+                            <Edit2 className="w-4 h-4 text-white" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteConversation(conv.id);
+                            }}
+                            className="p-2 rounded-md bg-red-600 hover:bg-red-700 transition-all shadow-lg"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
