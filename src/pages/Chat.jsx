@@ -205,7 +205,7 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="pt-16 pb-24">
+      <div className="pt-16 pb-32">
         <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
@@ -239,16 +239,13 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Input - TEST VISIBLE */}
-      <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-red-500">
-        <div className="p-4 text-white font-bold text-center">TEST - CAN YOU SEE THIS?</div>
-        <div className="bg-[#0a1628] border-t border-white/10">
-          <ChatInput 
-            onSend={handleSendMessage} 
-            isLoading={isLoading}
-            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-          />
-        </div>
+      {/* Input */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
+        <ChatInput 
+          onSend={handleSendMessage} 
+          isLoading={isLoading}
+          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+        />
       </div>
 
       {/* Thread List Sidebar */}
