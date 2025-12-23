@@ -119,7 +119,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 py-3">
+    <form onSubmit={handleSubmit} className="px-4 py-3 w-full">
       {/* Attached Files Display */}
       {attachedFiles.length > 0 && (
         <div className="mb-2 px-3 flex flex-wrap gap-2">
@@ -146,7 +146,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         </div>
       )}
       
-      <div className="flex items-end gap-2 bg-[#1a2744] border border-white/20 rounded-3xl px-3 py-2">
+      <div className="flex items-end gap-2 bg-[#1a2744] border border-white/20 rounded-3xl px-3 py-2 w-full">
         <button
           type="button"
           onClick={toggleVoiceRecording}
