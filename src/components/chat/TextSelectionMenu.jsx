@@ -32,10 +32,20 @@ export default function TextSelectionMenu({
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
       } else {
-        const utterance = new SpeechSynthesisUtterance(selectedText);
-        utterance.onend = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(utterance);
-        setIsSpeaking(true);
+        // Clean the text - remove emojis and special characters
+        const cleanText = selectedText
+          .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
+          .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Remove misc symbols
+          .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Remove dingbats
+          .trim();
+        
+        if (cleanText) {
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.onend = () => setIsSpeaking(false);
+          utterance.onerror = () => setIsSpeaking(false);
+          window.speechSynthesis.speak(utterance);
+          setIsSpeaking(true);
+        }
       }
     }
   };
