@@ -3,6 +3,51 @@ import { motion } from 'framer-motion';
 import moment from 'moment';
 
 export default function ChatBubble({ message, isUser }) {
+  const getYouTubeId = (url) => {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+  };
+
+  const renderContent = () => {
+    let content = message.content;
+    const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
+    
+    if (youtubeMatches && !isUser) {
+      return (
+        <div className="space-y-3">
+          {youtubeMatches.map((match, index) => {
+            const url = match.replace('[YOUTUBE:', '').replace(']', '');
+            const videoId = getYouTubeId(url);
+            content = content.replace(match, '');
+            
+            if (videoId) {
+              return (
+                <div key={index} className="rounded-lg overflow-hidden">
+                  <iframe
+                    width="100%"
+                    height="200"
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="rounded-lg"
+                  />
+                </div>
+              );
+            }
+            return null;
+          })}
+          {content.trim() && (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{content.trim()}</p>
+          )}
+        </div>
+      );
+    }
+    
+    return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -26,7 +71,7 @@ export default function ChatBubble({ message, isUser }) {
             }
           `}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          {renderContent()}
           {message.timestamp && (
             <p className={`text-xs mt-1.5 ${isUser ? 'text-white/60' : 'text-white/40'}`}>
               {moment(message.timestamp).format('h:mm A')}
