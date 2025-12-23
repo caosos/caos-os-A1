@@ -135,24 +135,24 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         </div>
       )}
       
-      <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-2">
+      <div className="flex items-end gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl px-3 py-2">
         <button
           type="button"
           onClick={toggleVoiceRecording}
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors ${isRecording ? 'bg-red-500/20' : ''}`}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500/20' : ''}`}
         >
           <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
         </button>
-        
+
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-hidden"
+          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-hidden min-h-[24px]"
           disabled={isLoading}
           rows={1}
           onInput={(e) => {
-            e.target.style.height = 'auto';
+            e.target.style.height = '24px';
             e.target.style.height = e.target.scrollHeight + 'px';
           }}
         />
@@ -160,7 +160,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
           disabled={uploading}
         >
           {uploading ? (
@@ -169,16 +169,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
             <Plus className="w-5 h-5 text-white/70" />
           )}
         </button>
-        
+
         <button
           type="button"
           onClick={toggleReadAloud}
           disabled={!lastAssistantMessage}
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
         >
           <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-blue-500 animate-pulse' : 'text-white/70'}`} />
         </button>
-        
+
         <input
           ref={fileInputRef}
           type="file"
@@ -187,11 +187,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
           onChange={handleFileSelect}
           className="hidden"
         />
-        
+
         <Button
           type="submit"
           disabled={(!message.trim() && attachedFiles.length === 0) || isLoading || uploading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-5 py-2 h-auto text-sm font-medium disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-5 py-2 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0"
         >
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
