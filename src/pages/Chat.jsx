@@ -207,7 +207,7 @@ export default function Chat() {
       {/* Messages Area - Centered */}
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
         <ScrollArea className="flex-1 px-4">
-          <div className="py-4 pb-6">
+          <div className="py-4 pb-32">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -239,8 +239,8 @@ export default function Chat() {
         </ScrollArea>
       </div>
 
-      {/* Input - Sticky, Full Width */}
-      <div className="sticky bottom-0 left-0 right-0 z-20 w-full bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2">
+      {/* Input - Fixed at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 w-full bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2 pb-safe">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
