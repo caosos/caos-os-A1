@@ -104,6 +104,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
       onSend(message.trim(), attachedFiles.map(f => f.url));
       setMessage('');
       setAttachedFiles([]);
+      // Reset textarea height
+      const textarea = e.target.querySelector('textarea');
+      if (textarea) {
+        textarea.style.height = '24px';
+      }
     }
   };
 
@@ -135,7 +140,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         </div>
       )}
       
-      <div className="flex items-end gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl px-3 py-2">
+      <div className="flex items-end gap-2 bg-[#1a2744] border border-white/20 rounded-3xl px-3 py-2">
         <button
           type="button"
           onClick={toggleVoiceRecording}
