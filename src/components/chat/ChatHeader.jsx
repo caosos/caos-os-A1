@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Settings, MessageSquare, FolderOpen, Monitor, User, Shield, LogOut, Plus, Image, FileText, Briefcase, ChevronRight } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import {
   DropdownMenu,
@@ -40,16 +40,12 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white">
               <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
-                <Image className="w-4 h-4 text-blue-400" />
-                <span>Photos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
                 <FileText className="w-4 h-4 text-blue-400" />
                 <span>Files</span>
               </DropdownMenuItem>
               <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
-                <Briefcase className="w-4 h-4 text-blue-400" />
-                <span>Projects</span>
+                <Image className="w-4 h-4 text-blue-400" />
+                <span>Photos</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
@@ -92,26 +88,6 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
         </div>
 
-        {/* Right side - Settings */}
-        <DropdownMenu>
-        <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-white/10 transition-colors focus:outline-none">
-          <Settings className="w-5 h-5 text-white/70 hover:text-white" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
-          align="end"
-        >
-          <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
-            <span>Setting 1</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
-            <span>Setting 2</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
-            <span>Setting 3</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-        </DropdownMenu>
         </div>
         );
-}
+        }
