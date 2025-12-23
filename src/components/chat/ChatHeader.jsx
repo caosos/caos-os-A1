@@ -10,6 +10,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile }) {
@@ -38,20 +39,22 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
               <Monitor className="w-4 h-4 text-blue-400" />
               <span>Desktop</span>
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[180px]" sideOffset={8}>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                <FileText className="w-4 h-4 text-blue-400" />
-                <span>Files</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                <Image className="w-4 h-4 text-blue-400" />
-                <span>Photos</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                <Folder className="w-4 h-4 text-blue-400" />
-                <span>Folders</span>
-              </DropdownMenuItem>
-            </DropdownMenuSubContent>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[180px]" sideOffset={8}>
+                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  <span>Files</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
+                  <Image className="w-4 h-4 text-blue-400" />
+                  <span>Photos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
+                  <Folder className="w-4 h-4 text-blue-400" />
+                  <span>Folders</span>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
           </DropdownMenuSub>
           <DropdownMenuItem 
             onClick={onNewThread}
