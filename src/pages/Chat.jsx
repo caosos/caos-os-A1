@@ -250,8 +250,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Input - Absolutely positioned at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 w-full z-50 bg-[#0a1628] border-t border-white/10">
+      {/* Input - Fixed to viewport bottom */}
+      <div className="fixed bottom-0 left-0 right-0 w-full z-50 bg-[#0a1628] border-t border-white/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
