@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
+import { Download } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 export default function ChatBubble({ message, isUser }) {
   const getYouTubeId = (url) => {
@@ -13,9 +15,41 @@ export default function ChatBubble({ message, isUser }) {
     return moment(timestamp).format('MMM D, YYYY • h:mm A');
   };
 
+  const downloadFile = (content, filename) => {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const extractFilename = (langString) => {
+    if (langString && langString.startsWith('filename:')) {
+      return langString.replace('filename:', '');
+    }
+    return null;
+  };
+
   const renderContent = () => {
     let content = message.content;
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
+    
+    // Check for file content in code blocks
+    const codeBlockRegex = /```(filename:[^\n]+)\n([\s\S]*?)```/g;
+    const fileBlocks = [];
+    let match;
+    
+    while ((match = codeBlockRegex.exec(message.content)) !== null) {
+      const filename = extractFilename(match[1]);
+      const fileContent = match[2];
+      if (filename) {
+        fileBlocks.push({ filename, content: fileContent });
+      }
+    }
     
     if (youtubeMatches && !isUser) {
       return (
@@ -49,7 +83,25 @@ export default function ChatBubble({ message, isUser }) {
       );
     }
     
-    return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+    return (
+      <div className="space-y-3">
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+        {fileBlocks.map((file, index) => (
+          <div key={index} className="flex items-center gap-2 bg-white/5 border border-white/20 rounded-lg px-3 py-2">
+            <span className="text-sm text-white/80 flex-1">{file.filename}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => downloadFile(file.content, file.filename)}
+              className="h-8 px-3 text-blue-400 hover:text-blue-300 hover:bg-white/10"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Download
+            </Button>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
