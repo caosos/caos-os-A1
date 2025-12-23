@@ -28,7 +28,7 @@ export default function Chat() {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       } else {
-        navigate(createPageUrl('Signup'));
+        navigate(createPageUrl('GetStarted'));
       }
     };
     loadUser();
