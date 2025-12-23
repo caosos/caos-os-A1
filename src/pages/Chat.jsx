@@ -205,7 +205,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#0a1628]">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#0a1628]" style={{ height: '100dvh' }}>
       <StarfieldBackground />
       
       {/* Header */}
@@ -255,7 +255,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10 min-h-[60px]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
