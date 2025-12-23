@@ -7,7 +7,9 @@ export default function ChatInput({ onSend, isLoading }) {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -34,6 +36,45 @@ export default function ChatInput({ onSend, isLoading }) {
 
   const removeFile = (index) => {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  const toggleVoiceRecording = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        setMessage(transcript);
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsRecording(false);
+      };
+      
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+      
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsRecording(true);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -76,9 +117,10 @@ export default function ChatInput({ onSend, isLoading }) {
       <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-2">
         <button
           type="button"
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          onClick={toggleVoiceRecording}
+          className={`p-2 rounded-full hover:bg-white/10 transition-colors ${isRecording ? 'bg-red-500/20' : ''}`}
         >
-          <Mic className="w-5 h-5 text-white/70" />
+          <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
         </button>
         
         <input
