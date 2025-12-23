@@ -119,7 +119,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 py-3 w-full">
+    <form onSubmit={handleSubmit} className="px-3 py-2 w-full max-w-full">
       {/* Attached Files Display */}
       {attachedFiles.length > 0 && (
         <div className="mb-2 px-3 flex flex-wrap gap-2">
@@ -146,13 +146,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         </div>
       )}
       
-      <div className="flex items-end gap-2 bg-[#1a2744] border border-white/20 rounded-3xl px-3 py-2 w-full">
+      <div className="flex items-center gap-1.5 bg-[#1a2744] border border-white/20 rounded-3xl px-2 py-1.5 w-full">
         <button
           type="button"
           onClick={toggleVoiceRecording}
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500/20' : ''}`}
+          className={`p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500/20' : ''}`}
         >
-          <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
+          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
         </button>
 
         <textarea
@@ -172,13 +172,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+          className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
           disabled={uploading}
         >
           {uploading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
           ) : (
-            <Plus className="w-5 h-5 text-white/70" />
+            <Plus className="w-4 h-4 text-white/70" />
           )}
         </button>
 
@@ -186,9 +186,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
           type="button"
           onClick={toggleReadAloud}
           disabled={!lastAssistantMessage}
-          className={`p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
+          className={`p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
         >
-          <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-blue-500 animate-pulse' : 'text-white/70'}`} />
+          <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-blue-500 animate-pulse' : 'text-white/70'}`} />
         </button>
 
         <input
@@ -203,7 +203,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         <Button
           type="submit"
           disabled={(!message.trim() && attachedFiles.length === 0) || isLoading || uploading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-5 py-2 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1.5 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0"
         >
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
