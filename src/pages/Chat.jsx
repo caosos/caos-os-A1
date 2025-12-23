@@ -11,6 +11,7 @@ import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
@@ -116,86 +117,92 @@ export default function Chat() {
 
   const handleSendMessage = async (content, fileUrls = []) => {
     setIsLoading(true);
-    
-    let conversationId = currentConversationId;
-    
-    // Create new conversation if none exists
-    if (!conversationId) {
-      const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-      const newConversation = await base44.entities.Conversation.create({
-        title: title,
+
+    try {
+      let conversationId = currentConversationId;
+
+      // Create new conversation if none exists
+      if (!conversationId) {
+        const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
+        const newConversation = await base44.entities.Conversation.create({
+          title: title,
+          last_message_time: new Date().toISOString(),
+        });
+        conversationId = newConversation.id;
+        setCurrentConversationId(conversationId);
+      }
+
+      // Save user message
+      const userMessage = content || '📎 Sent file(s)';
+      await base44.entities.Message.create({
+        conversation_id: conversationId,
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date().toISOString(),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+
+      // Get AI response
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are CAOS, a Cognitive Adaptive Operating Space - an intelligent AI assistant. 
+
+  CRITICAL: You have direct file creation capabilities. When asked to create a file, NEVER give instructions or suggest external tools. ALWAYS generate the file content directly.
+
+  Capabilities:
+  - View and analyze images, photos, documents, and files
+  - Create and generate text documents (.txt, .js, .json, .md, .html, .css, .py, .pdf, etc.)
+  - Write code, scripts, and programs
+  - Draft emails, letters, reports, and stories
+  - Generate structured data and configurations
+
+  To create a downloadable file, use this exact format:
+  \`\`\`filename:story.txt
+  Your file content goes here...
+  Multiple lines are supported.
+  \`\`\`
+
+  Example - if user asks "write me a story and make it a txt file":
+  \`\`\`filename:my_story.txt
+  Once upon a time...
+  (your story here)
+  \`\`\`
+
+  IMPORTANT: 
+  - DO NOT give instructions on how to create files
+  - DO NOT suggest external tools or converters
+  - ALWAYS generate the actual file content directly
+  - The user will see a download button automatically
+
+  When providing YouTube links, format them as: [YOUTUBE:video_url] so they can be embedded.
+
+  User message: ${content || 'User sent file(s)'}`,
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
+        add_context_from_internet: fileUrls.length === 0,
+      });
+
+      // Save AI response
+      await base44.entities.Message.create({
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: response,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Update conversation
+      await base44.entities.Conversation.update(conversationId, {
+        last_message_preview: response.substring(0, 100),
         last_message_time: new Date().toISOString(),
       });
-      conversationId = newConversation.id;
-      setCurrentConversationId(conversationId);
+
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Network error. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
-
-    // Save user message
-    const userMessage = content || '📎 Sent file(s)';
-    await base44.entities.Message.create({
-      conversation_id: conversationId,
-      role: 'user',
-      content: userMessage,
-      timestamp: new Date().toISOString(),
-    });
-
-    queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-
-    // Get AI response
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are CAOS, a Cognitive Adaptive Operating Space - an intelligent AI assistant. 
-
-    CRITICAL: You have direct file creation capabilities. When asked to create a file, NEVER give instructions or suggest external tools. ALWAYS generate the file content directly.
-
-    Capabilities:
-    - View and analyze images, photos, documents, and files
-    - Create and generate text documents (.txt, .js, .json, .md, .html, .css, .py, .pdf, etc.)
-    - Write code, scripts, and programs
-    - Draft emails, letters, reports, and stories
-    - Generate structured data and configurations
-
-    To create a downloadable file, use this exact format:
-    \`\`\`filename:story.txt
-    Your file content goes here...
-    Multiple lines are supported.
-    \`\`\`
-
-    Example - if user asks "write me a story and make it a txt file":
-    \`\`\`filename:my_story.txt
-    Once upon a time...
-    (your story here)
-    \`\`\`
-
-    IMPORTANT: 
-    - DO NOT give instructions on how to create files
-    - DO NOT suggest external tools or converters
-    - ALWAYS generate the actual file content directly
-    - The user will see a download button automatically
-
-    When providing YouTube links, format them as: [YOUTUBE:video_url] so they can be embedded.
-
-    User message: ${content || 'User sent file(s)'}`,
-      file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-      add_context_from_internet: fileUrls.length === 0,
-    });
-
-    // Save AI response
-    await base44.entities.Message.create({
-      conversation_id: conversationId,
-      role: 'assistant',
-      content: response,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Update conversation
-    await base44.entities.Conversation.update(conversationId, {
-      last_message_preview: response.substring(0, 100),
-      last_message_time: new Date().toISOString(),
-    });
-
-    queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    setIsLoading(false);
   };
 
   return (
