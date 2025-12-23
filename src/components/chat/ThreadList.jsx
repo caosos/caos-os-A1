@@ -115,27 +115,27 @@ export default function ThreadList({
                       
                       {/* Action buttons - bottom right */}
                       {editingId !== conv.id && (
-                        <div className="absolute bottom-2 right-2 flex gap-1.5">
+                        <div className="absolute bottom-2 right-2 flex gap-2 z-10">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 transition-all shadow-lg"
-                            title="Rename"
+                            className="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-all shadow-xl text-white font-medium text-xs flex items-center gap-1.5"
                           >
-                            <Edit2 className="w-4 h-4 text-white" />
+                            <Edit2 className="w-4 h-4" />
+                            Rename
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onDeleteConversation(conv.id);
                             }}
-                            className="p-2 rounded-md bg-red-600 hover:bg-red-700 transition-all shadow-lg"
-                            title="Delete"
+                            className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-all shadow-xl text-white font-medium text-xs flex items-center gap-1.5"
                           >
-                            <Trash2 className="w-4 h-4 text-white" />
+                            <Trash2 className="w-4 h-4" />
+                            Delete
                           </button>
                         </div>
                       )}
