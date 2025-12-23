@@ -177,7 +177,7 @@ User message: ${content || 'User sent file(s)'}`,
         </ScrollArea>
         
         {/* Input - Sticky */}
-        <div className="sticky bottom-0 z-20 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2">
+        <div className="sticky bottom-0 z-20">
           <ChatInput 
             onSend={handleSendMessage} 
             isLoading={isLoading}
