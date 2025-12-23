@@ -12,7 +12,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
-  const lastProcessedIndexRef = useRef(0);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -75,26 +74,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
       const recognition = new SpeechRecognition();
 
       recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.interimResults = false; // Turn off interim results to prevent duplicates
       recognition.lang = 'en-US';
 
-      // Reset the tracking index when starting new recording
-      lastProcessedIndexRef.current = 0;
-
       recognition.onresult = (event) => {
-        let finalTranscript = '';
-
-        // Process only new final results
-        for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
-            lastProcessedIndexRef.current = i + 1;
-          }
-        }
-
-        // Update message with new final results only
-        if (finalTranscript) {
-          setMessage(prev => prev + finalTranscript);
+        // Get the latest result
+        const lastResult = event.results[event.results.length - 1];
+        if (lastResult.isFinal) {
+          const transcript = lastResult[0].transcript + ' ';
+          setMessage(prev => prev + transcript);
           // Adjust textarea height
           if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
