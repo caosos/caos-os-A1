@@ -99,16 +99,16 @@ export default function ThreadList({
                             </button>
                           </div>
                         ) : (
-                          <h3 className="text-white font-medium text-sm truncate">
+                          <h3 className="text-white font-medium text-sm break-words pr-1">
                             {conv.title}
                           </h3>
                         )}
                         {conv.last_message_preview && editingId !== conv.id && (
-                          <p className="text-white/50 text-xs mt-1 truncate">
+                          <p className="text-white/50 text-xs mt-1 break-words pr-1 line-clamp-2">
                             {conv.last_message_preview}
                           </p>
                         )}
-                        <p className="text-white/30 text-xs mt-1.5 mb-2">
+                        <p className="text-white/30 text-xs mt-1.5">
                           {moment(conv.last_message_time || conv.created_date).fromNow()}
                         </p>
                       </div>
