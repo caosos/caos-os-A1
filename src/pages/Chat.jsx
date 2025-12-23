@@ -205,11 +205,11 @@ export default function Chat() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#0a1628]">
       <StarfieldBackground />
       
       {/* Header */}
-      <div className="flex-shrink-0 z-30 bg-[#0a1628]">
+      <div className="relative flex-shrink-0 z-30 bg-[#0a1628]">
         <ChatHeader 
           user={user}
           onNewThread={handleNewThread}
@@ -220,7 +220,7 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-y-auto z-20">
         <div className="max-w-2xl mx-auto px-4 py-4">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
@@ -255,7 +255,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
+      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
