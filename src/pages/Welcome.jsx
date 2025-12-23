@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
@@ -39,13 +39,12 @@ export default function Welcome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
         >
-          <Link to={createPageUrl('Chat')}>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
-            >
-              Get Started
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => base44.auth.redirectToLogin(createPageUrl('Chat'))}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
+          >
+            Get Started
+          </Button>
         </motion.div>
       </motion.div>
       
