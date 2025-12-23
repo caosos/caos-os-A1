@@ -23,12 +23,15 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
     <div className="flex items-center justify-between px-4 py-4 w-full">
       {/* Left side - User menu */}
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none group">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
+        <DropdownMenuTrigger className="flex items-center gap-1.5 focus:outline-none group">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
             {user?.full_name?.charAt(0) || 'U'}
           </div>
-          <span className="text-white font-medium">{user?.full_name || 'User'}</span>
-          <ChevronDown className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+          <span className="text-white font-medium text-sm hidden sm:block">{user?.full_name || 'User'}</span>
+          <span className="text-white font-medium text-sm sm:hidden">
+            {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" />
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           className="w-56 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
