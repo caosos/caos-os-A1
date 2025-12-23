@@ -146,15 +146,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
 
         <textarea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-hidden min-h-[24px]"
-          disabled={isLoading}
-          rows={1}
-          onInput={(e) => {
-            e.target.style.height = '24px';
+          onChange={(e) => {
+            setMessage(e.target.value);
+            e.target.style.height = 'auto';
             e.target.style.height = e.target.scrollHeight + 'px';
           }}
+          placeholder="Type a message..."
+          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-hidden"
+          style={{ minHeight: '24px', height: '24px' }}
+          disabled={isLoading}
         />
         
         <button
