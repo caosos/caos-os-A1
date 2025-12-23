@@ -108,11 +108,11 @@ export default function Chat() {
 
     // Get AI response
     const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are CAOS, a Cognitive Adaptive Operating Space - an intelligent AI assistant. Be helpful, friendly, and concise. 
-When providing YouTube links, format them as: [YOUTUBE:video_url] so they can be embedded.
-When providing other links, include them in markdown format: [Link Text](url)
+      prompt: `You are CAOS, a Cognitive Adaptive Operating Space - an intelligent AI assistant. You can view and analyze images, photos, documents, and files that users share with you. Be helpful, friendly, and concise. 
+    When providing YouTube links, format them as: [YOUTUBE:video_url] so they can be embedded.
+    When providing other links, include them in markdown format: [Link Text](url)
 
-User message: ${content || 'User sent file(s)'}`,
+    User message: ${content || 'User sent file(s)'}`,
       file_urls: fileUrls.length > 0 ? fileUrls : undefined,
       add_context_from_internet: true,
     });
