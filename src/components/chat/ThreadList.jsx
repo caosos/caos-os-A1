@@ -56,7 +56,7 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        group p-3 pb-14 rounded-xl mb-2 transition-all relative overflow-visible
+                        group p-3 rounded-xl mb-2 transition-all relative
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
