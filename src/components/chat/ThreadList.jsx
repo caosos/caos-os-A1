@@ -56,84 +56,86 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        group p-3 rounded-xl mb-2 transition-all
+                        group p-3 rounded-xl mb-2 transition-all relative
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
                         }
                       `}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div 
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => {
-                            if (editingId !== conv.id) {
-                              onSelectConversation(conv.id);
-                              onClose();
-                            }
-                          }}
-                        >
-                          {editingId === conv.id ? (
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                              <Input
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                className="bg-white/10 border-white/20 text-white text-sm h-8 px-2"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    onRenameConversation(conv.id, editTitle);
-                                    setEditingId(null);
-                                  } else if (e.key === 'Escape') {
-                                    setEditingId(null);
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={() => {
+                      <div 
+                        className="cursor-pointer pr-20"
+                        onClick={() => {
+                          if (editingId !== conv.id) {
+                            onSelectConversation(conv.id);
+                            onClose();
+                          }
+                        }}
+                      >
+                        {editingId === conv.id ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              className="bg-white/10 border-white/20 text-white text-sm h-8 px-2"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
                                   onRenameConversation(conv.id, editTitle);
                                   setEditingId(null);
-                                }}
-                                className="p-1 rounded hover:bg-white/10"
-                              >
-                                <Check className="w-4 h-4 text-green-400" />
-                              </button>
-                            </div>
-                          ) : (
-                            <h3 className="text-white font-medium text-sm truncate">
-                              {conv.title}
-                            </h3>
-                          )}
-                          {conv.last_message_preview && editingId !== conv.id && (
-                            <p className="text-white/50 text-xs mt-1 truncate">
-                              {conv.last_message_preview}
-                            </p>
-                          )}
-                          <p className="text-white/30 text-xs mt-1.5">
-                            {moment(conv.last_message_time || conv.created_date).fromNow()}
+                                } else if (e.key === 'Escape') {
+                                  setEditingId(null);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                onRenameConversation(conv.id, editTitle);
+                                setEditingId(null);
+                              }}
+                              className="p-1 rounded hover:bg-white/10"
+                            >
+                              <Check className="w-4 h-4 text-green-400" />
+                            </button>
+                          </div>
+                        ) : (
+                          <h3 className="text-white font-medium text-sm truncate">
+                            {conv.title}
+                          </h3>
+                        )}
+                        {conv.last_message_preview && editingId !== conv.id && (
+                          <p className="text-white/50 text-xs mt-1 truncate">
+                            {conv.last_message_preview}
                           </p>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0 items-start">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditTitle(conv.title);
-                              setEditingId(conv.id);
-                            }}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-blue-500/30 transition-all border border-white/10"
-                          >
-                            <Edit2 className="w-4 h-4 text-blue-400" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteConversation(conv.id);
-                            }}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-red-500/30 transition-all border border-white/10"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-400" />
-                          </button>
-                        </div>
+                        )}
+                        <p className="text-white/30 text-xs mt-1.5">
+                          {moment(conv.last_message_time || conv.created_date).fromNow()}
+                        </p>
+                      </div>
+                      
+                      {/* Action buttons - bottom right */}
+                      <div className="absolute bottom-3 right-3 flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditTitle(conv.title);
+                            setEditingId(conv.id);
+                          }}
+                          className="p-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/40 transition-all border border-blue-400/30"
+                          title="Rename"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-blue-300" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteConversation(conv.id);
+                          }}
+                          className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 transition-all border border-red-400/30"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-300" />
+                        </button>
                       </div>
                     </div>
                   ))
