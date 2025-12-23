@@ -1,10 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
 import { Download } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import TextSelectionMenu from './TextSelectionMenu';
 
-export default function ChatBubble({ message, isUser }) {
+export default function ChatBubble({ message, isUser, onUpdateMessage }) {
+  const [showSelectionMenu, setShowSelectionMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [selectedText, setSelectedText] = useState('');
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+    
+    if (text && text.length > 0) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      setSelectedText(text);
+      setMenuPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX,
+      });
+      setShowSelectionMenu(true);
+    }
+  };
+
+  const handleReact = (text, emoji) => {
+    const reactions = message.reactions || [];
+    reactions.push({ emoji, selected_text: text });
+    onUpdateMessage(message.id, { reactions });
+  };
+
+  const handleReply = (text, replyContent) => {
+    const replies = message.replies || [];
+    replies.push({ 
+      selected_text: text, 
+      reply_content: replyContent,
+      timestamp: new Date().toISOString()
+    });
+    onUpdateMessage(message.id, { replies });
+  };
   const getYouTubeId = (url) => {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
@@ -105,13 +142,14 @@ export default function ChatBubble({ message, isUser }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
-    >
-      <div className={`flex items-end gap-2 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+      >
+        <div className={`flex items-end gap-2 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isUser && (
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
             <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
@@ -126,6 +164,8 @@ export default function ChatBubble({ message, isUser }) {
               : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
             }
           `}
+          onMouseUp={handleTextSelection}
+          onTouchEnd={handleTextSelection}
         >
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
@@ -134,10 +174,54 @@ export default function ChatBubble({ message, isUser }) {
           {message.timestamp && (
             <p className={`text-xs mt-1.5 ${isUser ? 'text-white/60' : 'text-white/40'}`}>
               {formatDateTime(message.timestamp)}
-            </p>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+              </p>
+              )}
+
+              {/* Reactions */}
+              {message.reactions && message.reactions.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+              {message.reactions.map((reaction, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white/10 border border-white/20 rounded-full px-2 py-0.5 text-xs flex items-center gap-1"
+                  title={reaction.selected_text}
+                >
+                  <span>{reaction.emoji}</span>
+                </div>
+              ))}
+              </div>
+              )}
+
+              {/* Replies */}
+              {message.replies && message.replies.length > 0 && (
+              <div className="mt-2 space-y-1">
+              {message.replies.map((reply, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white/5 border-l-2 border-blue-400 rounded px-2 py-1.5 text-xs"
+                >
+                  <p className="text-white/50 italic mb-1">"{reply.selected_text}"</p>
+                  <p className="text-white/90">{reply.reply_content}</p>
+                </div>
+              ))}
+              </div>
+              )}
+              </div>
+              </div>
+              </motion.div>
+
+              {showSelectionMenu && (
+              <TextSelectionMenu
+              position={menuPosition}
+              selectedText={selectedText}
+              onReact={handleReact}
+              onReply={handleReply}
+              onClose={() => {
+              setShowSelectionMenu(false);
+              window.getSelection().removeAllRanges();
+              }}
+              />
+              )}
+              </>
+              );
+              }

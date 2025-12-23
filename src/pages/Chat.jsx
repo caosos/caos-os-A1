@@ -84,6 +84,11 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
+  const handleUpdateMessage = async (messageId, updates) => {
+    await base44.entities.Message.update(messageId, updates);
+    queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
+  };
+
   const handleSendMessage = async (content, fileUrls = []) => {
     setIsLoading(true);
     
@@ -190,7 +195,8 @@ export default function Chat() {
               <ChatBubble 
                 key={message.id} 
                 message={message} 
-                isUser={message.role === 'user'} 
+                isUser={message.role === 'user'}
+                onUpdateMessage={handleUpdateMessage}
               />
             ))}
 
