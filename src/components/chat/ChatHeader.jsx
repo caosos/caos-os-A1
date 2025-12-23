@@ -34,16 +34,16 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           align="start"
         >
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
+            <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 data-[state=open]:bg-white/10">
               <Monitor className="w-4 h-4 text-blue-400" />
               <span>Desktop</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white">
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
+              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10">
                 <FileText className="w-4 h-4 text-blue-400" />
                 <span>Files</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/10 focus:bg-white/10">
+              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10">
                 <Image className="w-4 h-4 text-blue-400" />
                 <span>Photos</span>
               </DropdownMenuItem>
