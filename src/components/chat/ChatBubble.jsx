@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import moment from 'moment';
 import { Download } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { base44 } from '@/api/base44Client';
 import TextSelectionMenu from './TextSelectionMenu';
 
 export default function ChatBubble({ message, isUser, onUpdateMessage }) {
@@ -40,11 +41,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
     onUpdateMessage(message.id, { reactions });
   };
 
-  const handleReply = (text, replyContent) => {
+  const handleReply = async (text, replyContent) => {
+    // Get AI response
+    const aiResponse = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are CAOS. The user is responding to this specific part of your previous message: "${text}"\n\nUser's reply: ${replyContent}\n\nProvide a brief, focused response to their reply.`,
+      add_context_from_internet: false,
+    });
+
     const replies = message.replies || [];
     replies.push({ 
       selected_text: text, 
-      reply_content: replyContent,
+      user_reply: replyContent,
+      ai_response: aiResponse,
       timestamp: new Date().toISOString()
     });
     onUpdateMessage(message.id, { replies });
@@ -201,17 +209,25 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
 
               {/* Replies */}
               {message.replies && message.replies.length > 0 && (
-              <div className="mt-2 space-y-1">
-              {message.replies.map((reply, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white/5 border-l-2 border-blue-400 rounded px-2 py-1.5 text-xs"
-                >
-                  <p className="text-white/50 italic mb-1">"{reply.selected_text}"</p>
-                  <p className="text-white/90">{reply.reply_content}</p>
+                <div className="mt-2 space-y-2">
+                  {message.replies.map((reply, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white/5 border-l-2 border-blue-400 rounded px-2 py-1.5 text-xs space-y-1.5"
+                    >
+                      <p className="text-white/50 italic text-[11px]">"{reply.selected_text}"</p>
+                      <div className="bg-blue-600/20 rounded px-2 py-1">
+                        <p className="text-white/90">{reply.user_reply}</p>
+                      </div>
+                      {reply.ai_response && (
+                        <div className="bg-white/10 rounded px-2 py-1">
+                          <p className="text-blue-300 font-medium text-[10px] mb-0.5">CAOS</p>
+                          <p className="text-white/90">{reply.ai_response}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-              </div>
               )}
               </div>
               </div>
