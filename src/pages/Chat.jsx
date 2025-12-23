@@ -255,7 +255,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
+      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
