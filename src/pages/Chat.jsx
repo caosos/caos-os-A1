@@ -199,8 +199,8 @@ export default function Chat() {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0a1628] flex flex-col">
-      <div className="fixed inset-0 z-0">
+    <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
+      <div className="absolute inset-0 z-0">
         <StarfieldBackground />
       </div>
       
