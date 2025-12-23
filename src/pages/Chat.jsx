@@ -171,19 +171,19 @@ export default function Chat() {
   return (
     <div className="min-h-screen flex flex-col relative">
       <StarfieldBackground />
-      
+
+      {/* Header - Sticky, Full Width */}
+      <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
+        <ChatHeader 
+          user={user}
+          onNewThread={handleNewThread}
+          onShowThreads={() => setShowThreads(true)}
+          onShowProfile={() => setShowProfile(true)}
+        />
+      </div>
+
+      {/* Messages Area - Centered */}
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
-        {/* Header - Sticky */}
-        <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
-          <ChatHeader 
-            user={user}
-            onNewThread={handleNewThread}
-            onShowThreads={() => setShowThreads(true)}
-            onShowProfile={() => setShowProfile(true)}
-          />
-        </div>
-        
-        {/* Messages Area */}
         <ScrollArea className="flex-1 px-4">
           <div className="py-4 pb-6">
             {messages.map((message) => (
@@ -193,7 +193,7 @@ export default function Chat() {
                 isUser={message.role === 'user'} 
               />
             ))}
-            
+
             {isLoading && (
               <div className="flex justify-start mb-4">
                 <div className="flex items-center gap-2">
@@ -210,19 +210,19 @@ export default function Chat() {
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
-        
-        {/* Input - Sticky */}
-        <div className="sticky bottom-0 z-20">
-          <ChatInput 
-            onSend={handleSendMessage} 
-            isLoading={isLoading}
-            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-          />
-        </div>
+      </div>
+
+      {/* Input - Sticky, Full Width */}
+      <div className="sticky bottom-0 z-20 w-full">
+        <ChatInput 
+          onSend={handleSendMessage} 
+          isLoading={isLoading}
+          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+        />
       </div>
 
       {/* Thread List Sidebar */}
