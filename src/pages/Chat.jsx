@@ -49,9 +49,19 @@ export default function Chat() {
     enabled: !!currentConversationId,
   });
 
-  // Scroll to bottom when messages change
+  // Track last message for smart scrolling
+  const lastMessageIdRef = useRef(null);
+  
+  // Only scroll to bottom when new messages are added, not when existing ones update
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const lastMessage = messages[messages.length - 1];
+    const lastMessageId = lastMessage?.id;
+    
+    // Scroll only if this is a genuinely new message
+    if (lastMessageId && lastMessageId !== lastMessageIdRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      lastMessageIdRef.current = lastMessageId;
+    }
   }, [messages]);
 
   const handleNewThread = async () => {
