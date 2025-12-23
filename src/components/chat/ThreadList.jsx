@@ -56,7 +56,7 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        group p-3 rounded-xl mb-2 transition-all relative
+                        group p-3 pb-14 rounded-xl mb-2 transition-all relative overflow-visible
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
@@ -64,7 +64,7 @@ export default function ThreadList({
                       `}
                     >
                       <div 
-                        className="cursor-pointer pr-20"
+                        className="cursor-pointer"
                         onClick={() => {
                           if (editingId !== conv.id) {
                             onSelectConversation(conv.id);
@@ -108,33 +108,35 @@ export default function ThreadList({
                             {conv.last_message_preview}
                           </p>
                         )}
-                        <p className="text-white/30 text-xs mt-1.5">
+                        <p className="text-white/30 text-xs mt-1.5 mb-2">
                           {moment(conv.last_message_time || conv.created_date).fromNow()}
                         </p>
                       </div>
                       
-                      {/* Action buttons - bottom right */}
+                      {/* Action buttons at bottom */}
                       {editingId !== conv.id && (
-                        <div className="absolute bottom-2 right-2 flex gap-2 z-10">
+                        <div className="flex gap-2 mt-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 transition-all shadow-xl text-white font-medium text-xs flex items-center gap-1.5"
+                            className="flex-1 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-all text-white font-medium text-xs flex items-center justify-center gap-1.5"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                             Rename
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteConversation(conv.id);
+                              if (window.confirm('Delete this conversation?')) {
+                                onDeleteConversation(conv.id);
+                              }
                             }}
-                            className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-all shadow-xl text-white font-medium text-xs flex items-center gap-1.5"
+                            className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition-all text-white font-medium text-xs flex items-center justify-center gap-1.5"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             Delete
                           </button>
                         </div>
