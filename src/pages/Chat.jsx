@@ -257,7 +257,7 @@ export default function Chat() {
       </div>
 
       {/* Input - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628]/95 backdrop-blur-md border-t border-white/10 pb-safe">
+      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
