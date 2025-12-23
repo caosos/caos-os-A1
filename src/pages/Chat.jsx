@@ -191,11 +191,11 @@ export default function Chat() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col relative pb-40">
-        <StarfieldBackground />
-
-        {/* Header - Sticky, Full Width */}
-        <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
+      <StarfieldBackground />
+      
+      <div className="fixed inset-0 flex flex-col">
+        {/* Header - Sticky at Top */}
+        <div className="flex-shrink-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
           <ChatHeader 
             user={user}
             onNewThread={handleNewThread}
@@ -205,10 +205,9 @@ export default function Chat() {
           />
         </div>
 
-        {/* Messages Area - Centered */}
-        <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
-          <ScrollArea className="flex-1 px-4">
-            <div className="py-4 pb-6">
+        {/* Messages Area - Scrollable Middle */}
+        <div className="flex-1 overflow-y-auto px-4">
+          <div className="max-w-2xl mx-auto py-4 pb-6">
             {messages.map((message) => (
               <ChatBubble 
                 key={message.id} 
@@ -237,18 +236,17 @@ export default function Chat() {
 
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
         </div>
-      </div>
 
-      {/* Input - Fixed at Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10">
-        <div className="max-w-2xl mx-auto">
-          <ChatInput 
-            onSend={handleSendMessage} 
-            isLoading={isLoading}
-            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-          />
+        {/* Input - Fixed at Bottom */}
+        <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10">
+          <div className="max-w-2xl mx-auto">
+            <ChatInput 
+              onSend={handleSendMessage} 
+              isLoading={isLoading}
+              lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+            />
+          </div>
         </div>
       </div>
 
