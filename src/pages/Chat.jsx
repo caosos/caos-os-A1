@@ -205,11 +205,11 @@ export default function Chat() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#0a1628]" style={{ height: '100dvh' }}>
+    <div className="w-full h-screen flex flex-col bg-[#0a1628]" style={{ height: '100dvh', maxHeight: '-webkit-fill-available' }}>
       <StarfieldBackground />
       
       {/* Header */}
-      <div className="relative flex-shrink-0 z-30 bg-[#0a1628]">
+      <div className="flex-shrink-0 z-30 bg-[#0a1628]">
         <ChatHeader 
           user={user}
           onNewThread={handleNewThread}
@@ -220,8 +220,8 @@ export default function Chat() {
       </div>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto z-20">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto z-20" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="max-w-2xl mx-auto px-4 py-4 pb-20">
             {messages.length === 0 && !isLoading && <WelcomeGreeting />}
             
             {messages.map((message) => (
@@ -255,7 +255,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10 min-h-[60px]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+      <div className="flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
