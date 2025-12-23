@@ -239,13 +239,16 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Input */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] border-t border-white/10 safe-area-inset-bottom">
-        <ChatInput 
-          onSend={handleSendMessage} 
-          isLoading={isLoading}
-          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-        />
+      {/* Input - TEST VISIBLE */}
+      <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-red-500">
+        <div className="p-4 text-white font-bold text-center">TEST - CAN YOU SEE THIS?</div>
+        <div className="bg-[#0a1628] border-t border-white/10">
+          <ChatInput 
+            onSend={handleSendMessage} 
+            isLoading={isLoading}
+            lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          />
+        </div>
       </div>
 
       {/* Thread List Sidebar */}
