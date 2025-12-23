@@ -148,12 +148,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none max-h-32 overflow-y-auto"
+          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-hidden"
           disabled={isLoading}
           rows={1}
           onInput={(e) => {
             e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+            e.target.style.height = e.target.scrollHeight + 'px';
           }}
         />
         
