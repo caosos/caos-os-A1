@@ -72,15 +72,16 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['messages'] });
   };
 
-  const handleSendMessage = async (content) => {
+  const handleSendMessage = async (content, fileUrls = []) => {
     setIsLoading(true);
     
     let conversationId = currentConversationId;
     
     // Create new conversation if none exists
     if (!conversationId) {
+      const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
       const newConversation = await base44.entities.Conversation.create({
-        title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+        title: title,
         last_message_time: new Date().toISOString(),
       });
       conversationId = newConversation.id;
@@ -88,10 +89,11 @@ export default function Chat() {
     }
 
     // Save user message
+    const userMessage = content || '📎 Sent file(s)';
     await base44.entities.Message.create({
       conversation_id: conversationId,
       role: 'user',
-      content: content,
+      content: userMessage,
       timestamp: new Date().toISOString(),
     });
 
@@ -101,7 +103,8 @@ export default function Chat() {
     const response = await base44.integrations.Core.InvokeLLM({
       prompt: `You are CAOS, a Cognitive Adaptive Operating Space - an intelligent AI assistant. Be helpful, friendly, and concise. 
 
-User message: ${content}`,
+User message: ${content || 'User sent file(s)'}`,
+      file_urls: fileUrls.length > 0 ? fileUrls : undefined,
     });
 
     // Save AI response
