@@ -134,13 +134,15 @@ User message: ${content || 'User sent file(s)'}`,
       <StarfieldBackground />
       
       <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full relative z-10">
-        {/* Header */}
-        <ChatHeader 
-          user={user}
-          onNewThread={handleNewThread}
-          onShowThreads={() => setShowThreads(true)}
-          onShowProfile={() => setShowProfile(true)}
-        />
+        {/* Header - Sticky */}
+        <div className="sticky top-0 z-20 bg-gradient-to-b from-[#0a1628] via-[#0a1628] to-transparent pb-2">
+          <ChatHeader 
+            user={user}
+            onNewThread={handleNewThread}
+            onShowThreads={() => setShowThreads(true)}
+            onShowProfile={() => setShowProfile(true)}
+          />
+        </div>
         
         {/* Messages Area */}
         <ScrollArea className="flex-1 px-4">
