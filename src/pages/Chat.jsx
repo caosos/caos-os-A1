@@ -260,7 +260,7 @@ export default function Chat() {
       />
 
       {/* Input - Fixed at Bottom, Outside Main Container */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-2">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628] pt-2 pb-4">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
