@@ -10,6 +10,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -81,6 +82,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
           .map(result => result[0].transcript)
           .join('');
         setMessage(transcript);
+        // Adjust textarea height
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
       };
       
       recognition.onerror = (event) => {
@@ -150,6 +156,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
         </button>
 
         <textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => {
             setMessage(e.target.value);
