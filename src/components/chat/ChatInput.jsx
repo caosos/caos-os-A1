@@ -72,20 +72,29 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
     } else {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
-      
+
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
-      
+
+      let lastProcessedIndex = 0;
+
       recognition.onresult = (event) => {
-        // Only process final results to avoid repetition
+        let interimTranscript = '';
         let finalTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
+
+        // Process only new results
+        for (let i = lastProcessedIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
+            finalTranscript += transcript + ' ';
+            lastProcessedIndex = i + 1;
+          } else {
+            interimTranscript += transcript;
           }
         }
 
+        // Update message with accumulated final results
         if (finalTranscript) {
           setMessage(prev => prev + finalTranscript);
           // Adjust textarea height
