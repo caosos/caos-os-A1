@@ -20,7 +20,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-4">
+    <div className="flex items-center justify-between px-4 py-4 w-full">
       {/* Left side - User menu */}
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none group">
