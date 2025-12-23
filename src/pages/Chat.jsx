@@ -251,7 +251,7 @@ export default function Chat() {
       </div>
 
       {/* Input - Fixed at bottom */}
-      <div className="relative flex-shrink-0 z-50 bg-[#0a1628] border-t border-white/10 min-h-[60px]">
+      <div className="sticky bottom-0 w-full z-50 bg-[#0a1628] border-t border-white/10 py-2">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
