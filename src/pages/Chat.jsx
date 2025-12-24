@@ -111,8 +111,14 @@ export default function Chat() {
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
-    await base44.entities.Message.update(messageId, updates);
-    queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
+    try {
+      await base44.entities.Message.update(messageId, updates);
+      queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
+    } catch (error) {
+      console.error('Error updating message:', error);
+      // Refresh messages to sync with server state
+      queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
+    }
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
