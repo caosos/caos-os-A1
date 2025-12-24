@@ -149,13 +149,23 @@ export default function Chat() {
 
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
 
+      // Fetch conversation history for CAOS
+      const conversationHistory = await base44.entities.Message.filter({ conversation_id: conversationId }, 'created_date');
+      
+      // Format history for CAOS (excluding the message we just added since we're sending it separately)
+      const history = conversationHistory.slice(0, -1).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
       // Get AI response from CAOS server
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: content || 'User sent file(s)',
-          session: conversationId
+          session: conversationId,
+          history: history
         })
       });
       const data = await caosResponse.json();
