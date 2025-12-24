@@ -57,6 +57,9 @@ export default function TextSelectionMenu({
   return (
     <AnimatePresence>
       <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -66,7 +69,7 @@ export default function TextSelectionMenu({
           left: position.left,
           zIndex: 1000,
         }}
-        className="bg-[#1a2744]/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[280px]"
+        className="bg-[#1a2744]/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[280px] cursor-move"
       >
         <div className="flex items-center justify-between mb-2 px-2">
           <span className="text-white/70 text-xs">React or reply</span>
