@@ -34,26 +34,26 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <ChevronDown className="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" />
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-56 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
+          className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
           align="start"
         >
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 data-[state=open]:bg-white/10">
-              <Monitor className="w-4 h-4 text-blue-400" />
+            <DropdownMenuSubTrigger className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 data-[state=open]:bg-white/10 text-sm">
+              <Monitor className="w-3.5 h-3.5 text-blue-400" />
               <span>Desktop</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[180px]" sideOffset={8}>
-                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                  <FileText className="w-4 h-4 text-blue-400" />
+              <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[140px]" sideOffset={4}>
+                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                  <FileText className="w-3.5 h-3.5 text-blue-400" />
                   <span>Files</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                  <Image className="w-4 h-4 text-blue-400" />
+                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                  <Image className="w-3.5 h-3.5 text-blue-400" />
                   <span>Photos</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">
-                  <Folder className="w-4 h-4 text-blue-400" />
+                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                  <Folder className="w-3.5 h-3.5 text-blue-400" />
                   <span>Folders</span>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -61,32 +61,32 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           </DropdownMenuSub>
           <DropdownMenuItem 
             onClick={onNewThread}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
           >
-            <Plus className="w-4 h-4 text-blue-400" />
+            <Plus className="w-3.5 h-3.5 text-blue-400" />
             <span>New Thread</span>
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={onShowThreads}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
           >
-            <FolderOpen className="w-4 h-4 text-blue-400" />
+            <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
             <span>Previous Threads</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={onShowProfile}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
           >
-            <User className="w-4 h-4 text-blue-400" />
+            <User className="w-3.5 h-3.5 text-blue-400" />
             <span>Profile</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white"
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
           >
-            <LogOut className="w-4 h-4 text-blue-400" />
+            <LogOut className="w-3.5 h-3.5 text-blue-400" />
             <span>Log Out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
