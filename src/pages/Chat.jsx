@@ -149,9 +149,12 @@ export default function Chat() {
 
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
 
+      // Get user's memory preference
+      const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
+
       // Fetch conversation history for CAOS
       const conversationHistory = await base44.entities.Message.filter({ conversation_id: conversationId }, 'created_date');
-      
+
       // Format history for CAOS (excluding the message we just added since we're sending it separately)
       const history = conversationHistory.slice(0, -1).map(msg => ({
         role: msg.role,
@@ -165,7 +168,9 @@ export default function Chat() {
         body: JSON.stringify({
           message: content || 'User sent file(s)',
           session: conversationId,
-          history: history
+          history: history,
+          remember: rememberConversations,
+          user_id: user?.id || 'guest'
         })
       });
       const data = await caosResponse.json();

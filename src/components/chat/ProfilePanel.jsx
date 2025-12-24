@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
 import moment from 'moment';
 
 export default function ProfilePanel({ isOpen, onClose, user }) {
+  const [rememberConversations, setRememberConversations] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('caos_remember_conversations');
+    if (saved !== null) {
+      setRememberConversations(saved === 'true');
+    }
+  }, []);
+
+  const handleToggleMemory = (checked) => {
+    setRememberConversations(checked);
+    localStorage.setItem('caos_remember_conversations', checked.toString());
+  };
   return (
     <AnimatePresence>
       {isOpen && (
@@ -68,6 +82,20 @@ export default function ProfilePanel({ isOpen, onClose, user }) {
                     <p className="text-white/50 text-xs">Role</p>
                     <p className="text-white text-sm capitalize">{user?.role || 'User'}</p>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Brain className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <p className="text-white text-sm">Remember Conversations</p>
+                      <p className="text-white/50 text-xs">Enable conversation memory</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={rememberConversations}
+                    onCheckedChange={handleToggleMemory}
+                  />
                 </div>
               </div>
             </div>
