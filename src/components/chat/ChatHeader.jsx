@@ -100,9 +100,9 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
 
         {/* Right - Thread Title */}
         {currentConversation && (
-          <div className="text-right">
-            <p className="text-white/90 text-sm font-medium">{currentConversation.title}</p>
-            <p className="text-white/50 text-xs">Thread ID: {currentConversation.id.slice(0, 8)}</p>
+          <div className="text-right max-w-[120px] sm:max-w-[200px]">
+            <p className="text-white/90 text-xs font-medium truncate">{currentConversation.title}</p>
+            <p className="text-white/50 text-[10px] hidden sm:block">ID: {currentConversation.id.slice(0, 6)}</p>
           </div>
         )}
         </div>
