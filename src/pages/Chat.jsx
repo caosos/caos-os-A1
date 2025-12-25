@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ScrollArea } from "@/components/ui/scroll-area";
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatBubble from '@/components/chat/ChatBubble';
@@ -14,40 +11,39 @@ import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 
 export default function Chat() {
-  const [user, setUser] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(() => {
     return localStorage.getItem('caos_current_conversation') || null;
+  });
+  const [conversations, setConversations] = useState(() => {
+    const saved = localStorage.getItem('caos_conversations');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('caos_messages');
+    return saved ? JSON.parse(saved) : {};
   });
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Prevent body scroll
     document.body.style.overflow = 'hidden';
-    
     return () => {
       document.body.style.overflow = '';
     };
   }, []);
 
+  // Save to localStorage whenever data changes
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-      } catch (error) {
-        console.error('Auth error:', error);
-        setUser(null);
-      }
-    };
-    loadUser();
-  }, []);
+    localStorage.setItem('caos_conversations', JSON.stringify(conversations));
+  }, [conversations]);
 
-  // Persist current conversation
+  useEffect(() => {
+    localStorage.setItem('caos_messages', JSON.stringify(messages));
+  }, [messages]);
+
   useEffect(() => {
     if (currentConversationId) {
       localStorage.setItem('caos_current_conversation', currentConversationId);
@@ -56,74 +52,39 @@ export default function Chat() {
     }
   }, [currentConversationId]);
 
-  // Fetch conversations
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['conversations'],
-    queryFn: () => base44.entities.Conversation.list('-created_date'),
-    enabled: !!user,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    staleTime: Infinity,
-  });
+  const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
-  // Fetch messages for current conversation
-  const { data: messages = [] } = useQuery({
-    queryKey: ['messages', currentConversationId],
-    queryFn: () => currentConversationId 
-      ? base44.entities.Message.filter({ conversation_id: currentConversationId }, 'created_date')
-      : Promise.resolve([]),
-    enabled: !!currentConversationId && !!user,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    staleTime: Infinity,
-  });
-
-  // Track last message for smart scrolling
-  const lastMessageIdRef = useRef(null);
-  
-  // Only scroll to bottom when new messages are added, not when existing ones update
   useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    const lastMessageId = lastMessage?.id;
-    
-    // Scroll only if this is a genuinely new message
-    if (lastMessageId && lastMessageId !== lastMessageIdRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      lastMessageIdRef.current = lastMessageId;
-    }
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages.length]);
 
-  const handleNewThread = async () => {
-    if (!user) return;
-    const newConversation = await base44.entities.Conversation.create({
+  const handleNewThread = () => {
+    const newId = 'conv_' + Date.now();
+    const newConversation = {
+      id: newId,
       title: 'New Conversation',
       last_message_time: new Date().toISOString(),
-    });
-    setCurrentConversationId(newConversation.id);
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      created_date: new Date().toISOString()
+    };
+    setConversations([newConversation, ...conversations]);
+    setCurrentConversationId(newId);
+    setMessages({ ...messages, [newId]: [] });
   };
 
-  const handleDeleteConversation = async (id) => {
-    if (!user) return;
-    // Delete all messages in the conversation
-    const conversationMessages = await base44.entities.Message.filter({ conversation_id: id });
-    for (const msg of conversationMessages) {
-      await base44.entities.Message.delete(msg.id);
-    }
-    // Delete the conversation
-    await base44.entities.Conversation.delete(id);
-
+  const handleDeleteConversation = (id) => {
+    setConversations(conversations.filter(c => c.id !== id));
+    const newMessages = { ...messages };
+    delete newMessages[id];
+    setMessages(newMessages);
     if (currentConversationId === id) {
       setCurrentConversationId(null);
     }
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    queryClient.invalidateQueries({ queryKey: ['messages'] });
   };
 
-  const handleRenameConversation = async (id, newTitle) => {
-    if (!user) return;
-    await base44.entities.Conversation.update(id, { title: newTitle });
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  const handleRenameConversation = (id, newTitle) => {
+    setConversations(conversations.map(c => 
+      c.id === id ? { ...c, title: newTitle } : c
+    ));
   };
 
   const handleLogout = () => {
@@ -132,38 +93,89 @@ export default function Chat() {
     navigate(createPageUrl('Welcome'));
   };
 
-  const handleUpdateMessage = async (messageId, updates) => {
-    if (!user) return;
-    try {
-      await base44.entities.Message.update(messageId, updates);
-      queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
-    } catch (error) {
-      console.error('Error updating message:', error);
-      // Refresh messages to sync with server state
-      queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
-    }
+  const handleUpdateMessage = (messageId, updates) => {
+    if (!currentConversationId) return;
+    const convMessages = messages[currentConversationId] || [];
+    const updatedMessages = convMessages.map(msg =>
+      msg.id === messageId ? { ...msg, ...updates } : msg
+    );
+    setMessages({ ...messages, [currentConversationId]: updatedMessages });
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
     setIsLoading(true);
 
     try {
-      // Get AI response from CAOS server without storing in database
+      let conversationId = currentConversationId;
+
+      // Create new conversation if none exists
+      if (!conversationId) {
+        conversationId = 'conv_' + Date.now();
+        const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
+        const newConversation = {
+          id: conversationId,
+          title: title,
+          last_message_time: new Date().toISOString(),
+          created_date: new Date().toISOString()
+        };
+        setConversations([newConversation, ...conversations]);
+        setCurrentConversationId(conversationId);
+        setMessages({ ...messages, [conversationId]: [] });
+      }
+
+      // Add user message
+      const userMessage = {
+        id: 'msg_' + Date.now(),
+        conversation_id: conversationId,
+        role: 'user',
+        content: content || '📎 Sent file(s)',
+        file_urls: fileUrls,
+        timestamp: new Date().toISOString()
+      };
+
+      const convMessages = messages[conversationId] || [];
+      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
+
+      // Get AI response from CAOS server
+      const history = convMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
+
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: content || 'User sent file(s)',
-          session: 'guest-session',
-          history: [],
-          remember: false,
+          session: conversationId,
+          history: history,
+          remember: rememberConversations,
           user_id: 'guest',
           file_urls: fileUrls
         })
       });
       const data = await caosResponse.json();
-      
-      toast.success('Response received! (Guest mode - not saved)');
+      const response = data.reply;
+
+      // Add AI response
+      const aiMessage = {
+        id: 'msg_' + Date.now() + '_ai',
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: response,
+        timestamp: new Date().toISOString()
+      };
+
+      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
+
+      // Update conversation
+      setConversations(conversations.map(c =>
+        c.id === conversationId
+          ? { ...c, last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() }
+          : c
+      ));
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Network error. Please check your connection and try again.');
@@ -178,10 +190,9 @@ export default function Chat() {
         <StarfieldBackground />
       </div>
       
-      {/* Header */}
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
         <ChatHeader 
-          user={user}
+          user={{ full_name: 'Guest User', email: 'guest@caos.app' }}
           onNewThread={handleNewThread}
           onShowThreads={() => setShowThreads(true)}
           onShowProfile={() => setShowProfile(true)}
@@ -190,51 +201,48 @@ export default function Chat() {
         />
       </div>
 
-      {/* Messages */}
       <div className="relative flex-1 overflow-y-auto z-20 pb-64">
         <div className="max-w-2xl mx-auto px-4 py-4">
-            {messages.length === 0 && !isLoading && <WelcomeGreeting />}
-            
-            {messages.map((message) => (
-              <ChatBubble 
-                key={message.id} 
-                message={message} 
-                isUser={message.role === 'user'}
-                onUpdateMessage={handleUpdateMessage}
-              />
-            ))}
+          {currentMessages.length === 0 && !isLoading && <WelcomeGreeting />}
+          
+          {currentMessages.map((message) => (
+            <ChatBubble 
+              key={message.id} 
+              message={message} 
+              isUser={message.role === 'user'}
+              onUpdateMessage={handleUpdateMessage}
+            />
+          ))}
 
-            {isLoading && (
-              <div className="flex justify-start mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-                    <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl rounded-bl-md px-4 py-3">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
+          {isLoading && (
+            <div className="flex justify-start mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input - Fixed higher up for mobile browser UI */}
       <div className="fixed bottom-32 left-0 right-0 w-full z-50">
         <ChatInput 
           onSend={handleSendMessage} 
           isLoading={isLoading}
-          lastAssistantMessage={messages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
         />
       </div>
 
-      {/* Thread List Sidebar */}
       <ThreadList
         isOpen={showThreads}
         onClose={() => setShowThreads(false)}
@@ -245,11 +253,10 @@ export default function Chat() {
         onRenameConversation={handleRenameConversation}
       />
 
-      {/* Profile Panel */}
       <ProfilePanel
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
-        user={user}
+        user={{ full_name: 'Guest User', email: 'guest@caos.app' }}
       />
     </div>
   );
