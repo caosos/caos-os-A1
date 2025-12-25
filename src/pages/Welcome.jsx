@@ -66,13 +66,17 @@ export default function Welcome() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
+          className="space-y-3"
         >
           <Button 
             onClick={handleLogin}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
           >
-            Sign In
+            Sign In / Create Account
           </Button>
+          <p className="text-white/50 text-xs text-center">
+            New users will be prompted to create an account
+          </p>
         </motion.div>
       </motion.div>
       
