@@ -15,7 +15,9 @@ import { toast } from 'sonner';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
-  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [currentConversationId, setCurrentConversationId] = useState(() => {
+    return localStorage.getItem('caos_current_conversation') || null;
+  });
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +45,15 @@ export default function Chat() {
     };
     loadUser();
   }, [navigate]);
+
+  // Persist current conversation
+  useEffect(() => {
+    if (currentConversationId) {
+      localStorage.setItem('caos_current_conversation', currentConversationId);
+    } else {
+      localStorage.removeItem('caos_current_conversation');
+    }
+  }, [currentConversationId]);
 
   // Fetch conversations
   const { data: conversations = [] } = useQuery({
