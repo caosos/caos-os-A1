@@ -11,16 +11,8 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const isAuthenticated = await base44.auth.isAuthenticated();
-      if (isAuthenticated) {
-        navigate(createPageUrl('Chat'));
-      } else {
-        setChecking(false);
-      }
-    };
-    checkAuth();
-  }, [navigate]);
+    setChecking(false);
+  }, []);
 
   const handleLogin = () => {
     base44.auth.redirectToLogin(createPageUrl('Chat'));
