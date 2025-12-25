@@ -8,7 +8,7 @@ import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
   const handleLogin = () => {
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    navigate(createPageUrl('Chat'));
   };
 
   return (
