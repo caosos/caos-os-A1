@@ -128,16 +128,9 @@ export default function Chat() {
   };
 
   const handleLogout = async () => {
-    try {
-      localStorage.clear();
-      // Navigate to welcome first
-      navigate(createPageUrl('Welcome'));
-      // Then clear session
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout error:', error);
-      navigate(createPageUrl('Welcome'));
-    }
+    localStorage.clear();
+    // Call logout then reload to Welcome page
+    await base44.auth.logout(createPageUrl('Welcome'));
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
