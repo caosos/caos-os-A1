@@ -75,13 +75,23 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             <span>Profile</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
-          <DropdownMenuItem 
-            onClick={onLogout}
-            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
-          >
-            <LogOut className="w-3.5 h-3.5 text-blue-400" />
-            <span>Log Out</span>
-          </DropdownMenuItem>
+          {user?.email === 'guest@caos.app' ? (
+            <DropdownMenuItem 
+              onClick={() => window.location.href = createPageUrl('Login')}
+              className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
+            >
+              <User className="w-3.5 h-3.5 text-blue-400" />
+              <span>Sign In / Sign Up</span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem 
+              onClick={onLogout}
+              className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
+            >
+              <LogOut className="w-3.5 h-3.5 text-blue-400" />
+              <span>Log Out</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
         </DropdownMenu>
 
