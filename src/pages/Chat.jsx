@@ -358,7 +358,11 @@ export default function Chat() {
 
       <div className="relative flex-1 overflow-y-auto z-20 pb-64">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          {currentMessages.length === 0 && !isLoading && <WelcomeGreeting />}
+          {currentMessages.length === 0 && !isLoading && (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <WelcomeGreeting />
+            </div>
+          )}
           
           {currentMessages.map((message) => (
             <ChatBubble 
