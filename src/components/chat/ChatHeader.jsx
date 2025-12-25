@@ -79,6 +79,14 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             <User className="w-3.5 h-3.5 text-blue-400" />
             <span>Profile</span>
           </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/10" />
+          <DropdownMenuItem 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
+          >
+            <LogOut className="w-3.5 h-3.5 text-blue-400" />
+            <span>Log Out</span>
+          </DropdownMenuItem>
 
         </DropdownMenuContent>
         </DropdownMenu>
