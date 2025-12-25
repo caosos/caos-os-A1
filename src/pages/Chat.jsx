@@ -127,9 +127,10 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('caos_current_conversation');
-    base44.auth.logout();
+    await base44.auth.logout();
+    window.location.href = '/';
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
