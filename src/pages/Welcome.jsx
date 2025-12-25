@@ -7,24 +7,9 @@ import { base44 } from '@/api/base44Client';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
-  const [checking, setChecking] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    setChecking(false);
-  }, []);
-
   const handleLogin = () => {
     base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
-
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <StarfieldBackground />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
