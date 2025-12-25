@@ -59,7 +59,7 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        setDataLoaded(true);
+        base44.auth.redirectToLogin();
       }
     };
 

@@ -21,12 +21,9 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-1.5 focus:outline-none group">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
-            {user?.full_name?.charAt(0) || 'U'}
+            {user?.full_name?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <span className="text-white font-medium text-sm hidden sm:block">{user?.full_name || 'User'}</span>
-          <span className="text-white font-medium text-sm sm:hidden">
-            {user?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-          </span>
+          <span className="text-white font-medium text-sm">{user?.full_name || 'User'}</span>
           <ChevronDown className="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" />
         </DropdownMenuTrigger>
         <DropdownMenuContent 
