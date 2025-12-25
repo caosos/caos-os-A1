@@ -77,7 +77,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <DropdownMenuSeparator className="bg-white/10" />
           {user?.email === 'guest@caos.app' ? (
             <DropdownMenuItem 
-              onClick={() => window.location.href = createPageUrl('Login')}
+              onClick={() => window.location.href = createPageUrl('Auth')}
               className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
             >
               <User className="w-3.5 h-3.5 text-blue-400" />
