@@ -9,22 +9,17 @@ import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
+import { base44 } from '@/api/base44Client';
 
 export default function Chat() {
-  const [currentConversationId, setCurrentConversationId] = useState(() => {
-    return localStorage.getItem('caos_current_conversation') || null;
-  });
-  const [conversations, setConversations] = useState(() => {
-    const saved = localStorage.getItem('caos_conversations');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem('caos_messages');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [user, setUser] = useState(null);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState({});
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
 
@@ -35,22 +30,41 @@ export default function Chat() {
     };
   }, []);
 
-  // Save to localStorage whenever data changes
+  // Load user and their data
   useEffect(() => {
-    localStorage.setItem('caos_conversations', JSON.stringify(conversations));
-  }, [conversations]);
+    const loadUserData = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
 
-  useEffect(() => {
-    localStorage.setItem('caos_messages', JSON.stringify(messages));
-  }, [messages]);
+        // Load conversations for this user
+        const userConvos = await base44.entities.Conversation.filter(
+          { created_by: currentUser.email },
+          '-last_message_time',
+          100
+        );
+        setConversations(userConvos);
 
-  useEffect(() => {
-    if (currentConversationId) {
-      localStorage.setItem('caos_current_conversation', currentConversationId);
-    } else {
-      localStorage.removeItem('caos_current_conversation');
-    }
-  }, [currentConversationId]);
+        // Load messages for all conversations
+        const messagesMap = {};
+        for (const conv of userConvos) {
+          const convMessages = await base44.entities.Message.filter(
+            { conversation_id: conv.id },
+            'timestamp',
+            1000
+          );
+          messagesMap[conv.id] = convMessages;
+        }
+        setMessages(messagesMap);
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        setDataLoaded(true);
+      }
+    };
+
+    loadUserData();
+  }, []);
 
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
@@ -58,48 +72,69 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length]);
 
-  const handleNewThread = () => {
-    const newId = 'conv_' + Date.now();
-    const newConversation = {
-      id: newId,
-      title: 'New Conversation',
-      last_message_time: new Date().toISOString(),
-      created_date: new Date().toISOString()
-    };
-    setConversations([newConversation, ...conversations]);
-    setCurrentConversationId(newId);
-    setMessages({ ...messages, [newId]: [] });
-  };
-
-  const handleDeleteConversation = (id) => {
-    setConversations(conversations.filter(c => c.id !== id));
-    const newMessages = { ...messages };
-    delete newMessages[id];
-    setMessages(newMessages);
-    if (currentConversationId === id) {
-      setCurrentConversationId(null);
+  const handleNewThread = async () => {
+    try {
+      const newConversation = await base44.entities.Conversation.create({
+        title: 'New Conversation',
+        last_message_time: new Date().toISOString()
+      });
+      setConversations([newConversation, ...conversations]);
+      setCurrentConversationId(newConversation.id);
+      setMessages({ ...messages, [newConversation.id]: [] });
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast.error('Failed to create new thread');
     }
   };
 
-  const handleRenameConversation = (id, newTitle) => {
-    setConversations(conversations.map(c => 
-      c.id === id ? { ...c, title: newTitle } : c
-    ));
+  const handleDeleteConversation = async (id) => {
+    try {
+      await base44.entities.Conversation.delete(id);
+      const convMessages = messages[id] || [];
+      for (const msg of convMessages) {
+        await base44.entities.Message.delete(msg.id);
+      }
+      setConversations(conversations.filter(c => c.id !== id));
+      const newMessages = { ...messages };
+      delete newMessages[id];
+      setMessages(newMessages);
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast.error('Failed to delete thread');
+    }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate(createPageUrl('Welcome'));
+  const handleRenameConversation = async (id, newTitle) => {
+    try {
+      await base44.entities.Conversation.update(id, { title: newTitle });
+      setConversations(conversations.map(c => 
+        c.id === id ? { ...c, title: newTitle } : c
+      ));
+    } catch (error) {
+      console.error('Error renaming conversation:', error);
+      toast.error('Failed to rename thread');
+    }
   };
 
-  const handleUpdateMessage = (messageId, updates) => {
+  const handleLogout = async () => {
+    await base44.auth.logout();
+  };
+
+  const handleUpdateMessage = async (messageId, updates) => {
     if (!currentConversationId) return;
-    const convMessages = messages[currentConversationId] || [];
-    const updatedMessages = convMessages.map(msg =>
-      msg.id === messageId ? { ...msg, ...updates } : msg
-    );
-    setMessages({ ...messages, [currentConversationId]: updatedMessages });
+    try {
+      await base44.entities.Message.update(messageId, updates);
+      const convMessages = messages[currentConversationId] || [];
+      const updatedMessages = convMessages.map(msg =>
+        msg.id === messageId ? { ...msg, ...updates } : msg
+      );
+      setMessages({ ...messages, [currentConversationId]: updatedMessages });
+    } catch (error) {
+      console.error('Error updating message:', error);
+    }
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
@@ -107,33 +142,32 @@ export default function Chat() {
 
     try {
       let conversationId = currentConversationId;
+      let conversation = conversations.find(c => c.id === conversationId);
 
       // Create new conversation if none exists
       if (!conversationId) {
-        conversationId = 'conv_' + Date.now();
         const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-        const newConversation = {
-          id: conversationId,
+        conversation = await base44.entities.Conversation.create({
           title: title,
-          last_message_time: new Date().toISOString(),
-          created_date: new Date().toISOString()
-        };
-        setConversations([newConversation, ...conversations]);
+          last_message_time: new Date().toISOString()
+        });
+        conversationId = conversation.id;
+        setConversations([conversation, ...conversations]);
         setCurrentConversationId(conversationId);
         setMessages({ ...messages, [conversationId]: [] });
       }
 
-      // Add user message
-      const userMessage = {
-        id: 'msg_' + Date.now(),
+      const convMessages = messages[conversationId] || [];
+
+      // Save user message to database
+      const userMessage = await base44.entities.Message.create({
         conversation_id: conversationId,
         role: 'user',
         content: content || '📎 Sent file(s)',
         file_urls: fileUrls,
         timestamp: new Date().toISOString()
-      };
+      });
 
-      const convMessages = messages[conversationId] || [];
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
 
       // Get AI response from CAOS server
@@ -152,7 +186,7 @@ export default function Chat() {
           session: conversationId,
           history: history,
           remember: rememberConversations,
-          user_id: 'guest',
+          user_id: user?.email || 'guest',
           file_urls: fileUrls,
           mode: "conversation",
           intent: "normal"
@@ -161,18 +195,22 @@ export default function Chat() {
       const data = await caosResponse.json();
       const response = data.reply;
 
-      // Add AI response
-      const aiMessage = {
-        id: 'msg_' + Date.now() + '_ai',
+      // Save AI response to database
+      const aiMessage = await base44.entities.Message.create({
         conversation_id: conversationId,
         role: 'assistant',
         content: response,
         timestamp: new Date().toISOString()
-      };
+      });
 
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
       // Update conversation
+      await base44.entities.Conversation.update(conversationId, {
+        last_message_preview: response.substring(0, 100),
+        last_message_time: new Date().toISOString()
+      });
+
       setConversations(conversations.map(c =>
         c.id === conversationId
           ? { ...c, last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() }
@@ -186,6 +224,15 @@ export default function Chat() {
     }
   };
 
+  if (!dataLoaded) {
+    return (
+      <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center">
+        <StarfieldBackground />
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -194,7 +241,7 @@ export default function Chat() {
       
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
         <ChatHeader 
-          user={{ full_name: 'Guest User', email: 'guest@caos.app' }}
+          user={user}
           onNewThread={handleNewThread}
           onShowThreads={() => setShowThreads(true)}
           onShowProfile={() => setShowProfile(true)}
@@ -258,7 +305,7 @@ export default function Chat() {
       <ProfilePanel
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
-        user={{ full_name: 'Guest User', email: 'guest@caos.app' }}
+        user={user}
       />
     </div>
   );
