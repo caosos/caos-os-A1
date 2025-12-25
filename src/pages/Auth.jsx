@@ -9,8 +9,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Auth() {
-  const [isSignup, setIsSignup] = useState(false);
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -30,24 +28,18 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      if (isSignup) {
-        if (!fullName || !email) {
-          toast.error('Please fill in all fields');
-          setLoading(false);
-          return;
-        }
-        
-        await base44.users.inviteUser(email, 'user');
-        toast.success('Account created! Check your email for login instructions.');
-        setIsSignup(false);
-        setEmail('');
-        setFullName('');
-      } else {
-        base44.auth.redirectToLogin(createPageUrl('Chat'));
+      if (!email) {
+        toast.error('Please enter your email');
+        setLoading(false);
+        return;
       }
+      
+      await base44.users.inviteUser(email, 'user');
+      toast.success('Success! Check your email for a login link to access your account.');
+      setEmail('');
     } catch (error) {
       console.error('Error:', error);
-      toast.error(isSignup ? 'Failed to create account' : 'Login failed');
+      toast.error('Failed to send invitation. You may already have an account.');
     } finally {
       setLoading(false);
     }
@@ -68,27 +60,14 @@ export default function Auth() {
             CAOS
           </h1>
           <p className="text-white/60 text-sm text-center mb-8">
-            {isSignup ? 'Create your account' : 'Sign in to continue'}
+            Get your account access
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignup && (
-              <div>
-                <Input
-                  type="text"
-                  placeholder="Full Name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
-                  required
-                />
-              </div>
-            )}
-            
             <div>
               <Input
                 type="email"
-                placeholder="Email"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
@@ -101,21 +80,14 @@ export default function Auth() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl font-medium"
             >
-              {loading ? 'Please wait...' : (isSignup ? 'Create Account' : 'Sign In')}
+              {loading ? 'Sending...' : 'Send Login Link'}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsSignup(!isSignup);
-                setFullName('');
-                setEmail('');
-              }}
-              className="text-white/60 hover:text-white text-sm transition-colors"
-            >
-              {isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+            <p className="text-white/50 text-xs">
+              We'll send you a secure login link via email
+            </p>
           </div>
 
           <div className="mt-4 text-center">
