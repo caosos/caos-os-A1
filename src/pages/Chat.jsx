@@ -153,7 +153,9 @@ export default function Chat() {
           history: history,
           remember: rememberConversations,
           user_id: 'guest',
-          file_urls: fileUrls
+          file_urls: fileUrls,
+          mode: "conversation",
+          intent: "normal"
         })
       });
       const data = await caosResponse.json();
