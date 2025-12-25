@@ -41,11 +41,11 @@ export default function Chat() {
         setUser(currentUser);
       } catch (error) {
         console.error('Auth error:', error);
-        window.location.href = '/Welcome';
+        navigate(createPageUrl('Welcome'));
       }
     };
     loadUser();
-  }, []);
+  }, [navigate]);
 
   // Persist current conversation
   useEffect(() => {
