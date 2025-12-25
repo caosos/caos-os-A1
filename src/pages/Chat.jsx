@@ -144,6 +144,7 @@ export default function Chat() {
         conversation_id: conversationId,
         role: 'user',
         content: userMessage,
+        file_urls: fileUrls,
         timestamp: new Date().toISOString(),
       });
 
@@ -170,7 +171,8 @@ export default function Chat() {
           session: conversationId,
           history: history,
           remember: rememberConversations,
-          user_id: user?.id || 'guest'
+          user_id: user?.id || 'guest',
+          file_urls: fileUrls
         })
       });
       const data = await caosResponse.json();
