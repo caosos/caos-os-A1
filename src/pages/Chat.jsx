@@ -129,8 +129,8 @@ export default function Chat() {
 
   const handleLogout = async () => {
     localStorage.clear();
-    // Call logout then reload to Welcome page
-    await base44.auth.logout(createPageUrl('Welcome'));
+    await base44.auth.logout();
+    window.location.href = createPageUrl('Welcome');
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
