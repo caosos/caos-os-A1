@@ -232,6 +232,7 @@ export default function Chat() {
           onNewThread={handleNewThread}
           onShowThreads={() => setShowThreads(true)}
           onShowProfile={() => setShowProfile(true)}
+          onLogout={handleLogout}
           currentConversation={conversations.find(c => c.id === currentConversationId)}
         />
       </div>
