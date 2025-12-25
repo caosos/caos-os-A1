@@ -35,10 +35,25 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
     }
   };
 
-  const handleReact = (text, emoji) => {
+  const handleReact = async (text, emoji) => {
     const reactions = Array.isArray(message.reactions) ? [...message.reactions] : [];
     reactions.push({ emoji, selected_text: text });
-    onUpdateMessage(message.id, { reactions });
+    
+    // Get AI acknowledgment of the reaction
+    const aiResponse = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are CAOS. The user just reacted with ${emoji} to this part of your message: "${text}"\n\nBriefly acknowledge their reaction in a natural, conversational way.`,
+      add_context_from_internet: false,
+    });
+
+    const replies = Array.isArray(message.replies) ? [...message.replies] : [];
+    replies.push({ 
+      selected_text: text, 
+      user_reply: `Reacted with ${emoji}`,
+      ai_response: aiResponse,
+      timestamp: new Date().toISOString()
+    });
+    
+    onUpdateMessage(message.id, { reactions, replies });
   };
 
   const handleReply = async (text, replyContent) => {
