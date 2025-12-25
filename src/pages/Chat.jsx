@@ -94,6 +94,7 @@ export default function Chat() {
   }, [messages]);
 
   const handleNewThread = async () => {
+    if (!user) return;
     const newConversation = await base44.entities.Conversation.create({
       title: 'New Conversation',
       last_message_time: new Date().toISOString(),
@@ -103,6 +104,7 @@ export default function Chat() {
   };
 
   const handleDeleteConversation = async (id) => {
+    if (!user) return;
     // Delete all messages in the conversation
     const conversationMessages = await base44.entities.Message.filter({ conversation_id: id });
     for (const msg of conversationMessages) {
@@ -119,6 +121,7 @@ export default function Chat() {
   };
 
   const handleRenameConversation = async (id, newTitle) => {
+    if (!user) return;
     await base44.entities.Conversation.update(id, { title: newTitle });
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
@@ -130,6 +133,7 @@ export default function Chat() {
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
+    if (!user) return;
     try {
       await base44.entities.Message.update(messageId, updates);
       queryClient.invalidateQueries({ queryKey: ['messages', currentConversationId] });
@@ -144,75 +148,22 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      let conversationId = currentConversationId;
-
-      // Create new conversation if none exists
-      if (!conversationId) {
-        const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-        const newConversation = await base44.entities.Conversation.create({
-          title: title,
-          last_message_time: new Date().toISOString(),
-        });
-        conversationId = newConversation.id;
-        setCurrentConversationId(conversationId);
-      }
-
-      // Save user message
-      const userMessage = content || '📎 Sent file(s)';
-      await base44.entities.Message.create({
-        conversation_id: conversationId,
-        role: 'user',
-        content: userMessage,
-        file_urls: fileUrls,
-        timestamp: new Date().toISOString(),
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-
-      // Get user's memory preference
-      const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
-
-      // Fetch conversation history for CAOS
-      const conversationHistory = await base44.entities.Message.filter({ conversation_id: conversationId }, 'created_date');
-
-      // Format history for CAOS (excluding the message we just added since we're sending it separately)
-      const history = conversationHistory.slice(0, -1).map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
-      // Get AI response from CAOS server
+      // Get AI response from CAOS server without storing in database
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: content || 'User sent file(s)',
-          session: conversationId,
-          history: history,
-          remember: rememberConversations,
-          user_id: user?.id || 'guest',
+          session: 'guest-session',
+          history: [],
+          remember: false,
+          user_id: 'guest',
           file_urls: fileUrls
         })
       });
       const data = await caosResponse.json();
-      const response = data.reply;
-
-      // Save AI response
-      await base44.entities.Message.create({
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: response,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Update conversation
-      await base44.entities.Conversation.update(conversationId, {
-        last_message_preview: response.substring(0, 100),
-        last_message_time: new Date().toISOString(),
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      
+      toast.success('Response received! (Guest mode - not saved)');
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Network error. Please check your connection and try again.');
