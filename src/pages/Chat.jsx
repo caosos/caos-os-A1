@@ -129,7 +129,8 @@ export default function Chat() {
 
   const handleLogout = () => {
     localStorage.clear();
-    window.location.href = '/';
+    sessionStorage.clear();
+    window.location.href = '/Welcome';
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
