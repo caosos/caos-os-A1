@@ -127,10 +127,17 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = createPageUrl('Welcome');
-    base44.auth.logout();
+  const handleLogout = async () => {
+    try {
+      localStorage.clear();
+      // Navigate to welcome first
+      navigate(createPageUrl('Welcome'));
+      // Then clear session
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate(createPageUrl('Welcome'));
+    }
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
