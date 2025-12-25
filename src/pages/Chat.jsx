@@ -194,10 +194,30 @@ export default function Chat() {
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
 
       // Get AI response from CAOS server
-      const history = convMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      const history = convMessages.map(msg => {
+        let content = msg.content;
+        
+        // Add reactions context
+        if (msg.reactions && msg.reactions.length > 0) {
+          const reactionsText = msg.reactions.map(r => 
+            `[User reacted ${r.emoji} to: "${r.selected_text}"]`
+          ).join('\n');
+          content += '\n' + reactionsText;
+        }
+        
+        // Add replies context
+        if (msg.replies && msg.replies.length > 0) {
+          const repliesText = msg.replies.map(r => 
+            `[User replied to "${r.selected_text}": ${r.user_reply}]\n[CAOS responded: ${r.ai_response}]`
+          ).join('\n');
+          content += '\n' + repliesText;
+        }
+        
+        return {
+          role: msg.role,
+          content: content
+        };
+      });
 
       const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
 
