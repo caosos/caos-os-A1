@@ -9,7 +9,7 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate(createPageUrl('Chat'));
+    navigate(createPageUrl('Auth'));
   };
 
   return (
