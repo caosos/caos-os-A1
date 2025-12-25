@@ -122,15 +122,12 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const handleLogout = async () => {
-    try {
-      await base44.auth.logout();
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
+  const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
-    window.location.replace('/Welcome');
+    setTimeout(() => {
+      window.location.replace('/Welcome');
+    }, 100);
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
