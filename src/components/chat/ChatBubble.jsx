@@ -103,6 +103,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
       }
     }
     
+    // Get attached files
+    const attachedFiles = message.file_urls || [];
+    
     if (youtubeMatches && !isUser) {
       return (
         <div className="space-y-3">
@@ -137,7 +140,35 @@ export default function ChatBubble({ message, isUser, onUpdateMessage }) {
     
     return (
       <div className="space-y-3">
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+        {content && <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>}
+        
+        {/* Display attached files */}
+        {attachedFiles.length > 0 && (
+          <div className="space-y-2">
+            {attachedFiles.map((fileUrl, index) => {
+              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileUrl);
+              const fileName = fileUrl.split('/').pop();
+              
+              return isImage ? (
+                <div key={index} className="rounded-lg overflow-hidden border border-white/20">
+                  <img src={fileUrl} alt="Attached" className="max-w-full h-auto" />
+                </div>
+              ) : (
+                <a
+                  key={index}
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-white/5 border border-white/20 rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
+                >
+                  <Download className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-white/80 flex-1">{fileName}</span>
+                </a>
+              );
+            })}
+          </div>
+        )}
+        
         {fileBlocks.map((file, index) => (
           <div key={index} className="flex items-center gap-2 bg-white/5 border border-white/20 rounded-lg px-3 py-2">
             <span className="text-sm text-white/80 flex-1">{file.filename}</span>
