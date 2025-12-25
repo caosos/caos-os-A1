@@ -1,11 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('caos_user');
+    if (storedUser) {
+      navigate(createPageUrl('Chat'));
+    }
+  }, [navigate]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
       <StarfieldBackground />
