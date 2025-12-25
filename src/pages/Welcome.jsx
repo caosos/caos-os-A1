@@ -7,8 +7,12 @@ import { base44 } from '@/api/base44Client';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
-  const handleLogin = () => {
-    navigate(createPageUrl('Chat'));
+  const handleLogin = async () => {
+    try {
+      await base44.auth.redirectToLogin(createPageUrl('Chat'));
+    } catch (error) {
+      navigate(createPageUrl('Chat'));
+    }
   };
 
   return (
