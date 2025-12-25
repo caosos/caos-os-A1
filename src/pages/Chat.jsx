@@ -34,20 +34,14 @@ export default function Chat() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const isAuth = await base44.auth.isAuthenticated();
+        const savedUser = localStorage.getItem('caos_user');
         
-        if (!isAuth) {
-          // Guest user - use localStorage
-          setUser({ full_name: 'Guest User', email: 'guest@caos.app' });
-          const savedConvos = localStorage.getItem('caos_conversations');
-          const savedMessages = localStorage.getItem('caos_messages');
-          setConversations(savedConvos ? JSON.parse(savedConvos) : []);
-          setMessages(savedMessages ? JSON.parse(savedMessages) : {});
+        if (!savedUser) {
           setDataLoaded(true);
           return;
         }
 
-        const currentUser = await base44.auth.me();
+        const currentUser = JSON.parse(savedUser);
         setUser(currentUser);
 
         // Load conversations for this user
@@ -72,8 +66,6 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        // Fallback to guest mode
-        setUser({ full_name: 'Guest User', email: 'guest@caos.app' });
         setDataLoaded(true);
       }
     };
@@ -88,28 +80,13 @@ export default function Chat() {
   }, [currentMessages.length]);
 
   const handleNewThread = async () => {
-    const isAuth = await base44.auth.isAuthenticated();
-    
-    if (!isAuth) {
-      // Guest mode - use localStorage
-      const newId = 'conv_' + Date.now();
-      const newConversation = {
-        id: newId,
-        title: 'New Conversation',
-        last_message_time: new Date().toISOString()
-      };
-      const updatedConvos = [newConversation, ...conversations];
-      setConversations(updatedConvos);
-      setCurrentConversationId(newId);
-      setMessages({ ...messages, [newId]: [] });
-      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
-      return;
-    }
+    if (!user) return;
 
     try {
       const newConversation = await base44.entities.Conversation.create({
         title: 'New Conversation',
-        last_message_time: new Date().toISOString()
+        last_message_time: new Date().toISOString(),
+        created_by: user.email
       });
       setConversations([newConversation, ...conversations]);
       setCurrentConversationId(newConversation.id);
@@ -121,23 +98,6 @@ export default function Chat() {
   };
 
   const handleDeleteConversation = async (id) => {
-    const isAuth = await base44.auth.isAuthenticated();
-    
-    if (!isAuth) {
-      // Guest mode - use localStorage
-      const updatedConvos = conversations.filter(c => c.id !== id);
-      setConversations(updatedConvos);
-      const newMessages = { ...messages };
-      delete newMessages[id];
-      setMessages(newMessages);
-      if (currentConversationId === id) {
-        setCurrentConversationId(null);
-      }
-      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
-      localStorage.setItem('caos_messages', JSON.stringify(newMessages));
-      return;
-    }
-
     try {
       await base44.entities.Conversation.delete(id);
       const convMessages = messages[id] || [];
@@ -158,17 +118,10 @@ export default function Chat() {
   };
 
   const handleRenameConversation = async (id, newTitle) => {
-    const isAuth = await base44.auth.isAuthenticated();
-    
     const updatedConvos = conversations.map(c => 
       c.id === id ? { ...c, title: newTitle } : c
     );
     setConversations(updatedConvos);
-    
-    if (!isAuth) {
-      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
-      return;
-    }
 
     try {
       await base44.entities.Conversation.update(id, { title: newTitle });
@@ -178,13 +131,13 @@ export default function Chat() {
     }
   };
 
-  const handleLogout = async () => {
-    await base44.auth.logout();
+  const handleSaveUser = (userData) => {
+    localStorage.setItem('caos_user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
     if (!currentConversationId) return;
-    const isAuth = await base44.auth.isAuthenticated();
     
     const convMessages = messages[currentConversationId] || [];
     const updatedMessages = convMessages.map(msg =>
@@ -192,11 +145,6 @@ export default function Chat() {
     );
     const newMessages = { ...messages, [currentConversationId]: updatedMessages };
     setMessages(newMessages);
-    
-    if (!isAuth) {
-      localStorage.setItem('caos_messages', JSON.stringify(newMessages));
-      return;
-    }
 
     try {
       await base44.entities.Message.update(messageId, updates);
@@ -206,10 +154,10 @@ export default function Chat() {
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
+    if (!user) return;
     setIsLoading(true);
 
     try {
-      const isAuth = await base44.auth.isAuthenticated();
       let conversationId = currentConversationId;
       let conversation = conversations.find(c => c.id === conversationId);
 
@@ -217,48 +165,31 @@ export default function Chat() {
       if (!conversationId) {
         const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
         
-        if (!isAuth) {
-          // Guest mode - use localStorage
-          conversationId = 'conv_' + Date.now();
-          conversation = {
-            id: conversationId,
-            title: title,
-            last_message_time: new Date().toISOString()
-          };
-          const updatedConvos = [conversation, ...conversations];
-          setConversations(updatedConvos);
-          setCurrentConversationId(conversationId);
-          setMessages({ ...messages, [conversationId]: [] });
-          localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
-        } else {
-          conversation = await base44.entities.Conversation.create({
-            title: title,
-            last_message_time: new Date().toISOString()
-          });
-          conversationId = conversation.id;
-          setConversations([conversation, ...conversations]);
-          setCurrentConversationId(conversationId);
-          setMessages({ ...messages, [conversationId]: [] });
-        }
+        conversation = await base44.entities.Conversation.create({
+          title: title,
+          last_message_time: new Date().toISOString(),
+          created_by: user.email
+        });
+        conversationId = conversation.id;
+        setConversations([conversation, ...conversations]);
+        setCurrentConversationId(conversationId);
+        setMessages({ ...messages, [conversationId]: [] });
       }
 
       const convMessages = messages[conversationId] || [];
 
       // Create user message
       const userMessage = {
-        id: isAuth ? undefined : 'msg_' + Date.now(),
         conversation_id: conversationId,
         role: 'user',
         content: content || '📎 Sent file(s)',
         file_urls: fileUrls,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        created_by: user.email
       };
 
-      // Save to database if authenticated
-      if (isAuth) {
-        const savedUserMessage = await base44.entities.Message.create(userMessage);
-        userMessage.id = savedUserMessage.id;
-      }
+      const savedUserMessage = await base44.entities.Message.create(userMessage);
+      userMessage.id = savedUserMessage.id;
 
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
 
@@ -289,18 +220,15 @@ export default function Chat() {
 
       // Create AI message
       const aiMessage = {
-        id: isAuth ? undefined : 'msg_' + Date.now() + '_ai',
         conversation_id: conversationId,
         role: 'assistant',
         content: response,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        created_by: user.email
       };
 
-      // Save to database if authenticated
-      if (isAuth) {
-        const savedAiMessage = await base44.entities.Message.create(aiMessage);
-        aiMessage.id = savedAiMessage.id;
-      }
+      const savedAiMessage = await base44.entities.Message.create(aiMessage);
+      aiMessage.id = savedAiMessage.id;
 
       const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
       setMessages(updatedMessages);
@@ -313,15 +241,10 @@ export default function Chat() {
       );
       setConversations(updatedConvos);
 
-      if (!isAuth) {
-        localStorage.setItem('caos_messages', JSON.stringify(updatedMessages));
-        localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
-      } else {
-        await base44.entities.Conversation.update(conversationId, {
-          last_message_preview: response.substring(0, 100),
-          last_message_time: new Date().toISOString()
-        });
-      }
+      await base44.entities.Conversation.update(conversationId, {
+        last_message_preview: response.substring(0, 100),
+        last_message_time: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Network error. Please check your connection and try again.');
@@ -339,6 +262,50 @@ export default function Chat() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center">
+        <StarfieldBackground />
+        <div className="relative z-10 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4">
+          <h2 className="text-2xl font-light text-white text-center mb-6">Welcome to CAOS</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            handleSaveUser({
+              full_name: formData.get('name'),
+              email: formData.get('email')
+            });
+          }} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                name="name"
+                placeholder="Your Name"
+                required
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400"
+              />
+            </div>
+            <div>
+              <input
+                type="email"
+                name="email"
+                placeholder="Your Email"
+                required
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition-colors"
+            >
+              Continue
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -351,7 +318,6 @@ export default function Chat() {
           onNewThread={handleNewThread}
           onShowThreads={() => setShowThreads(true)}
           onShowProfile={() => setShowProfile(true)}
-          onLogout={handleLogout}
           currentConversation={conversations.find(c => c.id === currentConversationId)}
         />
       </div>
