@@ -37,20 +37,15 @@ export default function Chat() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (!isAuthenticated) {
-          navigate(createPageUrl('Welcome'));
-          return;
-        }
         const currentUser = await base44.auth.me();
         setUser(currentUser);
       } catch (error) {
         console.error('Auth error:', error);
-        navigate(createPageUrl('Welcome'));
+        window.location.href = '/Welcome';
       }
     };
     loadUser();
-  }, [navigate]);
+  }, []);
 
   // Persist current conversation
   useEffect(() => {
@@ -127,10 +122,15 @@ export default function Chat() {
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await base44.auth.logout();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = '/Welcome';
+    window.location.replace('/Welcome');
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
