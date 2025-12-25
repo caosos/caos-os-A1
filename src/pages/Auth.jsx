@@ -9,8 +9,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function Auth() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,26 +21,12 @@ export default function Auth() {
     checkAuth();
   }, [navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSignIn = () => {
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
+  };
 
-    try {
-      if (!email) {
-        toast.error('Please enter your email');
-        setLoading(false);
-        return;
-      }
-      
-      await base44.users.inviteUser(email, 'user');
-      toast.success('Success! Check your email for a login link to access your account.');
-      setEmail('');
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to send invitation. You may already have an account.');
-    } finally {
-      setLoading(false);
-    }
+  const handleGuest = () => {
+    navigate(createPageUrl('Chat'));
   };
 
   return (
@@ -60,43 +44,24 @@ export default function Auth() {
             CAOS
           </h1>
           <p className="text-white/60 text-sm text-center mb-8">
-            Get your account access
+            Cognitive Adaptive Operating Space
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
-                required
-              />
-            </div>
-
+          <div className="space-y-3">
             <Button
-              type="submit"
-              disabled={loading}
+              onClick={handleSignIn}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl font-medium"
             >
-              {loading ? 'Sending...' : 'Send Login Link'}
+              Sign In
             </Button>
-          </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-white/50 text-xs">
-              We'll send you a secure login link via email
-            </p>
-          </div>
-
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => navigate(createPageUrl('Chat'))}
-              className="text-white/60 hover:text-white text-sm transition-colors"
+            <Button
+              onClick={handleGuest}
+              variant="outline"
+              className="w-full bg-white/5 hover:bg-white/10 text-white border-white/20 py-6 rounded-xl font-medium"
             >
-              Continue as guest
-            </button>
+              Continue as Guest
+            </Button>
           </div>
         </div>
       </motion.div>
