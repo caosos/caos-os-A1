@@ -1,18 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { base44 } from '@/api/base44Client';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
-  const handleLogin = async () => {
-    try {
-      await base44.auth.redirectToLogin(createPageUrl('Chat'));
-    } catch (error) {
-      navigate(createPageUrl('Chat'));
-    }
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate(createPageUrl('Chat'));
   };
 
   return (
@@ -47,17 +44,13 @@ export default function Welcome() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="space-y-3"
         >
           <Button 
-            onClick={handleLogin}
+            onClick={handleGetStarted}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
           >
-            Sign In / Create Account
+            Get Started
           </Button>
-          <p className="text-white/50 text-xs text-center">
-            New users will be prompted to create an account
-          </p>
         </motion.div>
       </motion.div>
       
