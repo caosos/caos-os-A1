@@ -34,6 +34,19 @@ export default function Chat() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        const isAuth = await base44.auth.isAuthenticated();
+        
+        if (!isAuth) {
+          // Guest user - use localStorage
+          setUser({ full_name: 'Guest User', email: 'guest@caos.app' });
+          const savedConvos = localStorage.getItem('caos_conversations');
+          const savedMessages = localStorage.getItem('caos_messages');
+          setConversations(savedConvos ? JSON.parse(savedConvos) : []);
+          setMessages(savedMessages ? JSON.parse(savedMessages) : {});
+          setDataLoaded(true);
+          return;
+        }
+
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
@@ -59,7 +72,9 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        base44.auth.redirectToLogin();
+        // Fallback to guest mode
+        setUser({ full_name: 'Guest User', email: 'guest@caos.app' });
+        setDataLoaded(true);
       }
     };
 
@@ -73,6 +88,24 @@ export default function Chat() {
   }, [currentMessages.length]);
 
   const handleNewThread = async () => {
+    const isAuth = await base44.auth.isAuthenticated();
+    
+    if (!isAuth) {
+      // Guest mode - use localStorage
+      const newId = 'conv_' + Date.now();
+      const newConversation = {
+        id: newId,
+        title: 'New Conversation',
+        last_message_time: new Date().toISOString()
+      };
+      const updatedConvos = [newConversation, ...conversations];
+      setConversations(updatedConvos);
+      setCurrentConversationId(newId);
+      setMessages({ ...messages, [newId]: [] });
+      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
+      return;
+    }
+
     try {
       const newConversation = await base44.entities.Conversation.create({
         title: 'New Conversation',
@@ -88,6 +121,23 @@ export default function Chat() {
   };
 
   const handleDeleteConversation = async (id) => {
+    const isAuth = await base44.auth.isAuthenticated();
+    
+    if (!isAuth) {
+      // Guest mode - use localStorage
+      const updatedConvos = conversations.filter(c => c.id !== id);
+      setConversations(updatedConvos);
+      const newMessages = { ...messages };
+      delete newMessages[id];
+      setMessages(newMessages);
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+      }
+      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
+      localStorage.setItem('caos_messages', JSON.stringify(newMessages));
+      return;
+    }
+
     try {
       await base44.entities.Conversation.delete(id);
       const convMessages = messages[id] || [];
@@ -108,11 +158,20 @@ export default function Chat() {
   };
 
   const handleRenameConversation = async (id, newTitle) => {
+    const isAuth = await base44.auth.isAuthenticated();
+    
+    const updatedConvos = conversations.map(c => 
+      c.id === id ? { ...c, title: newTitle } : c
+    );
+    setConversations(updatedConvos);
+    
+    if (!isAuth) {
+      localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
+      return;
+    }
+
     try {
       await base44.entities.Conversation.update(id, { title: newTitle });
-      setConversations(conversations.map(c => 
-        c.id === id ? { ...c, title: newTitle } : c
-      ));
     } catch (error) {
       console.error('Error renaming conversation:', error);
       toast.error('Failed to rename thread');
@@ -125,13 +184,22 @@ export default function Chat() {
 
   const handleUpdateMessage = async (messageId, updates) => {
     if (!currentConversationId) return;
+    const isAuth = await base44.auth.isAuthenticated();
+    
+    const convMessages = messages[currentConversationId] || [];
+    const updatedMessages = convMessages.map(msg =>
+      msg.id === messageId ? { ...msg, ...updates } : msg
+    );
+    const newMessages = { ...messages, [currentConversationId]: updatedMessages };
+    setMessages(newMessages);
+    
+    if (!isAuth) {
+      localStorage.setItem('caos_messages', JSON.stringify(newMessages));
+      return;
+    }
+
     try {
       await base44.entities.Message.update(messageId, updates);
-      const convMessages = messages[currentConversationId] || [];
-      const updatedMessages = convMessages.map(msg =>
-        msg.id === messageId ? { ...msg, ...updates } : msg
-      );
-      setMessages({ ...messages, [currentConversationId]: updatedMessages });
     } catch (error) {
       console.error('Error updating message:', error);
     }
@@ -141,32 +209,56 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
+      const isAuth = await base44.auth.isAuthenticated();
       let conversationId = currentConversationId;
       let conversation = conversations.find(c => c.id === conversationId);
 
       // Create new conversation if none exists
       if (!conversationId) {
         const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-        conversation = await base44.entities.Conversation.create({
-          title: title,
-          last_message_time: new Date().toISOString()
-        });
-        conversationId = conversation.id;
-        setConversations([conversation, ...conversations]);
-        setCurrentConversationId(conversationId);
-        setMessages({ ...messages, [conversationId]: [] });
+        
+        if (!isAuth) {
+          // Guest mode - use localStorage
+          conversationId = 'conv_' + Date.now();
+          conversation = {
+            id: conversationId,
+            title: title,
+            last_message_time: new Date().toISOString()
+          };
+          const updatedConvos = [conversation, ...conversations];
+          setConversations(updatedConvos);
+          setCurrentConversationId(conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+          localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
+        } else {
+          conversation = await base44.entities.Conversation.create({
+            title: title,
+            last_message_time: new Date().toISOString()
+          });
+          conversationId = conversation.id;
+          setConversations([conversation, ...conversations]);
+          setCurrentConversationId(conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+        }
       }
 
       const convMessages = messages[conversationId] || [];
 
-      // Save user message to database
-      const userMessage = await base44.entities.Message.create({
+      // Create user message
+      const userMessage = {
+        id: isAuth ? undefined : 'msg_' + Date.now(),
         conversation_id: conversationId,
         role: 'user',
         content: content || '📎 Sent file(s)',
         file_urls: fileUrls,
         timestamp: new Date().toISOString()
-      });
+      };
+
+      // Save to database if authenticated
+      if (isAuth) {
+        const savedUserMessage = await base44.entities.Message.create(userMessage);
+        userMessage.id = savedUserMessage.id;
+      }
 
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
 
@@ -195,27 +287,41 @@ export default function Chat() {
       const data = await caosResponse.json();
       const response = data.reply;
 
-      // Save AI response to database
-      const aiMessage = await base44.entities.Message.create({
+      // Create AI message
+      const aiMessage = {
+        id: isAuth ? undefined : 'msg_' + Date.now() + '_ai',
         conversation_id: conversationId,
         role: 'assistant',
         content: response,
         timestamp: new Date().toISOString()
-      });
+      };
 
-      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
+      // Save to database if authenticated
+      if (isAuth) {
+        const savedAiMessage = await base44.entities.Message.create(aiMessage);
+        aiMessage.id = savedAiMessage.id;
+      }
+
+      const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
+      setMessages(updatedMessages);
 
       // Update conversation
-      await base44.entities.Conversation.update(conversationId, {
-        last_message_preview: response.substring(0, 100),
-        last_message_time: new Date().toISOString()
-      });
-
-      setConversations(conversations.map(c =>
+      const updatedConvos = conversations.map(c =>
         c.id === conversationId
           ? { ...c, last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() }
           : c
-      ));
+      );
+      setConversations(updatedConvos);
+
+      if (!isAuth) {
+        localStorage.setItem('caos_messages', JSON.stringify(updatedMessages));
+        localStorage.setItem('caos_conversations', JSON.stringify(updatedConvos));
+      } else {
+        await base44.entities.Conversation.update(conversationId, {
+          last_message_preview: response.substring(0, 100),
+          last_message_time: new Date().toISOString()
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Network error. Please check your connection and try again.');
