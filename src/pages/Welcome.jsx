@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 
 export default function Welcome() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('caos_user');
-    if (storedUser) {
-      navigate(createPageUrl('Chat'));
-    }
+    const checkAuth = async () => {
+      const isAuthenticated = await base44.auth.isAuthenticated();
+      if (isAuthenticated) {
+        navigate(createPageUrl('Chat'));
+      } else {
+        setChecking(false);
+      }
+    };
+    checkAuth();
   }, [navigate]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    const user = {
-      id: Math.random().toString(36).substring(7),
-      full_name: name,
-      email: email,
-      created_date: new Date().toISOString(),
-    };
-    
-    localStorage.setItem('caos_user', JSON.stringify(user));
-    navigate(createPageUrl('Chat'));
+  const handleLogin = () => {
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <StarfieldBackground />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
@@ -62,37 +62,18 @@ export default function Welcome() {
           Cognitive Adaptive Operating Space
         </motion.p>
         
-        <motion.form
-          onSubmit={handleSubmit}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="space-y-4"
         >
-          <Input
-            type="text"
-            placeholder="Your Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-blue-400"
-          />
-          <Input
-            type="email"
-            placeholder="Your Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-blue-400"
-          />
           <Button 
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105 disabled:opacity-50"
+            onClick={handleLogin}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
           >
-            {isLoading ? 'Starting...' : 'Get Started'}
+            Sign In
           </Button>
-        </motion.form>
+        </motion.div>
       </motion.div>
       
       {/* Subtle glow effect */}

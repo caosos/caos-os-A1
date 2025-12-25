@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,

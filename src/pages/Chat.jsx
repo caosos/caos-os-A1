@@ -35,12 +35,18 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    const loadUser = () => {
-      const storedUser = localStorage.getItem('caos_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        navigate(createPageUrl('GetStarted'));
+    const loadUser = async () => {
+      try {
+        const isAuthenticated = await base44.auth.isAuthenticated();
+        if (!isAuthenticated) {
+          navigate(createPageUrl('Welcome'));
+          return;
+        }
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+      } catch (error) {
+        console.error('Auth error:', error);
+        navigate(createPageUrl('Welcome'));
       }
     };
     loadUser();

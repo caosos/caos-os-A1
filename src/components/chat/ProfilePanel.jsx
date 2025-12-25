@@ -50,10 +50,10 @@ export default function ProfilePanel({ isOpen, onClose, user }) {
               {/* Avatar */}
               <div className="flex flex-col items-center mb-8">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-medium mb-4">
-                  {user?.full_name?.charAt(0) || 'U'}
+                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <h3 className="text-white font-semibold text-lg">{user?.full_name || 'User'}</h3>
-                <span className="text-white/50 text-sm capitalize">{user?.role || 'Member'}</span>
+                <span className="text-white/50 text-sm capitalize">{user?.role || 'user'}</span>
               </div>
 
               {/* User Info */}
