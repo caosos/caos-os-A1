@@ -129,7 +129,7 @@ export default function Chat() {
 
   const handleLogout = () => {
     localStorage.removeItem('caos_current_conversation');
-    base44.auth.logout(createPageUrl('Welcome'));
+    base44.auth.logout();
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
