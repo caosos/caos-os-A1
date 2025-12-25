@@ -60,6 +60,7 @@ export default function Chat() {
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => base44.entities.Conversation.list('-created_date'),
+    enabled: !!user,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: Infinity,
@@ -71,7 +72,7 @@ export default function Chat() {
     queryFn: () => currentConversationId 
       ? base44.entities.Message.filter({ conversation_id: currentConversationId }, 'created_date')
       : Promise.resolve([]),
-    enabled: !!currentConversationId,
+    enabled: !!currentConversationId && !!user,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: Infinity,
