@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
+  const handleLogout = () => {
+    localStorage.removeItem('caos_user');
+    window.location.reload();
+  };
 
   return (
     <div className="flex items-center justify-between px-4 py-4 w-full">
