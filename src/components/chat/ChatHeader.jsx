@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,11 +78,11 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <DropdownMenuSeparator className="bg-white/10" />
           {user?.email === 'guest@caos.app' ? (
             <DropdownMenuItem 
-              onClick={() => window.location.href = createPageUrl('Auth')}
+              onClick={() => base44.auth.redirectToLogin(createPageUrl('Chat'))}
               className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
             >
               <User className="w-3.5 h-3.5 text-blue-400" />
-              <span>Sign In / Sign Up</span>
+              <span>Sign In</span>
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem 
