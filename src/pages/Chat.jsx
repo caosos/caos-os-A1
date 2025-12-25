@@ -129,7 +129,7 @@ export default function Chat() {
 
   const handleLogout = () => {
     localStorage.clear();
-    navigate(createPageUrl('Welcome'));
+    window.location.href = '/';
   };
 
   const handleUpdateMessage = async (messageId, updates) => {
