@@ -109,6 +109,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
+      // Stop recording if active
+      if (isRecording) {
+        recognitionRef.current?.stop();
+        setIsRecording(false);
+      }
+      
       onSend(message.trim(), attachedFiles.map(f => f.url));
       setMessage('');
       setAttachedFiles([]);
