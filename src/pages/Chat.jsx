@@ -155,13 +155,6 @@ export default function Chat() {
 
   const handleSendMessage = async (content, fileUrls = []) => {
     if (!user) return;
-    
-    // Check if message is too long
-    if (content && content.length > 50000) {
-      toast.error('Message is too long. Please split it into smaller messages.');
-      return;
-    }
-    
     setIsLoading(true);
 
     try {
