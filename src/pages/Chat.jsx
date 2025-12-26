@@ -191,8 +191,6 @@ export default function Chat() {
       const savedUserMessage = await base44.entities.Message.create(userMessage);
       userMessage.id = savedUserMessage.id;
 
-      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
-
       // Get AI response from CAOS server
       const history = convMessages.map(msg => {
         let content = msg.content;
