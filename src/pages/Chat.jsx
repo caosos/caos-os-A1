@@ -248,8 +248,7 @@ export default function Chat() {
       const savedAiMessage = await base44.entities.Message.create(aiMessage);
       aiMessage.id = savedAiMessage.id;
 
-      const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
-      setMessages(updatedMessages);
+      setMessages(prev => ({ ...prev, [conversationId]: [...convMessages, userMessage, aiMessage] }));
 
       // Update conversation
       const updatedConvos = conversations.map(c =>
