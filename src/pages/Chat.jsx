@@ -155,6 +155,13 @@ export default function Chat() {
 
   const handleSendMessage = async (content, fileUrls = []) => {
     if (!user) return;
+    
+    // Check if message is too long
+    if (content && content.length > 50000) {
+      toast.error('Message is too long. Please split it into smaller messages.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -233,6 +240,11 @@ export default function Chat() {
           intent: "normal"
         })
       });
+      
+      if (!caosResponse.ok) {
+        throw new Error(`Server error: ${caosResponse.status}`);
+      }
+      
       const data = await caosResponse.json();
       const response = data.reply;
 
@@ -264,7 +276,15 @@ export default function Chat() {
       });
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Network error. Please check your connection and try again.');
+      
+      // Show more specific error messages
+      if (error.message.includes('Failed to fetch')) {
+        toast.error('Cannot reach CAOS server. Please check if the server is running.');
+      } else if (error.message.includes('Server error')) {
+        toast.error('Server error. The message may be too large or malformed.');
+      } else {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
