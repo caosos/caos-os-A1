@@ -22,18 +22,10 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
 
   return (
     <div className="px-4 py-3 w-full">
-      {/* Mobile: Stack vertically, Desktop: Horizontal */}
+      {/* Mobile: Stack vertically, Desktop: Horizontal layout */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* CAOS branding - centered on mobile, center on desktop */}
-        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">
-          <h1 className="text-white font-bold text-xl">CAOS</h1>
-          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
-        </div>
-
-        {/* Controls row - user menu and thread title */}
-        <div className="flex items-center justify-between w-full gap-2">
-          {/* Left side - User menu */}
-          <DropdownMenu>
+        {/* Left side - User menu (stays left on desktop) */}
+        <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1 focus:outline-none group">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
               {user?.full_name?.charAt(0).toUpperCase() || 'U'}
@@ -103,15 +95,20 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Center - CAOS branding */}
+        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2 order-first sm:order-none">
+        <h1 className="text-white font-bold text-xl">CAOS</h1>
+        <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+        </div>
+
         {/* Right - Thread Title */}
         {currentConversation && (
-          <div className="text-right max-w-[120px] sm:max-w-[200px]">
-            <p className="text-white/90 text-xs font-medium truncate">
-              {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
-            </p>
-          </div>
-        )}
+        <div className="text-right max-w-[120px] sm:max-w-[200px]">
+          <p className="text-white/90 text-xs font-medium truncate">
+            {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
+          </p>
         </div>
+        )}
         </div>
         </div>
         );
