@@ -31,16 +31,18 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </div>
 
         {/* Controls row - user menu and thread title */}
-        <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+        <div className="flex items-center justify-between w-full sm:w-auto gap-2">
           {/* Left side - User menu */}
           <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-1.5 focus:outline-none group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
-            {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <span className="text-white font-medium text-sm">{user?.full_name || 'User'}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-white/70 group-hover:text-white transition-colors" />
-        </DropdownMenuTrigger>
+          <DropdownMenuTrigger className="flex items-center gap-1 focus:outline-none group">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
+              {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span className="text-white font-medium text-sm truncate max-w-[80px]">
+              {user?.full_name?.split(' ')[0] || 'User'}
+            </span>
+            <ChevronDown className="w-3 h-3 text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
+          </DropdownMenuTrigger>
         <DropdownMenuContent 
           className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
           align="start"
@@ -103,9 +105,10 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
 
         {/* Right - Thread Title */}
         {currentConversation && (
-          <div className="text-right max-w-[150px] sm:max-w-[200px]">
-            <p className="text-white/90 text-xs font-medium truncate">{currentConversation.title}</p>
-            <p className="text-white/50 text-[10px] hidden sm:block">ID: {currentConversation.id.slice(0, 6)}</p>
+          <div className="text-right max-w-[120px] sm:max-w-[200px]">
+            <p className="text-white/90 text-xs font-medium truncate">
+              {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
+            </p>
           </div>
         )}
         </div>
