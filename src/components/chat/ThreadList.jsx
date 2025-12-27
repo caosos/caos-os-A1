@@ -113,16 +113,16 @@ export default function ThreadList({
                         </p>
                       </div>
                       
-                      {/* Action buttons - top right */}
+                      {/* Action buttons - always visible on right */}
                       {editingId !== conv.id && (
-                        <div className="absolute top-3 right-3 flex gap-1">
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-100">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center"
+                            className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0"
                           >
                             <Edit2 className="w-3 h-3 text-white" />
                           </button>
@@ -133,7 +133,7 @@ export default function ThreadList({
                                 onDeleteConversation(conv.id);
                               }
                             }}
-                            className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center"
+                            className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center shrink-0"
                           >
                             <Trash2 className="w-3 h-3 text-white" />
                           </button>
