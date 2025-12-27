@@ -64,7 +64,7 @@ export default function ThreadList({
                       `}
                     >
                       <div 
-                        className="cursor-pointer pr-14"
+                        className="cursor-pointer"
                         onClick={() => {
                           if (editingId !== conv.id) {
                             onSelectConversation(conv.id);
@@ -99,12 +99,12 @@ export default function ThreadList({
                             </button>
                           </div>
                         ) : (
-                          <h3 className="text-white font-medium text-sm break-words pr-1">
+                          <h3 className="text-white font-medium text-sm break-words pr-16">
                             {conv.title}
                           </h3>
                         )}
                         {conv.last_message_preview && editingId !== conv.id && (
-                          <p className="text-white/50 text-xs mt-1 break-words pr-1 line-clamp-2">
+                          <p className="text-white/50 text-xs mt-1 break-words pr-16 line-clamp-2">
                             {conv.last_message_preview}
                           </p>
                         )}
@@ -115,16 +115,16 @@ export default function ThreadList({
                       
                       {/* Action buttons - top right */}
                       {editingId !== conv.id && (
-                        <div className="absolute top-2 right-2 flex gap-1 z-10">
+                        <div className="absolute top-3 right-3 flex gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditTitle(conv.title);
                               setEditingId(conv.id);
                             }}
-                            className="w-7 h-7 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"
+                            className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center"
                           >
-                            <Edit2 className="w-3.5 h-3.5 text-white" />
+                            <Edit2 className="w-3 h-3 text-white" />
                           </button>
                           <button
                             onClick={(e) => {
@@ -133,9 +133,9 @@ export default function ThreadList({
                                 onDeleteConversation(conv.id);
                               }
                             }}
-                            className="w-7 h-7 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center shadow-lg"
+                            className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center"
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-white" />
+                            <Trash2 className="w-3 h-3 text-white" />
                           </button>
                         </div>
                       )}
