@@ -57,7 +57,7 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        p-3 rounded-xl mb-2 transition-all relative
+                        p-3 rounded-xl mb-2 transition-all relative overflow-visible
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
@@ -112,14 +112,14 @@ export default function ThreadList({
                             </p>
                           </div>
                           
-                          <div className="absolute top-2 right-2 flex gap-1">
+                          <div className="absolute top-2 right-2 flex gap-1 z-10">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditTitle(conv.title);
                                 setEditingId(conv.id);
                               }}
-                              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center"
+                              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"
                             >
                               <Edit2 className="w-3 h-3 text-white" />
                             </button>
@@ -130,7 +130,7 @@ export default function ThreadList({
                                   onDeleteConversation(conv.id);
                                 }
                               }}
-                              className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center"
+                              className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center shadow-lg"
                             >
                               <Trash2 className="w-3 h-3 text-white" />
                             </button>
