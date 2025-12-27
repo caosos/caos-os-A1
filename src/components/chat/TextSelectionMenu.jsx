@@ -60,6 +60,12 @@ export default function TextSelectionMenu({
         drag
         dragMomentum={false}
         dragElastic={0}
+        dragConstraints={{
+          top: 0,
+          left: 0,
+          right: window.innerWidth - 300,
+          bottom: window.innerHeight - 100
+        }}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -69,10 +75,10 @@ export default function TextSelectionMenu({
           left: position.left,
           zIndex: 1000,
         }}
-        className="bg-[#1a2744]/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl p-2 min-w-[280px] cursor-move"
+        className="bg-[#1a2744]/95 backdrop-blur-xl border-2 border-white/30 rounded-xl shadow-2xl p-2 min-w-[280px] cursor-move select-none"
       >
-        <div className="flex items-center justify-between mb-2 px-2">
-          <span className="text-white/70 text-xs">React or reply</span>
+        <div className="flex items-center justify-between mb-2 px-2 cursor-move">
+          <span className="text-white/70 text-xs pointer-events-none">React or reply</span>
           <button
             onClick={() => {
               if ('speechSynthesis' in window) {
@@ -80,7 +86,7 @@ export default function TextSelectionMenu({
               }
               onClose();
             }}
-            className="p-1 hover:bg-white/10 rounded transition-colors"
+            className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
           >
             <X className="w-3 h-3 text-white/50" />
           </button>
