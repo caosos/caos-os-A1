@@ -57,7 +57,7 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        p-3 rounded-xl mb-2 transition-all relative overflow-visible
+                        relative p-3 rounded-xl mb-2 transition-all
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
@@ -69,7 +69,7 @@ export default function ThreadList({
                           <Input
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="bg-white/10 border-white/20 text-white text-sm h-8 px-2"
+                            className="bg-white/10 border-white/20 text-white text-sm h-8 px-2 flex-1"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -85,25 +85,25 @@ export default function ThreadList({
                               onRenameConversation(conv.id, editTitle);
                               setEditingId(null);
                             }}
-                            className="p-1 rounded hover:bg-white/10"
+                            className="p-1 rounded hover:bg-white/10 shrink-0"
                           >
                             <Check className="w-4 h-4 text-green-400" />
                           </button>
                         </div>
                       ) : (
-                        <>
+                        <div className="flex gap-2">
                           <div 
-                            className="cursor-pointer pr-16"
+                            className="flex-1 cursor-pointer min-w-0"
                             onClick={() => {
                               onSelectConversation(conv.id);
                               onClose();
                             }}
                           >
-                            <h3 className="text-white font-medium text-sm break-words overflow-hidden">
+                            <h3 className="text-white font-medium text-sm break-words pr-1">
                               {conv.title}
                             </h3>
                             {conv.last_message_preview && (
-                              <p className="text-white/50 text-xs mt-1 break-words line-clamp-2 overflow-hidden">
+                              <p className="text-white/50 text-xs mt-1 break-words line-clamp-2 pr-1">
                                 {conv.last_message_preview}
                               </p>
                             )}
@@ -111,15 +111,15 @@ export default function ThreadList({
                               {moment(conv.last_message_time || conv.created_date).fromNow()}
                             </p>
                           </div>
-
-                          <div className="absolute top-2 right-2 flex gap-1 z-20 bg-[#0f1f3d]">
+                          
+                          <div className="flex gap-1 shrink-0 items-start pt-0.5">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditTitle(conv.title);
                                 setEditingId(conv.id);
                               }}
-                              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-all flex items-center justify-center shadow-lg"
+                              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center"
                             >
                               <Edit2 className="w-3 h-3 text-white" />
                             </button>
@@ -130,12 +130,12 @@ export default function ThreadList({
                                   onDeleteConversation(conv.id);
                                 }
                               }}
-                              className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center shadow-lg"
+                              className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center"
                             >
                               <Trash2 className="w-3 h-3 text-white" />
                             </button>
                           </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   ))
