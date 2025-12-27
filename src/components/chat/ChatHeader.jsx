@@ -21,9 +21,19 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-4 w-full">
-      {/* Left side - User menu */}
-      <DropdownMenu>
+    <div className="px-4 py-3 w-full">
+      {/* Mobile: Stack vertically, Desktop: Horizontal */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* CAOS branding - centered on mobile, center on desktop */}
+        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2">
+          <h1 className="text-white font-bold text-xl">CAOS</h1>
+          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+        </div>
+
+        {/* Controls row - user menu and thread title */}
+        <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+          {/* Left side - User menu */}
+          <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-1.5 focus:outline-none group">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
             {user?.full_name?.charAt(0).toUpperCase() || 'U'}
@@ -91,19 +101,15 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Center - CAOS branding */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
-          <h1 className="text-white font-bold text-xl">CAOS</h1>
-          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
-        </div>
-
         {/* Right - Thread Title */}
         {currentConversation && (
-          <div className="text-right max-w-[120px] sm:max-w-[200px]">
+          <div className="text-right max-w-[150px] sm:max-w-[200px]">
             <p className="text-white/90 text-xs font-medium truncate">{currentConversation.title}</p>
             <p className="text-white/50 text-[10px] hidden sm:block">ID: {currentConversation.id.slice(0, 6)}</p>
           </div>
         )}
+        </div>
+        </div>
         </div>
         );
         }
