@@ -132,9 +132,32 @@ export default function Chat() {
     }
   };
 
-  const handleSaveUser = (userData) => {
+  const handleSaveUser = async (userData) => {
     localStorage.setItem('caos_user', JSON.stringify(userData));
     setUser(userData);
+    
+    // Load conversations after user is set
+    try {
+      const userConvos = await base44.entities.Conversation.filter(
+        { created_by: userData.email },
+        '-last_message_time',
+        100
+      );
+      setConversations(userConvos);
+
+      const messagesMap = {};
+      for (const conv of userConvos) {
+        const convMessages = await base44.entities.Message.filter(
+          { conversation_id: conv.id },
+          'timestamp',
+          1000
+        );
+        messagesMap[conv.id] = convMessages;
+      }
+      setMessages(messagesMap);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
   };
 
   const handleUpdateMessage = async (messageId, updates) => {

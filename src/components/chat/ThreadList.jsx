@@ -93,28 +93,26 @@ export default function ThreadList({
                       ) : (
                         <>
                           <div 
-                           className="cursor-pointer"
-                           onClick={() => {
-                             onSelectConversation(conv.id);
-                             onClose();
-                           }}
+                            className="cursor-pointer pr-16"
+                            onClick={() => {
+                              onSelectConversation(conv.id);
+                              onClose();
+                            }}
                           >
-                           <div className="pr-16">
-                             <h3 className="text-white font-medium text-sm break-words">
-                               {conv.title}
-                             </h3>
-                             {conv.last_message_preview && (
-                               <p className="text-white/50 text-xs mt-1 break-words line-clamp-2">
-                                 {conv.last_message_preview}
-                               </p>
-                             )}
-                             <p className="text-white/30 text-xs mt-1.5">
-                               {moment(conv.last_message_time || conv.created_date).fromNow()}
-                             </p>
-                           </div>
+                            <h3 className="text-white font-medium text-sm break-words overflow-hidden">
+                              {conv.title}
+                            </h3>
+                            {conv.last_message_preview && (
+                              <p className="text-white/50 text-xs mt-1 break-words line-clamp-2 overflow-hidden">
+                                {conv.last_message_preview}
+                              </p>
+                            )}
+                            <p className="text-white/30 text-xs mt-1.5">
+                              {moment(conv.last_message_time || conv.created_date).fromNow()}
+                            </p>
                           </div>
-                          
-                          <div className="absolute top-2 right-2 flex gap-1 z-10">
+
+                          <div className="absolute top-2 right-2 flex gap-1 z-20 bg-[#0f1f3d]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
