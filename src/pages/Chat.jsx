@@ -43,6 +43,7 @@ export default function Chat() {
 
         const currentUser = JSON.parse(savedUser);
         setUser(currentUser);
+        setDataLoaded(true);
 
         // Load conversations for this user
         const userConvos = await base44.entities.Conversation.filter(

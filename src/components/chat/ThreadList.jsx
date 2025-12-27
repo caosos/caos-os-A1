@@ -93,23 +93,25 @@ export default function ThreadList({
                       ) : (
                         <>
                           <div 
-                            className="cursor-pointer pr-14"
-                            onClick={() => {
-                              onSelectConversation(conv.id);
-                              onClose();
-                            }}
+                           className="cursor-pointer"
+                           onClick={() => {
+                             onSelectConversation(conv.id);
+                             onClose();
+                           }}
                           >
-                            <h3 className="text-white font-medium text-sm break-words pr-1">
-                              {conv.title}
-                            </h3>
-                            {conv.last_message_preview && (
-                              <p className="text-white/50 text-xs mt-1 break-words pr-1 line-clamp-2">
-                                {conv.last_message_preview}
-                              </p>
-                            )}
-                            <p className="text-white/30 text-xs mt-1.5">
-                              {moment(conv.last_message_time || conv.created_date).fromNow()}
-                            </p>
+                           <div className="pr-16">
+                             <h3 className="text-white font-medium text-sm break-words">
+                               {conv.title}
+                             </h3>
+                             {conv.last_message_preview && (
+                               <p className="text-white/50 text-xs mt-1 break-words line-clamp-2">
+                                 {conv.last_message_preview}
+                               </p>
+                             )}
+                             <p className="text-white/30 text-xs mt-1.5">
+                               {moment(conv.last_message_time || conv.created_date).fromNow()}
+                             </p>
+                           </div>
                           </div>
                           
                           <div className="absolute top-2 right-2 flex gap-1 z-10">
