@@ -25,7 +25,8 @@ export default function ThreadList({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: 9998 }}
             onClick={onClose}
           />
           <motion.div
@@ -33,7 +34,8 @@ export default function ThreadList({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed left-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-r border-white/10 z-[9999] flex flex-col"
+            className="fixed left-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-r border-white/10 flex flex-col"
+            style={{ zIndex: 9999 }}
           >
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h2 className="text-white font-semibold">Previous Threads</h2>
@@ -57,7 +59,7 @@ export default function ThreadList({
                     <div
                       key={conv.id}
                       className={`
-                        relative p-3 rounded-xl mb-2 transition-all
+                        p-3 rounded-xl mb-2 transition-all
                         ${currentConversationId === conv.id 
                           ? 'bg-blue-600/30 border border-blue-500/50' 
                           : 'hover:bg-white/10 border border-transparent'
@@ -91,20 +93,20 @@ export default function ThreadList({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex gap-2 items-start">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px', alignItems: 'start' }}>
                           <div 
-                            className="cursor-pointer overflow-hidden"
-                            style={{ flex: '1 1 0', minWidth: '0' }}
+                            className="cursor-pointer"
                             onClick={() => {
                               onSelectConversation(conv.id);
                               onClose();
                             }}
+                            style={{ minWidth: 0, overflow: 'hidden' }}
                           >
-                            <h3 className="text-white font-medium text-sm" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                            <h3 className="text-white font-medium text-sm" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                               {conv.title}
                             </h3>
                             {conv.last_message_preview && (
-                              <p className="text-white/50 text-xs mt-1 line-clamp-2" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                              <p className="text-white/50 text-xs mt-1" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {conv.last_message_preview}
                               </p>
                             )}
@@ -113,14 +115,15 @@ export default function ThreadList({
                             </p>
                           </div>
                           
-                          <div className="flex gap-1" style={{ flexShrink: '0' }}>
+                          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditTitle(conv.title);
                                 setEditingId(conv.id);
                               }}
-                              className="w-7 h-7 rounded bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center"
+                              className="bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center rounded"
+                              style={{ width: '28px', height: '28px', flexShrink: 0 }}
                             >
                               <Edit2 className="w-3.5 h-3.5 text-white" />
                             </button>
@@ -131,7 +134,8 @@ export default function ThreadList({
                                   onDeleteConversation(conv.id);
                                 }
                               }}
-                              className="w-7 h-7 rounded bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center"
+                              className="bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center rounded"
+                              style={{ width: '28px', height: '28px', flexShrink: 0 }}
                             >
                               <Trash2 className="w-3.5 h-3.5 text-white" />
                             </button>
