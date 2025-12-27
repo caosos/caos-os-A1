@@ -91,19 +91,20 @@ export default function ThreadList({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-start">
                           <div 
-                            className="flex-1 cursor-pointer min-w-0"
+                            className="cursor-pointer overflow-hidden"
+                            style={{ flex: '1 1 0', minWidth: '0' }}
                             onClick={() => {
                               onSelectConversation(conv.id);
                               onClose();
                             }}
                           >
-                            <h3 className="text-white font-medium text-sm break-words pr-1">
+                            <h3 className="text-white font-medium text-sm" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                               {conv.title}
                             </h3>
                             {conv.last_message_preview && (
-                              <p className="text-white/50 text-xs mt-1 break-words line-clamp-2 pr-1">
+                              <p className="text-white/50 text-xs mt-1 line-clamp-2" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                                 {conv.last_message_preview}
                               </p>
                             )}
@@ -112,16 +113,16 @@ export default function ThreadList({
                             </p>
                           </div>
                           
-                          <div className="flex gap-1 shrink-0 items-start pt-0.5">
+                          <div className="flex gap-1" style={{ flexShrink: '0' }}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditTitle(conv.title);
                                 setEditingId(conv.id);
                               }}
-                              className="w-6 h-6 rounded bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center"
+                              className="w-7 h-7 rounded bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center"
                             >
-                              <Edit2 className="w-3 h-3 text-white" />
+                              <Edit2 className="w-3.5 h-3.5 text-white" />
                             </button>
                             <button
                               onClick={(e) => {
@@ -130,9 +131,9 @@ export default function ThreadList({
                                   onDeleteConversation(conv.id);
                                 }
                               }}
-                              className="w-6 h-6 rounded bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center"
+                              className="w-7 h-7 rounded bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center"
                             >
-                              <Trash2 className="w-3 h-3 text-white" />
+                              <Trash2 className="w-3.5 h-3.5 text-white" />
                             </button>
                           </div>
                         </div>
