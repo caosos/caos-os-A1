@@ -25,7 +25,7 @@ export default function ThreadList({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
             onClick={onClose}
           />
           <motion.div
@@ -33,7 +33,7 @@ export default function ThreadList({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -300, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed left-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col"
+            className="fixed left-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-r border-white/10 z-[9999] flex flex-col"
           >
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h2 className="text-white font-semibold">Previous Threads</h2>
