@@ -31,7 +31,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </div>
 
         {/* Controls row - user menu and thread title */}
-        <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+        <div className="flex items-center justify-between w-full gap-2">
           {/* Left side - User menu */}
           <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1 focus:outline-none group">
