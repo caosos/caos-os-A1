@@ -64,7 +64,7 @@ export default function ThreadList({
                       `}
                     >
                       <div 
-                        className="cursor-pointer"
+                        className="cursor-pointer pr-14"
                         onClick={() => {
                           if (editingId !== conv.id) {
                             onSelectConversation(conv.id);
@@ -99,12 +99,12 @@ export default function ThreadList({
                             </button>
                           </div>
                         ) : (
-                          <h3 className="text-white font-medium text-sm break-words pr-16">
+                          <h3 className="text-white font-medium text-sm break-words">
                             {conv.title}
                           </h3>
                         )}
                         {conv.last_message_preview && editingId !== conv.id && (
-                          <p className="text-white/50 text-xs mt-1 break-words pr-16 line-clamp-2">
+                          <p className="text-white/50 text-xs mt-1 break-words line-clamp-2">
                             {conv.last_message_preview}
                           </p>
                         )}
