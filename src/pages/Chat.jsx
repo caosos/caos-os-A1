@@ -390,7 +390,7 @@ export default function Chat() {
 
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
-      <div className="absolute inset-0 z-0">
+      <div className="fixed inset-0 z-0">
         <StarfieldBackground />
       </div>
 
@@ -407,8 +407,8 @@ export default function Chat() {
       <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`}>
         {/* Chat Section */}
         <div className={`relative flex flex-col overflow-hidden ${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' : 'h-full w-full'}`}>
-          <div className="flex-1 overflow-y-auto pb-24">
-            <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden pb-24">
+            <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
                   <WelcomeGreeting />
