@@ -7,6 +7,7 @@ import ChatInput from '@/components/chat/ChatInput';
 import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
+import CodeTerminal from '@/components/terminal/CodeTerminal';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
@@ -21,8 +22,11 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
+  const [showTerminal, setShowTerminal] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
+  
+  const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -366,7 +370,7 @@ export default function Chat() {
       <div className="absolute inset-0 z-0">
         <StarfieldBackground />
       </div>
-      
+
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
         <ChatHeader 
           user={user}
@@ -377,52 +381,67 @@ export default function Chat() {
         />
       </div>
 
-      <div className="relative flex-1 overflow-y-auto z-20 pb-64">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          {currentMessages.length === 0 && !isLoading && (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <WelcomeGreeting />
-            </div>
-          )}
-          
-          {currentMessages.map((message) => (
-            <ChatBubble 
-              key={message.id} 
-              message={message} 
-              isUser={message.role === 'user'}
-              onUpdateMessage={handleUpdateMessage}
-              closeMenuTrigger={closeMenuTrigger}
-            />
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-start mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col lg:flex-row' : 'flex flex-col'}`}>
+        {/* Chat Section */}
+        <div className={`flex flex-col overflow-hidden ${isDeveloperMode ? 'lg:w-1/2 lg:border-r lg:border-white/10' : 'w-full'}`}>
+          <div className="flex-1 overflow-y-auto pb-64">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+              {currentMessages.length === 0 && !isLoading && (
+                <div className="flex items-center justify-center min-h-[60vh]">
+                  <WelcomeGreeting />
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl rounded-bl-md px-4 py-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+              )}
+
+              {currentMessages.map((message) => (
+                <ChatBubble 
+                  key={message.id} 
+                  message={message} 
+                  isUser={message.role === 'user'}
+                  onUpdateMessage={handleUpdateMessage}
+                  closeMenuTrigger={closeMenuTrigger}
+                />
+              ))}
+
+              {isLoading && (
+                <div className="flex justify-start mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                      <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl rounded-bl-md px-4 py-3">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-          )}
+          </div>
 
-          <div ref={messagesEndRef} />
+          <div className={`fixed ${isDeveloperMode ? 'lg:left-0 lg:right-1/2' : 'left-0 right-0'} bottom-32 w-full z-50`}>
+            <ChatInput 
+              onSend={handleSendMessage} 
+              isLoading={isLoading}
+              lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+              onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="fixed bottom-32 left-0 right-0 w-full z-50">
-        <ChatInput 
-          onSend={handleSendMessage} 
-          isLoading={isLoading}
-          lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-          onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
-        />
+        {/* Terminal Section */}
+        {isDeveloperMode && (
+          <div className="lg:w-1/2 h-full">
+            <CodeTerminal onClose={() => {
+              localStorage.setItem('caos_developer_mode', 'false');
+              window.location.reload();
+            }} />
+          </div>
+        )}
       </div>
 
       <ThreadList
@@ -442,4 +461,4 @@ export default function Chat() {
       />
     </div>
   );
-}
+  }
