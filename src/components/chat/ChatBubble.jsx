@@ -10,6 +10,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
+  const justSelectedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -19,6 +20,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
   React.useEffect(() => {
     const handleClickOutside = (e) => {
+      // Ignore if we just made a selection
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
+
       if (showSelectionMenu) {
         // Don't close if clicking within the menu or message bubble
         const menu = document.querySelector('[data-selection-menu]');
@@ -32,40 +39,53 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     };
 
     if (showSelectionMenu) {
-      // Add small delay to prevent immediate closure from the selection event
+      // Add delay to prevent immediate closure from the selection event
       const timer = setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-      }, 100);
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+      }, 200);
       
       return () => {
         clearTimeout(timer);
-        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
       };
     }
   }, [showSelectionMenu]);
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
+  const handleTextSelection = (e) => {
+    e.stopPropagation();
     
-    if (text && text.length > 0) {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
+    // Small delay to ensure selection is complete
+    setTimeout(() => {
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
       
-      setSelectedText(text);
-      
-      // Position menu - check space and avoid input bar at bottom
-      const spaceBelow = window.innerHeight - rect.bottom - 100; // Extra space for input bar
-      const menuHeight = 200;
-      
-      setMenuPosition({
-        top: spaceBelow < menuHeight 
-          ? Math.max(20, rect.top + window.scrollY - menuHeight - 8)
-          : rect.bottom + window.scrollY + 8,
-        left: Math.min(rect.left + window.scrollX, window.innerWidth - 300),
-      });
-      setShowSelectionMenu(true);
-    }
+      if (text && text.length > 0) {
+        justSelectedRef.current = true;
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        setSelectedText(text);
+        
+        // Position menu - check space and avoid input bar at bottom
+        const spaceBelow = window.innerHeight - rect.bottom - 100;
+        const menuHeight = 200;
+        
+        setMenuPosition({
+          top: spaceBelow < menuHeight 
+            ? Math.max(20, rect.top + window.scrollY - menuHeight - 8)
+            : rect.bottom + window.scrollY + 8,
+          left: Math.min(rect.left + window.scrollX, window.innerWidth - 300),
+        });
+        setShowSelectionMenu(true);
+        
+        // Reset the flag after a bit
+        setTimeout(() => {
+          justSelectedRef.current = false;
+        }, 300);
+      }
+    }, 50);
   };
 
   const handleReact = async (text, emoji) => {
