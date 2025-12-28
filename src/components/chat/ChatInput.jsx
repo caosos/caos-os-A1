@@ -74,20 +74,29 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const recognition = new SpeechRecognition();
 
       recognition.continuous = true;
-      recognition.interimResults = false; // Turn off interim results to prevent duplicates
+      recognition.interimResults = true; // Enable real-time transcription
       recognition.lang = 'en-US';
 
+      let finalTranscript = '';
+
       recognition.onresult = (event) => {
-        // Get the latest result
-        const lastResult = event.results[event.results.length - 1];
-        if (lastResult.isFinal) {
-          const transcript = lastResult[0].transcript + ' ';
-          setMessage(prev => prev + transcript);
-          // Adjust textarea height
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
           }
+        }
+        
+        setMessage(message + finalTranscript + interimTranscript);
+        
+        // Adjust textarea height
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
       };
       
