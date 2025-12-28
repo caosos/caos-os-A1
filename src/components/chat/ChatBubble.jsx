@@ -54,10 +54,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   }, [showSelectionMenu]);
 
   const handleTextSelection = (e) => {
-    e.stopPropagation();
-    
-    // Small delay to ensure selection is complete
-    setTimeout(() => {
+    // Only show menu on right-click, not on normal selection
+    if (e.type === 'contextmenu') {
+      e.preventDefault();
+      e.stopPropagation();
+      
       const selection = window.getSelection();
       const text = selection.toString().trim();
       
@@ -85,7 +86,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           justSelectedRef.current = false;
         }, 300);
       }
-    }, 50);
+    }
   };
 
   const handleReact = async (text, emoji) => {
@@ -273,14 +274,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         <div
             data-message-bubble
             className={`
-              px-4 py-3 rounded-2xl
+              px-4 py-3 rounded-2xl select-text
               ${isUser 
                 ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
                 : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
               }
             `}
-            onMouseUp={handleTextSelection}
-            onTouchEnd={handleTextSelection}
+            onContextMenu={handleTextSelection}
           >
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
