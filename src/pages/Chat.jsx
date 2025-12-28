@@ -373,6 +373,10 @@ export default function Chat() {
         reason: rememberConversations ? (hasMemoryQuery ? 'User query requires recall' : 'Memory enabled but not requested') : 'Memory disabled by user'
       };
 
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -381,8 +385,11 @@ export default function Chat() {
           session: conversationId,
           memory_gate: memory_gate,
           files: fileMetadata.length > 0 ? fileMetadata : undefined
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
@@ -429,7 +436,9 @@ export default function Chat() {
       console.error('Error sending message:', error);
 
       // Show more specific error messages
-      if (error.message.includes('Failed to fetch')) {
+      if (error.name === 'AbortError') {
+        toast.error('Request timed out after 60 seconds. The server may be processing a large file.');
+      } else if (error.message.includes('Failed to fetch')) {
         toast.error('Cannot reach CAOS server. Please check if the server is running.');
       } else if (error.message.includes('Server error')) {
         toast.error('Server error. The message may be too large or malformed.');
