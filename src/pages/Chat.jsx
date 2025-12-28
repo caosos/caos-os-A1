@@ -232,18 +232,37 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
-      // Extract content from files
+      // Extract content from text files only
       let fileContents = '';
+      const binaryFileUrls = [];
+      
       if (fileUrls.length > 0) {
         for (const fileUrl of fileUrls) {
           try {
             const fileName = fileUrl.split('/').pop();
-            const response = await fetch(fileUrl);
-            const text = await response.text();
-            fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
+            const extension = fileName.split('.').pop()?.toLowerCase();
+            
+            // Check if it's a text-based file
+            const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+            
+            if (textExtensions.includes(extension)) {
+              // Read text files fully
+              const response = await fetch(fileUrl);
+              const text = await response.text();
+              fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
+            } else {
+              // For binary files (images, PDFs, etc.), just include the URL
+              binaryFileUrls.push(fileUrl);
+              if (imageExtensions.includes(extension)) {
+                fileContents += `\n\n[Image attached: ${fileName}]\n`;
+              } else {
+                fileContents += `\n\n[File attached: ${fileName}]\n`;
+              }
+            }
           } catch (error) {
             console.error('Error reading file:', error);
-            fileContents += `\n\n[Could not read file: ${fileName}]\n`;
+            fileContents += `\n\n[Could not read file: ${fileUrl.split('/').pop()}]\n`;
           }
         }
       }
@@ -300,7 +319,7 @@ export default function Chat() {
           history: history,
           remember: rememberConversations,
           user_id: user?.email || 'guest',
-          file_urls: fileUrls,
+          file_urls: binaryFileUrls.length > 0 ? binaryFileUrls : fileUrls,
           mode: "conversation",
           intent: "normal"
         })
