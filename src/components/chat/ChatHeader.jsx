@@ -96,18 +96,18 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenu>
 
         {/* Center - CAOS branding */}
-        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2 order-first sm:order-none">
-        <h1 className="text-white font-bold text-xl">CAOS</h1>
-        <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2 order-first sm:order-none pointer-events-none">
+          <h1 className="text-white font-bold text-xl">CAOS</h1>
+          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
         </div>
 
         {/* Right - Thread Title */}
         {currentConversation && (
-        <div className="text-right max-w-[120px] sm:max-w-[200px]">
-          <p className="text-white/90 text-xs font-medium truncate">
-            {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
-          </p>
-        </div>
+          <div className="text-right max-w-[120px] sm:max-w-[200px] ml-auto pointer-events-none">
+            <p className="text-white/90 text-xs font-medium truncate">
+              {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
+            </p>
+          </div>
         )}
         </div>
         </div>
