@@ -69,6 +69,14 @@ export default function Chat() {
           messagesMap[conv.id] = convMessages;
         }
         setMessages(messagesMap);
+        
+        // Restore last conversation
+        const lastConvId = localStorage.getItem('caos_last_conversation');
+        if (lastConvId && userConvos.some(c => c.id === lastConvId)) {
+          setCurrentConversationId(lastConvId);
+          handleSessionResume(lastConvId);
+        }
+        
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -96,6 +104,7 @@ export default function Chat() {
       });
       setConversations([newConversation, ...conversations]);
       setCurrentConversationId(newConversation.id);
+      localStorage.setItem('caos_last_conversation', newConversation.id);
       setMessages({ ...messages, [newConversation.id]: [] });
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -217,6 +226,7 @@ export default function Chat() {
         conversationId = conversation.id;
         setConversations([conversation, ...conversations]);
         setCurrentConversationId(conversationId);
+        localStorage.setItem('caos_last_conversation', conversationId);
         setMessages({ ...messages, [conversationId]: [] });
       }
 
@@ -474,6 +484,7 @@ export default function Chat() {
         currentConversationId={currentConversationId}
         onSelectConversation={(id) => {
           setCurrentConversationId(id);
+          localStorage.setItem('caos_last_conversation', id);
           handleSessionResume(id);
         }}
         onDeleteConversation={handleDeleteConversation}
