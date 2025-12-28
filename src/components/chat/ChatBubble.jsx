@@ -18,20 +18,30 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   }, [closeMenuTrigger]);
 
   React.useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e) => {
       if (showSelectionMenu) {
-        setShowSelectionMenu(false);
-        window.getSelection().removeAllRanges();
+        // Don't close if clicking within the menu or message bubble
+        const menu = document.querySelector('[data-selection-menu]');
+        const bubble = e.target.closest('[data-message-bubble]');
+        
+        if (!menu?.contains(e.target) && !bubble) {
+          setShowSelectionMenu(false);
+          window.getSelection().removeAllRanges();
+        }
       }
     };
 
     if (showSelectionMenu) {
-      document.addEventListener('click', handleClickOutside);
+      // Add small delay to prevent immediate closure from the selection event
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
     }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
   }, [showSelectionMenu]);
 
   const handleTextSelection = () => {
@@ -241,16 +251,17 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         )}
         
         <div
-          className={`
-            px-4 py-3 rounded-2xl
-            ${isUser 
-              ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
-              : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
-            }
-          `}
-          onMouseUp={handleTextSelection}
-          onTouchEnd={handleTextSelection}
-        >
+            data-message-bubble
+            className={`
+              px-4 py-3 rounded-2xl
+              ${isUser 
+                ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
+                : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
+              }
+            `}
+            onMouseUp={handleTextSelection}
+            onTouchEnd={handleTextSelection}
+          >
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
           )}
@@ -303,8 +314,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               </motion.div>
 
               {showSelectionMenu && (
-              <div onClick={(e) => e.stopPropagation()}>
-              <TextSelectionMenu
+                <div data-selection-menu onClick={(e) => e.stopPropagation()}>
+                <TextSelectionMenu
               position={menuPosition}
               selectedText={selectedText}
               onReact={handleReact}
