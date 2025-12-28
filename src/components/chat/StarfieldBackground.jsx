@@ -8,29 +8,28 @@ export default function StarfieldBackground() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     
+    // Create stars
+    const stars = [];
+    
+    const initStars = () => {
+      stars.length = 0;
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.5 + 0.5,
+          opacity: Math.random() * 0.8 + 0.2,
+          twinkleSpeed: Math.random() * 0.02 + 0.005,
+          twinklePhase: Math.random() * Math.PI * 2
+        });
+      }
+    };
+    
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      
-      // Redistribute stars on resize
-      stars.forEach(star => {
-        if (star.x > canvas.width) star.x = Math.random() * canvas.width;
-        if (star.y > canvas.height) star.y = Math.random() * canvas.height;
-      });
+      initStars();
     };
-    
-    // Create stars
-    const stars = [];
-    for (let i = 0; i < 200; i++) {
-      stars.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        radius: Math.random() * 1.5 + 0.5,
-        opacity: Math.random() * 0.8 + 0.2,
-        twinkleSpeed: Math.random() * 0.02 + 0.005,
-        twinklePhase: Math.random() * Math.PI * 2
-      });
-    }
     
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
