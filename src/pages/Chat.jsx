@@ -193,14 +193,28 @@ export default function Chat() {
 
   const handleSessionResume = async (sessionId) => {
     try {
-      await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const conversation = conversations.find(c => c.id === sessionId);
+      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "__SESSION_RESUME__",
-          session: sessionId
+          session: sessionId,
+          thread_meta: {
+            title: conversation?.title || 'Untitled',
+            created_ts: conversation?.created_date ? new Date(conversation.created_date).getTime() : Date.now(),
+            last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now()
+          }
         })
       });
+
+      const data = await response.json();
+
+      // Verify session alignment per CAOS-A1 contract
+      if (data.session && data.session !== sessionId) {
+        console.error('SESSION DESYNC on resume:', { expected: sessionId, received: data.session });
+        toast.error('Session mismatch detected during resume.');
+      }
     } catch (error) {
       console.error('Session resume handshake failed:', error);
     }
@@ -232,37 +246,55 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
-      // Process files and prepare structured data
+      // Process files per CAOS-A1 contract
       let fileContents = '';
       const fileMetadata = [];
       
       if (fileUrls.length > 0) {
-        for (const fileUrl of fileUrls) {
+        for (let i = 0; i < fileUrls.length; i++) {
+          const fileUrl = fileUrls[i];
           try {
             const fileName = fileUrl.split('/').pop();
             const extension = fileName.split('.').pop()?.toLowerCase();
             
-            // Check if it's a text-based file
+            // Determine MIME type
+            const mimeMap = {
+              jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', 
+              webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml',
+              txt: 'text/plain', md: 'text/markdown', json: 'application/json',
+              csv: 'text/csv', pdf: 'application/pdf', doc: 'application/msword',
+              docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            };
+            
             const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
             const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
             const documentExtensions = ['pdf', 'doc', 'docx'];
             
+            let fileType = 'other';
+            let fileContent = null;
+            
             if (textExtensions.includes(extension)) {
-              // Read text files fully
+              fileType = 'text';
               const response = await fetch(fileUrl);
-              const text = await response.text();
-              fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
-              fileMetadata.push({ url: fileUrl, name: fileName, type: 'text', extension });
+              fileContent = await response.text();
+              fileContents += `\n\n=== File: ${fileName} ===\n${fileContent}\n=== End of ${fileName} ===\n`;
             } else if (imageExtensions.includes(extension)) {
-              fileContents += `\n\n[IMAGE: Please analyze and describe the image file "${fileName}"]\n`;
-              fileMetadata.push({ url: fileUrl, name: fileName, type: 'image', extension });
+              fileType = 'image';
+              fileContents += `\n\n[IMAGE: Analyze "${fileName}"]\n`;
             } else if (documentExtensions.includes(extension)) {
-              fileContents += `\n\n[DOCUMENT: Please extract and analyze content from "${fileName}"]\n`;
-              fileMetadata.push({ url: fileUrl, name: fileName, type: 'document', extension });
-            } else {
-              fileContents += `\n\n[BINARY FILE: "${fileName}" - type: ${extension}]\n`;
-              fileMetadata.push({ url: fileUrl, name: fileName, type: 'binary', extension });
+              fileType = 'document';
+              fileContents += `\n\n[DOCUMENT: Extract content from "${fileName}"]\n`;
             }
+            
+            // Build file metadata per contract
+            fileMetadata.push({
+              id: `file_${Date.now()}_${i}`,
+              type: fileType,
+              mime: mimeMap[extension] || 'application/octet-stream',
+              url: fileUrl,
+              name: fileName,
+              bytes: fileContent ? new Blob([fileContent]).size : 0
+            });
           } catch (error) {
             console.error('Error reading file:', error);
             fileContents += `\n\n[Could not read file: ${fileUrl.split('/').pop()}]\n`;
@@ -312,6 +344,16 @@ export default function Chat() {
       });
 
       const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
+      
+      // Determine memory_gate based on message content and settings
+      const memoryKeywords = ['earlier', 'before', 'previously', 'last time', 'you said', 'i said', 'what did', 'remember', 'recall'];
+      const hasMemoryQuery = memoryKeywords.some(kw => messageWithFiles.toLowerCase().includes(kw));
+      
+      const memory_gate = {
+        allowed: rememberConversations && hasMemoryQuery,
+        scope: rememberConversations ? 'session' : 'none',
+        reason: rememberConversations ? (hasMemoryQuery ? 'User query requires recall' : 'Memory enabled but not requested') : 'Memory disabled by user'
+      };
 
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
@@ -319,12 +361,8 @@ export default function Chat() {
         body: JSON.stringify({
           message: messageWithFiles,
           session: conversationId,
-          history: history,
-          remember: rememberConversations,
-          user_id: user?.email || 'guest',
-          files: fileMetadata,
-          mode: "conversation",
-          intent: "normal"
+          memory_gate: memory_gate,
+          files: fileMetadata.length > 0 ? fileMetadata : undefined
         })
       });
 
