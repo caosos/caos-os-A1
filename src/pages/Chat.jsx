@@ -362,15 +362,21 @@ export default function Chat() {
       });
 
       const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
-      
-      // Determine memory_gate based on message content and settings
+
+      // CAOS-A1 Session-Implied Recall: Session continuity is ephemeral context, always allowed
+      // Cross-session recall requires explicit keywords
       const memoryKeywords = ['earlier', 'before', 'previously', 'last time', 'you said', 'i said', 'what did', 'remember', 'recall'];
-      const hasMemoryQuery = memoryKeywords.some(kw => messageWithFiles.toLowerCase().includes(kw));
-      
+      const hasExplicitRecallQuery = memoryKeywords.some(kw => messageWithFiles.toLowerCase().includes(kw));
+
+      // Session recall: implicit (L4 raw, session-bounded)
+      // Cross-session recall: explicit request only (L2 reconstructive)
       const memory_gate = {
-        allowed: rememberConversations && hasMemoryQuery,
-        scope: rememberConversations ? 'session' : 'none',
-        reason: rememberConversations ? (hasMemoryQuery ? 'User query requires recall' : 'Memory enabled but not requested') : 'Memory disabled by user'
+        allowed: rememberConversations,
+        scope: 'session',
+        explicit_recall: hasExplicitRecallQuery,
+        reason: rememberConversations 
+          ? (hasExplicitRecallQuery ? 'Explicit recall requested' : 'Session continuity enabled') 
+          : 'Memory disabled by user'
       };
 
       // Create abort controller for timeout
