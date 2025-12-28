@@ -182,6 +182,21 @@ export default function Chat() {
     }
   };
 
+  const handleSessionResume = async (sessionId) => {
+    try {
+      await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "__SESSION_RESUME__",
+          session: sessionId
+        })
+      });
+    } catch (error) {
+      console.error('Session resume handshake failed:', error);
+    }
+  };
+
   const handleSendMessage = async (content, fileUrls = []) => {
     if (!user) return;
     setIsLoading(true);
@@ -193,7 +208,7 @@ export default function Chat() {
       // Create new conversation if none exists
       if (!conversationId) {
         const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-        
+
         conversation = await base44.entities.Conversation.create({
           title: title,
           last_message_time: new Date().toISOString(),
@@ -223,7 +238,7 @@ export default function Chat() {
       // Get AI response from CAOS server
       const history = convMessages.map(msg => {
         let content = msg.content;
-        
+
         // Add reactions context
         if (msg.reactions && msg.reactions.length > 0) {
           const reactionsText = msg.reactions.map(r => 
@@ -231,7 +246,7 @@ export default function Chat() {
           ).join('\n');
           content += '\n' + reactionsText;
         }
-        
+
         // Add replies context
         if (msg.replies && msg.replies.length > 0) {
           const repliesText = msg.replies.map(r => 
@@ -239,7 +254,7 @@ export default function Chat() {
           ).join('\n');
           content += '\n' + repliesText;
         }
-        
+
         return {
           role: msg.role,
           content: content
@@ -262,12 +277,20 @@ export default function Chat() {
           intent: "normal"
         })
       });
-      
+
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
-      
+
       const data = await caosResponse.json();
+
+      // CAOS-A1 Contract: Verify session alignment
+      if (data.session && data.session !== conversationId) {
+        console.error('SESSION DESYNC:', { expected: conversationId, received: data.session });
+        toast.error('Session mismatch detected. Please refresh.');
+        return;
+      }
+
       const response = data.reply;
 
       // Create AI message
@@ -298,7 +321,7 @@ export default function Chat() {
       });
     } catch (error) {
       console.error('Error sending message:', error);
-      
+
       // Show more specific error messages
       if (error.message.includes('Failed to fetch')) {
         toast.error('Cannot reach CAOS server. Please check if the server is running.');
@@ -449,7 +472,10 @@ export default function Chat() {
         onClose={() => setShowThreads(false)}
         conversations={conversations}
         currentConversationId={currentConversationId}
-        onSelectConversation={setCurrentConversationId}
+        onSelectConversation={(id) => {
+          setCurrentConversationId(id);
+          handleSessionResume(id);
+        }}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
       />
