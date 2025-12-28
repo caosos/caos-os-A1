@@ -181,6 +181,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             const newHeight = Math.min(e.target.scrollHeight, 120);
             e.target.style.height = newHeight + 'px';
           }}
+          onPaste={(e) => {
+            // CAOS-A1 Turn Handling: Multi-line paste = ONE turn (default)
+            // No automatic turn segmentation
+          }}
           onFocus={() => onTypingStart?.()}
           placeholder="Type a message..."
           className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-y-auto"
