@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import TextSelectionMenu from './TextSelectionMenu';
 
-export default function ChatBubble({ message, isUser, onUpdateMessage }) {
+export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
+
+  React.useEffect(() => {
+    if (closeMenuTrigger > 0) {
+      setShowSelectionMenu(false);
+    }
+  }, [closeMenuTrigger]);
 
   const handleTextSelection = () => {
     const selection = window.getSelection();

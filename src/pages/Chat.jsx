@@ -20,6 +20,7 @@ export default function Chat() {
   const [showProfile, setShowProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
 
@@ -390,6 +391,7 @@ export default function Chat() {
               message={message} 
               isUser={message.role === 'user'}
               onUpdateMessage={handleUpdateMessage}
+              closeMenuTrigger={closeMenuTrigger}
             />
           ))}
 
@@ -419,6 +421,7 @@ export default function Chat() {
           onSend={handleSendMessage} 
           isLoading={isLoading}
           lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+          onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
         />
       </div>
 

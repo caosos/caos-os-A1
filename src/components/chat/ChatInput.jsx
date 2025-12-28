@@ -3,7 +3,7 @@ import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon } from 'lucid
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 
-export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
+export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart }) {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -172,6 +172,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage }) {
             const newHeight = Math.min(e.target.scrollHeight, 120);
             e.target.style.height = newHeight + 'px';
           }}
+          onFocus={() => onTypingStart?.()}
           placeholder="Type a message..."
           className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-y-auto"
           style={{ minHeight: '24px', height: '24px', maxHeight: '120px' }}
