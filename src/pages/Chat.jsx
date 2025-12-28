@@ -232,32 +232,6 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
-      // Extract content from files
-      let fileContents = '';
-      if (fileUrls.length > 0) {
-        console.log('Reading files:', fileUrls);
-        for (const fileUrl of fileUrls) {
-          try {
-            const fileName = fileUrl.split('/').pop();
-            console.log('Fetching file:', fileName);
-            const response = await fetch(fileUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to fetch: ${response.status}`);
-            }
-            const text = await response.text();
-            console.log('File read successfully:', fileName, 'Length:', text.length);
-            fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
-          } catch (error) {
-            console.error('Error reading file:', error);
-            toast.error(`Failed to read file: ${error.message}`);
-            fileContents += `\n\n[Could not read file]\n`;
-          }
-        }
-      }
-
-      const messageWithFiles = content ? `${content}${fileContents}` : (fileContents || 'User sent file(s)');
-      console.log('Sending to CAOS, message length:', messageWithFiles.length);
-
       // Create user message
       const userMessage = {
         conversation_id: conversationId,
@@ -299,12 +273,11 @@ export default function Chat() {
 
       const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
 
-      console.log('Sending request to CAOS server...');
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: messageWithFiles,
+          message: content || 'User sent file(s)',
           session: conversationId,
           history: history,
           remember: rememberConversations,
@@ -315,14 +288,11 @@ export default function Chat() {
         })
       });
 
-      console.log('CAOS response status:', caosResponse.status);
-
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
       const data = await caosResponse.json();
-      console.log('CAOS response received:', data);
 
       // CAOS-A1 Contract: Verify session alignment
       if (data.session && data.session !== conversationId) {
