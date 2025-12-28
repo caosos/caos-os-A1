@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Volume2 } from 'lucide-react';
+import { MessageSquare, X, Volume2, Copy } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from 'sonner';
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🤔', '👀', '🔥', '😊', '🎯'];
 
@@ -52,6 +53,15 @@ export default function TextSelectionMenu({
         setIsSpeaking(true);
       }
     }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(selectedText).then(() => {
+      toast.success('Copied to clipboard');
+      onClose();
+    }).catch(() => {
+      toast.error('Failed to copy');
+    });
   };
 
   return (
@@ -108,20 +118,27 @@ export default function TextSelectionMenu({
                 </button>
               ))}
             </div>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-1">
               <button
                 onClick={handleReadAloud}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-purple-600/30 hover:bg-purple-600/50 rounded-lg transition-colors text-white text-sm"
+                className="flex items-center gap-2 px-3 py-2 bg-purple-600/30 hover:bg-purple-600/50 rounded-lg transition-colors text-white text-sm justify-center"
               >
                 <Volume2 className="w-4 h-4" />
-                {isSpeaking ? 'Stop Reading' : 'Read Aloud'}
+                {isSpeaking ? 'Stop' : 'Read'}
               </button>
               <button
                 onClick={() => setShowReplyInput(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600/30 hover:bg-blue-600/50 rounded-lg transition-colors text-white text-sm"
+                className="flex items-center gap-2 px-3 py-2 bg-blue-600/30 hover:bg-blue-600/50 rounded-lg transition-colors text-white text-sm justify-center"
               >
                 <MessageSquare className="w-4 h-4" />
-                Reply to this
+                Reply
+              </button>
+              <button
+                onClick={handleCopy}
+                className="col-span-2 flex items-center gap-2 px-3 py-2 bg-green-600/30 hover:bg-green-600/50 rounded-lg transition-colors text-white text-sm justify-center"
+              >
+                <Copy className="w-4 h-4" />
+                Copy
               </button>
             </div>
           </>
