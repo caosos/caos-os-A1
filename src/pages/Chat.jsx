@@ -232,6 +232,24 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
+      // Extract content from files
+      let fileContents = '';
+      if (fileUrls.length > 0) {
+        for (const fileUrl of fileUrls) {
+          try {
+            const fileName = fileUrl.split('/').pop();
+            const response = await fetch(fileUrl);
+            const text = await response.text();
+            fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
+          } catch (error) {
+            console.error('Error reading file:', error);
+            fileContents += `\n\n[Could not read file: ${fileName}]\n`;
+          }
+        }
+      }
+
+      const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
+
       // Create user message
       const userMessage = {
         conversation_id: conversationId,
@@ -277,7 +295,7 @@ export default function Chat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: content || 'User sent file(s)',
+          message: messageWithFiles,
           session: conversationId,
           history: history,
           remember: rememberConversations,
