@@ -384,7 +384,7 @@ export default function Chat() {
       <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col lg:flex-row' : 'flex flex-col'}`}>
         {/* Chat Section */}
         <div className={`flex flex-col overflow-hidden ${isDeveloperMode ? 'lg:w-1/2 lg:border-r lg:border-white/10' : 'w-full'}`}>
-          <div className="flex-1 overflow-y-auto pb-64">
+          <div className="flex-1 overflow-y-auto pb-32">
             <div className="max-w-2xl mx-auto px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -423,7 +423,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className={`fixed ${isDeveloperMode ? 'lg:left-0 lg:right-1/2' : 'left-0 right-0'} bottom-32 w-full z-50`}>
+          <div className="absolute bottom-0 left-0 right-0 z-30 bg-[#0a1628] pb-32">
             <ChatInput 
               onSend={handleSendMessage} 
               isLoading={isLoading}
