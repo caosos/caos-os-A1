@@ -232,9 +232,9 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
-      // Extract content from text files only
+      // Process files and prepare structured data
       let fileContents = '';
-      const binaryFileUrls = [];
+      const fileMetadata = [];
       
       if (fileUrls.length > 0) {
         for (const fileUrl of fileUrls) {
@@ -245,20 +245,23 @@ export default function Chat() {
             // Check if it's a text-based file
             const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
             const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+            const documentExtensions = ['pdf', 'doc', 'docx'];
             
             if (textExtensions.includes(extension)) {
               // Read text files fully
               const response = await fetch(fileUrl);
               const text = await response.text();
               fileContents += `\n\n=== File: ${fileName} ===\n${text}\n=== End of ${fileName} ===\n`;
+              fileMetadata.push({ url: fileUrl, name: fileName, type: 'text', extension });
+            } else if (imageExtensions.includes(extension)) {
+              fileContents += `\n\n[IMAGE: Please analyze and describe the image file "${fileName}"]\n`;
+              fileMetadata.push({ url: fileUrl, name: fileName, type: 'image', extension });
+            } else if (documentExtensions.includes(extension)) {
+              fileContents += `\n\n[DOCUMENT: Please extract and analyze content from "${fileName}"]\n`;
+              fileMetadata.push({ url: fileUrl, name: fileName, type: 'document', extension });
             } else {
-              // For binary files (images, PDFs, etc.), just include the URL
-              binaryFileUrls.push(fileUrl);
-              if (imageExtensions.includes(extension)) {
-                fileContents += `\n\n[Image attached: ${fileName}]\n`;
-              } else {
-                fileContents += `\n\n[File attached: ${fileName}]\n`;
-              }
+              fileContents += `\n\n[BINARY FILE: "${fileName}" - type: ${extension}]\n`;
+              fileMetadata.push({ url: fileUrl, name: fileName, type: 'binary', extension });
             }
           } catch (error) {
             console.error('Error reading file:', error);
@@ -319,7 +322,7 @@ export default function Chat() {
           history: history,
           remember: rememberConversations,
           user_id: user?.email || 'guest',
-          file_urls: binaryFileUrls.length > 0 ? binaryFileUrls : fileUrls,
+          files: fileMetadata,
           mode: "conversation",
           intent: "normal"
         })
