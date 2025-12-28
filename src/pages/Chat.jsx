@@ -381,10 +381,10 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col lg:flex-row' : 'flex flex-col'}`}>
+      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`}>
         {/* Chat Section */}
-        <div className={`flex flex-col overflow-hidden ${isDeveloperMode ? 'lg:w-1/2 lg:border-r lg:border-white/10' : 'w-full'}`}>
-          <div className="flex-1 overflow-y-auto pb-32">
+        <div className={`relative flex flex-col overflow-hidden ${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' : 'h-full w-full'}`}>
+          <div className="flex-1 overflow-y-auto pb-24">
             <div className="max-w-2xl mx-auto px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -423,7 +423,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-30 bg-[#0a1628] pb-32">
+          <div className="absolute bottom-0 left-0 right-0 z-30 bg-[#0a1628]">
             <ChatInput 
               onSend={handleSendMessage} 
               isLoading={isLoading}
@@ -435,7 +435,7 @@ export default function Chat() {
 
         {/* Terminal Section */}
         {isDeveloperMode && (
-          <div className="lg:w-1/2 h-full">
+          <div className={`${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2' : ''}`}>
             <CodeTerminal onClose={() => {
               localStorage.setItem('caos_developer_mode', 'false');
               window.location.reload();
