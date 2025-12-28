@@ -446,7 +446,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-30 bg-[#0a1628]">
+          <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-8">
             <ChatInput 
               onSend={handleSendMessage} 
               isLoading={isLoading}
