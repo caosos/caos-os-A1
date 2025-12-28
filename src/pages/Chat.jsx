@@ -249,6 +249,7 @@ export default function Chat() {
       // Process files per CAOS-A1 contract
       let fileContents = '';
       const fileMetadata = [];
+      const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
       
       if (fileUrls.length > 0) {
         for (let i = 0; i < fileUrls.length; i++) {
@@ -277,13 +278,19 @@ export default function Chat() {
               fileType = 'text';
               const response = await fetch(fileUrl);
               fileContent = await response.text();
-              fileContents += `\n\n=== File: ${fileName} ===\n${fileContent}\n=== End of ${fileName} ===\n`;
+              fileContents += `\n\n=== TEXT FILE: ${fileName} ===\n${fileContent}\n=== END TEXT FILE ===\n`;
+              fileSummary.text++;
             } else if (imageExtensions.includes(extension)) {
               fileType = 'image';
-              fileContents += `\n\n[IMAGE: Analyze "${fileName}"]\n`;
+              fileContents += `\n\n[IMAGE ${i + 1}: "${fileName}" - USE VISION TO ANALYZE AND DESCRIBE IN DETAIL]\n`;
+              fileSummary.image++;
             } else if (documentExtensions.includes(extension)) {
               fileType = 'document';
-              fileContents += `\n\n[DOCUMENT: Extract content from "${fileName}"]\n`;
+              fileContents += `\n\n[DOCUMENT ${i + 1}: "${fileName}" - EXTRACT TEXT, SUMMARIZE KEY POINTS]\n`;
+              fileSummary.document++;
+            } else {
+              fileContents += `\n\n[BINARY FILE ${i + 1}: "${fileName}" (${extension}) - PROVIDE METADATA]\n`;
+              fileSummary.other++;
             }
             
             // Build file metadata per contract
@@ -297,8 +304,19 @@ export default function Chat() {
             });
           } catch (error) {
             console.error('Error reading file:', error);
-            fileContents += `\n\n[Could not read file: ${fileUrl.split('/').pop()}]\n`;
+            fileContents += `\n\n[ERROR: Could not read "${fileUrl.split('/').pop()}"]\n`;
           }
+        }
+        
+        // Add synthesis instruction if multiple files
+        if (fileUrls.length > 1) {
+          const fileTypesList = [];
+          if (fileSummary.text > 0) fileTypesList.push(`${fileSummary.text} text file${fileSummary.text > 1 ? 's' : ''}`);
+          if (fileSummary.image > 0) fileTypesList.push(`${fileSummary.image} image${fileSummary.image > 1 ? 's' : ''}`);
+          if (fileSummary.document > 0) fileTypesList.push(`${fileSummary.document} document${fileSummary.document > 1 ? 's' : ''}`);
+          if (fileSummary.other > 0) fileTypesList.push(`${fileSummary.other} other file${fileSummary.other > 1 ? 's' : ''}`);
+          
+          fileContents = `\n\n[MULTI-FILE REQUEST: ${fileUrls.length} files provided - ${fileTypesList.join(', ')}]\n[INSTRUCTION: Analyze each file according to its type, then synthesize findings into a cohesive response]\n` + fileContents;
         }
       }
 
