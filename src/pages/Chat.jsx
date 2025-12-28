@@ -232,6 +232,35 @@ export default function Chat() {
 
       const convMessages = messages[conversationId] || [];
 
+      // Extract content from files
+      let fileContents = '';
+      if (fileUrls.length > 0) {
+        for (const fileUrl of fileUrls) {
+          try {
+            // Try to extract text content from files
+            const fileName = fileUrl.split('/').pop();
+            const isTextFile = /\.(txt|md|json|js|py|html|css|xml)$/i.test(fileName);
+            const isPdfOrImage = /\.(pdf|png|jpg|jpeg)$/i.test(fileName);
+            
+            if (isTextFile) {
+              const response = await fetch(fileUrl);
+              const text = await response.text();
+              fileContents += `\n\n--- Content of ${fileName} ---\n${text}\n--- End of ${fileName} ---\n`;
+            } else if (isPdfOrImage) {
+              const extracted = await base44.integrations.Core.InvokeLLM({
+                prompt: `Extract and summarize all text content from this file. If it's an image, describe what you see in detail.`,
+                file_urls: [fileUrl]
+              });
+              fileContents += `\n\n--- Content of ${fileName} ---\n${extracted}\n--- End of ${fileName} ---\n`;
+            }
+          } catch (error) {
+            console.error('Error extracting file content:', error);
+          }
+        }
+      }
+
+      const fullContent = content + fileContents;
+
       // Create user message
       const userMessage = {
         conversation_id: conversationId,
@@ -277,7 +306,7 @@ export default function Chat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: content || 'User sent file(s)',
+          message: fullContent || 'User sent file(s)',
           session: conversationId,
           history: history,
           remember: rememberConversations,
