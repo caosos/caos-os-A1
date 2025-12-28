@@ -141,6 +141,11 @@ export default function CodeTerminal({ onClose }) {
             lineNumbers: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,
+            contextmenu: true,
+            quickSuggestions: true,
+            acceptSuggestionOnCommitCharacter: true,
+            acceptSuggestionOnEnter: 'on',
+            tabCompletion: 'on',
           }}
         />
       </div>
