@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import moment from 'moment';
 
@@ -95,6 +95,23 @@ export default function ProfilePanel({ isOpen, onClose, user }) {
                   <Switch
                     checked={rememberConversations}
                     onCheckedChange={handleToggleMemory}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Terminal className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <p className="text-white text-sm">Developer Mode</p>
+                      <p className="text-white/50 text-xs">Split-screen terminal</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={localStorage.getItem('caos_developer_mode') === 'true'}
+                    onCheckedChange={(checked) => {
+                      localStorage.setItem('caos_developer_mode', checked.toString());
+                      window.location.reload();
+                    }}
                   />
                 </div>
               </div>
