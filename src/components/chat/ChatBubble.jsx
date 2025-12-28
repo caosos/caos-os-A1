@@ -17,6 +17,23 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
   }, [closeMenuTrigger]);
 
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      if (showSelectionMenu) {
+        setShowSelectionMenu(false);
+        window.getSelection().removeAllRanges();
+      }
+    };
+
+    if (showSelectionMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showSelectionMenu]);
+
   const handleTextSelection = () => {
     const selection = window.getSelection();
     const text = selection.toString().trim();
@@ -286,6 +303,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               </motion.div>
 
               {showSelectionMenu && (
+              <div onClick={(e) => e.stopPropagation()}>
               <TextSelectionMenu
               position={menuPosition}
               selectedText={selectedText}
@@ -296,6 +314,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               window.getSelection().removeAllRanges();
               }}
               />
+              </div>
               )}
               </>
               );
