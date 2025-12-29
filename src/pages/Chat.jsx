@@ -250,66 +250,42 @@ export default function Chat() {
 
       // Process files per CAOS-A1 contract
       let fileContents = '';
-      const fileMetadata = [];
+      const images = [];
       const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
-      
+
       if (fileUrls.length > 0) {
         for (let i = 0; i < fileUrls.length; i++) {
           const fileUrl = fileUrls[i];
           try {
             const fileName = fileUrl.split('/').pop();
             const extension = fileName.split('.').pop()?.toLowerCase();
-            
-            // Determine MIME type
-            const mimeMap = {
-              jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', 
-              webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml',
-              txt: 'text/plain', md: 'text/markdown', json: 'application/json',
-              csv: 'text/csv', pdf: 'application/pdf', doc: 'application/msword',
-              docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            };
-            
+
             const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
             const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
             const documentExtensions = ['pdf', 'doc', 'docx'];
-            
-            let fileType = 'other';
-            let fileContent = null;
-            
+
             if (textExtensions.includes(extension)) {
-              fileType = 'text';
               const response = await fetch(fileUrl);
-              fileContent = await response.text();
+              const fileContent = await response.text();
               fileContents += `\n\n=== TEXT FILE: ${fileName} ===\n${fileContent}\n=== END TEXT FILE ===\n`;
               fileSummary.text++;
             } else if (imageExtensions.includes(extension)) {
-              fileType = 'image';
+              images.push({ url: fileUrl });
               fileContents += `\n\n[IMAGE ${i + 1}: "${fileName}" - USE VISION TO ANALYZE AND DESCRIBE IN DETAIL]\n`;
               fileSummary.image++;
             } else if (documentExtensions.includes(extension)) {
-              fileType = 'document';
               fileContents += `\n\n[DOCUMENT ${i + 1}: "${fileName}" - EXTRACT TEXT, SUMMARIZE KEY POINTS]\n`;
               fileSummary.document++;
             } else {
               fileContents += `\n\n[BINARY FILE ${i + 1}: "${fileName}" (${extension}) - PROVIDE METADATA]\n`;
               fileSummary.other++;
             }
-            
-            // Build file metadata per contract
-            fileMetadata.push({
-              id: `file_${Date.now()}_${i}`,
-              type: fileType,
-              mime: mimeMap[extension] || 'application/octet-stream',
-              url: fileUrl,
-              name: fileName,
-              bytes: fileContent ? new Blob([fileContent]).size : 0
-            });
           } catch (error) {
             console.error('Error reading file:', error);
             fileContents += `\n\n[ERROR: Could not read "${fileUrl.split('/').pop()}"]\n`;
           }
         }
-        
+
         // Add synthesis instruction if multiple files
         if (fileUrls.length > 1) {
           const fileTypesList = [];
@@ -317,7 +293,7 @@ export default function Chat() {
           if (fileSummary.image > 0) fileTypesList.push(`${fileSummary.image} image${fileSummary.image > 1 ? 's' : ''}`);
           if (fileSummary.document > 0) fileTypesList.push(`${fileSummary.document} document${fileSummary.document > 1 ? 's' : ''}`);
           if (fileSummary.other > 0) fileTypesList.push(`${fileSummary.other} other file${fileSummary.other > 1 ? 's' : ''}`);
-          
+
           fileContents = `\n\n[MULTI-FILE REQUEST: ${fileUrls.length} files provided - ${fileTypesList.join(', ')}]\n[INSTRUCTION: Analyze each file according to its type, then synthesize findings into a cohesive response]\n` + fileContents;
         }
       }
@@ -392,7 +368,7 @@ export default function Chat() {
           message: messageWithFiles,
           session: conversationId,
           memory_gate: memory_gate,
-          files: fileMetadata.length > 0 ? fileMetadata : undefined
+          images: images.length > 0 ? images : undefined
         }),
         signal: controller.signal
       });
