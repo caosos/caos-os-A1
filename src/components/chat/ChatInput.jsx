@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
+import html2canvas from 'html2canvas';
 
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart }) {
   const [message, setMessage] = useState('');
@@ -9,9 +10,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showCaptureMenu, setShowCaptureMenu] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -31,6 +34,59 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setAttachedFiles([...attachedFiles, ...uploadedFiles]);
     } catch (error) {
       console.error('Error uploading files:', error);
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const captureScreen = async () => {
+    setShowCaptureMenu(false);
+    setUploading(true);
+    try {
+      const canvas = await html2canvas(document.body, {
+        allowTaint: true,
+        useCORS: true,
+        scrollY: -window.scrollY,
+        scrollX: -window.scrollX,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight
+      });
+      
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
+        const result = await base44.integrations.Core.UploadFile({ file });
+        setAttachedFiles([...attachedFiles, {
+          name: file.name,
+          url: result.file_url,
+          type: 'image/png',
+        }]);
+        setUploading(false);
+      });
+    } catch (error) {
+      console.error('Error capturing screen:', error);
+      setUploading(false);
+    }
+  };
+
+  const captureCamera = () => {
+    setShowCaptureMenu(false);
+    cameraInputRef.current?.click();
+  };
+
+  const handleCameraCapture = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await base44.integrations.Core.UploadFile({ file });
+      setAttachedFiles([...attachedFiles, {
+        name: file.name,
+        url: result.file_url,
+        type: file.type,
+      }]);
+    } catch (error) {
+      console.error('Error uploading camera photo:', error);
     }
     setUploading(false);
     e.target.value = '';
@@ -192,18 +248,49 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           disabled={isLoading}
         />
         
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
-          disabled={uploading}
-        >
-          {uploading ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4 text-white/70" />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowCaptureMenu(!showCaptureMenu)}
+            className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+            disabled={uploading}
+          >
+            {uploading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 text-white/70" />
+            )}
+          </button>
+
+          {showCaptureMenu && (
+            <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-white/20 rounded-lg shadow-xl p-2 space-y-1 min-w-[160px]">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                Upload Files
+              </button>
+              <button
+                type="button"
+                onClick={captureScreen}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+              >
+                <Monitor className="w-4 h-4" />
+                Capture Screen
+              </button>
+              <button
+                type="button"
+                onClick={captureCamera}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+                Take Photo
+              </button>
+            </div>
           )}
-        </button>
+        </div>
 
         <button
           type="button"
@@ -220,6 +307,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           multiple
           accept="image/*,application/pdf,.doc,.docx,.txt"
           onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleCameraCapture}
           className="hidden"
         />
 
