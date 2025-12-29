@@ -125,7 +125,9 @@ export default function Chat() {
       setMessages(newMessages);
       if (currentConversationId === id) {
         setCurrentConversationId(null);
+        localStorage.removeItem('caos_last_conversation');
       }
+      toast.success('Conversation deleted');
     } catch (error) {
       console.error('Error deleting conversation:', error);
       toast.error('Failed to delete thread');
