@@ -239,21 +239,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-                // Stop recording if active
-                if (isRecording) {
-                  recognitionRef.current?.stop();
-                  setIsRecording(false);
-                }
-
-                onSend(message.trim(), attachedFiles.map(f => f.url));
-                setMessage('');
-                setAttachedFiles([]);
-                // Reset textarea height
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = '24px';
-                }
-              }
+              handleSubmit(e);
             }
           }}
           onPaste={(e) => {
@@ -338,7 +324,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           className="hidden"
         />
 
-        <Button
+        <button
           type="submit"
           disabled={(!message.trim() && attachedFiles.length === 0) || isLoading || uploading}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1.5 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0"
@@ -348,7 +334,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           ) : (
             'Send'
           )}
-        </Button>
+        </button>
       </div>
     </form>
   );
