@@ -240,7 +240,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
-              handleSubmit(e);
+              
+              // Send message directly
+              if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
+                if (isRecording) {
+                  recognitionRef.current?.stop();
+                  setIsRecording(false);
+                }
+                onSend(message.trim(), attachedFiles.map(f => f.url));
+                setMessage('');
+                setAttachedFiles([]);
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = '24px';
+                }
+              }
             }
           }}
           onPaste={(e) => {
