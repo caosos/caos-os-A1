@@ -15,6 +15,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const baseMessageRef = useRef('');
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -130,9 +131,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const recognition = new SpeechRecognition();
 
       recognition.continuous = true;
-      recognition.interimResults = true; // Enable real-time transcription
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      baseMessageRef.current = message;
       let finalTranscript = '';
 
       recognition.onresult = (event) => {
@@ -147,9 +149,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           }
         }
         
-        setMessage(message + finalTranscript + interimTranscript);
+        setMessage(baseMessageRef.current + finalTranscript + interimTranscript);
         
-        // Adjust textarea height
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
