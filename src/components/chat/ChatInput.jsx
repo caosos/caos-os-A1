@@ -151,6 +151,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           // Show interim transcript
           interimTranscript = transcript;
           setMessage(baseMessageRef.current + interimTranscript);
+        }
         
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
