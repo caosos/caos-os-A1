@@ -219,13 +219,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </div>
       )}
       
-      <div className="flex items-center gap-1.5 bg-[#1a2744] border border-white/20 rounded-3xl px-2 py-1.5 w-full">
+      <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
         <button
           type="button"
           onClick={toggleVoiceRecording}
-          className={`p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500/20' : ''}`}
-        >
-          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500 animate-pulse' : 'text-white/70'}`} />
+          className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-100' : ''}`}
+          >
+          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-700'}`} />
         </button>
 
         <textarea
@@ -264,7 +264,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           }}
           onFocus={() => onTypingStart?.()}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-sm px-2 resize-none overflow-y-auto"
+          className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-sm px-2 resize-none overflow-y-auto"
           style={{ minHeight: '24px', height: '24px', maxHeight: '120px' }}
           disabled={isLoading}
         />
@@ -273,22 +273,22 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           <button
             type="button"
             onClick={() => setShowCaptureMenu(!showCaptureMenu)}
-            className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
             disabled={uploading}
-          >
+            >
             {uploading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white/70 rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
             ) : (
-              <Plus className="w-4 h-4 text-white/70" />
+              <Plus className="w-4 h-4 text-gray-700" />
             )}
           </button>
 
           {showCaptureMenu && (
-            <div className="absolute bottom-full left-0 mb-2 bg-[#1a2744] border border-white/20 rounded-lg shadow-xl p-2 space-y-1 min-w-[160px]">
+            <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[160px]">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
               >
                 <FileText className="w-4 h-4" />
                 Upload Files
@@ -296,7 +296,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               <button
                 type="button"
                 onClick={captureScreen}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
               >
                 <Monitor className="w-4 h-4" />
                 Capture Screen
@@ -304,7 +304,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               <button
                 type="button"
                 onClick={captureCamera}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
               >
                 <Camera className="w-4 h-4" />
                 Take Photo
@@ -317,9 +317,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           type="button"
           onClick={toggleReadAloud}
           disabled={!lastAssistantMessage}
-          className={`p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-500/20' : ''} disabled:opacity-30`}
+          className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-100' : ''} disabled:opacity-30`}
         >
-          <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-blue-500 animate-pulse' : 'text-white/70'}`} />
+          <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-blue-600 animate-pulse' : 'text-gray-700'}`} />
         </button>
 
         <input
@@ -343,7 +343,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <button
           type="submit"
           disabled={(!message.trim() && attachedFiles.length === 0) || isLoading || uploading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1.5 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-1.5 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0 shadow-sm"
         >
           {isLoading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
