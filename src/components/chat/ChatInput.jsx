@@ -236,12 +236,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             const newHeight = Math.min(e.target.scrollHeight, 120);
             e.target.style.height = newHeight + 'px';
           }}
-          onKeyDown={(e) => {
+          onKeyPress={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
               
-              // Send message directly
+              // Send message directly without form submission
               if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
                 if (isRecording) {
                   recognitionRef.current?.stop();
@@ -254,6 +254,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   textareaRef.current.style.height = '24px';
                 }
               }
+              return false;
             }
           }}
           onPaste={(e) => {
