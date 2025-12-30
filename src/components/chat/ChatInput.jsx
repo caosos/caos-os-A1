@@ -172,21 +172,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
       // Stop recording if active
       if (isRecording) {
         recognitionRef.current?.stop();
         setIsRecording(false);
       }
-      
+
       onSend(message.trim(), attachedFiles.map(f => f.url));
       setMessage('');
       setAttachedFiles([]);
       // Reset textarea height
-      const textarea = e.target.querySelector('textarea');
-      if (textarea) {
-        textarea.style.height = '24px';
+      if (textareaRef.current) {
+        textareaRef.current.style.height = '24px';
       }
     }
   };
@@ -236,6 +235,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             e.target.style.height = 'auto';
             const newHeight = Math.min(e.target.scrollHeight, 120);
             e.target.style.height = newHeight + 'px';
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
+                handleSubmit(e);
+              }
+            }
           }}
           onPaste={(e) => {
             // CAOS-A1 Turn Handling: Multi-line paste = ONE turn (default)
