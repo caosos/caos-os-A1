@@ -239,6 +239,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
+              e.stopPropagation();
               handleSubmit(e);
             }
           }}
