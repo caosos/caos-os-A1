@@ -545,13 +545,15 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-8">
-            <ChatInput 
-              onSend={handleSendMessage} 
-              isLoading={isLoading}
-              lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-              onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
-            />
+          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-8 pointer-events-none">
+            <div className="pointer-events-auto">
+              <ChatInput 
+                onSend={handleSendMessage} 
+                isLoading={isLoading}
+                lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+                onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
+              />
+            </div>
           </div>
         </div>
 
