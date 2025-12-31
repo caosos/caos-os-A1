@@ -16,6 +16,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
   const baseMessageRef = useRef('');
+  const processedResultsRef = useRef(0);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -135,17 +136,24 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       recognition.lang = 'en-US';
 
       baseMessageRef.current = message;
+      processedResultsRef.current = 0;
 
       recognition.onresult = (event) => {
-        const lastResultIndex = event.results.length - 1;
-        const transcript = event.results[lastResultIndex][0].transcript;
+        let interimTranscript = '';
         
-        if (event.results[lastResultIndex].isFinal) {
-          baseMessageRef.current += transcript + ' ';
-          setMessage(baseMessageRef.current);
-        } else {
-          setMessage(baseMessageRef.current + transcript);
+        // Only process results we haven't seen yet
+        for (let i = processedResultsRef.current; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
+          if (event.results[i].isFinal) {
+            baseMessageRef.current += transcript + ' ';
+            processedResultsRef.current = i + 1;
+          } else {
+            interimTranscript += transcript;
+          }
         }
+        
+        setMessage(baseMessageRef.current + interimTranscript);
         
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
@@ -155,11 +163,21 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
-        setIsRecording(false);
+        if (event.error === 'no-speech' || event.error === 'audio-capture') {
+          // Restart on timeout
+          if (isRecording) {
+            recognition.start();
+          }
+        } else {
+          setIsRecording(false);
+        }
       };
       
       recognition.onend = () => {
-        setIsRecording(false);
+        // Auto-restart if still recording
+        if (isRecording) {
+          recognition.start();
+        }
       };
       
       recognitionRef.current = recognition;
