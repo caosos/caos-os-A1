@@ -17,6 +17,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const cameraInputRef = useRef(null);
   const baseMessageRef = useRef('');
   const processedResultsRef = useRef(0);
+  const silenceTimerRef = useRef(null);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -125,6 +126,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
 
     if (isRecording) {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       recognitionRef.current?.stop();
       setIsRecording(false);
     } else {
@@ -139,6 +144,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       processedResultsRef.current = 0;
 
       recognition.onresult = (event) => {
+        // Reset silence timer on any speech
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+        }
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current && isRecording) {
+            recognitionRef.current.stop();
+            setIsRecording(false);
+          }
+        }, 10000); // 10 seconds of silence
+        
         let interimTranscript = '';
         
         // Only process results we haven't seen yet
