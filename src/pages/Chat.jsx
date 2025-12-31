@@ -597,10 +597,7 @@ export default function Chat() {
       />
 
       <Dialog open={showToken} onOpenChange={setShowToken}>
-        <DialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">CAOS-A1 Session Token</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white max-w-3xl">
           <ContinuityToken
             sessionId={currentConversationId}
             userId={user?.email}
