@@ -609,6 +609,7 @@ export default function Chat() {
               message_count: currentMessages.length,
               last_message_time: conversations.find(c => c.id === currentConversationId)?.last_message_time
             }}
+            messages={currentMessages}
           />
         </DialogContent>
       </Dialog>
