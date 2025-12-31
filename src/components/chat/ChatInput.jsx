@@ -11,10 +11,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const finalTranscriptRef = useRef('');
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -125,32 +127,52 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
+      setInterimTranscript('');
     } else {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      finalTranscriptRef.current = message;
+
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setMessage(message + (message ? ' ' : '') + transcript);
+        let interim = '';
+        let final = '';
+        
+        for (let i = 0; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += transcript + ' ';
+          } else {
+            interim += transcript;
+          }
+        }
+        
+        if (final) {
+          finalTranscriptRef.current += final;
+          setMessage(finalTranscriptRef.current);
+        }
+        
+        setInterimTranscript(interim);
         
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
-        setIsRecording(false);
       };
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setIsRecording(false);
+        setInterimTranscript('');
       };
       
       recognition.onend = () => {
         setIsRecording(false);
+        setInterimTranscript('');
       };
       
       recognitionRef.current = recognition;
@@ -171,6 +193,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       onSend(message.trim(), attachedFiles.map(f => f.url));
       setMessage('');
       setAttachedFiles([]);
+      setInterimTranscript('');
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = '24px';
@@ -210,14 +233,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <button
           type="button"
           onClick={toggleVoiceRecording}
-          className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ${isRecording ? 'bg-red-100' : ''}`}
+          className={`p-1.5 rounded-full transition-colors flex-shrink-0 relative ${isRecording ? 'bg-red-100 animate-pulse' : 'hover:bg-gray-100'}`}
           >
-          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-700'}`} />
+          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500' : 'text-gray-700'}`} />
+          {isRecording && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+          )}
         </button>
 
         <textarea
           ref={textareaRef}
-          value={message}
+          value={message + interimTranscript}
           onChange={(e) => {
             setMessage(e.target.value);
             e.target.style.height = 'auto';
