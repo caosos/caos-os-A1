@@ -15,6 +15,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const lastTranscriptRef = useRef('');
+  const isRecordingRef = useRef(false);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -123,33 +125,71 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
 
     if (isRecording) {
+      isRecordingRef.current = false;
       recognitionRef.current?.stop();
       setIsRecording(false);
+      lastTranscriptRef.current = '';
     } else {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
+      isRecordingRef.current = true;
+      lastTranscriptRef.current = '';
+
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setMessage(message + (message ? ' ' : '') + transcript);
+        // Build complete transcript from all final results
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            fullTranscript += event.results[i][0].transcript + ' ';
+          }
+        }
         
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        // Only add the NEW part that wasn't in our last transcript
+        if (fullTranscript && fullTranscript !== lastTranscriptRef.current) {
+          const newPart = fullTranscript.slice(lastTranscriptRef.current.length);
+          if (newPart.trim()) {
+            setMessage(prev => prev + (prev ? ' ' : '') + newPart.trim());
+            
+            if (textareaRef.current) {
+              textareaRef.current.style.height = 'auto';
+              textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+            }
+          }
+          lastTranscriptRef.current = fullTranscript;
         }
       };
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
+        if (event.error === 'no-speech' && isRecordingRef.current) {
+          // Continue listening even after silence
+          return;
+        }
+        isRecordingRef.current = false;
         setIsRecording(false);
+        lastTranscriptRef.current = '';
       };
       
       recognition.onend = () => {
-        setIsRecording(false);
+        if (isRecordingRef.current) {
+          // Auto-restart if we're still supposed to be recording
+          try {
+            recognition.start();
+          } catch (e) {
+            console.error('Could not restart recognition', e);
+            isRecordingRef.current = false;
+            setIsRecording(false);
+            lastTranscriptRef.current = '';
+          }
+        } else {
+          setIsRecording(false);
+          lastTranscriptRef.current = '';
+        }
       };
       
       recognitionRef.current = recognition;
