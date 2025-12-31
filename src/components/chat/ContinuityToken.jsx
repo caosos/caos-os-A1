@@ -156,31 +156,31 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-white font-medium text-lg">CAOS-A1 Session Token</h3>
+        <h3 className="text-white font-medium">CAOS-A1 Session Token</h3>
         <div className="flex gap-2">
           <Button
             size="sm"
             onClick={handleDownload}
-            className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4"
+            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-3.5 h-3.5 mr-1.5" />
             Download
           </Button>
           <Button
             size="sm"
             onClick={handleCopy}
-            className="bg-gray-600 hover:bg-gray-700 text-white h-9 px-4"
+            className="bg-gray-600 hover:bg-gray-700 text-white h-8 px-3 text-xs"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 mr-2 text-green-400" />
+                <Check className="w-3.5 h-3.5 mr-1.5 text-green-400" />
                 <span className="text-green-400">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 mr-2" />
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
                 Copy
               </>
             )}
@@ -189,39 +189,35 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white/10 border border-white/20 w-full mb-3 p-1">
-          <TabsTrigger value="session" className="text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-2">
+        <TabsList className="bg-white/10 border border-white/20 w-full mb-2 p-0.5 h-9">
+          <TabsTrigger value="session" className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-1.5">
             Session Data
           </TabsTrigger>
-          <TabsTrigger value="implementation" className="text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-2">
+          <TabsTrigger value="implementation" className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-1.5">
             Implementation Spec
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="session" className="mt-0">
-          <div className="mb-2">
-            <p className="text-xs text-blue-300">L4 Raw Data • Session {sessionId?.substring(0, 8)}...</p>
-          </div>
-          <ScrollArea className="h-[300px] w-full">
-            <pre className="bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white/80 font-mono">
+          <p className="text-xs text-blue-300 mb-1.5">L4 Raw Data • Session {sessionId?.substring(0, 8)}...</p>
+          <ScrollArea className="h-[200px] w-full">
+            <pre className="bg-black/30 border border-white/10 rounded-lg p-2.5 text-xs text-white/80 font-mono whitespace-pre-wrap break-all">
               {tokenString}
             </pre>
           </ScrollArea>
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-white/50 mt-1.5">
             Raw conversation history → Lane 4 → Lane 5 verification
           </p>
         </TabsContent>
 
         <TabsContent value="implementation" className="mt-0">
-          <div className="mb-2">
-            <p className="text-xs text-blue-300">UI-Backend Contract • For Backend Alignment</p>
-          </div>
-          <ScrollArea className="h-[300px] w-full">
-            <pre className="bg-black/30 border border-white/10 rounded-lg p-3 text-xs text-white/80 font-mono">
+          <p className="text-xs text-blue-300 mb-1.5">UI-Backend Contract • For Backend Alignment</p>
+          <ScrollArea className="h-[200px] w-full">
+            <pre className="bg-black/30 border border-white/10 rounded-lg p-2.5 text-xs text-white/80 font-mono whitespace-pre-wrap break-all">
               {tokenString}
             </pre>
           </ScrollArea>
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-white/50 mt-1.5">
             UI capabilities + contract specs → Lane 4 tools → Lane 5 backend implementation
           </p>
         </TabsContent>
