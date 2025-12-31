@@ -157,46 +157,48 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
 
   return (
     <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between mb-3">
-          <TabsList className="bg-white/5 border border-white/10">
-            <TabsTrigger value="session" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white">
-              Session Data
-            </TabsTrigger>
-            <TabsTrigger value="implementation" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white">
-              Implementation Spec
-            </TabsTrigger>
-          </TabsList>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleDownload}
-              className="h-8 px-3 text-white hover:bg-white/10"
-            >
-              <Download className="w-4 h-4 mr-1" />
-              Download
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCopy}
-              className="h-8 px-3 text-white hover:bg-white/10"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 mr-1 text-green-400" />
-                  <span className="text-green-400">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Copy
-                </>
-              )}
-            </Button>
-          </div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white font-medium">CAOS-A1 Session Token</h3>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleDownload}
+            className="h-8 px-3 text-white hover:bg-white/10"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            Download
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleCopy}
+            className="h-8 px-3 text-white hover:bg-white/10"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 mr-1 text-green-400" />
+                <span className="text-green-400">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 mr-1" />
+                Copy
+              </>
+            )}
+          </Button>
         </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-white/5 border border-white/10 w-full mb-3">
+          <TabsTrigger value="session" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white flex-1">
+            Session Data
+          </TabsTrigger>
+          <TabsTrigger value="implementation" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white flex-1">
+            Implementation Spec
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="session" className="mt-0">
           <div className="mb-2">
