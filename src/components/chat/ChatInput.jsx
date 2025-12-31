@@ -11,7 +11,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState('');
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -127,52 +126,43 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
-      setInterimTranscript('');
     } else {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
       recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.interimResults = false;
       recognition.lang = 'en-US';
 
       finalTranscriptRef.current = message;
 
       recognition.onresult = (event) => {
-        let interim = '';
         let final = '';
         
         for (let i = 0; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            final += transcript + ' ';
-          } else {
-            interim += transcript;
+            final += event.results[i][0].transcript + ' ';
           }
         }
         
         if (final) {
           finalTranscriptRef.current += final;
           setMessage(finalTranscriptRef.current);
-        }
-        
-        setInterimTranscript(interim);
-        
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+          
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+          }
         }
       };
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setIsRecording(false);
-        setInterimTranscript('');
       };
       
       recognition.onend = () => {
         setIsRecording(false);
-        setInterimTranscript('');
       };
       
       recognitionRef.current = recognition;
@@ -193,7 +183,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       onSend(message.trim(), attachedFiles.map(f => f.url));
       setMessage('');
       setAttachedFiles([]);
-      setInterimTranscript('');
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = '24px';
@@ -243,7 +232,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
         <textarea
           ref={textareaRef}
-          value={message + interimTranscript}
+          value={message}
           onChange={(e) => {
             setMessage(e.target.value);
             e.target.style.height = 'auto';
