@@ -137,26 +137,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       baseMessageRef.current = message;
 
       recognition.onresult = (event) => {
-        // Build complete transcript from all final results
-        let finalTranscript = '';
-        
-        for (let i = 0; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
-          }
-        }
-        
-        // If we have new final results, update base
-        if (finalTranscript) {
-          baseMessageRef.current = baseMessageRef.current + finalTranscript;
-          setMessage(baseMessageRef.current);
-        }
-        
-        // Show interim results
         const lastResultIndex = event.results.length - 1;
-        if (!event.results[lastResultIndex].isFinal) {
-          const interimTranscript = event.results[lastResultIndex][0].transcript;
-          setMessage(baseMessageRef.current + interimTranscript);
+        const transcript = event.results[lastResultIndex][0].transcript;
+        
+        if (event.results[lastResultIndex].isFinal) {
+          baseMessageRef.current += transcript + ' ';
+          setMessage(baseMessageRef.current);
+        } else {
+          setMessage(baseMessageRef.current + transcript);
         }
         
         if (textareaRef.current) {
