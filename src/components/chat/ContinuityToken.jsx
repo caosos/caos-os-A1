@@ -156,33 +156,31 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white font-medium">CAOS-A1 Session Token</h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-medium text-lg">CAOS-A1 Session Token</h3>
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant="ghost"
             onClick={handleDownload}
-            className="h-8 px-3 text-white hover:bg-white/10"
+            className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4"
           >
-            <Download className="w-4 h-4 mr-1" />
+            <Download className="w-4 h-4 mr-2" />
             Download
           </Button>
           <Button
             size="sm"
-            variant="ghost"
             onClick={handleCopy}
-            className="h-8 px-3 text-white hover:bg-white/10"
+            className="bg-gray-600 hover:bg-gray-700 text-white h-9 px-4"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 mr-1 text-green-400" />
+                <Check className="w-4 h-4 mr-2 text-green-400" />
                 <span className="text-green-400">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 mr-1" />
+                <Copy className="w-4 h-4 mr-2" />
                 Copy
               </>
             )}
@@ -191,11 +189,11 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white/5 border border-white/10 w-full mb-3">
-          <TabsTrigger value="session" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white flex-1">
+        <TabsList className="bg-white/10 border border-white/20 w-full mb-3 p-1">
+          <TabsTrigger value="session" className="text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-2">
             Session Data
           </TabsTrigger>
-          <TabsTrigger value="implementation" className="text-xs data-[state=active]:bg-blue-600/50 data-[state=active]:text-white flex-1">
+          <TabsTrigger value="implementation" className="text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white text-white/70 flex-1 py-2">
             Implementation Spec
           </TabsTrigger>
         </TabsList>
