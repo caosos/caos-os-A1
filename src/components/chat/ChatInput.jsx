@@ -16,8 +16,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
   const baseMessageRef = useRef('');
-  const processedResultsRef = useRef(0);
   const silenceTimerRef = useRef(null);
+  const lastTranscriptRef = useRef('');
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -141,7 +141,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       recognition.lang = 'en-US';
 
       baseMessageRef.current = message;
-      processedResultsRef.current = 0;
+      lastTranscriptRef.current = '';
 
       recognition.onresult = (event) => {
         // Reset silence timer on any speech
@@ -155,18 +155,24 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           }
         }, 10000); // 10 seconds of silence
         
+        let finalTranscript = '';
         let interimTranscript = '';
         
-        // Only process results we haven't seen yet
-        for (let i = processedResultsRef.current; i < event.results.length; i++) {
+        // Process all results in this event
+        for (let i = 0; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           
           if (event.results[i].isFinal) {
-            baseMessageRef.current += transcript + ' ';
-            processedResultsRef.current = i + 1;
+            finalTranscript += transcript + ' ';
           } else {
             interimTranscript += transcript;
           }
+        }
+        
+        // Only add final transcript if it's new (different from last time)
+        if (finalTranscript && finalTranscript !== lastTranscriptRef.current) {
+          baseMessageRef.current += finalTranscript;
+          lastTranscriptRef.current = finalTranscript;
         }
         
         setMessage(baseMessageRef.current + interimTranscript);
