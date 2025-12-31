@@ -16,6 +16,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
   const finalTranscriptRef = useRef('');
+  const shouldKeepListeningRef = useRef(false);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -117,6 +118,49 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   };
 
+  const startListening = () => {
+    if (!shouldKeepListeningRef.current) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + transcript;
+      setMessage(finalTranscriptRef.current);
+      
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+      }
+
+      // Auto-restart to keep listening
+      if (shouldKeepListeningRef.current) {
+        setTimeout(() => startListening(), 100);
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error);
+      if (event.error !== 'no-speech' && shouldKeepListeningRef.current) {
+        setTimeout(() => startListening(), 100);
+      } else if (shouldKeepListeningRef.current) {
+        setTimeout(() => startListening(), 100);
+      }
+    };
+    
+    recognition.onend = () => {
+      // Don't change recording state here, let it continue
+    };
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   const toggleVoiceRecording = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert('Speech recognition is not supported in your browser');
@@ -124,50 +168,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
 
     if (isRecording) {
+      shouldKeepListeningRef.current = false;
       recognitionRef.current?.stop();
       setIsRecording(false);
     } else {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
+      shouldKeepListeningRef.current = true;
       finalTranscriptRef.current = message;
-
-      recognition.onresult = (event) => {
-        let final = '';
-        
-        for (let i = 0; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript + ' ';
-          }
-        }
-        
-        if (final) {
-          finalTranscriptRef.current += final;
-          setMessage(finalTranscriptRef.current);
-          
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-          }
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        setIsRecording(false);
-      };
-      
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
-      
-      recognitionRef.current = recognition;
-      recognition.start();
       setIsRecording(true);
+      startListening();
     }
   };
 
