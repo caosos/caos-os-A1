@@ -7,8 +7,10 @@ import ChatInput from '@/components/chat/ChatInput';
 import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
+import ContinuityToken from '@/components/chat/ContinuityToken';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
 import { createPageUrl } from '@/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 
@@ -19,6 +21,7 @@ export default function Chat() {
   const [messages, setMessages] = useState({});
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showToken, setShowToken] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
@@ -30,8 +33,13 @@ export default function Chat() {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    
+    const handleShowToken = () => setShowToken(true);
+    window.addEventListener('show-continuity-token', handleShowToken);
+    
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('show-continuity-token', handleShowToken);
     };
   }, []);
 
@@ -587,6 +595,23 @@ export default function Chat() {
         onClose={() => setShowProfile(false)}
         user={user}
       />
-    </div>
-  );
-  }
+
+      <Dialog open={showToken} onOpenChange={setShowToken}>
+        <DialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">CAOS-A1 Session Token</DialogTitle>
+          </DialogHeader>
+          <ContinuityToken
+            sessionId={currentConversationId}
+            userId={user?.email}
+            conversationMeta={{
+              title: conversations.find(c => c.id === currentConversationId)?.title,
+              message_count: currentMessages.length,
+              last_message_time: conversations.find(c => c.id === currentConversationId)?.last_message_time
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+      </div>
+      );
+      }
