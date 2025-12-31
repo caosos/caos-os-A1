@@ -15,9 +15,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const baseMessageRef = useRef('');
   const silenceTimerRef = useRef(null);
-  const lastTranscriptRef = useRef('');
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -136,67 +134,27 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.interimResults = false;
       recognition.lang = 'en-US';
 
-      baseMessageRef.current = message;
-      lastTranscriptRef.current = '';
-
       recognition.onresult = (event) => {
-        // Reset silence timer on any speech
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-        }
-        silenceTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current && isRecording) {
-            recognitionRef.current.stop();
-            setIsRecording(false);
-          }
-        }, 10000); // 10 seconds of silence
-        
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
-        // Process all results in this event
-        for (let i = 0; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        // Only add final transcript if it's new (different from last time)
-        if (finalTranscript && finalTranscript !== lastTranscriptRef.current) {
-          baseMessageRef.current += finalTranscript;
-          lastTranscriptRef.current = finalTranscript;
-        }
-        
-        setMessage(baseMessageRef.current + interimTranscript);
+        const transcript = event.results[0][0].transcript;
+        setMessage(message + (message ? ' ' : '') + transcript);
         
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
         }
+        setIsRecording(false);
       };
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
         setIsRecording(false);
       };
       
       recognition.onend = () => {
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
         setIsRecording(false);
       };
       
