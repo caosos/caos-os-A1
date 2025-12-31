@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Download } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -139,6 +139,22 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = () => {
+    const filename = activeTab === 'session' 
+      ? `caos-session-${sessionId?.substring(0, 8)}-${Date.now()}.txt`
+      : `caos-implementation-spec-${Date.now()}.txt`;
+    
+    const blob = new Blob([tokenString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -151,24 +167,35 @@ export default function ContinuityToken({ sessionId, userId, conversationMeta, m
               Implementation Spec
             </TabsTrigger>
           </TabsList>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleCopy}
-            className="h-8 px-3 text-white hover:bg-white/10"
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4 mr-1 text-green-400" />
-                <span className="text-green-400">Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 mr-1" />
-                Copy
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleDownload}
+              className="h-8 px-3 text-white hover:bg-white/10"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Download
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCopy}
+              className="h-8 px-3 text-white hover:bg-white/10"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 mr-1 text-green-400" />
+                  <span className="text-green-400">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-1" />
+                  Copy
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <TabsContent value="session" className="mt-0">
