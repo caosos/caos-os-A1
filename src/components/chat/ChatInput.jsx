@@ -179,21 +179,19 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
-        if (event.error === 'no-speech' || event.error === 'audio-capture') {
-          // Restart on timeout
-          if (isRecording) {
-            recognition.start();
-          }
-        } else {
-          setIsRecording(false);
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
         }
+        setIsRecording(false);
       };
       
       recognition.onend = () => {
-        // Auto-restart if still recording
-        if (isRecording) {
-          recognition.start();
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
         }
+        setIsRecording(false);
       };
       
       recognitionRef.current = recognition;
