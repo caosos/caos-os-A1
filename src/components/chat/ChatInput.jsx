@@ -16,6 +16,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
   const silenceTimerRef = useRef(null);
+  const startMessageRef = useRef('');
+  const processedIndexRef = useRef(0);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -126,6 +128,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (isRecording) {
       recognitionRef.current?.stop();
       setIsRecording(false);
+      processedIndexRef.current = 0;
     } else {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
@@ -134,27 +137,40 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
+      startMessageRef.current = message;
+      processedIndexRef.current = 0;
+
       recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        let newTranscript = '';
+        
+        // Only process results we haven't seen yet
+        for (let i = processedIndexRef.current; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            newTranscript += event.results[i][0].transcript + ' ';
+            processedIndexRef.current = i + 1;
+          }
         }
         
-        setMessage(prev => prev + transcript);
-        
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-          textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        if (newTranscript) {
+          setMessage(startMessageRef.current + newTranscript);
+          startMessageRef.current = startMessageRef.current + newTranscript;
+          
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+          }
         }
       };
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
         setIsRecording(false);
+        processedIndexRef.current = 0;
       };
       
       recognition.onend = () => {
         setIsRecording(false);
+        processedIndexRef.current = 0;
       };
       
       recognitionRef.current = recognition;
