@@ -166,15 +166,46 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       recognition.onerror = (event) => {
         console.error('Speech recognition error', event.error);
-        isRecordingRef.current = false;
-        setIsRecording(false);
-        lastTranscriptRef.current = '';
+        if (event.error === 'aborted') {
+          // User manually stopped
+          isRecordingRef.current = false;
+          setIsRecording(false);
+          lastTranscriptRef.current = '';
+          return;
+        }
+        // On other errors, retry after a moment if still recording
+        if (isRecordingRef.current) {
+          setTimeout(() => {
+            if (isRecordingRef.current) {
+              try {
+                recognition.start();
+              } catch (e) {
+                isRecordingRef.current = false;
+                setIsRecording(false);
+              }
+            }
+          }, 500);
+        }
       };
       
       recognition.onend = () => {
-        isRecordingRef.current = false;
-        setIsRecording(false);
-        lastTranscriptRef.current = '';
+        // Auto-restart after silence (with small delay to prevent rapid loops)
+        if (isRecordingRef.current) {
+          setTimeout(() => {
+            if (isRecordingRef.current) {
+              try {
+                recognition.start();
+              } catch (e) {
+                isRecordingRef.current = false;
+                setIsRecording(false);
+                lastTranscriptRef.current = '';
+              }
+            }
+          }, 300);
+        } else {
+          setIsRecording(false);
+          lastTranscriptRef.current = '';
+        }
       };
       
       recognitionRef.current = recognition;
