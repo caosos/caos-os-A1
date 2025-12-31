@@ -175,7 +175,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 console.error('Restart failed:', e);
               }
             }
-          }, 1000);
+          }, 5000);
         } else {
           isRecordingRef.current = false;
           setIsRecording(false);
@@ -196,7 +196,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 lastTranscriptRef.current = '';
               }
             }
-          }, 1000);
+          }, 5000);
         } else {
           setIsRecording(false);
           lastTranscriptRef.current = '';
