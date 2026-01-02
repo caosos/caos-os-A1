@@ -214,8 +214,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
       // Stop recording if active
       if (isRecording) {
+        isRecordingRef.current = false;
         recognitionRef.current?.stop();
         setIsRecording(false);
+        lastTranscriptRef.current = '';
       }
 
       onSend(message.trim(), attachedFiles.map(f => f.url));
@@ -281,12 +283,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
-              
+
               // Send message directly without form submission
               if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
                 if (isRecording) {
+                  isRecordingRef.current = false;
                   recognitionRef.current?.stop();
                   setIsRecording(false);
+                  lastTranscriptRef.current = '';
                 }
                 onSend(message.trim(), attachedFiles.map(f => f.url));
                 setMessage('');
