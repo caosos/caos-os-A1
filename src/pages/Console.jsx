@@ -364,7 +364,9 @@ export default function Console() {
                   alt="CAOS AI Avatar"
                   className="w-full h-full object-cover opacity-90"
                   style={{ 
-                    objectPosition: 'center 30%'
+                    objectPosition: 'center 20%',
+                    transform: 'scale(2.5)',
+                    transformOrigin: 'center 35%'
                   }}
                 />
                 
