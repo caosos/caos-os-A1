@@ -536,7 +536,13 @@ export default function Chat() {
 
       <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`}>
         {/* Chat Section */}
-        <div className={`relative flex flex-col overflow-hidden ${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' : 'h-full w-full'}`}>
+        <div className={`relative flex flex-col overflow-hidden ${
+          isDeveloperMode 
+            ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' 
+            : multiAgentMode 
+              ? 'h-3/4 w-full' 
+              : 'h-full w-full'
+        }`}>
           <div className="flex-1 overflow-y-auto overflow-x-hidden pb-24">
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
@@ -621,7 +627,40 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Right Side: Blackboard + Terminal */}
+        {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
+        {multiAgentMode && !isDeveloperMode && (
+          <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
+            <div className="p-4">
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <span className="text-lg">📋</span> Blackboard
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                  <div className="text-blue-300 font-medium text-xs mb-1">ARCHITECT</div>
+                  <div className="text-white/70 text-xs">No entries yet</div>
+                </div>
+                <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
+                  <div className="text-red-300 font-medium text-xs mb-1">SECURITY</div>
+                  <div className="text-white/70 text-xs">No entries yet</div>
+                </div>
+                <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
+                  <div className="text-green-300 font-medium text-xs mb-1">ENGINEER</div>
+                  <div className="text-white/70 text-xs">No entries yet</div>
+                </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                  <div className="text-yellow-300 font-medium text-xs mb-1">QA</div>
+                  <div className="text-white/70 text-xs">No entries yet</div>
+                </div>
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded p-2">
+                  <div className="text-purple-300 font-medium text-xs mb-1">DOCS</div>
+                  <div className="text-white/70 text-xs">No entries yet</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Side: Blackboard + Terminal - Only in developer mode */}
         {isDeveloperMode && (
           <div className="h-1/2 md:h-full md:w-1/2 flex flex-col">
             {/* Blackboard Section - Only show if multi-agent mode */}

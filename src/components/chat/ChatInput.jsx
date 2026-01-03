@@ -277,6 +277,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   };
 
+  const handleAgentRightClick = (e, agentId) => {
+    e.preventDefault();
+    if (agentId === 'all') return;
+    
+    const newRole = prompt('Enter role for this agent:');
+    if (newRole && newRole.trim()) {
+      // Store in localStorage per conversation (temporary)
+      const roles = JSON.parse(localStorage.getItem('caos_agent_roles') || '{}');
+      roles[agentId] = newRole.trim();
+      localStorage.setItem('caos_agent_roles', JSON.stringify(roles));
+      alert(`Role updated for ${agentId}: ${newRole.trim()}`);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
       {/* Agent Selector - Only show in multi-agent mode */}
@@ -289,6 +303,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 key={agent.id}
                 type="button"
                 onClick={() => toggleAgent(agent.id)}
+                onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
                 className={`px-2 py-1 rounded text-white/80 transition-all ${
                   selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
                     ? agent.color + ' border border-white/30'
