@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2 } from 'lucide-react';
+import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { base44 } from '@/api/base44Client';
 
 export default function Console() {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [pendingIntent, setPendingIntent] = useState(null);
   const recognitionRef = useRef(null);
 
   const CAOS_SERVER = "https://nonextractive-son-ichnographical.ngrok-free.dev";
@@ -58,22 +62,40 @@ export default function Console() {
   };
 
   const handleVoiceCommand = async (command) => {
-    // Send command to CAOS backend
-    console.log('Voice command:', command);
+    // CAOS-A1: Send raw transcript to CAOS as UNTRUSTED INPUT
+    console.log('[Whisper → CAOS] Raw transcript:', command);
     
-    // Get AI response
-    const response = await fetch(`${CAOS_SERVER}/api/console/command`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command })
-    }).catch(() => {
-      return { ok: false };
-    });
+    try {
+      const response = await fetch(`${CAOS_SERVER}/api/console/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          raw_transcript: command,
+          source: 'whisper_ui',
+          timestamp: new Date().toISOString()
+        })
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      speakResponse(data.reply || 'Command received');
-    } else {
+      if (response.ok) {
+        const data = await response.json();
+        
+        // CAOS-A1: Display normalized intent if available
+        if (data.intent) {
+          setPendingIntent(data.intent);
+        }
+        
+        // CAOS-A1: Check if approval required before state mutation
+        if (data.requires_approval) {
+          speakResponse(data.approval_prompt || 'Action requires approval. Confirm to proceed.');
+        } else {
+          speakResponse(data.reply || 'Command processed');
+          setPendingIntent(null);
+        }
+      } else {
+        speakResponse('Console interface ready for commands');
+      }
+    } catch (error) {
+      console.error('[CAOS] Connection failed:', error);
       speakResponse('Console interface ready for commands');
     }
   };
@@ -183,12 +205,20 @@ export default function Console() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate(createPageUrl('Chat'))}
+              className="p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+              title="Back to Chat"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <button
               onClick={toggleVoiceInput}
               className={`p-3 rounded-full transition-all ${
                 isListening 
                   ? 'bg-red-500/30 border-2 border-red-500 animate-pulse' 
                   : 'bg-white/10 border border-white/20 hover:bg-white/20'
               }`}
+              title={isListening ? 'Stop Listening' : 'Start Voice Input'}
             >
               <Mic className={`w-5 h-5 ${isListening ? 'text-red-400' : 'text-white'}`} />
             </button>
@@ -196,15 +226,47 @@ export default function Console() {
               onClick={fetchMetrics}
               disabled={loading}
               className="p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors disabled:opacity-50"
+              title="Refresh Metrics"
             >
               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
+        {/* Whisper Transcript Display */}
         {transcript && (
-          <div className="mb-3 px-4 py-2 bg-blue-500/20 border border-blue-500/40 rounded text-blue-300 text-sm">
-            "{transcript}"
+          <div className="mb-3 px-4 py-2 bg-blue-500/20 border border-blue-500/40 rounded">
+            <div className="text-[10px] text-blue-400/60 uppercase tracking-wider mb-1">Raw Transcript (Whisper)</div>
+            <div className="text-blue-300 text-sm">"{transcript}"</div>
+          </div>
+        )}
+
+        {/* Pending Intent (from CAOS) */}
+        {pendingIntent && (
+          <div className="mb-3 px-4 py-2 bg-yellow-500/20 border border-yellow-500/40 rounded">
+            <div className="text-[10px] text-yellow-400/60 uppercase tracking-wider mb-1">Pending Action (Requires Approval)</div>
+            <div className="text-yellow-300 text-sm">{pendingIntent}</div>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  // Send approval to CAOS
+                  fetch(`${CAOS_SERVER}/api/console/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ intent: pendingIntent, approved: true })
+                  }).then(() => setPendingIntent(null));
+                }}
+                className="px-3 py-1 bg-green-500/30 hover:bg-green-500/40 border border-green-500/50 rounded text-green-300 text-xs"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => setPendingIntent(null)}
+                className="px-3 py-1 bg-red-500/30 hover:bg-red-500/40 border border-red-500/50 rounded text-red-300 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
@@ -287,27 +349,57 @@ export default function Console() {
             </CardContent>
           </Card>
 
-          {/* Center - CAOS Avatar */}
+          {/* Center - CAOS Avatar (Storm-like AI) */}
           <div className="col-span-6 row-span-4 flex items-center justify-center">
             <div className="relative">
-              <div className="w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 border-2 border-cyan-500/50 flex items-center justify-center animate-pulse">
-                <div className="w-56 h-56 rounded-full bg-gradient-to-br from-blue-600/30 to-purple-600/30 border border-blue-400/40 flex items-center justify-center">
+              {/* Glowing rings */}
+              <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping" style={{ animationDuration: '3s' }}></div>
+              <div className="absolute inset-0 rounded-full border border-purple-500/20 animate-pulse" style={{ animationDuration: '2s' }}></div>
+              
+              {/* Main avatar container */}
+              <div className="w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 border-2 border-cyan-500/50 overflow-hidden relative">
+                {/* Storm-like AI woman image */}
+                <img 
+                  src="https://images.unsplash.com/photo-1634926878768-2a5b3c42f139?w=400&h=400&fit=crop&q=80"
+                  alt="CAOS AI Avatar"
+                  className="w-full h-full object-cover opacity-80"
+                  style={{ 
+                    filter: 'saturate(1.2) contrast(1.1)',
+                    mixBlendMode: 'screen'
+                  }}
+                />
+                
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 via-transparent to-purple-900/40"></div>
+                
+                {/* Status overlay at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                   <div className="text-center">
-                    <div className="text-5xl font-bold text-white mb-2 tracking-widest">CAOS</div>
-                    <div className="text-xs text-cyan-400 tracking-wider">{isListening ? 'LISTENING...' : isSpeaking ? 'SPEAKING...' : 'READY'}</div>
+                    <div className="text-2xl font-bold text-white mb-1 tracking-widest">C·A·O·S</div>
+                    <div className="text-xs text-cyan-400 tracking-wider font-medium">
+                      {isListening ? 'LISTENING...' : isSpeaking ? 'SPEAKING...' : 'READY'}
+                    </div>
                     {(isListening || isSpeaking) && (
-                      <div className="mt-3 flex justify-center gap-1">
-                        <div className="w-1 h-4 bg-cyan-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-1 h-6 bg-cyan-400 animate-pulse" style={{ animationDelay: '100ms' }}></div>
-                        <div className="w-1 h-5 bg-cyan-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                        <div className="w-1 h-7 bg-cyan-400 animate-pulse" style={{ animationDelay: '300ms' }}></div>
-                        <div className="w-1 h-4 bg-cyan-400 animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                      <div className="mt-2 flex justify-center gap-1">
+                        <div className="w-1 h-3 bg-cyan-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-1 h-5 bg-cyan-400 animate-pulse" style={{ animationDelay: '100ms' }}></div>
+                        <div className="w-1 h-4 bg-cyan-400 animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                        <div className="w-1 h-6 bg-cyan-400 animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                        <div className="w-1 h-3 bg-cyan-400 animate-pulse" style={{ animationDelay: '400ms' }}></div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Energy particles when active */}
+                {(isListening || isSpeaking) && (
+                  <>
+                    <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400 rounded-full animate-ping"></div>
+                    <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                    <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" style={{ animationDelay: '400ms' }}></div>
+                  </>
+                )}
               </div>
-              <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping" style={{ animationDuration: '3s' }}></div>
             </div>
           </div>
 
