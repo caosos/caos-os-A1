@@ -12,11 +12,25 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (captureMenuRef.current && !captureMenuRef.current.contains(event.target)) {
+        setShowCaptureMenu(false);
+      }
+    };
+
+    if (showCaptureMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCaptureMenu]);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
   const lastTranscriptRef = useRef('');
   const isRecordingRef = useRef(false);
+  const captureMenuRef = useRef(null);
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
@@ -313,7 +327,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           disabled={isLoading}
         />
         
-        <div className="relative">
+        <div className="relative" ref={captureMenuRef}>
           <button
             type="button"
             onClick={() => setShowCaptureMenu(!showCaptureMenu)}
