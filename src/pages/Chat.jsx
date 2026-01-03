@@ -91,7 +91,8 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        navigate(createPageUrl('Welcome'));
+        // Don't redirect - let Base44 handle authentication flow
+        setDataLoaded(true);
       }
     };
 
