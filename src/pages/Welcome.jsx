@@ -20,10 +20,17 @@ export default function Welcome() {
   };
 
   const handleGoogleLogin = async () => {
-    // Clear any guest data first
+    // Clear any guest data and existing sessions
     localStorage.removeItem('caos_guest_user');
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
+    
+    // Force logout to clear any existing Base44 session
+    try {
+      await base44.auth.logout();
+    } catch (e) {
+      // Ignore if not logged in
+    }
     
     // Use Base44's built-in OAuth - it handles the redirect automatically
     try {
