@@ -422,6 +422,7 @@ export default function Console() {
               </div>
             </CardContent>
           </Card>
+        </div>
       </div>
     </div>
   );
