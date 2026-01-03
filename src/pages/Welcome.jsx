@@ -25,8 +25,8 @@ export default function Welcome() {
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Navigate to Chat - if not authenticated, Chat page will redirect to Base44's OAuth
-    navigate(createPageUrl('Chat'));
+    // Trigger Base44's OAuth login flow directly
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   return (
