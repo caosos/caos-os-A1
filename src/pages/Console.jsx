@@ -360,12 +360,11 @@ export default function Console() {
               <div className="w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 border-2 border-cyan-500/50 overflow-hidden relative">
                 {/* Storm-like AI woman image */}
                 <img 
-                  src="https://images.unsplash.com/photo-1634926878768-2a5b3c42f139?w=400&h=400&fit=crop&q=80"
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/694a39ebf56fe3b59c5683d8/e47c9b9db_consoleofthefuture.png"
                   alt="CAOS AI Avatar"
-                  className="w-full h-full object-cover opacity-80"
+                  className="w-full h-full object-cover opacity-90"
                   style={{ 
-                    filter: 'saturate(1.2) contrast(1.1)',
-                    mixBlendMode: 'screen'
+                    objectPosition: 'center 30%'
                   }}
                 />
                 
