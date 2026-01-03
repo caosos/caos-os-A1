@@ -19,25 +19,14 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleLogin = async () => {
-    // Clear any guest data and existing sessions
+  const handleGoogleLogin = () => {
+    // Clear any guest data first
     localStorage.removeItem('caos_guest_user');
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Force logout to clear any existing Base44 session
-    try {
-      await base44.auth.logout();
-    } catch (e) {
-      // Ignore if not logged in
-    }
-    
-    // Use Base44's built-in OAuth - it handles the redirect automatically
-    try {
-      await base44.auth.loginWithProvider('google', window.location.origin + createPageUrl('Chat'));
-    } catch (error) {
-      console.error('Google login failed:', error);
-    }
+    // Redirect to Google OAuth
+    base44.auth.loginWithProvider('google', window.location.origin + createPageUrl('Chat'));
   };
 
   return (
