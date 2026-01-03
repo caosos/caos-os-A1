@@ -254,14 +254,34 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   };
 
+  const [customAgents, setCustomAgents] = useState(() => {
+    const saved = localStorage.getItem('caos_custom_agents');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const agents = [
-    { id: 'all', name: 'All Agents', color: 'bg-white/20' },
+    { id: 'all', name: 'All', color: 'bg-white/20' },
     { id: 'architect', name: 'Architect', color: 'bg-blue-500/20' },
     { id: 'security', name: 'Security', color: 'bg-red-500/20' },
     { id: 'engineer', name: 'Engineer', color: 'bg-green-500/20' },
     { id: 'qa', name: 'QA', color: 'bg-yellow-500/20' },
-    { id: 'docs', name: 'Docs', color: 'bg-purple-500/20' }
+    { id: 'docs', name: 'Docs', color: 'bg-purple-500/20' },
+    ...customAgents
   ];
+
+  const handleAddAgent = () => {
+    const name = prompt('Enter agent name:');
+    if (name && name.trim()) {
+      const newAgent = {
+        id: name.toLowerCase().replace(/\s+/g, '_'),
+        name: name.trim(),
+        color: 'bg-cyan-500/20'
+      };
+      const updated = [...customAgents, newAgent];
+      setCustomAgents(updated);
+      localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
+    }
+  };
 
   const toggleAgent = (agentId) => {
     if (agentId === 'all') {
@@ -313,6 +333,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 {agent.name}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={handleAddAgent}
+              className="px-2 py-1 rounded text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all"
+            >
+              + Add
+            </button>
           </div>
         </div>
       )}
