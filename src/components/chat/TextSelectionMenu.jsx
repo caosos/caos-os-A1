@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Volume2, Copy } from 'lucide-react';
+import { MessageSquare, X, Volume2, Copy, Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 
-const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🤔', '👀', '🔥', '😊', '🎯'];
+const ALL_EMOJIS = ['👍', '❤️', '😂', '🤔', '👀', '🔥', '😊', '🎯', '✨', '💯', '🙌', '👏', '💪', '🎉', '⭐', '💡', '🚀', '🌟', '💖', '😍', '🤗', '😎', '🤩', '😢', '😭', '🙏', '👌', '✅', '❌', '⚡', '💥'];
 
 export default function TextSelectionMenu({ 
   position, 
@@ -17,6 +17,33 @@ export default function TextSelectionMenu({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showAllEmojis, setShowAllEmojis] = useState(false);
+  
+  // Get frequently used emojis from localStorage
+  const getFrequentEmojis = () => {
+    const stored = localStorage.getItem('caos_emoji_usage');
+    if (!stored) return ALL_EMOJIS.slice(0, 7);
+    
+    const usage = JSON.parse(stored);
+    const sorted = Object.entries(usage)
+      .sort((a, b) => b[1] - a[1])
+      .map(([emoji]) => emoji);
+    
+    // Combine frequent + new emojis, limit to 7
+    const frequent = sorted.slice(0, 5);
+    const remaining = ALL_EMOJIS.filter(e => !frequent.includes(e)).slice(0, 2);
+    return [...frequent, ...remaining];
+  };
+  
+  const [frequentEmojis, setFrequentEmojis] = useState(getFrequentEmojis());
+  
+  const trackEmojiUsage = (emoji) => {
+    const stored = localStorage.getItem('caos_emoji_usage');
+    const usage = stored ? JSON.parse(stored) : {};
+    usage[emoji] = (usage[emoji] || 0) + 1;
+    localStorage.setItem('caos_emoji_usage', JSON.stringify(usage));
+    setFrequentEmojis(getFrequentEmojis());
+  };
 
   // Stop speech when menu closes
   useEffect(() => {
@@ -105,10 +132,11 @@ export default function TextSelectionMenu({
         {!showReplyInput ? (
           <>
             <div className="flex gap-1 mb-2 flex-wrap">
-              {EMOJI_OPTIONS.map((emoji) => (
+              {(showAllEmojis ? ALL_EMOJIS : frequentEmojis).map((emoji) => (
                 <button
                   key={emoji}
                   onClick={() => {
+                    trackEmojiUsage(emoji);
                     onReact(selectedText, emoji);
                     onClose();
                   }}
@@ -117,6 +145,12 @@ export default function TextSelectionMenu({
                   {emoji}
                 </button>
               ))}
+              <button
+                onClick={() => setShowAllEmojis(!showAllEmojis)}
+                className="w-9 h-9 flex items-center justify-center hover:bg-white/10 rounded-lg transition-all text-white/70 bg-white/5"
+              >
+                <Plus className={`w-4 h-4 transition-transform ${showAllEmojis ? 'rotate-45' : ''}`} />
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-1">
               <button
