@@ -47,10 +47,27 @@ export default function Chat() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        // Check if guest mode
+        const guestUser = localStorage.getItem('caos_guest_user');
+        if (guestUser) {
+          const currentUser = JSON.parse(guestUser);
+          setUser(currentUser);
+          
+          // Load guest conversations from localStorage
+          const guestConvos = JSON.parse(localStorage.getItem('caos_guest_conversations') || '[]');
+          setConversations(guestConvos);
+          
+          const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
+          setMessages(guestMessages);
+          
+          setDataLoaded(true);
+          return;
+        }
+
+        // Check if authenticated user
         const isAuth = await base44.auth.isAuthenticated();
-        
         if (!isAuth) {
-          base44.auth.redirectToLogin();
+          navigate(createPageUrl('Welcome'));
           return;
         }
 
@@ -80,13 +97,14 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        base44.auth.redirectToLogin();
+        navigate(createPageUrl('Welcome'));
       }
     };
 
     loadUserData();
-  }, []);
+  }, [navigate]);
 
+  const isGuestMode = !!localStorage.getItem('caos_guest_user');
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
   useEffect(() => {
