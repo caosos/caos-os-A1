@@ -496,6 +496,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             'Send'
           )}
         </button>
+          </div>
+        </div>
       </div>
         </div>
       </div>
