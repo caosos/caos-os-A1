@@ -48,28 +48,18 @@ export default function Welcome() {
           
           <div className="space-y-4">
             <motion.button
-              onClick={handleGoogleLogin}
+              onClick={handleGuestLogin}
               className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <LogIn className="w-5 h-5" />
-              Sign in with Google
-            </motion.button>
-
-            <motion.button
-              onClick={handleGuestLogin}
-              className="w-full bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm border border-blue-500/30 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 flex items-center justify-center gap-3"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
               <UserPlus className="w-5 h-5" />
-              Continue as Guest
+              Get Started
             </motion.button>
           </div>
 
           <p className="text-white/40 text-sm mt-6">
-            Guest mode stores your conversations locally
+            Your conversations are stored locally in your browser
           </p>
         </motion.div>
         
