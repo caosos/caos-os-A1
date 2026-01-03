@@ -202,7 +202,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             return null;
           })}
           {content.trim() && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{content.trim()}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content.trim()}</p>
           )}
         </div>
       );
@@ -210,7 +210,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     return (
       <div className="space-y-3">
-        {content && <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>}
+        {content && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content}</p>}
         
         {/* Display attached files */}
         {attachedFiles.length > 0 && (
