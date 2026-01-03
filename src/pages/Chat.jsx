@@ -52,25 +52,19 @@ export default function Chat() {
         if (guestUser) {
           const currentUser = JSON.parse(guestUser);
           setUser(currentUser);
-          
+
           // Load guest conversations from localStorage
           const guestConvos = JSON.parse(localStorage.getItem('caos_guest_conversations') || '[]');
           setConversations(guestConvos);
-          
+
           const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
           setMessages(guestMessages);
-          
+
           setDataLoaded(true);
           return;
         }
 
-        // Check authentication first
-        const isAuth = await base44.auth.isAuthenticated();
-        if (!isAuth) {
-          // Not authenticated - Base44 will handle the redirect, just wait
-          return;
-        }
-
+        // For authenticated users - Base44 handles auth automatically
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
@@ -97,7 +91,7 @@ export default function Chat() {
         setDataLoaded(true);
         } catch (error) {
         console.error('Error loading user data:', error);
-        navigate(createPageUrl('Welcome'));
+        // Base44 will automatically redirect to login if not authenticated
         }
     };
 
