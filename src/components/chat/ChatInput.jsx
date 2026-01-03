@@ -275,12 +275,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const newAgent = {
         id: name.toLowerCase().replace(/\s+/g, '_'),
         name: name.trim(),
-        color: 'bg-cyan-500/20'
+        color: 'bg-cyan-500/20',
+        isCustom: true
       };
       const updated = [...customAgents, newAgent];
       setCustomAgents(updated);
       localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
     }
+  };
+
+  const handleDeleteAgent = (agentId) => {
+    const updated = customAgents.filter(a => a.id !== agentId);
+    setCustomAgents(updated);
+    localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
+    setSelectedAgents(selectedAgents.filter(id => id !== agentId));
   };
 
   const toggleAgent = (agentId) => {
@@ -319,19 +327,32 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           <span className="text-white/50">Send to:</span>
           <div className="flex flex-wrap gap-1">
             {agents.map(agent => (
-              <button
-                key={agent.id}
-                type="button"
-                onClick={() => toggleAgent(agent.id)}
-                onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
-                className={`px-2 py-1 rounded text-white/80 transition-all ${
-                  selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
-                    ? agent.color + ' border border-white/30'
-                    : 'bg-white/5 border border-white/10 opacity-50'
-                }`}
-              >
-                {agent.name}
-              </button>
+              <div key={agent.id} className="relative group">
+                <button
+                  type="button"
+                  onClick={() => toggleAgent(agent.id)}
+                  onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
+                  className={`px-2 py-1 rounded text-white/80 transition-all ${
+                    selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
+                      ? agent.color + ' border border-white/30'
+                      : 'bg-white/5 border border-white/10 opacity-50'
+                  }`}
+                >
+                  {agent.name}
+                </button>
+                {agent.isCustom && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteAgent(agent.id);
+                    }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             ))}
             <button
               type="button"
