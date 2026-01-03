@@ -263,9 +263,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 px-2`}
+        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full max-w-4xl mx-auto px-4`}
       >
-        <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-end gap-2 w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isUser && (
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
             <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
