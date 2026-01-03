@@ -415,7 +415,17 @@ export default function Chat() {
           message: messageWithFiles,
           session: conversationId,
           memory_gate: memory_gate,
-          images: images.length > 0 ? images : undefined
+          images: images.length > 0 ? images : undefined,
+          capabilities: {
+            file_operations: {
+              read: true,
+              create: true,
+              modify: true,
+              description: "Files are provided by the UI/caller. You can read provided files and create new files as output."
+            },
+            vision: images.length > 0,
+            internet_access: memory_gate.allowed && memory_gate.explicit_recall
+          }
         }),
         signal: controller.signal
       });
