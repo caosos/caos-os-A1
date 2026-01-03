@@ -64,7 +64,15 @@ export default function Chat() {
           return;
         }
 
-        // For authenticated users - Base44 handles auth automatically
+        // Check authentication
+        const isAuth = await base44.auth.isAuthenticated();
+        if (!isAuth) {
+          // Redirect to welcome if not authenticated
+          navigate(createPageUrl('Welcome'));
+          return;
+        }
+
+        // For authenticated users
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
@@ -89,10 +97,10 @@ export default function Chat() {
         setMessages(messagesMap);
 
         setDataLoaded(true);
-        } catch (error) {
+      } catch (error) {
         console.error('Error loading user data:', error);
-        // Base44 will automatically redirect to login if not authenticated
-        }
+        navigate(createPageUrl('Welcome'));
+      }
     };
 
     loadUserData();
