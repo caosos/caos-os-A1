@@ -576,9 +576,18 @@ export default function Chat() {
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-8 pb-12 pointer-events-none">
-            {/* Generated Files Panel */}
+            <div className="pointer-events-auto pb-6">
+              <ChatInput 
+                onSend={handleSendMessage} 
+                isLoading={isLoading}
+                lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+                onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
+              />
+            </div>
+
+            {/* Generated Files Panel - Below Input Bar */}
             {generatedFiles.length > 0 && (
-              <div className="pointer-events-auto max-w-4xl mx-auto px-4 mb-3">
+              <div className="pointer-events-auto max-w-4xl mx-auto px-4 mt-3">
                 <div className="bg-[#0f1f3d]/95 backdrop-blur-xl border border-white/10 rounded-lg p-3">
                   <div className="text-xs text-white/50 mb-2 flex items-center gap-2">
                     <span>📁</span> Generated Files
@@ -607,15 +616,6 @@ export default function Chat() {
                 </div>
               </div>
             )}
-
-            <div className="pointer-events-auto pb-6">
-              <ChatInput 
-                onSend={handleSendMessage} 
-                isLoading={isLoading}
-                lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
-                onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
-              />
-            </div>
           </div>
         </div>
 
