@@ -67,6 +67,14 @@ export default function Chat() {
         // Check if authenticated user
         const isAuth = await base44.auth.isAuthenticated();
         if (!isAuth) {
+          // Check if user is trying to authenticate
+          const needsAuth = localStorage.getItem('caos_needs_auth');
+          if (needsAuth) {
+            localStorage.removeItem('caos_needs_auth');
+            // Trigger Base44 authentication flow
+            base44.auth.redirectToLogin(window.location.pathname);
+            return;
+          }
           navigate(createPageUrl('Welcome'));
           return;
         }
