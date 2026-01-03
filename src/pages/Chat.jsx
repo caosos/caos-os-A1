@@ -543,7 +543,7 @@ export default function Chat() {
               ? 'h-3/4 w-full' 
               : 'h-full w-full'
         }`}>
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden ${multiAgentMode ? 'pb-40' : 'pb-24'}`}>
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden ${multiAgentMode ? 'pb-32' : 'pb-24'}`}>
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -630,6 +630,11 @@ export default function Chat() {
         {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
         {multiAgentMode && !isDeveloperMode && (
           <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
+            <div className="text-center pt-2 pb-1">
+              <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
+                📋 Blackboard
+              </div>
+            </div>
             <div className="p-4 pt-2">
               <div className="space-y-3 text-sm">
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
@@ -663,6 +668,11 @@ export default function Chat() {
             {/* Blackboard Section - Only show if multi-agent mode */}
             {multiAgentMode && (
             <div className="h-1/3 border-b border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
+              <div className="text-center pt-2 pb-1">
+                <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
+                  📋 Blackboard
+                </div>
+              </div>
               <div className="p-4 pt-2">
                 <div className="space-y-3 text-sm">
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">

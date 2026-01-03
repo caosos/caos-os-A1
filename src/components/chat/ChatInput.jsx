@@ -356,15 +356,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </div>
       )}
       
-      {/* Blackboard Label - Above Agent Chips */}
-      {multiAgentMode && (
-        <div className="mb-2 text-center">
-          <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
-            📋 Blackboard
-          </div>
-        </div>
-      )}
-      
       {/* Agent Chips - Above Input Bar */}
       {multiAgentMode && (
         <div className="mb-3 flex justify-center">
