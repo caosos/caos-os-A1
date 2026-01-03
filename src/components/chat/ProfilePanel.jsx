@@ -4,7 +4,7 @@ import { X, Mail, Calendar, Shield, Brain, Terminal } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import moment from 'moment';
 
-export default function ProfilePanel({ isOpen, onClose, user }) {
+export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
   const [rememberConversations, setRememberConversations] = useState(true);
 
   useEffect(() => {
@@ -112,6 +112,20 @@ export default function ProfilePanel({ isOpen, onClose, user }) {
                       localStorage.setItem('caos_developer_mode', checked.toString());
                       window.location.reload();
                     }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-purple-400" />
+                    <div>
+                      <p className="text-white text-sm">Multi-Agent Mode</p>
+                      <p className="text-white/50 text-xs">Agent collaboration</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={multiAgentMode}
+                    onCheckedChange={onMultiAgentModeChange}
                   />
                 </div>
               </div>
