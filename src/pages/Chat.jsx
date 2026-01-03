@@ -64,7 +64,7 @@ export default function Chat() {
           return;
         }
 
-        // For authenticated users - Base44 auto-redirects to OAuth if needed
+        // For authenticated users - check if logged in
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
@@ -89,10 +89,11 @@ export default function Chat() {
         setMessages(messagesMap);
 
         setDataLoaded(true);
-      } catch (error) {
+        } catch (error) {
         console.error('Error loading user data:', error);
-        // Base44 handles OAuth redirect automatically
-      }
+        // Not authenticated - redirect to welcome page
+        navigate(createPageUrl('Welcome'));
+        }
     };
 
     loadUserData();
