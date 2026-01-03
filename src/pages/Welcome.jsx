@@ -19,25 +19,14 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      // Check if already authenticated
-      const isAuth = await base44.auth.isAuthenticated();
-      if (isAuth) {
-        navigate(createPageUrl('Chat'));
-        return;
-      }
-      
-      // Redirect to login
-      const currentOrigin = window.location.origin;
-      const chatPath = createPageUrl('Chat').replace(/^\//, '');
-      const redirectUrl = `${currentOrigin}/${chatPath}`;
-      base44.auth.redirectToLogin(redirectUrl);
-    } catch (error) {
-      console.error('Login error:', error);
-      // Fallback to guest mode if login fails
-      handleGuestLogin();
-    }
+  const handleGoogleLogin = () => {
+    // Clear any guest data first
+    localStorage.removeItem('caos_guest_user');
+    localStorage.removeItem('caos_guest_conversations');
+    localStorage.removeItem('caos_guest_messages');
+    
+    // Redirect to Google login
+    base44.auth.redirectToLogin(window.location.origin + createPageUrl('Chat'));
   };
 
   return (
