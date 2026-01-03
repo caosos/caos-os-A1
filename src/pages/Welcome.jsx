@@ -25,8 +25,8 @@ export default function Welcome() {
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Redirect to Google login
-    base44.auth.redirectToLogin(window.location.origin + createPageUrl('Chat'));
+    // Redirect to Google login (base44 handles the OAuth flow)
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   return (
