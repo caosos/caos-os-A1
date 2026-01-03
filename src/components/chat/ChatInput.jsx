@@ -331,42 +331,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
-      {/* Blackboard Label + Agent Selector - Only show in multi-agent mode */}
-      {multiAgentMode && (
-        <div className="mb-2 flex items-center gap-3">
-          <div className="text-white/70 text-xs font-medium whitespace-nowrap px-1">
-            📋 Blackboard
-          </div>
-          <div className="flex items-center gap-2 text-xs flex-1">
-            <span className="text-white/50">Send to:</span>
-            <div className="flex flex-wrap gap-1">
-              {agents.map(agent => (
-                <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => toggleAgent(agent.id)}
-                  onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
-                  className={`px-2 py-1 rounded text-white/80 transition-all ${
-                    selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
-                      ? agent.color + ' border border-white/30'
-                      : 'bg-white/5 border border-white/10 opacity-50'
-                  }`}
-                >
-                  {agent.name}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddAgent}
-                className="px-2 py-1 rounded text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all"
-              >
-                + Add
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Attached Files Display */}
       {attachedFiles.length > 0 && (
         <div className="mb-2 px-3 flex flex-wrap gap-2">
@@ -532,6 +496,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             'Send'
           )}
         </button>
+      </div>
+        </div>
       </div>
     </form>
   );
