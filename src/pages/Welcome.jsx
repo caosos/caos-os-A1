@@ -24,6 +24,16 @@ export default function Welcome() {
     }
   };
 
+  const handleGuestLogin = () => {
+    const guestUser = {
+      full_name: 'Guest User',
+      email: 'guest@caos.app',
+      isGuest: true
+    };
+    localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
+    navigate(createPageUrl('Chat'));
+  };
+
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center overflow-hidden">
       <StarfieldBackground />
@@ -69,11 +79,20 @@ export default function Welcome() {
               <UserPlus className="w-5 h-5" />
               Get Started
             </motion.button>
-          </form>
+            </form>
 
-          <p className="text-white/40 text-sm mt-6">
+            <motion.button
+            onClick={handleGuestLogin}
+            className="w-full bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm border border-blue-500/30 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 mt-3"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            >
+            Continue as Guest
+            </motion.button>
+
+            <p className="text-white/40 text-sm mt-6">
             Your conversations are stored locally
-          </p>
+            </p>
         </motion.div>
         
         <motion.div
