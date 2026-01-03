@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatBubble from '@/components/chat/ChatBubble';
