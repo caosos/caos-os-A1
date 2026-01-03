@@ -16,8 +16,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
+  const navigate = useNavigate();
+  
   const handleLogout = () => {
-    base44.auth.logout();
+    const isGuest = !!localStorage.getItem('caos_guest_user');
+    if (isGuest) {
+      localStorage.removeItem('caos_guest_user');
+      localStorage.removeItem('caos_guest_conversations');
+      localStorage.removeItem('caos_guest_messages');
+      navigate(createPageUrl('Welcome'));
+    } else {
+      base44.auth.logout(createPageUrl('Welcome'));
+    }
   };
 
   return (
