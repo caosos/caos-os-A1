@@ -97,15 +97,31 @@ export default function Chat() {
     if (!user) return;
 
     try {
-      const newConversation = await base44.entities.Conversation.create({
-        title: 'New Conversation',
-        last_message_time: new Date().toISOString(),
-        created_by: user.email
-      });
-      setConversations([newConversation, ...conversations]);
-      setCurrentConversationId(newConversation.id);
-      localStorage.setItem('caos_last_conversation', newConversation.id);
-      setMessages({ ...messages, [newConversation.id]: [] });
+      if (isGuestMode) {
+        // Guest mode: create conversation locally
+        const newConversation = {
+          id: 'guest_' + Date.now(),
+          title: 'New Conversation',
+          last_message_time: new Date().toISOString(),
+          created_by: user.email
+        };
+        const updatedConvos = [newConversation, ...conversations];
+        setConversations(updatedConvos);
+        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+        setCurrentConversationId(newConversation.id);
+        setMessages({ ...messages, [newConversation.id]: [] });
+      } else {
+        // Authenticated: save to database
+        const newConversation = await base44.entities.Conversation.create({
+          title: 'New Conversation',
+          last_message_time: new Date().toISOString(),
+          created_by: user.email
+        });
+        setConversations([newConversation, ...conversations]);
+        setCurrentConversationId(newConversation.id);
+        localStorage.setItem('caos_last_conversation', newConversation.id);
+        setMessages({ ...messages, [newConversation.id]: [] });
+      }
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast.error('Failed to create new thread');
@@ -114,18 +130,35 @@ export default function Chat() {
 
   const handleDeleteConversation = async (id) => {
     try {
-      await base44.entities.Conversation.delete(id);
-      const convMessages = messages[id] || [];
-      for (const msg of convMessages) {
-        await base44.entities.Message.delete(msg.id);
-      }
-      setConversations(conversations.filter(c => c.id !== id));
-      const newMessages = { ...messages };
-      delete newMessages[id];
-      setMessages(newMessages);
-      if (currentConversationId === id) {
-        setCurrentConversationId(null);
-        localStorage.removeItem('caos_last_conversation');
+      if (isGuestMode) {
+        // Guest mode: delete locally
+        const updatedConvos = conversations.filter(c => c.id !== id);
+        setConversations(updatedConvos);
+        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+        
+        const newMessages = { ...messages };
+        delete newMessages[id];
+        setMessages(newMessages);
+        localStorage.setItem('caos_guest_messages', JSON.stringify(newMessages));
+        
+        if (currentConversationId === id) {
+          setCurrentConversationId(null);
+        }
+      } else {
+        // Authenticated: delete from database
+        await base44.entities.Conversation.delete(id);
+        const convMessages = messages[id] || [];
+        for (const msg of convMessages) {
+          await base44.entities.Message.delete(msg.id);
+        }
+        setConversations(conversations.filter(c => c.id !== id));
+        const newMessages = { ...messages };
+        delete newMessages[id];
+        setMessages(newMessages);
+        if (currentConversationId === id) {
+          setCurrentConversationId(null);
+          localStorage.removeItem('caos_last_conversation');
+        }
       }
       toast.success('Conversation deleted');
     } catch (error) {
@@ -141,7 +174,11 @@ export default function Chat() {
     setConversations(updatedConvos);
 
     try {
-      await base44.entities.Conversation.update(id, { title: newTitle });
+      if (isGuestMode) {
+        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+      } else {
+        await base44.entities.Conversation.update(id, { title: newTitle });
+      }
     } catch (error) {
       console.error('Error renaming conversation:', error);
       toast.error('Failed to rename thread');
@@ -161,7 +198,11 @@ export default function Chat() {
     setMessages(newMessages);
 
     try {
-      await base44.entities.Message.update(messageId, updates);
+      if (isGuestMode) {
+        localStorage.setItem('caos_guest_messages', JSON.stringify(newMessages));
+      } else {
+        await base44.entities.Message.update(messageId, updates);
+      }
     } catch (error) {
       console.error('Error updating message:', error);
     }
@@ -208,16 +249,31 @@ export default function Chat() {
       if (!conversationId) {
         const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
 
-        conversation = await base44.entities.Conversation.create({
-          title: title,
-          last_message_time: new Date().toISOString(),
-          created_by: user.email
-        });
-        conversationId = conversation.id;
-        setConversations([conversation, ...conversations]);
-        setCurrentConversationId(conversationId);
-        localStorage.setItem('caos_last_conversation', conversationId);
-        setMessages({ ...messages, [conversationId]: [] });
+        if (isGuestMode) {
+          conversation = {
+            id: 'guest_' + Date.now(),
+            title: title,
+            last_message_time: new Date().toISOString(),
+            created_by: user.email
+          };
+          conversationId = conversation.id;
+          const updatedConvos = [conversation, ...conversations];
+          setConversations(updatedConvos);
+          localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+          setCurrentConversationId(conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+        } else {
+          conversation = await base44.entities.Conversation.create({
+            title: title,
+            last_message_time: new Date().toISOString(),
+            created_by: user.email
+          });
+          conversationId = conversation.id;
+          setConversations([conversation, ...conversations]);
+          setCurrentConversationId(conversationId);
+          localStorage.setItem('caos_last_conversation', conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+        }
       }
 
       const convMessages = messages[conversationId] || [];
@@ -284,8 +340,12 @@ export default function Chat() {
         created_by: user.email
       };
 
-      const savedUserMessage = await base44.entities.Message.create(userMessage);
-      userMessage.id = savedUserMessage.id;
+      if (isGuestMode) {
+        userMessage.id = 'guest_msg_' + Date.now();
+      } else {
+        const savedUserMessage = await base44.entities.Message.create(userMessage);
+        userMessage.id = savedUserMessage.id;
+      }
 
       // Get AI response from CAOS server
       const history = convMessages.map(msg => {
@@ -373,10 +433,15 @@ export default function Chat() {
         created_by: user.email
       };
 
-      const savedAiMessage = await base44.entities.Message.create(aiMessage);
-      aiMessage.id = savedAiMessage.id;
+      if (isGuestMode) {
+        aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
+      } else {
+        const savedAiMessage = await base44.entities.Message.create(aiMessage);
+        aiMessage.id = savedAiMessage.id;
+      }
 
-      setMessages(prev => ({ ...prev, [conversationId]: [...convMessages, userMessage, aiMessage] }));
+      const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
+      setMessages(updatedMessages);
 
       // Update conversation
       const updatedConvos = conversations.map(c =>
@@ -386,10 +451,15 @@ export default function Chat() {
       );
       setConversations(updatedConvos);
 
-      await base44.entities.Conversation.update(conversationId, {
-        last_message_preview: response.substring(0, 100),
-        last_message_time: new Date().toISOString()
-      });
+      if (isGuestMode) {
+        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedMessages));
+        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+      } else {
+        await base44.entities.Conversation.update(conversationId, {
+          last_message_preview: response.substring(0, 100),
+          last_message_time: new Date().toISOString()
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
 
