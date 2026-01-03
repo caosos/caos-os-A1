@@ -64,13 +64,7 @@ export default function Chat() {
           return;
         }
 
-        // Check if authenticated user
-        const isAuth = await base44.auth.isAuthenticated();
-        if (!isAuth) {
-          navigate(createPageUrl('Welcome'));
-          return;
-        }
-
+        // Try to get authenticated user - let Base44 handle auth redirect if needed
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
