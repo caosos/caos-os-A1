@@ -47,16 +47,15 @@ export default function Chat() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const savedUser = localStorage.getItem('caos_user');
+        const isAuth = await base44.auth.isAuthenticated();
         
-        if (!savedUser) {
-          setDataLoaded(true);
+        if (!isAuth) {
+          base44.auth.redirectToLogin();
           return;
         }
 
-        const currentUser = JSON.parse(savedUser);
+        const currentUser = await base44.auth.me();
         setUser(currentUser);
-        setDataLoaded(true);
 
         // Load conversations for this user
         const userConvos = await base44.entities.Conversation.filter(
@@ -81,7 +80,7 @@ export default function Chat() {
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
-        setDataLoaded(true);
+        base44.auth.redirectToLogin();
       }
     };
 
@@ -149,33 +148,7 @@ export default function Chat() {
     }
   };
 
-  const handleSaveUser = async (userData) => {
-    localStorage.setItem('caos_user', JSON.stringify(userData));
-    setUser(userData);
-    
-    // Load conversations after user is set
-    try {
-      const userConvos = await base44.entities.Conversation.filter(
-        { created_by: userData.email },
-        '-last_message_time',
-        100
-      );
-      setConversations(userConvos);
 
-      const messagesMap = {};
-      for (const conv of userConvos) {
-        const convMessages = await base44.entities.Message.filter(
-          { conversation_id: conv.id },
-          'timestamp',
-          1000
-        );
-        messagesMap[conv.id] = convMessages;
-      }
-      setMessages(messagesMap);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
 
   const handleUpdateMessage = async (messageId, updates) => {
     if (!currentConversationId) return;
@@ -444,49 +417,7 @@ export default function Chat() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center">
-        <StarfieldBackground />
-        <div className="relative z-10 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4">
-          <h2 className="text-2xl font-light text-white text-center mb-6">Welcome to CAOS</h2>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            handleSaveUser({
-              full_name: formData.get('name'),
-              email: formData.get('email')
-            });
-          }} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                name="name"
-                placeholder="Your Name"
-                required
-                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <input
-                type="email"
-                name="email"
-                placeholder="Your Email"
-                required
-                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition-colors"
-            >
-              Continue
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
