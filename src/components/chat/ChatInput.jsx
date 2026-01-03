@@ -362,7 +362,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   setIsRecording(false);
                   lastTranscriptRef.current = '';
                 }
-                onSend(message.trim(), attachedFiles.map(f => f.url));
+                onSend(message.trim(), attachedFiles.map(f => f.url), multiAgentMode ? selectedAgents : null);
                 setMessage('');
                 setAttachedFiles([]);
                 if (textareaRef.current) {
