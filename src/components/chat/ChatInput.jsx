@@ -310,21 +310,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (agentId === 'all') return;
     
     const agent = agents.find(a => a.id === agentId);
-    const action = confirm('Right-click menu:\n\n[OK] = Edit Role\n[Cancel] = Delete Agent' + (agent?.isCustom ? '' : ' (built-in agents cannot be deleted)'));
     
-    if (action) {
-      // Edit role
+    if (agent?.isCustom) {
+      // Custom agents: show delete option
+      if (confirm(`Delete agent "${agent.name}"?`)) {
+        handleDeleteAgent(agentId);
+      }
+    } else {
+      // Built-in agents: show role edit
       const newRole = prompt('Enter role for this agent:');
       if (newRole && newRole.trim()) {
         const roles = JSON.parse(localStorage.getItem('caos_agent_roles') || '{}');
         roles[agentId] = newRole.trim();
         localStorage.setItem('caos_agent_roles', JSON.stringify(roles));
         alert(`Role updated for ${agentId}: ${newRole.trim()}`);
-      }
-    } else if (agent?.isCustom) {
-      // Delete custom agent
-      if (confirm(`Delete agent "${agent.name}"?`)) {
-        handleDeleteAgent(agentId);
       }
     }
   };
@@ -354,6 +353,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               </button>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Blackboard Label - Above Agent Chips */}
+      {multiAgentMode && (
+        <div className="mb-2 text-center">
+          <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
+            📋 Blackboard
+          </div>
         </div>
       )}
       
@@ -388,13 +396,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       )}
       
       <div className="flex items-start gap-3">
-        {/* Blackboard Label - Left of Input */}
-        {multiAgentMode && (
-          <div className="text-white/70 text-xs font-medium whitespace-nowrap pt-2">
-            📋 Blackboard
-          </div>
-        )}
-        
         <div className="flex-1">
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
         <button
