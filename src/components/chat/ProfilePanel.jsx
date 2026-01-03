@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain, Terminal } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal, Activity } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import moment from 'moment';
 
 export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
@@ -128,6 +130,17 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                     onCheckedChange={onMultiAgentModeChange}
                   />
                 </div>
+
+                <Link 
+                  to={createPageUrl('Console')}
+                  className="flex items-center gap-3 p-3 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl border border-cyan-500/30 transition-colors"
+                >
+                  <Activity className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <p className="text-white text-sm font-medium">System Console</p>
+                    <p className="text-white/50 text-xs">Monitor CAOS metrics</p>
+                  </div>
+                </Link>
               </div>
             </div>
           </motion.div>
