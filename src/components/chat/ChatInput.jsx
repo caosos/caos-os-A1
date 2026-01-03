@@ -357,37 +357,41 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </div>
       )}
       
-      <div className="flex items-start gap-3">
-        {/* Blackboard Label + Agent Selector - Left of Input */}
-        {multiAgentMode && (
-          <div className="flex flex-col gap-2 pt-2">
-            <div className="text-white/70 text-xs font-medium whitespace-nowrap">
-              📋 Blackboard
-            </div>
-            <div className="flex flex-col gap-1">
-              {agents.map(agent => (
-                <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => toggleAgent(agent.id)}
-                  onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
-                  className={`px-2 py-1 rounded text-xs text-white/80 transition-all whitespace-nowrap ${
-                    selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
-                      ? agent.color + ' border border-white/30'
-                      : 'bg-white/5 border border-white/10 opacity-50'
-                  }`}
-                >
-                  {agent.name}
-                </button>
-              ))}
+      {/* Agent Chips - Above Input Bar */}
+      {multiAgentMode && (
+        <div className="mb-3 flex justify-center">
+          <div className="flex flex-col gap-1">
+            {agents.map(agent => (
               <button
+                key={agent.id}
                 type="button"
-                onClick={handleAddAgent}
-                className="px-2 py-1 rounded text-xs text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all whitespace-nowrap"
+                onClick={() => toggleAgent(agent.id)}
+                onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
+                className={`px-3 py-1.5 rounded text-xs text-white/80 transition-all whitespace-nowrap ${
+                  selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
+                    ? agent.color + ' border border-white/30'
+                    : 'bg-white/5 border border-white/10 opacity-50'
+                }`}
               >
-                + Add
+                {agent.name}
               </button>
-            </div>
+            ))}
+            <button
+              type="button"
+              onClick={handleAddAgent}
+              className="px-3 py-1.5 rounded text-xs text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all whitespace-nowrap"
+            >
+              + Add
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex items-start gap-3">
+        {/* Blackboard Label - Left of Input */}
+        {multiAgentMode && (
+          <div className="text-white/70 text-xs font-medium whitespace-nowrap pt-2">
+            📋 Blackboard
           </div>
         )}
         
