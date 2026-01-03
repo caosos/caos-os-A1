@@ -9,15 +9,6 @@ import { LogIn, UserPlus } from 'lucide-react';
 export default function Welcome() {
   const navigate = useNavigate();
 
-  // Redirect to Chat if already authenticated
-  React.useEffect(() => {
-    base44.auth.isAuthenticated().then(isAuth => {
-      if (isAuth) {
-        navigate(createPageUrl('Chat'));
-      }
-    });
-  }, [navigate]);
-
   const handleGuestLogin = () => {
     const guestUser = {
       full_name: 'Guest User',
