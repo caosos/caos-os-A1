@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 
-export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart }) {
+export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode }) {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
+  const [selectedAgents, setSelectedAgents] = useState(['all']);
+  const [showAgentMenu, setShowAgentMenu] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -242,7 +244,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         lastTranscriptRef.current = '';
       }
 
-      onSend(message.trim(), attachedFiles.map(f => f.url));
+      onSend(message.trim(), attachedFiles.map(f => f.url), multiAgentMode ? selectedAgents : null);
       setMessage('');
       setAttachedFiles([]);
       // Reset textarea height
@@ -252,8 +254,54 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   };
 
+  const agents = [
+    { id: 'all', name: 'All Agents', color: 'bg-white/20' },
+    { id: 'architect', name: 'Architect', color: 'bg-blue-500/20' },
+    { id: 'security', name: 'Security', color: 'bg-red-500/20' },
+    { id: 'engineer', name: 'Engineer', color: 'bg-green-500/20' },
+    { id: 'qa', name: 'QA', color: 'bg-yellow-500/20' },
+    { id: 'docs', name: 'Docs', color: 'bg-purple-500/20' }
+  ];
+
+  const toggleAgent = (agentId) => {
+    if (agentId === 'all') {
+      setSelectedAgents(['all']);
+    } else {
+      let newSelection = selectedAgents.filter(id => id !== 'all');
+      if (newSelection.includes(agentId)) {
+        newSelection = newSelection.filter(id => id !== agentId);
+      } else {
+        newSelection.push(agentId);
+      }
+      setSelectedAgents(newSelection.length === 0 ? ['all'] : newSelection);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
+      {/* Agent Selector - Only show in multi-agent mode */}
+      {multiAgentMode && (
+        <div className="mb-2 px-3 flex items-center gap-2 text-xs">
+          <span className="text-white/50">Send to:</span>
+          <div className="flex flex-wrap gap-1">
+            {agents.map(agent => (
+              <button
+                key={agent.id}
+                type="button"
+                onClick={() => toggleAgent(agent.id)}
+                className={`px-2 py-1 rounded text-white/80 transition-all ${
+                  selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
+                    ? agent.color + ' border border-white/30'
+                    : 'bg-white/5 border border-white/10 opacity-50'
+                }`}
+              >
+                {agent.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Attached Files Display */}
       {attachedFiles.length > 0 && (
         <div className="mb-2 px-3 flex flex-wrap gap-2">

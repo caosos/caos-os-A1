@@ -27,6 +27,7 @@ export default function Chat() {
   const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
   const [showTerminal, setShowTerminal] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState([]);
+  const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   
@@ -582,6 +583,7 @@ export default function Chat() {
                 isLoading={isLoading}
                 lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
                 onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
+                multiAgentMode={multiAgentMode}
               />
             </div>
 
@@ -622,7 +624,8 @@ export default function Chat() {
         {/* Right Side: Blackboard + Terminal */}
         {isDeveloperMode && (
           <div className="h-1/2 md:h-full md:w-1/2 flex flex-col">
-            {/* Blackboard Section */}
+            {/* Blackboard Section - Only show if multi-agent mode */}
+            {multiAgentMode && (
             <div className="h-1/3 border-b border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
               <div className="p-4">
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
@@ -651,10 +654,11 @@ export default function Chat() {
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
+              )}
 
-            {/* Terminal Section */}
-            <div className="h-2/3">
+              {/* Terminal Section */}
+              <div className={multiAgentMode ? "h-2/3" : "h-full"}>
             <CodeTerminal onClose={() => {
               localStorage.setItem('caos_developer_mode', 'false');
               window.location.reload();
@@ -682,6 +686,11 @@ export default function Chat() {
         isOpen={showProfile}
         onClose={() => setShowProfile(false)}
         user={user}
+        multiAgentMode={multiAgentMode}
+        onMultiAgentModeChange={(enabled) => {
+          setMultiAgentMode(enabled);
+          localStorage.setItem('caos_multi_agent_mode', enabled);
+        }}
       />
 
       <Dialog open={showToken} onOpenChange={setShowToken}>
