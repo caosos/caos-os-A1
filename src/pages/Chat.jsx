@@ -64,7 +64,13 @@ export default function Chat() {
           return;
         }
 
-        // Try to get authenticated user - let Base44 handle auth redirect if needed
+        // Check authentication first
+        const isAuth = await base44.auth.isAuthenticated();
+        if (!isAuth) {
+          // Not authenticated - Base44 will handle the redirect, just wait
+          return;
+        }
+
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
@@ -89,11 +95,10 @@ export default function Chat() {
         setMessages(messagesMap);
 
         setDataLoaded(true);
-      } catch (error) {
+        } catch (error) {
         console.error('Error loading user data:', error);
-        // Don't redirect - let Base44 handle authentication flow
-        setDataLoaded(true);
-      }
+        navigate(createPageUrl('Welcome'));
+        }
     };
 
     loadUserData();
