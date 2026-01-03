@@ -154,6 +154,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setIsRecording(false);
       lastTranscriptRef.current = '';
     } else {
+      // CAOS-A1: Base44 UI Layer handles speech-to-text (Whisper equivalent)
+      // Output is UNTRUSTED and will be sent to CAOS for normalization
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
 
@@ -177,6 +179,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         if (fullTranscript && fullTranscript !== lastTranscriptRef.current) {
           const newPart = fullTranscript.slice(lastTranscriptRef.current.length);
           if (newPart.trim()) {
+            // CAOS-A1: Raw transcript added to input (untrusted)
             setMessage(prev => prev + (prev ? ' ' : '') + newPart.trim());
             
             if (textareaRef.current) {
@@ -189,14 +192,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       };
       
       recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
+        console.error('[Whisper UI] Speech recognition error', event.error);
         if (event.error !== 'aborted' && isRecordingRef.current) {
           setTimeout(() => {
             if (isRecordingRef.current) {
               try {
                 recognition.start();
               } catch (e) {
-                console.error('Restart failed:', e);
+                console.error('[Whisper UI] Restart failed:', e);
               }
             }
           }, 5000);
@@ -214,7 +217,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               try {
                 recognition.start();
               } catch (e) {
-                console.error('Restart failed:', e);
+                console.error('[Whisper UI] Restart failed:', e);
                 isRecordingRef.current = false;
                 setIsRecording(false);
                 lastTranscriptRef.current = '';
