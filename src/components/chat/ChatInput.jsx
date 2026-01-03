@@ -36,6 +36,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    // Check if adding these files would exceed the limit
+    const totalFiles = attachedFiles.length + files.length;
+    if (totalFiles > 5) {
+      alert(`You can only attach up to 5 files. You currently have ${attachedFiles.length} file(s) attached.`);
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     try {
       const uploadedFiles = [];
@@ -347,9 +355,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                disabled={attachedFiles.length >= 5}
               >
                 <FileText className="w-4 h-4" />
-                Upload Files
+                Upload Files {attachedFiles.length >= 5 ? '(Max 5)' : `(${5 - attachedFiles.length} left)`}
               </button>
               <button
                 type="button"
