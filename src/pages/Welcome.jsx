@@ -20,13 +20,8 @@ export default function Welcome() {
   };
 
   const handleGoogleLogin = () => {
-    // Clear any guest data first
-    localStorage.removeItem('caos_guest_user');
-    localStorage.removeItem('caos_guest_conversations');
-    localStorage.removeItem('caos_guest_messages');
-    
-    // Trigger Base44 Google OAuth - Base44 handles the complete flow
-    base44.auth.redirectToLogin();
+    // Navigate to login page
+    navigate(createPageUrl('Login'));
   };
 
   return (
