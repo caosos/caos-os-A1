@@ -25,8 +25,8 @@ export default function Welcome() {
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Just navigate to Chat - base44 will auto-redirect to Google OAuth if not authenticated
-    navigate(createPageUrl('Chat'));
+    // Direct OAuth redirect to Google (Base44 handles the provider flow)
+    window.location.href = '/api/auth/login/google?redirect=' + encodeURIComponent(createPageUrl('Chat'));
   };
 
   return (
