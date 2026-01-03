@@ -532,9 +532,9 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`}>
+      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col' : 'flex flex-col'}`}>
         {/* Chat Section */}
-        <div className={`relative flex flex-col overflow-hidden ${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' : 'h-full w-full'}`}>
+        <div className={`relative flex flex-col overflow-hidden ${isDeveloperMode ? 'h-1/3 border-b border-white/10' : 'h-full w-full'}`}>
           <div className="flex-1 overflow-y-auto overflow-x-hidden pb-24">
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
@@ -588,7 +588,7 @@ export default function Chat() {
 
         {/* Terminal Section */}
         {isDeveloperMode && (
-          <div className={`${isDeveloperMode ? 'h-1/2 md:h-full md:w-1/2' : ''}`}>
+          <div className={`${isDeveloperMode ? 'h-2/3' : ''}`}>
             <CodeTerminal onClose={() => {
               localStorage.setItem('caos_developer_mode', 'false');
               window.location.reload();
