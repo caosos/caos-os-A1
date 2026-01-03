@@ -275,12 +275,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         <div
             data-message-bubble
             className={`
-              px-4 py-3 rounded-2xl select-text
+              px-4 py-3 rounded-2xl select-text break-words overflow-wrap-anywhere
               ${isUser 
                 ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
                 : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
               }
             `}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             onContextMenu={handleTextSelection}
           >
           {!isUser && (

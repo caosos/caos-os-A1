@@ -456,12 +456,16 @@ export default function Chat() {
       const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
       setMessages(updatedMessages);
 
-      // Update conversation
-      const updatedConvos = conversations.map(c =>
-        c.id === conversationId
-          ? { ...c, last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() }
-          : c
-      );
+      // Update conversation with sort order
+      const updatedConvo = {
+        ...conversation,
+        last_message_preview: response.substring(0, 100),
+        last_message_time: new Date().toISOString()
+      };
+      const updatedConvos = [
+        updatedConvo,
+        ...conversations.filter(c => c.id !== conversationId)
+      ];
       setConversations(updatedConvos);
 
       if (isGuestMode) {
