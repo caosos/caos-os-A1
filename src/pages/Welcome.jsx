@@ -8,20 +8,20 @@ import { LogIn, UserPlus } from 'lucide-react';
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
 
-  const handleGuestLogin = () => {
-    const guestUser = {
-      full_name: 'Guest User',
-      email: 'guest@caos.app',
-      isGuest: true
-    };
-    localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-    navigate(createPageUrl('Chat'));
-  };
-
-  const handleGoogleLogin = () => {
-    // Navigate to login page
-    navigate(createPageUrl('Login'));
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (name.trim() && email.trim()) {
+      const user = {
+        full_name: name.trim(),
+        email: email.trim(),
+        isGuest: true
+      };
+      localStorage.setItem('caos_guest_user', JSON.stringify(user));
+      navigate(createPageUrl('Chat'));
+    }
   };
 
   return (
@@ -40,31 +40,39 @@ export default function Welcome() {
           <p className="text-lg text-white/70 mb-12">
             Cognitive Adaptive Operating Space
           </p>
-          
-          <div className="space-y-4">
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 px-6 py-3.5 rounded-xl text-base focus:outline-none focus:border-blue-500/50 transition-all"
+              required
+            />
+
+            <input
+              type="email"
+              placeholder="Your Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 px-6 py-3.5 rounded-xl text-base focus:outline-none focus:border-blue-500/50 transition-all"
+              required
+            />
+
             <motion.button
-              onClick={handleGoogleLogin}
+              type="submit"
               className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <LogIn className="w-5 h-5" />
-              Sign in with Google
-            </motion.button>
-
-            <motion.button
-              onClick={handleGuestLogin}
-              className="w-full bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm border border-blue-500/30 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 flex items-center justify-center gap-3"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
               <UserPlus className="w-5 h-5" />
-              Continue as Guest
+              Get Started
             </motion.button>
-          </div>
+          </form>
 
           <p className="text-white/40 text-sm mt-6">
-            Guest mode stores your conversations locally
+            Your conversations are stored locally
           </p>
         </motion.div>
         
