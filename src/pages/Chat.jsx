@@ -582,7 +582,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-8 pb-12 pointer-events-none">
+          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-3 pb-12 pointer-events-none">
             <div className="pointer-events-auto pb-6">
               <ChatInput 
                 onSend={handleSendMessage} 
