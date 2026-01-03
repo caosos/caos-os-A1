@@ -19,23 +19,14 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     // Clear any guest data first
     localStorage.removeItem('caos_guest_user');
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Check if already authenticated
-    const isAuth = await base44.auth.isAuthenticated();
-    if (isAuth) {
-      // Already logged in, just go to Chat
-      navigate(createPageUrl('Chat'));
-    } else {
-      // Not authenticated - set a flag and navigate to Chat
-      // The Chat page will trigger Base44's authentication
-      localStorage.setItem('caos_needs_auth', 'true');
-      navigate(createPageUrl('Chat'));
-    }
+    // Navigate directly to Chat - Base44 will handle authentication
+    navigate(createPageUrl('Chat'));
   };
 
   return (
