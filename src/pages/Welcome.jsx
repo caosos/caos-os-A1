@@ -9,6 +9,15 @@ import { LogIn, UserPlus } from 'lucide-react';
 export default function Welcome() {
   const navigate = useNavigate();
 
+  // Redirect to Chat if already authenticated
+  React.useEffect(() => {
+    base44.auth.isAuthenticated().then(isAuth => {
+      if (isAuth) {
+        navigate(createPageUrl('Chat'));
+      }
+    });
+  }, [navigate]);
+
   const handleGuestLogin = () => {
     const guestUser = {
       full_name: 'Guest User',
@@ -25,8 +34,8 @@ export default function Welcome() {
     localStorage.removeItem('caos_guest_conversations');
     localStorage.removeItem('caos_guest_messages');
     
-    // Redirect to Base44 login page which shows Google OAuth option
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    // Trigger Base44 Google OAuth - Base44 handles the complete flow
+    base44.auth.redirectToLogin();
   };
 
   return (
