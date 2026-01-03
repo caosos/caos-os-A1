@@ -630,10 +630,21 @@ export default function Chat() {
         {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
         {multiAgentMode && !isDeveloperMode && (
           <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto mt-2">
-            <div className="text-center pt-2 pb-1">
-              <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
-                📋 Blackboard
+            <div className="flex items-center justify-between pt-2 pb-1 px-4">
+              <div className="flex-1 text-center">
+                <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
+                  📋 Blackboard
+                </div>
               </div>
+              <button
+                onClick={() => {
+                  setMultiAgentMode(false);
+                  localStorage.setItem('caos_multi_agent_mode', 'false');
+                }}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4 text-white/50" />
+              </button>
             </div>
             <div className="p-4 pt-2">
               <div className="space-y-3 text-sm">
