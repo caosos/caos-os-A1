@@ -630,10 +630,7 @@ export default function Chat() {
         {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
         {multiAgentMode && !isDeveloperMode && (
           <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                <span className="text-lg">📋</span> Blackboard
-              </h3>
+            <div className="p-4 pt-2">
               <div className="space-y-3 text-sm">
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
                   <div className="text-blue-300 font-medium text-xs mb-1">ARCHITECT</div>
@@ -666,10 +663,7 @@ export default function Chat() {
             {/* Blackboard Section - Only show if multi-agent mode */}
             {multiAgentMode && (
             <div className="h-1/3 border-b border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
-              <div className="p-4">
-                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <span className="text-lg">📋</span> Blackboard
-                </h3>
+              <div className="p-4 pt-2">
                 <div className="space-y-3 text-sm">
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
                     <div className="text-blue-300 font-medium text-xs mb-1">ARCHITECT</div>

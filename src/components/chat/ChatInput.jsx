@@ -309,26 +309,40 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     e.preventDefault();
     if (agentId === 'all') return;
     
-    const newRole = prompt('Enter role for this agent:');
-    if (newRole && newRole.trim()) {
-      // Store in localStorage per conversation (temporary)
-      const roles = JSON.parse(localStorage.getItem('caos_agent_roles') || '{}');
-      roles[agentId] = newRole.trim();
-      localStorage.setItem('caos_agent_roles', JSON.stringify(roles));
-      alert(`Role updated for ${agentId}: ${newRole.trim()}`);
+    const agent = agents.find(a => a.id === agentId);
+    const action = confirm('Right-click menu:\n\n[OK] = Edit Role\n[Cancel] = Delete Agent' + (agent?.isCustom ? '' : ' (built-in agents cannot be deleted)'));
+    
+    if (action) {
+      // Edit role
+      const newRole = prompt('Enter role for this agent:');
+      if (newRole && newRole.trim()) {
+        const roles = JSON.parse(localStorage.getItem('caos_agent_roles') || '{}');
+        roles[agentId] = newRole.trim();
+        localStorage.setItem('caos_agent_roles', JSON.stringify(roles));
+        alert(`Role updated for ${agentId}: ${newRole.trim()}`);
+      }
+    } else if (agent?.isCustom) {
+      // Delete custom agent
+      if (confirm(`Delete agent "${agent.name}"?`)) {
+        handleDeleteAgent(agentId);
+      }
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
-      {/* Agent Selector - Only show in multi-agent mode */}
+      {/* Blackboard Label + Agent Selector - Only show in multi-agent mode */}
       {multiAgentMode && (
-        <div className="mb-2 px-3 flex items-center gap-2 text-xs">
-          <span className="text-white/50">Send to:</span>
-          <div className="flex flex-wrap gap-1">
-            {agents.map(agent => (
-              <div key={agent.id} className="relative group">
+        <div className="mb-2 flex items-center gap-3">
+          <div className="text-white/70 text-xs font-medium whitespace-nowrap px-1">
+            📋 Blackboard
+          </div>
+          <div className="flex items-center gap-2 text-xs flex-1">
+            <span className="text-white/50">Send to:</span>
+            <div className="flex flex-wrap gap-1">
+              {agents.map(agent => (
                 <button
+                  key={agent.id}
                   type="button"
                   onClick={() => toggleAgent(agent.id)}
                   onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
@@ -340,27 +354,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 >
                   {agent.name}
                 </button>
-                {agent.isCustom && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteAgent(agent.id);
-                    }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={handleAddAgent}
-              className="px-2 py-1 rounded text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all"
-            >
-              + Add
-            </button>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddAgent}
+                className="px-2 py-1 rounded text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all"
+              >
+                + Add
+              </button>
+            </div>
           </div>
         </div>
       )}
