@@ -77,14 +77,7 @@ export default function Chat() {
           messagesMap[conv.id] = convMessages;
         }
         setMessages(messagesMap);
-        
-        // Restore last conversation
-        const lastConvId = localStorage.getItem('caos_last_conversation');
-        if (lastConvId && userConvos.some(c => c.id === lastConvId)) {
-          setCurrentConversationId(lastConvId);
-          handleSessionResume(lastConvId);
-        }
-        
+
         setDataLoaded(true);
       } catch (error) {
         console.error('Error loading user data:', error);
