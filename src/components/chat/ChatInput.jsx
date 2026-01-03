@@ -358,7 +358,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       {/* Agent Chips - Above Input Bar */}
       {multiAgentMode && (
-        <div className="mb-3 flex justify-center">
+        <div className="mb-2 flex justify-center">
           <div className="flex flex-row flex-wrap gap-2 justify-center">
             {agents.map(agent => (
               <button
