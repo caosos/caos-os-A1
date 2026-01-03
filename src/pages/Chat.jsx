@@ -582,7 +582,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-3 pb-12 pointer-events-none">
+          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-3 pb-3 pointer-events-none">
             <div className="pointer-events-auto pb-6">
               <ChatInput 
                 onSend={handleSendMessage} 
@@ -629,7 +629,7 @@ export default function Chat() {
 
         {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
         {multiAgentMode && !isDeveloperMode && (
-          <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
+          <div className="h-1/4 w-full border-t border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto mt-2">
             <div className="text-center pt-2 pb-1">
               <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
                 📋 Blackboard
