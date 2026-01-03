@@ -1,61 +1,81 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
+import { LogIn, UserPlus } from 'lucide-react';
 
 export default function Welcome() {
   const navigate = useNavigate();
 
-  const handleGetStarted = () => {
+  const handleGuestLogin = () => {
+    const guestUser = {
+      full_name: 'Guest User',
+      email: 'guest@caos.app',
+      isGuest: true
+    };
+    localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
     navigate(createPageUrl('Chat'));
   };
 
+  const handleGoogleLogin = () => {
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative">
+    <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center overflow-hidden">
       <StarfieldBackground />
       
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center max-w-md w-full"
-      >
-        <motion.h1 
-          className="text-5xl md:text-6xl font-light text-white tracking-[0.3em] mb-3"
-          initial={{ opacity: 0, y: -20 }}
+      <div className="relative z-10 text-center px-6 max-w-md w-full">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.8 }}
         >
-          CAOS
-        </motion.h1>
-        
-        <motion.p 
-          className="text-white/70 text-sm md:text-base tracking-wider mb-12"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          Cognitive Adaptive Operating Space
-        </motion.p>
+          <h1 className="text-6xl font-bold text-white mb-3">
+            CAOS
+          </h1>
+          <p className="text-lg text-white/70 mb-12">
+            Cognitive Adaptive Operating Space
+          </p>
+          
+          <div className="space-y-4">
+            <motion.button
+              onClick={handleGoogleLogin}
+              className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <LogIn className="w-5 h-5" />
+              Sign in with Google
+            </motion.button>
+
+            <motion.button
+              onClick={handleGuestLogin}
+              className="w-full bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm border border-blue-500/30 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 flex items-center justify-center gap-3"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <UserPlus className="w-5 h-5" />
+              Continue as Guest
+            </motion.button>
+          </div>
+
+          <p className="text-white/40 text-sm mt-6">
+            Guest mode stores your conversations locally
+          </p>
+        </motion.div>
         
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 1 }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10"
         >
-          <Button 
-            onClick={handleGetStarted}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-xl text-lg font-medium shadow-lg shadow-blue-600/25 transition-all hover:shadow-blue-600/40 hover:scale-105"
-          >
-            Get Started
-          </Button>
+          <div className="w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
         </motion.div>
-      </motion.div>
-      
-      {/* Subtle glow effect */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+      </div>
     </div>
   );
 }
