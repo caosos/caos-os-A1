@@ -20,7 +20,9 @@ export default function StarfieldBackground() {
           radius: Math.random() * 1.5 + 0.5,
           opacity: Math.random() * 0.8 + 0.2,
           twinkleSpeed: Math.random() * 0.02 + 0.005,
-          twinklePhase: Math.random() * Math.PI * 2
+          twinklePhase: Math.random() * Math.PI * 2,
+          velocityX: (Math.random() - 0.5) * 0.15,
+          velocityY: (Math.random() - 0.5) * 0.15
         });
       }
     };
@@ -53,6 +55,16 @@ export default function StarfieldBackground() {
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${currentOpacity})`;
         ctx.fill();
+
+        // Move stars continuously
+        star.x += star.velocityX;
+        star.y += star.velocityY;
+
+        // Wrap around edges
+        if (star.x < 0) star.x = canvas.width;
+        if (star.x > canvas.width) star.x = 0;
+        if (star.y < 0) star.y = canvas.height;
+        if (star.y > canvas.height) star.y = 0;
       });
 
       animationFrameId = requestAnimationFrame(animate);
