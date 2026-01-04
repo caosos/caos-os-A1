@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2, ArrowLeft, FileText, HardDrive, Timer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
@@ -166,6 +166,34 @@ export default function Console() {
           recall_requests: 0,
           cross_session_recalls: 0,
           memory_enabled_sessions: 0
+        },
+        export: {
+          last_exported_seq: 0,
+          latest_committed_seq: 0,
+          lag: 0,
+          lag_threshold: 100,
+          last_export_ts: null,
+          health_status: 'healthy'
+        },
+        pending_resolution: {
+          count: 0,
+          oldest_age_hours: 0,
+          count_threshold: 50,
+          ttl_expirations_24h: 0
+        },
+        wal: {
+          last_checkpoint_ms: 0,
+          checkpoint_lag_ms: 0,
+          write_latency_p95_ms: 0,
+          wal_size_kb: 0,
+          status: 'healthy'
+        },
+        rebuild: {
+          in_progress: false,
+          progress_percent: 0,
+          parity_status: 'verified',
+          last_rebuild_ts: null,
+          shadow_lag: 0
         }
       };
 
@@ -271,7 +299,7 @@ export default function Console() {
         )}
 
         {/* Main Grid Layout */}
-        <div className="flex-1 grid grid-cols-12 grid-rows-6 gap-3 overflow-hidden">
+        <div className="flex-1 grid grid-cols-12 gap-3 overflow-y-auto pb-4" style={{ gridTemplateRows: 'repeat(8, minmax(120px, auto))' }}>
           {/* Top Left - Real-Time Query */}
           <Card className="col-span-4 row-span-2 bg-[#0a1628]/90 border-cyan-500/30 backdrop-blur-sm overflow-hidden">
             <CardHeader className="pb-2">
@@ -515,7 +543,158 @@ export default function Console() {
               </div>
             </CardContent>
           </Card>
-        </div>
+
+          {/* Row 7 - CAOS-A1 v1.5 Monitoring */}
+
+          {/* Export Health */}
+          <Card className={`col-span-3 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden ${
+            metrics.export.lag > metrics.export.lag_threshold ? 'border-red-500/50' : 'border-green-500/30'
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-xs font-bold tracking-wider flex items-center gap-2 ${
+                metrics.export.lag > metrics.export.lag_threshold ? 'text-red-400' : 'text-green-400'
+              }`}>
+                <FileText className="w-3 h-3" />
+                EXPORT HEALTH
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Export Lag</span>
+                  <span className={`text-sm font-bold ${
+                    metrics.export.lag > metrics.export.lag_threshold ? 'text-red-400' : 'text-white'
+                  }`}>
+                    {metrics.export.lag} seq
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Status</span>
+                  <span className={`text-xs font-bold uppercase ${
+                    metrics.export.health_status === 'healthy' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {metrics.export.health_status}
+                  </span>
+                </div>
+                {metrics.export.lag > metrics.export.lag_threshold && (
+                  <div className="text-[10px] text-red-400/80 mt-2">
+                    ⚠ Threshold: {metrics.export.lag_threshold}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pending Resolution */}
+          <Card className={`col-span-3 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden ${
+            metrics.pending_resolution.count > metrics.pending_resolution.count_threshold ? 'border-red-500/50' : 'border-yellow-500/30'
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-xs font-bold tracking-wider flex items-center gap-2 ${
+                metrics.pending_resolution.count > metrics.pending_resolution.count_threshold ? 'text-red-400' : 'text-yellow-400'
+              }`}>
+                <AlertTriangle className="w-3 h-3" />
+                PENDING RESOLUTION
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Count</span>
+                  <span className={`text-sm font-bold ${
+                    metrics.pending_resolution.count > metrics.pending_resolution.count_threshold ? 'text-red-400' : 'text-white'
+                  }`}>
+                    {metrics.pending_resolution.count}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Oldest</span>
+                  <span className="text-sm font-bold text-white">{metrics.pending_resolution.oldest_age_hours}h</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">TTL Expired (24h)</span>
+                  <span className="text-sm font-bold text-white">{metrics.pending_resolution.ttl_expirations_24h}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* WAL Checkpoint Health */}
+          <Card className={`col-span-3 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden ${
+            metrics.wal.status === 'healthy' ? 'border-blue-500/30' : 'border-orange-500/50'
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-xs font-bold tracking-wider flex items-center gap-2 ${
+                metrics.wal.status === 'healthy' ? 'text-blue-400' : 'text-orange-400'
+              }`}>
+                <HardDrive className="w-3 h-3" />
+                WAL CHECKPOINT
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Last Checkpoint</span>
+                  <span className="text-sm font-bold text-white">{metrics.wal.last_checkpoint_ms}ms</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Write P95</span>
+                  <span className="text-sm font-bold text-white">{metrics.wal.write_latency_p95_ms}ms</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">WAL Size</span>
+                  <span className="text-sm font-bold text-white">{metrics.wal.wal_size_kb}KB</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Index Rebuild Status */}
+          <Card className={`col-span-3 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden ${
+            metrics.rebuild.in_progress ? 'border-cyan-500/50 animate-pulse' : 'border-purple-500/30'
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className={`text-xs font-bold tracking-wider flex items-center gap-2 ${
+                metrics.rebuild.in_progress ? 'text-cyan-400' : 'text-purple-400'
+              }`}>
+                <Timer className="w-3 h-3" />
+                INDEX REBUILD
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Status</span>
+                  <span className={`text-xs font-bold uppercase ${
+                    metrics.rebuild.in_progress ? 'text-cyan-400' : 'text-white'
+                  }`}>
+                    {metrics.rebuild.in_progress ? 'IN PROGRESS' : 'IDLE'}
+                  </span>
+                </div>
+                {metrics.rebuild.in_progress && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-white/60">Progress</div>
+                    <div className="w-full bg-white/10 rounded-full h-2">
+                      <div 
+                        className="bg-cyan-400 h-2 rounded-full transition-all"
+                        style={{ width: `${metrics.rebuild.progress_percent}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-white text-right">{metrics.rebuild.progress_percent}%</div>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-white/60">Parity</span>
+                  <span className={`text-xs font-bold uppercase ${
+                    metrics.rebuild.parity_status === 'verified' ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {metrics.rebuild.parity_status}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          </div>
       </div>
     </div>
   );
