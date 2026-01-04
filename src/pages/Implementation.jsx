@@ -1273,6 +1273,7 @@ if __name__ == "__main__":
               </CardContent>
             </Card>
           </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
