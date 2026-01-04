@@ -3,11 +3,13 @@ import { FileCode, Database, Zap, GitBranch, Server, CheckCircle } from 'lucide-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import CAOSBlueprint from '@/components/docs/CAOSBlueprint';
 
 export default function Implementation() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
+        <CAOSBlueprint />
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">CAOS-A1 Implementation Blueprints</h1>
           <p className="text-slate-400">v1.5 Architecture — External Python Service</p>
