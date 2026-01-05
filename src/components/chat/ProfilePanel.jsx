@@ -100,47 +100,51 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Terminal className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <p className="text-white text-sm">Developer Mode</p>
-                      <p className="text-white/50 text-xs">Split-screen terminal</p>
+                {user?.role === 'admin' && (
+                  <>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-3">
+                        <Terminal className="w-5 h-5 text-blue-400" />
+                        <div>
+                          <p className="text-white text-sm">Developer Mode</p>
+                          <p className="text-white/50 text-xs">Split-screen terminal</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={localStorage.getItem('caos_developer_mode') === 'true'}
+                        onCheckedChange={(checked) => {
+                          localStorage.setItem('caos_developer_mode', checked.toString());
+                          window.location.reload();
+                        }}
+                      />
                     </div>
-                  </div>
-                  <Switch
-                    checked={localStorage.getItem('caos_developer_mode') === 'true'}
-                    onCheckedChange={(checked) => {
-                      localStorage.setItem('caos_developer_mode', checked.toString());
-                      window.location.reload();
-                    }}
-                  />
-                </div>
 
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-purple-400" />
-                    <div>
-                      <p className="text-white text-sm">Multi-Agent Mode</p>
-                      <p className="text-white/50 text-xs">Agent collaboration</p>
+                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-3">
+                        <Shield className="w-5 h-5 text-purple-400" />
+                        <div>
+                          <p className="text-white text-sm">Multi-Agent Mode</p>
+                          <p className="text-white/50 text-xs">Agent collaboration</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={multiAgentMode}
+                        onCheckedChange={onMultiAgentModeChange}
+                      />
                     </div>
-                  </div>
-                  <Switch
-                    checked={multiAgentMode}
-                    onCheckedChange={onMultiAgentModeChange}
-                  />
-                </div>
 
-                <Link 
-                  to={createPageUrl('Console')}
-                  className="flex items-center gap-3 p-3 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl border border-cyan-500/30 transition-colors"
-                >
-                  <Activity className="w-5 h-5 text-cyan-400" />
-                  <div>
-                    <p className="text-white text-sm font-medium">System Console</p>
-                    <p className="text-white/50 text-xs">Monitor CAOS metrics</p>
-                  </div>
-                </Link>
+                    <Link 
+                      to={createPageUrl('Console')}
+                      className="flex items-center gap-3 p-3 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl border border-cyan-500/30 transition-colors"
+                    >
+                      <Activity className="w-5 h-5 text-cyan-400" />
+                      <div>
+                        <p className="text-white text-sm font-medium">System Console</p>
+                        <p className="text-white/50 text-xs">Monitor CAOS metrics</p>
+                      </div>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
