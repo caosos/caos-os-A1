@@ -407,6 +407,12 @@ export default function Chat() {
           : 'Memory disabled by user'
       };
 
+      // CAOS-A1: Explicit recall directive
+      const recall_directive = rememberConversations ? {
+        mode: 'session_tail',
+        limit: 20
+      } : undefined;
+
       // Create abort controller for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
@@ -418,6 +424,7 @@ export default function Chat() {
           message: messageWithFiles,
           session: conversationId,
           memory_gate: memory_gate,
+          recall: recall_directive,
           images: images.length > 0 ? images : undefined,
           capabilities: {
             file_operations: {
