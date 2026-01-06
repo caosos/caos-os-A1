@@ -11,7 +11,7 @@ export default function Welcome() {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
 
-  const handleLogin = (e) => {
+  const handleGuestSignup = (e) => {
     e.preventDefault();
     if (name.trim() && email.trim()) {
       const user = {
@@ -51,7 +51,18 @@ export default function Welcome() {
             Cognitive Adaptive Operating Space
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <motion.button
+              onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl('Chat'))}
+              className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <LogIn className="w-5 h-5" />
+              Sign In with Base44
+            </motion.button>
+
+          <form onSubmit={handleGuestSignup} className="space-y-4 mt-6">
+            <p className="text-white/60 text-sm text-center">Or try as guest:</p>
             <input
               type="text"
               placeholder="Your Name"
@@ -72,36 +83,17 @@ export default function Welcome() {
 
             <motion.button
               type="submit"
-              className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+              className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 flex items-center justify-center gap-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <UserPlus className="w-5 h-5" />
-              Get Started
+              Continue as Guest
             </motion.button>
             </form>
 
-            <motion.button
-            onClick={() => base44.auth.redirectToLogin(createPageUrl('Chat'))}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mt-3"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            >
-            <LogIn className="w-5 h-5" />
-            Sign In with Base44
-            </motion.button>
-
-            <motion.button
-            onClick={handleGuestLogin}
-            className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 mt-3"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            >
-            Continue as Guest
-            </motion.button>
-
             <p className="text-white/40 text-sm mt-6">
-            Guest mode stores conversations locally only
+            Guest conversations are stored locally only
             </p>
         </motion.div>
         
