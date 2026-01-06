@@ -11,6 +11,21 @@ export default function Welcome() {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
 
+  // Check if user is already authenticated
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (isAuth) {
+          navigate(createPageUrl('Chat'));
+        }
+      } catch (err) {
+        // Not authenticated, stay on welcome page
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   const handleGuestSignup = (e) => {
     e.preventDefault();
     if (name.trim() && email.trim()) {
@@ -24,14 +39,9 @@ export default function Welcome() {
     }
   };
 
-  const handleGuestLogin = () => {
-    const guestUser = {
-      full_name: 'Guest User',
-      email: 'guest@caos.app',
-      isGuest: true
-    };
-    localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-    navigate(createPageUrl('Chat'));
+  const handleAuthLogin = () => {
+    // Redirect to Base44 OAuth - will return to Chat after auth
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   return (
@@ -52,7 +62,7 @@ export default function Welcome() {
           </p>
 
           <motion.button
-              onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl('Chat'))}
+              onClick={handleAuthLogin}
               className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
