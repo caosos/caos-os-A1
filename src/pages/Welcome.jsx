@@ -36,12 +36,28 @@ export default function Welcome() {
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
+    
+    // Create user with email sign-in
+    const user = {
+      full_name: email.split('@')[0],
+      email: email,
+      isGuest: true
+    };
+    localStorage.setItem('caos_guest_user', JSON.stringify(user));
     navigate(createPageUrl('Chat'));
   };
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
+    
+    // Create user with provided info
+    const user = {
+      full_name: name,
+      email: email,
+      isGuest: true
+    };
+    localStorage.setItem('caos_guest_user', JSON.stringify(user));
     navigate(createPageUrl('Chat'));
   };
 
