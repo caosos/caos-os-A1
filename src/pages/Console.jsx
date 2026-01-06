@@ -299,7 +299,7 @@ export default function Console() {
         )}
 
         {/* Main Grid Layout */}
-        <div className="flex-1 grid grid-cols-12 gap-3 overflow-y-auto pb-4" style={{ gridTemplateRows: 'repeat(8, minmax(120px, auto))' }}>
+        <div className="flex-1 grid grid-cols-12 gap-3 overflow-hidden" style={{ gridTemplateRows: 'repeat(8, 1fr)' }}>
           {/* Top Left - Real-Time Query */}
           <Card className="col-span-4 row-span-2 bg-[#0a1628]/90 border-cyan-500/30 backdrop-blur-sm overflow-hidden">
             <CardHeader className="pb-2">
