@@ -82,8 +82,18 @@ export default function Welcome() {
             </form>
 
             <motion.button
+            onClick={() => base44.auth.redirectToLogin(createPageUrl('Chat'))}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mt-3"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            >
+            <LogIn className="w-5 h-5" />
+            Sign In with Base44
+            </motion.button>
+
+            <motion.button
             onClick={handleGuestLogin}
-            className="w-full bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm border border-blue-500/30 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 mt-3"
+            className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 mt-3"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             >
@@ -91,7 +101,7 @@ export default function Welcome() {
             </motion.button>
 
             <p className="text-white/40 text-sm mt-6">
-            Your conversations are stored locally
+            Guest mode stores conversations locally only
             </p>
         </motion.div>
         
