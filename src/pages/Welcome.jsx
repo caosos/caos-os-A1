@@ -40,8 +40,8 @@ export default function Welcome() {
   };
 
   const handleAuthLogin = () => {
-    // Redirect to Base44 OAuth - will return to Chat after auth
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    // Navigate to Chat - Base44 will handle OAuth automatically
+    navigate(createPageUrl('Chat'));
   };
 
   return (
