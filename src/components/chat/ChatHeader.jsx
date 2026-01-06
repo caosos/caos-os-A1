@@ -26,13 +26,14 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       localStorage.removeItem('caos_guest_messages');
       navigate(createPageUrl('Welcome'));
     } else {
+      // Set flag to prevent auto-redirect on Welcome page
+      sessionStorage.setItem('just_logged_out', 'true');
+      
       // Clear all CAOS data
       localStorage.clear();
-      sessionStorage.clear();
       
-      // Call Base44 logout and force full page reload to clear auth cookies
-      await base44.auth.logout();
-      window.location.href = createPageUrl('Welcome');
+      // Call Base44 logout and redirect
+      await base44.auth.logout(createPageUrl('Welcome'));
     }
   };
 
