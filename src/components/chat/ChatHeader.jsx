@@ -34,17 +34,14 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
     if (isGuest) {
       setShowGuestLogoutDialog(true);
     } else {
-      // Clear all CAOS data first
-      localStorage.clear();
-      
-      // Set flag AFTER clearing localStorage
+      // Set logout flag first before clearing anything
       sessionStorage.setItem('just_logged_out', 'true');
       
-      // Call Base44 logout without redirect param, let it clear cookies
-      await base44.auth.logout();
+      // Clear all CAOS data
+      localStorage.clear();
       
-      // Force full page reload to Welcome to ensure clean state
-      window.location.href = createPageUrl('Welcome');
+      // Call Base44 logout with redirect to Welcome
+      await base44.auth.logout(createPageUrl('Welcome'));
     }
   };
 

@@ -12,10 +12,11 @@ export default function Welcome() {
   // Check if user is already authenticated (but not if we just logged out)
   React.useEffect(() => {
     const checkAuth = async () => {
-      // Check if we just logged out
+      // Check if we just logged out - if so, don't auto-redirect
       const justLoggedOut = sessionStorage.getItem('just_logged_out');
       if (justLoggedOut) {
-        sessionStorage.removeItem('just_logged_out');
+        // Keep the flag for a bit to prevent race conditions
+        setTimeout(() => sessionStorage.removeItem('just_logged_out'), 1000);
         return; // Stay on welcome page
       }
 
