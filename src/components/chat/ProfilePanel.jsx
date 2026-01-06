@@ -28,11 +28,15 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   };
 
   const handleSaveBirthday = async () => {
+    if (!birthday) return;
     try {
       await base44.auth.updateMe({ date_of_birth: birthday });
       setIsEditingBirthday(false);
+      // Refresh user data
+      window.location.reload();
     } catch (error) {
       console.error('Error saving birthday:', error);
+      alert('Failed to save birthday');
     }
   };
 
@@ -56,9 +60,9 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed right-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-l border-white/10 z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-l border-white/10 z-50 flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
               <h2 className="text-white font-semibold">Profile</h2>
               <button
                 onClick={onClose}
@@ -68,75 +72,76 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
               </button>
             </div>
             
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-6 overflow-y-auto">
               {/* Avatar */}
-              <div className="flex flex-col items-center mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-medium mb-4">
+              <div className="flex flex-col items-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xl font-medium mb-3">
                   {user?.full_name?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <h3 className="text-white font-semibold text-lg">{user?.full_name || 'User'}</h3>
-                <span className="text-white/50 text-sm capitalize">{user?.role || 'user'}</span>
+                <h3 className="text-white font-semibold text-base">{user?.full_name || 'User'}</h3>
+                <span className="text-white/50 text-xs capitalize">{user?.role || 'user'}</span>
               </div>
 
               {/* User Info */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-                  <Mail className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-white/50 text-xs">Email</p>
-                    <p className="text-white text-sm">{user?.email || 'No email'}</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <Mail className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white/50 text-[10px]">Email</p>
+                    <p className="text-white text-xs truncate">{user?.email || 'No email'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-                  <Calendar className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-white/50 text-xs">Member since</p>
-                    <p className="text-white text-sm">
-                      {user?.created_date ? moment(user.created_date).format('MMMM D, YYYY') : 'Unknown'}
+                <div className="flex items-center gap-2 p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <Calendar className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white/50 text-[10px]">Member since</p>
+                    <p className="text-white text-xs">
+                      {user?.created_date ? moment(user.created_date).format('MMM D, YYYY') : 'Unknown'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-                  <Shield className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-white/50 text-xs">Role</p>
-                    <p className="text-white text-sm capitalize">{user?.role || 'User'}</p>
+                <div className="flex items-center gap-2 p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <Shield className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white/50 text-[10px]">Role</p>
+                    <p className="text-white text-xs capitalize">{user?.role || 'User'}</p>
                   </div>
                 </div>
 
-                <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Cake className="w-5 h-5 text-blue-400" />
-                    <div className="flex-1">
-                      <p className="text-white/50 text-xs">Birthday</p>
+                <div className="p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Cake className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/50 text-[10px]">Birthday</p>
                       {!isEditingBirthday ? (
-                        <div className="flex items-center justify-between">
-                          <p className="text-white text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-white text-xs truncate">
                             {user?.date_of_birth 
-                              ? `${moment(user.date_of_birth).format('MMMM D, YYYY')} (Age ${calculateAge(user.date_of_birth)})`
+                              ? `${moment(user.date_of_birth).format('MMM D, YYYY')} (${calculateAge(user.date_of_birth)})`
                               : 'Not set'}
                           </p>
                           <button
                             onClick={() => setIsEditingBirthday(true)}
-                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors"
+                            className="text-blue-400 text-[10px] hover:text-blue-300 transition-colors flex-shrink-0"
                           >
                             {user?.date_of_birth ? 'Edit' : 'Add'}
                           </button>
                         </div>
                       ) : (
-                        <div className="space-y-2 mt-2">
+                        <div className="space-y-1.5 mt-1.5">
                           <input
                             type="date"
                             value={birthday}
                             onChange={(e) => setBirthday(e.target.value)}
-                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                            max="2026-01-06"
+                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-xs"
                           />
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <button
                               onClick={handleSaveBirthday}
-                              className="flex-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                              className="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] rounded transition-colors"
                             >
                               Save
                             </button>
@@ -145,7 +150,7 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                                 setIsEditingBirthday(false);
                                 setBirthday(user?.date_of_birth || '');
                               }}
-                              className="flex-1 px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors"
+                              className="flex-1 px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[10px] rounded transition-colors"
                             >
                               Cancel
                             </button>
@@ -156,28 +161,29 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Brain className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <p className="text-white text-sm">Remember Conversations</p>
-                      <p className="text-white/50 text-xs">Enable conversation memory</p>
+                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Brain className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-xs">Remember Conversations</p>
+                      <p className="text-white/50 text-[10px]">Enable memory</p>
                     </div>
                   </div>
                   <Switch
                     checked={rememberConversations}
                     onCheckedChange={handleToggleMemory}
+                    className="flex-shrink-0"
                   />
                 </div>
 
                 {user?.role === 'admin' && (
                   <>
-                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                      <div className="flex items-center gap-3">
-                        <Terminal className="w-5 h-5 text-blue-400" />
-                        <div>
-                          <p className="text-white text-sm">Developer Mode</p>
-                          <p className="text-white/50 text-xs">Split-screen terminal</p>
+                    <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Terminal className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white text-xs">Developer Mode</p>
+                          <p className="text-white/50 text-[10px]">Split-screen</p>
                         </div>
                       </div>
                       <Switch
@@ -186,31 +192,33 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                           localStorage.setItem('caos_developer_mode', checked.toString());
                           window.location.reload();
                         }}
+                        className="flex-shrink-0"
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                      <div className="flex items-center gap-3">
-                        <Shield className="w-5 h-5 text-purple-400" />
-                        <div>
-                          <p className="text-white text-sm">Multi-Agent Mode</p>
-                          <p className="text-white/50 text-xs">Agent collaboration</p>
+                    <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Shield className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white text-xs">Multi-Agent Mode</p>
+                          <p className="text-white/50 text-[10px]">Collaboration</p>
                         </div>
                       </div>
                       <Switch
                         checked={multiAgentMode}
                         onCheckedChange={onMultiAgentModeChange}
+                        className="flex-shrink-0"
                       />
                     </div>
 
                     <Link 
                       to={createPageUrl('Console')}
-                      className="flex items-center gap-3 p-3 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl border border-cyan-500/30 transition-colors"
+                      className="flex items-center gap-2 p-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/30 transition-colors"
                     >
-                      <Activity className="w-5 h-5 text-cyan-400" />
-                      <div>
-                        <p className="text-white text-sm font-medium">System Console</p>
-                        <p className="text-white/50 text-xs">Monitor CAOS metrics</p>
+                      <Activity className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-xs font-medium">System Console</p>
+                        <p className="text-white/50 text-[10px]">Monitor metrics</p>
                       </div>
                     </Link>
                   </>
