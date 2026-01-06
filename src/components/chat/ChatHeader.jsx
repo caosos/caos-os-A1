@@ -14,17 +14,25 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
   const navigate = useNavigate();
+  const [showGuestLogoutDialog, setShowGuestLogoutDialog] = useState(false);
   
   const handleLogout = async () => {
     const isGuest = !!localStorage.getItem('caos_guest_user');
     if (isGuest) {
-      localStorage.removeItem('caos_guest_user');
-      localStorage.removeItem('caos_guest_conversations');
-      localStorage.removeItem('caos_guest_messages');
-      navigate(createPageUrl('Welcome'));
+      setShowGuestLogoutDialog(true);
     } else {
       // Clear all CAOS data first
       localStorage.clear();
@@ -38,6 +46,20 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       // Force full page reload to Welcome to ensure clean state
       window.location.href = createPageUrl('Welcome');
     }
+  };
+
+  const handleGuestLogoutConfirm = () => {
+    localStorage.removeItem('caos_guest_user');
+    localStorage.removeItem('caos_guest_conversations');
+    localStorage.removeItem('caos_guest_messages');
+    setShowGuestLogoutDialog(false);
+    navigate(createPageUrl('Welcome'));
+  };
+
+  const handleCreateAccount = () => {
+    setShowGuestLogoutDialog(false);
+    navigate(createPageUrl('Chat'));
+    // This will trigger Base44 OAuth
   };
 
   return (
@@ -140,6 +162,31 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           </div>
         )}
         </div>
+
+        <AlertDialog open={showGuestLogoutDialog} onOpenChange={setShowGuestLogoutDialog}>
+          <AlertDialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Create an Account?</AlertDialogTitle>
+              <AlertDialogDescription className="text-white/70">
+                You're currently using CAOS as a guest. Would you like to create an account to save your conversations and access them from anywhere?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel 
+                onClick={handleGuestLogoutConfirm}
+                className="bg-white/10 hover:bg-white/20 border-white/20 text-white"
+              >
+                No, Log Out
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleCreateAccount}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Yes, Create Account
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </div>
         );
         }

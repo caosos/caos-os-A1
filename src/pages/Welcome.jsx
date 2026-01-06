@@ -8,8 +8,6 @@ import { LogIn, UserPlus } from 'lucide-react';
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const [name, setName] = React.useState('');
-  const [email, setEmail] = React.useState('');
 
   // Check if user is already authenticated (but not if we just logged out)
   React.useEffect(() => {
@@ -33,17 +31,14 @@ export default function Welcome() {
     checkAuth();
   }, [navigate]);
 
-  const handleGuestSignup = (e) => {
-    e.preventDefault();
-    if (name.trim() && email.trim()) {
-      const user = {
-        full_name: name.trim(),
-        email: email.trim(),
-        isGuest: true
-      };
-      localStorage.setItem('caos_guest_user', JSON.stringify(user));
-      navigate(createPageUrl('Chat'));
-    }
+  const handleGuestContinue = () => {
+    const user = {
+      full_name: 'Guest User',
+      email: `guest_${Date.now()}@caos.local`,
+      isGuest: true
+    };
+    localStorage.setItem('caos_guest_user', JSON.stringify(user));
+    navigate(createPageUrl('Chat'));
   };
 
   const handleAuthLogin = () => {
@@ -78,28 +73,10 @@ export default function Welcome() {
               Sign In with Base44
             </motion.button>
 
-          <form onSubmit={handleGuestSignup} className="space-y-4 mt-6">
-            <p className="text-white/60 text-sm text-center">Or try as guest:</p>
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 px-6 py-3.5 rounded-xl text-base focus:outline-none focus:border-blue-500/50 transition-all"
-              required
-            />
-
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 px-6 py-3.5 rounded-xl text-base focus:outline-none focus:border-blue-500/50 transition-all"
-              required
-            />
+            <p className="text-white/60 text-sm text-center my-4">or</p>
 
             <motion.button
-              type="submit"
+              onClick={handleGuestContinue}
               className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 flex items-center justify-center gap-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -107,10 +84,9 @@ export default function Welcome() {
               <UserPlus className="w-5 h-5" />
               Continue as Guest
             </motion.button>
-            </form>
 
             <p className="text-white/40 text-sm mt-6">
-            Guest conversations are stored locally only
+            Guest mode - data stored locally only
             </p>
         </motion.div>
         
