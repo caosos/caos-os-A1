@@ -18,7 +18,7 @@ import {
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
   const navigate = useNavigate();
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const isGuest = !!localStorage.getItem('caos_guest_user');
     if (isGuest) {
       localStorage.removeItem('caos_guest_user');
@@ -26,7 +26,13 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       localStorage.removeItem('caos_guest_messages');
       navigate(createPageUrl('Welcome'));
     } else {
-      base44.auth.logout(createPageUrl('Welcome'));
+      // Clear all CAOS data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Call Base44 logout and force full page reload to clear auth cookies
+      await base44.auth.logout();
+      window.location.href = createPageUrl('Welcome');
     }
   };
 
