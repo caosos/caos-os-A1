@@ -409,7 +409,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onChange={(e) => {
             setMessage(e.target.value);
             e.target.style.height = 'auto';
-            const newHeight = Math.min(e.target.scrollHeight, 120);
+            const newHeight = Math.min(e.target.scrollHeight, 168);
             e.target.style.height = newHeight + 'px';
           }}
           onKeyPress={(e) => {
@@ -426,11 +426,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   lastTranscriptRef.current = '';
                 }
                 onSend(message.trim(), attachedFiles.map(f => f.url), multiAgentMode ? selectedAgents : null);
-                setMessage('');
-                setAttachedFiles([]);
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = '24px';
-                }
+                
+                // Clear message and files immediately
+                setTimeout(() => {
+                  setMessage('');
+                  setAttachedFiles([]);
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = '24px';
+                  }
+                }, 0);
               }
               return false;
             }
@@ -442,7 +446,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onFocus={() => onTypingStart?.()}
           placeholder="Type a message..."
           className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-sm px-2 resize-none overflow-y-auto"
-          style={{ minHeight: '24px', height: '24px', maxHeight: '120px' }}
+          style={{ minHeight: '24px', height: '24px', maxHeight: '168px' }}
           disabled={isLoading}
         />
         
