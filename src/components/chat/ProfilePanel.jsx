@@ -1,24 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain, Terminal, Activity } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import moment from 'moment';
 
 export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
   const [rememberConversations, setRememberConversations] = useState(true);
+  const [isEditingBirthday, setIsEditingBirthday] = useState(false);
+  const [birthday, setBirthday] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('caos_remember_conversations');
     if (saved !== null) {
       setRememberConversations(saved === 'true');
     }
-  }, []);
+    if (user?.date_of_birth) {
+      setBirthday(user.date_of_birth);
+    }
+  }, [user]);
 
   const handleToggleMemory = (checked) => {
     setRememberConversations(checked);
     localStorage.setItem('caos_remember_conversations', checked.toString());
+  };
+
+  const handleSaveBirthday = async () => {
+    try {
+      await base44.auth.updateMe({ date_of_birth: birthday });
+      setIsEditingBirthday(false);
+    } catch (error) {
+      console.error('Error saving birthday:', error);
+    }
+  };
+
+  const calculateAge = (dob) => {
+    if (!dob) return null;
+    return moment().diff(moment(dob), 'years');
   };
   return (
     <AnimatePresence>
@@ -83,6 +103,56 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   <div>
                     <p className="text-white/50 text-xs">Role</p>
                     <p className="text-white text-sm capitalize">{user?.role || 'User'}</p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Cake className="w-5 h-5 text-blue-400" />
+                    <div className="flex-1">
+                      <p className="text-white/50 text-xs">Birthday</p>
+                      {!isEditingBirthday ? (
+                        <div className="flex items-center justify-between">
+                          <p className="text-white text-sm">
+                            {user?.date_of_birth 
+                              ? `${moment(user.date_of_birth).format('MMMM D, YYYY')} (Age ${calculateAge(user.date_of_birth)})`
+                              : 'Not set'}
+                          </p>
+                          <button
+                            onClick={() => setIsEditingBirthday(true)}
+                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors"
+                          >
+                            {user?.date_of_birth ? 'Edit' : 'Add'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 mt-2">
+                          <input
+                            type="date"
+                            value={birthday}
+                            onChange={(e) => setBirthday(e.target.value)}
+                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveBirthday}
+                              className="flex-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingBirthday(false);
+                                setBirthday(user?.date_of_birth || '');
+                              }}
+                              className="flex-1 px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
