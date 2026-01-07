@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, ArrowDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatBubble from '@/components/chat/ChatBubble';
@@ -29,7 +30,9 @@ export default function Chat() {
   const [showTerminal, setShowTerminal] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState([]);
   const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const navigate = useNavigate();
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
@@ -108,6 +111,25 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length]);
+
+  // Track scroll position to show/hide scroll button
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom && currentMessages.length > 0);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [currentMessages.length]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleNewThread = async () => {
     if (!user) return;
@@ -551,7 +573,7 @@ export default function Chat() {
               ? 'h-3/4 w-full' 
               : 'h-full w-full'
         }`}>
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden ${multiAgentMode ? 'pb-40' : 'pb-24'}`}>
+          <div ref={chatContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden ${multiAgentMode ? 'pb-40' : 'pb-24'}`}>
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -589,6 +611,21 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/* Scroll to Bottom Button */}
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                onClick={scrollToBottom}
+                className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
+              >
+                <ArrowDown className="w-5 h-5 text-white" />
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-3 pb-3 pointer-events-none">
             <div className="pointer-events-auto pb-6">
