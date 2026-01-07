@@ -62,41 +62,37 @@ export default function Console() {
   };
 
   const handleVoiceCommand = async (command) => {
-    // CAOS-A1: Send raw transcript to CAOS as UNTRUSTED INPUT
-    console.log('[Whisper → CAOS] Raw transcript:', command);
+    console.log('[Voice → CAOS] Transcript:', command);
     
     try {
-      const response = await fetch(`${CAOS_SERVER}/api/console/command`, {
+      const response = await fetch(`${CAOS_SERVER}/api/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          raw_transcript: command,
-          source: 'whisper_ui',
-          timestamp: new Date().toISOString()
+          message: command,
+          session: 'console_voice_session',
+          memory_gate: {
+            allowed: true,
+            scope: 'session',
+            explicit_recall: false,
+            reason: 'Voice console session'
+          },
+          recall: {
+            mode: 'session_tail',
+            limit: 10
+          }
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        
-        // CAOS-A1: Display normalized intent if available
-        if (data.intent) {
-          setPendingIntent(data.intent);
-        }
-        
-        // CAOS-A1: Check if approval required before state mutation
-        if (data.requires_approval) {
-          speakResponse(data.approval_prompt || 'Action requires approval. Confirm to proceed.');
-        } else {
-          speakResponse(data.reply || 'Command processed');
-          setPendingIntent(null);
-        }
+        speakResponse(data.reply || 'I heard you');
       } else {
-        speakResponse('Console interface ready for commands');
+        speakResponse('Sorry, I had trouble understanding that');
       }
     } catch (error) {
       console.error('[CAOS] Connection failed:', error);
-      speakResponse('Console interface ready for commands');
+      speakResponse('Connection error. Please check the server.');
     }
   };
 
