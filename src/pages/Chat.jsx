@@ -573,7 +573,7 @@ export default function Chat() {
               ? 'h-3/4 w-full' 
               : 'h-full w-full'
         }`}>
-          <div ref={chatContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden ${multiAgentMode ? 'pb-52' : 'pb-56'}`}>
+          <div ref={chatContainerRef} className={`flex-1 overflow-y-auto overflow-x-hidden pb-32 sm:pb-44`}>
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -627,8 +627,8 @@ export default function Chat() {
             )}
           </AnimatePresence>
 
-          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/80 to-transparent pt-3 pb-3 pointer-events-none">
-            <div className="pointer-events-auto pb-6">
+          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-4 sm:pb-6 pointer-events-none safe-area-bottom">
+            <div className="pointer-events-auto">
               <ChatInput 
                 onSend={handleSendMessage} 
                 isLoading={isLoading}
