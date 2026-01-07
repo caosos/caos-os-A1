@@ -636,7 +636,7 @@ export default function Chat() {
             )}
           </AnimatePresence>
 
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-4 pointer-events-none" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <div className="fixed left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-2 pointer-events-none" style={{ bottom: 'max(60px, calc(60px + env(safe-area-inset-bottom)))' }}>
             <div className="pointer-events-auto">
               <ChatInput 
                 onSend={handleSendMessage} 
