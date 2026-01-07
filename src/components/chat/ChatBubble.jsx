@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download } from 'lucide-react';
+import { Download, Mail } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
 
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
@@ -148,6 +149,26 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     URL.revokeObjectURL(url);
   };
 
+  const isEmailableContent = (content) => {
+    if (!content) return false;
+    const lower = content.toLowerCase();
+    return (
+      content.includes('- [ ]') || 
+      content.includes('- [x]') ||
+      lower.includes('checklist') ||
+      lower.includes('memo:') ||
+      lower.includes('subject:') ||
+      (content.split('\n').length > 3 && content.includes('-'))
+    );
+  };
+
+  const handleEmailContent = () => {
+    const subject = encodeURIComponent('From CAOS');
+    const body = encodeURIComponent(message.content);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    toast.success('Opening email client...');
+  };
+
   const extractFilename = (langString) => {
     if (langString && langString.startsWith('filename:')) {
       return langString.replace('filename:', '');
@@ -275,6 +296,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         <div
             data-message-bubble
             className={`
+              relative group
               px-4 py-3 rounded-2xl select-text break-words overflow-wrap-anywhere
               ${isUser 
                 ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
@@ -284,6 +306,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             onContextMenu={handleTextSelection}
           >
+          {!isUser && isEmailableContent(message.content) && (
+            <button
+              onClick={handleEmailContent}
+              className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all opacity-0 group-hover:opacity-100"
+              title="Email this content"
+            >
+              <Mail className="w-3.5 h-3.5 text-white" />
+            </button>
+          )}
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
           )}
