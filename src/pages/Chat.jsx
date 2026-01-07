@@ -558,7 +558,7 @@ export default function Chat() {
 
 
   return (
-    <div className="fixed inset-0 bg-[#0a1628] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-[#0a1628] flex flex-col" style={{ height: '100vh', height: '100dvh' }}>
       <div className="fixed inset-0 z-0">
         <StarfieldBackground />
       </div>
@@ -573,16 +573,16 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`}>
+      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
         {/* Chat Section */}
-        <div className={`relative flex flex-col overflow-hidden ${
+        <div className={`relative flex flex-col ${
           isDeveloperMode 
             ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' 
             : multiAgentMode 
               ? 'h-3/4 w-full' 
               : 'h-full w-full'
-        }`}>
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
+        }`} style={{ minHeight: 0 }}>
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -636,7 +636,7 @@ export default function Chat() {
             )}
           </AnimatePresence>
 
-          <div className="fixed left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-2 pointer-events-none" style={{ bottom: 'max(60px, calc(60px + env(safe-area-inset-bottom)))' }}>
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
             <div className="pointer-events-auto">
               <ChatInput 
                 onSend={handleSendMessage} 
