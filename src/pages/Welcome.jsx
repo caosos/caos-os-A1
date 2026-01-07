@@ -35,6 +35,7 @@ export default function Welcome() {
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!email.trim()) return;
     
     // Create user with email sign-in
@@ -44,11 +45,16 @@ export default function Welcome() {
       isGuest: true
     };
     localStorage.setItem('caos_guest_user', JSON.stringify(user));
-    navigate(createPageUrl('Chat'));
+    
+    // Small delay to ensure localStorage is written
+    setTimeout(() => {
+      navigate(createPageUrl('Chat'));
+    }, 100);
   };
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!name.trim() || !email.trim()) return;
     
     // Create user with provided info
@@ -58,7 +64,11 @@ export default function Welcome() {
       isGuest: true
     };
     localStorage.setItem('caos_guest_user', JSON.stringify(user));
-    navigate(createPageUrl('Chat'));
+    
+    // Small delay to ensure localStorage is written
+    setTimeout(() => {
+      navigate(createPageUrl('Chat'));
+    }, 100);
   };
 
   return (
