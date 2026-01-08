@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake, Gamepad2, Lock, Unlock } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -11,6 +11,8 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   const [rememberConversations, setRememberConversations] = useState(true);
   const [isEditingBirthday, setIsEditingBirthday] = useState(false);
   const [birthday, setBirthday] = useState('');
+  const [availableTokens, setAvailableTokens] = useState(0);
+  const [gameModeEnabled, setGameModeEnabled] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('caos_remember_conversations');
@@ -20,7 +22,41 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
     if (user?.date_of_birth) {
       setBirthday(user.date_of_birth);
     }
+    
+    // Load game mode state
+    const gameMode = localStorage.getItem('caos_game_mode') === 'true';
+    setGameModeEnabled(gameMode);
+    
+    // Load available game tokens
+    if (user?.email) {
+      loadGameTokens();
+    }
   }, [user]);
+
+  const loadGameTokens = async () => {
+    if (!user?.email) return;
+    try {
+      const tokens = await base44.entities.GameToken.filter({
+        user_email: user.email,
+        approved: true,
+        spent: false
+      });
+      const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
+      setAvailableTokens(total);
+    } catch (error) {
+      console.error('Error loading tokens:', error);
+    }
+  };
+
+  const handleToggleGameMode = (checked) => {
+    if (checked && availableTokens <= 0) {
+      alert('You need approved tokens to unlock game mode!');
+      return;
+    }
+    setGameModeEnabled(checked);
+    localStorage.setItem('caos_game_mode', checked.toString());
+    window.location.reload();
+  };
 
   const handleToggleMemory = (checked) => {
     setRememberConversations(checked);
@@ -174,6 +210,43 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                     onCheckedChange={handleToggleMemory}
                     className="flex-shrink-0"
                   />
+                </div>
+
+                {/* Game Mode Section */}
+                <div className="p-2.5 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Gamepad2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white text-xs font-medium">Game Mode</p>
+                        <p className="text-white/50 text-[10px]">Earn tokens to unlock</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {availableTokens > 0 ? (
+                        <Unlock className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Lock className="w-4 h-4 text-red-400" />
+                      )}
+                      <Switch
+                        checked={gameModeEnabled}
+                        onCheckedChange={handleToggleGameMode}
+                        disabled={availableTokens <= 0}
+                        className="flex-shrink-0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-white/60">Available Tokens:</span>
+                    <span className={`font-bold ${availableTokens > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {availableTokens}
+                    </span>
+                  </div>
+                  {availableTokens <= 0 && (
+                    <p className="text-[10px] text-yellow-400 mt-1.5">
+                      Complete homework/chores and get parent approval to earn tokens!
+                    </p>
+                  )}
                 </div>
 
                 {user?.role === 'admin' && (
