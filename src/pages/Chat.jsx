@@ -11,6 +11,7 @@ import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
 import ContinuityToken from '@/components/chat/ContinuityToken';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
+import GameView from '@/components/game/GameView';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
@@ -31,11 +32,13 @@ export default function Chat() {
   const [generatedFiles, setGeneratedFiles] = useState([]);
   const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [availableTokens, setAvailableTokens] = useState(0);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const navigate = useNavigate();
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
+  const isGameMode = localStorage.getItem('caos_game_mode') === 'true';
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -102,6 +105,17 @@ export default function Chat() {
           messagesMap[conv.id] = convMessages;
         }
         setMessages(messagesMap);
+
+        // Load game tokens
+        if (currentUser?.email) {
+          const tokens = await base44.entities.GameToken.filter({
+            user_email: currentUser.email,
+            approved: true,
+            spent: false
+          });
+          const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
+          setAvailableTokens(total);
+        }
 
         setDataLoaded(true);
         } catch (error) {
@@ -648,14 +662,16 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${isDeveloperMode ? 'flex flex-col md:flex-row' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
+      <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex flex-col md:flex-row' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
         {/* Chat Section */}
         <div className={`relative flex flex-col ${
           isDeveloperMode 
             ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' 
-            : multiAgentMode 
-              ? 'h-3/4 w-full' 
-              : 'h-full w-full'
+            : isGameMode
+              ? 'h-full md:w-1/2 md:border-r md:border-white/10'
+              : multiAgentMode 
+                ? 'h-3/4 w-full' 
+                : 'h-full w-full'
         }`} style={{ minHeight: 0 }}>
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
@@ -799,6 +815,13 @@ export default function Chat() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Right Side: Game View - Only in game mode */}
+        {isGameMode && !isDeveloperMode && (
+          <div className="h-full md:w-1/2">
+            <GameView availableTokens={availableTokens} />
           </div>
         )}
 
