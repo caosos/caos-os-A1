@@ -23,11 +23,12 @@ export default function GameView({ availableTokens }) {
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const presetGames = [
-    { name: 'Roblox', url: 'https://www.roblox.com/home', icon: '🎮' },
-    { name: 'Minecraft', url: 'https://classic.minecraft.net/', icon: '⛏️' },
     { name: 'Cool Math Games', url: 'https://www.coolmathgames.com/', icon: '🎲' },
-    { name: 'Chess.com', url: 'https://www.chess.com/play/computer', icon: '♟️' },
     { name: 'Poki Games', url: 'https://poki.com/', icon: '🕹️' },
+    { name: 'Bluey Games', url: 'https://www.abc.net.au/kids/bluey/', icon: '🐕' },
+    { name: 'Horse Games', url: 'https://www.girlsgogames.com/games/horse', icon: '🐴' },
+    { name: 'PBS Kids', url: 'https://pbskids.org/games/', icon: '📺' },
+    { name: 'Nick Jr', url: 'https://www.nickjr.com/games/', icon: '🌟' },
   ];
 
   const handleLoadGame = (url) => {
