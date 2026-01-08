@@ -49,7 +49,8 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   };
 
   const handleToggleGameMode = (checked) => {
-    if (checked && availableTokens <= 0) {
+    const isAdmin = user?.role === 'admin';
+    if (checked && availableTokens <= 0 && !isAdmin) {
       alert('You need approved tokens to unlock game mode!');
       return;
     }
@@ -219,11 +220,13 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                       <Gamepad2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-white text-xs font-medium">Game Mode</p>
-                        <p className="text-white/50 text-[10px]">Earn tokens to unlock</p>
+                        <p className="text-white/50 text-[10px]">
+                          {user?.role === 'admin' ? 'Admin access' : 'Earn tokens to unlock'}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {availableTokens > 0 ? (
+                      {user?.role === 'admin' || availableTokens > 0 ? (
                         <Unlock className="w-4 h-4 text-green-400" />
                       ) : (
                         <Lock className="w-4 h-4 text-red-400" />
@@ -231,21 +234,25 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                       <Switch
                         checked={gameModeEnabled}
                         onCheckedChange={handleToggleGameMode}
-                        disabled={availableTokens <= 0}
+                        disabled={availableTokens <= 0 && user?.role !== 'admin'}
                         className="flex-shrink-0"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-white/60">Available Tokens:</span>
-                    <span className={`font-bold ${availableTokens > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {availableTokens}
-                    </span>
-                  </div>
-                  {availableTokens <= 0 && (
-                    <p className="text-[10px] text-yellow-400 mt-1.5">
-                      Complete homework/chores and get parent approval to earn tokens!
-                    </p>
+                  {user?.role !== 'admin' && (
+                    <>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-white/60">Available Tokens:</span>
+                        <span className={`font-bold ${availableTokens > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {availableTokens}
+                        </span>
+                      </div>
+                      {availableTokens <= 0 && (
+                        <p className="text-[10px] text-yellow-400 mt-1.5">
+                          Complete homework/chores and get parent approval to earn tokens!
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
