@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, Gamepad2, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { base44 } from '@/api/base44Client';
 
 export default function GameView({ availableTokens }) {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const user = await base44.auth.me();
+        setIsAdmin(user?.role === 'admin');
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+    };
+    checkAdmin();
+  }, []);
   const [gameUrl, setGameUrl] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const presetGames = [
-    { name: 'Roblox', url: 'https://www.roblox.com/home', icon: '🎮' },
-    { name: 'Minecraft', url: 'https://www.minecraft.net/en-us/play', icon: '⛏️' },
+    { name: 'Roblox', url: 'https://now.gg/play/roblox-corporation/5349/roblox', icon: '🎮' },
+    { name: 'Minecraft', url: 'https://classic.minecraft.net/', icon: '⛏️' },
     { name: 'Cool Math Games', url: 'https://www.coolmathgames.com/', icon: '🎲' },
-    { name: 'Chess.com', url: 'https://www.chess.com/', icon: '♟️' },
+    { name: 'Chess.com', url: 'https://www.chess.com/play/computer', icon: '♟️' },
   ];
 
   const handleLoadGame = (url) => {
@@ -40,7 +54,9 @@ export default function GameView({ availableTokens }) {
             <Gamepad2 className="w-5 h-5 text-purple-400" />
             <div>
               <h3 className="text-white font-semibold text-sm">Game Mode Active</h3>
-              <p className="text-white/60 text-xs">{availableTokens} tokens remaining</p>
+              <p className="text-white/60 text-xs">
+                {isAdmin ? '∞ Admin Access' : `${availableTokens} tokens remaining`}
+              </p>
             </div>
           </div>
           {gameUrl && (
@@ -117,7 +133,7 @@ export default function GameView({ availableTokens }) {
             )}
 
             <p className="text-white/40 text-xs text-center mt-4">
-              Note: Some games may not load due to browser restrictions
+              Note: Some sites block embedding. Use "Open in new tab" button if game doesn't load.
             </p>
           </div>
         </div>
