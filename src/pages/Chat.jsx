@@ -394,6 +394,24 @@ export default function Chat() {
         userMessage.id = savedUserMessage.id;
       }
 
+      // Add user message to UI immediately
+      const updatedWithUser = { ...messages, [conversationId]: [...convMessages, userMessage] };
+      setMessages(updatedWithUser);
+
+      // Create placeholder AI message for streaming
+      const aiMessageId = isGuestMode ? 'guest_msg_' + Date.now() + '_ai' : 'temp_' + Date.now();
+      const aiMessage = {
+        id: aiMessageId,
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+        created_by: user.email
+      };
+
+      // Add placeholder to UI
+      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
+
       // Get AI response from CAOS server
       const history = convMessages.map(msg => {
         let content = msg.content;
@@ -446,7 +464,7 @@ export default function Chat() {
 
       // Create abort controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for streaming
 
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
@@ -457,6 +475,7 @@ export default function Chat() {
           memory_gate: memory_gate,
           recall: recall_directive,
           images: images.length > 0 ? images : undefined,
+          stream: true,
           capabilities: {
             file_operations: {
               read: true,
@@ -477,35 +496,91 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      const data = await caosResponse.json();
+      // Handle streaming response
+      const reader = caosResponse.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedResponse = '';
 
-      // CAOS-A1 Contract: Verify session alignment
-      if (data.session && data.session !== conversationId) {
-        console.error('SESSION DESYNC:', { expected: conversationId, received: data.session });
-        toast.error('Session mismatch detected. Please refresh.');
-        return;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+
+                // Check for session alignment
+                if (parsed.session && parsed.session !== conversationId) {
+                  console.error('SESSION DESYNC:', { expected: conversationId, received: parsed.session });
+                  throw new Error('Session mismatch');
+                }
+
+                if (parsed.chunk) {
+                  accumulatedResponse += parsed.chunk;
+
+                  // Update message in real-time
+                  setMessages(prevMessages => {
+                    const convMsgs = prevMessages[conversationId] || [];
+                    const updatedConvMsgs = convMsgs.map(msg => 
+                      msg.id === aiMessageId 
+                        ? { ...msg, content: accumulatedResponse }
+                        : msg
+                    );
+                    return { ...prevMessages, [conversationId]: updatedConvMsgs };
+                  });
+                }
+              } catch (e) {
+                console.error('Parse error:', e);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
       }
 
-      const response = data.reply;
-
-      // Create AI message
-      const aiMessage = {
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: response,
-        timestamp: new Date().toISOString(),
-        created_by: user.email
-      };
-
+      // Save final message
       if (isGuestMode) {
-        aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
+        const finalMessages = { ...messages };
+        const convMsgs = finalMessages[conversationId] || [];
+        const finalConvMsgs = convMsgs.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, content: accumulatedResponse }
+            : msg
+        );
+        finalMessages[conversationId] = finalConvMsgs;
+        localStorage.setItem('caos_guest_messages', JSON.stringify(finalMessages));
       } else {
-        const savedAiMessage = await base44.entities.Message.create(aiMessage);
-        aiMessage.id = savedAiMessage.id;
+        const savedAiMessage = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: accumulatedResponse,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        });
+
+        // Update with real ID
+        setMessages(prevMessages => {
+          const convMsgs = prevMessages[conversationId] || [];
+          const updatedConvMsgs = convMsgs.map(msg => 
+            msg.id === aiMessageId 
+              ? { ...msg, id: savedAiMessage.id }
+              : msg
+          );
+          return { ...prevMessages, [conversationId]: updatedConvMsgs };
+        });
       }
 
-      const updatedMessages = { ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] };
-      setMessages(updatedMessages);
+      const response = accumulatedResponse;
+      const updatedMessages = messages;
 
       // Update conversation with sort order
       const updatedConvo = {
