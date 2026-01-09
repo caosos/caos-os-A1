@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from 'react-resizable-panels';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatBubble from '@/components/chat/ChatBubble';
@@ -662,17 +663,11 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex flex-col md:flex-row' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
-        {/* Chat Section */}
-        <div className={`relative flex flex-col ${
-          isDeveloperMode 
-            ? 'h-1/2 md:h-full md:w-1/2 md:border-r md:border-white/10' 
-            : isGameMode
-              ? 'h-full md:w-1/2 md:border-r md:border-white/10'
-              : multiAgentMode 
-                ? 'h-3/4 w-full' 
-                : 'h-full w-full'
-        }`} style={{ minHeight: 0 }}>
+      <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
+        {(isDeveloperMode || isGameMode) ? (
+          <ResizablePanelGroup direction="horizontal" className="flex-1">
+            {/* Chat Section */}
+            <ResizablePanel defaultSize={50} minSize={30} className="relative flex flex-col" style={{ minHeight: 0 }}>
           <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
             <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
@@ -770,7 +765,161 @@ export default function Chat() {
               </div>
             )}
           </div>
-        </div>
+            </ResizablePanel>
+
+            <ResizableHandle className="w-1 bg-white/10 hover:bg-white/20 transition-colors" />
+
+            {/* Right Side Panel */}
+            <ResizablePanel defaultSize={50} minSize={30}>
+              {isGameMode && !isDeveloperMode && (
+                <GameView availableTokens={availableTokens} />
+              )}
+              
+              {isDeveloperMode && (
+                <div className="h-full flex flex-col">
+                  {multiAgentMode && (
+                    <div className="h-1/3 border-b border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
+                      <div className="text-center pt-2 pb-1">
+                        <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
+                          📋 Blackboard
+                        </div>
+                      </div>
+                      <div className="p-4 pt-2">
+                        <div className="space-y-3 text-sm">
+                          <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                            <div className="text-blue-300 font-medium text-xs mb-1">ARCHITECT</div>
+                            <div className="text-white/70 text-xs">No entries yet</div>
+                          </div>
+                          <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
+                            <div className="text-red-300 font-medium text-xs mb-1">SECURITY</div>
+                            <div className="text-white/70 text-xs">No entries yet</div>
+                          </div>
+                          <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
+                            <div className="text-green-300 font-medium text-xs mb-1">ENGINEER</div>
+                            <div className="text-white/70 text-xs">No entries yet</div>
+                          </div>
+                          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                            <div className="text-yellow-300 font-medium text-xs mb-1">QA</div>
+                            <div className="text-white/70 text-xs">No entries yet</div>
+                          </div>
+                          <div className="bg-purple-500/10 border border-purple-500/30 rounded p-2">
+                            <div className="text-purple-300 font-medium text-xs mb-1">DOCS</div>
+                            <div className="text-white/70 text-xs">No entries yet</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className={multiAgentMode ? "h-2/3" : "h-full"}>
+                    <CodeTerminal onClose={() => {
+                      localStorage.setItem('caos_developer_mode', 'false');
+                      window.location.reload();
+                    }} />
+                  </div>
+                </div>
+              )}
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          /* Non-resizable chat when game/dev mode is off */
+          <div className={`relative flex flex-col ${multiAgentMode ? 'h-3/4 w-full' : 'h-full w-full'}`} style={{ minHeight: 0 }}>
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-32">
+              <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
+                {currentMessages.length === 0 && !isLoading && (
+                  <div className="flex items-center justify-center min-h-[60vh]">
+                    <WelcomeGreeting />
+                  </div>
+                )}
+
+                {currentMessages.map((message) => (
+                  <ChatBubble 
+                    key={message.id} 
+                    message={message} 
+                    isUser={message.role === 'user'}
+                    onUpdateMessage={handleUpdateMessage}
+                    closeMenuTrigger={closeMenuTrigger}
+                  />
+                ))}
+
+                {isLoading && (
+                  <div className="flex justify-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                        <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+                      </div>
+                      <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl rounded-bl-md px-4 py-3">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {showScrollButton && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={scrollToBottom}
+                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
+                >
+                  <ArrowDown className="w-5 h-5 text-white" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
+              <div className="pointer-events-auto">
+                <ChatInput 
+                  onSend={handleSendMessage} 
+                  isLoading={isLoading}
+                  lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
+                  onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
+                  multiAgentMode={multiAgentMode}
+                />
+              </div>
+
+              {generatedFiles.length > 0 && (
+                <div className="pointer-events-auto max-w-4xl mx-auto px-4 mt-3">
+                  <div className="bg-[#0f1f3d]/95 backdrop-blur-xl border border-white/10 rounded-lg p-3">
+                    <div className="text-xs text-white/50 mb-2 flex items-center gap-2">
+                      <span>📁</span> Generated Files
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {generatedFiles.map((file, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            const blob = new Blob([file.content], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = file.name;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/20 rounded px-3 py-2 text-left transition-colors group"
+                        >
+                          <span className="text-blue-400">📄</span>
+                          <span className="text-white/80 text-sm flex-1 truncate">{file.name}</span>
+                          <span className="text-white/40 text-xs group-hover:text-white/60">Download</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Blackboard Below Input - Only in multi-agent mode WITHOUT developer mode */}
         {multiAgentMode && !isDeveloperMode && (
@@ -817,61 +966,6 @@ export default function Chat() {
             </div>
           </div>
         )}
-
-        {/* Right Side: Game View - Only in game mode */}
-        {isGameMode && !isDeveloperMode && (
-          <div className="h-full md:w-1/2">
-            <GameView availableTokens={availableTokens} />
-          </div>
-        )}
-
-        {/* Right Side: Blackboard + Terminal - Only in developer mode */}
-        {isDeveloperMode && (
-          <div className="h-1/2 md:h-full md:w-1/2 flex flex-col">
-            {/* Blackboard Section - Only show if multi-agent mode */}
-            {multiAgentMode && (
-            <div className="h-1/3 border-b border-white/10 bg-[#0a1628]/50 backdrop-blur-sm overflow-y-auto">
-              <div className="text-center pt-2 pb-1">
-                <div className="inline-block text-white/60 text-xs font-medium px-4 py-1 bg-white/5 border border-white/10 rounded-full">
-                  📋 Blackboard
-                </div>
-              </div>
-              <div className="p-4 pt-2">
-                <div className="space-y-3 text-sm">
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
-                    <div className="text-blue-300 font-medium text-xs mb-1">ARCHITECT</div>
-                    <div className="text-white/70 text-xs">No entries yet</div>
-                  </div>
-                  <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
-                    <div className="text-red-300 font-medium text-xs mb-1">SECURITY</div>
-                    <div className="text-white/70 text-xs">No entries yet</div>
-                  </div>
-                  <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
-                    <div className="text-green-300 font-medium text-xs mb-1">ENGINEER</div>
-                    <div className="text-white/70 text-xs">No entries yet</div>
-                  </div>
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                    <div className="text-yellow-300 font-medium text-xs mb-1">QA</div>
-                    <div className="text-white/70 text-xs">No entries yet</div>
-                  </div>
-                  <div className="bg-purple-500/10 border border-purple-500/30 rounded p-2">
-                    <div className="text-purple-300 font-medium text-xs mb-1">DOCS</div>
-                    <div className="text-white/70 text-xs">No entries yet</div>
-                  </div>
-                </div>
-              </div>
-              </div>
-              )}
-
-              {/* Terminal Section */}
-              <div className={multiAgentMode ? "h-2/3" : "h-full"}>
-            <CodeTerminal onClose={() => {
-              localStorage.setItem('caos_developer_mode', 'false');
-              window.location.reload();
-            }} />
-            </div>
-            </div>
-            )}
       </div>
 
       <ThreadList
