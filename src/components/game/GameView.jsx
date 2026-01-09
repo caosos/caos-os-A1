@@ -25,10 +25,10 @@ export default function GameView({ availableTokens }) {
   const presetGames = [
     { name: 'Cool Math Games', url: 'https://www.coolmathgames.com/', icon: '🎲' },
     { name: 'Poki Games', url: 'https://poki.com/', icon: '🕹️' },
-    { name: 'Bluey Games', url: 'https://www.abc.net.au/kids/bluey/', icon: '🐕' },
-    { name: 'Horse Games', url: 'https://www.girlsgogames.com/games/horse', icon: '🐴' },
-    { name: 'PBS Kids', url: 'https://pbskids.org/games/', icon: '📺' },
-    { name: 'Nick Jr', url: 'https://www.nickjr.com/games/', icon: '🌟' },
+    { name: 'Pac-Man', url: 'https://www.pacman.com/', icon: '👾' },
+    { name: 'CrazyGames', url: 'https://www.crazygames.com/', icon: '🎮' },
+    { name: 'Minecraft Classic', url: 'https://classic.minecraft.net/', icon: '⛏️' },
+    { name: 'Y8 Games', url: 'https://www.y8.com/', icon: '🕹️' },
   ];
 
   const handleLoadGame = (url) => {
