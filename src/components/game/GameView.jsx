@@ -24,11 +24,11 @@ export default function GameView({ availableTokens }) {
 
   const presetGames = [
     { name: 'Cool Math Games', url: 'https://www.coolmathgames.com/', icon: '🎲' },
-    { name: 'Poki Games', url: 'https://poki.com/', icon: '🕹️' },
     { name: 'Pac-Man', url: 'https://www.pacman.com/', icon: '👾' },
-    { name: 'CrazyGames', url: 'https://www.crazygames.com/', icon: '🎮' },
     { name: 'Minecraft Classic', url: 'https://classic.minecraft.net/', icon: '⛏️' },
-    { name: 'Y8 Games', url: 'https://www.y8.com/', icon: '🕹️' },
+    { name: 'Scratch', url: 'https://scratch.mit.edu/explore/projects/games/', icon: '🐱' },
+    { name: 'Friv', url: 'https://www.friv.com/', icon: '🎮' },
+    { name: 'Armor Games', url: 'https://armorgames.com/', icon: '🛡️' },
   ];
 
   const handleLoadGame = (url) => {
