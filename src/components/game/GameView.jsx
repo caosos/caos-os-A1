@@ -146,7 +146,7 @@ export default function GameView({ availableTokens }) {
             className="w-full h-full border-0"
             title="Game"
             allow="fullscreen; gamepad; microphone; camera"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
           />
           <a
             href={gameUrl}
