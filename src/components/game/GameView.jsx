@@ -26,9 +26,9 @@ export default function GameView({ availableTokens }) {
     { name: 'Cool Math Games', url: 'https://www.coolmathgames.com/', icon: '🎲' },
     { name: 'Pac-Man', url: 'https://www.pacman.com/', icon: '👾' },
     { name: 'Minecraft Classic', url: 'https://classic.minecraft.net/', icon: '⛏️' },
-    { name: 'Slither.io', url: 'https://slither.io/', icon: '🐍' },
-    { name: 'Friv', url: 'https://www.friv.com/', icon: '🎮' },
-    { name: 'Agar.io', url: 'https://agar.io/', icon: '🔴' },
+    { name: '2048', url: 'https://play2048.co/', icon: '🔢' },
+    { name: 'Tetris', url: 'https://tetris.com/play-tetris', icon: '🟦' },
+    { name: 'Chess', url: 'https://www.chess.com/play/computer', icon: '♟️' },
   ];
 
   const handleLoadGame = (url) => {
