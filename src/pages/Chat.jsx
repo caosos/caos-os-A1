@@ -275,7 +275,10 @@ export default function Chat() {
       const conversation = conversations.find(c => c.id === sessionId);
       const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
         body: JSON.stringify({
           type: "__SESSION_RESUME__",
           session: sessionId,
@@ -483,7 +486,10 @@ export default function Chat() {
 
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
         body: JSON.stringify({
           message: messageWithFiles,
           session: conversationId,
