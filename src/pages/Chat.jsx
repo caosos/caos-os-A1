@@ -496,7 +496,6 @@ export default function Chat() {
           memory_gate: memory_gate,
           recall: recall_directive,
           images: images.length > 0 ? images : undefined,
-          stream: true,
           capabilities: {
             file_operations: {
               read: true,
@@ -517,56 +516,29 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      // Handle streaming response
-      const reader = caosResponse.body.getReader();
-      const decoder = new TextDecoder();
+      // Handle non-streaming JSON response
+      const responseData = await caosResponse.json();
       let accumulatedResponse = '';
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(data);
-
-                // Check for session alignment
-                if (parsed.session && parsed.session !== conversationId) {
-                  console.error('SESSION DESYNC:', { expected: conversationId, received: parsed.session });
-                  throw new Error('Session mismatch');
-                }
-
-                if (parsed.chunk) {
-                  accumulatedResponse += parsed.chunk;
-
-                  // Update message in real-time
-                  setMessages(prevMessages => {
-                    const convMsgs = prevMessages[conversationId] || [];
-                    const updatedConvMsgs = convMsgs.map(msg => 
-                      msg.id === aiMessageId 
-                        ? { ...msg, content: accumulatedResponse }
-                        : msg
-                    );
-                    return { ...prevMessages, [conversationId]: updatedConvMsgs };
-                  });
-                }
-              } catch (e) {
-                console.error('Parse error:', e);
-              }
-            }
-          }
-        }
-      } finally {
-        reader.releaseLock();
+      // Check for session alignment
+      if (responseData.session && responseData.session !== conversationId) {
+        console.error('SESSION DESYNC:', { expected: conversationId, received: responseData.session });
+        throw new Error('Session mismatch');
       }
+
+      // Extract reply from CAOS response
+      accumulatedResponse = responseData.reply || responseData.content || responseData.message || '';
+
+      // Update message with complete response
+      setMessages(prevMessages => {
+        const convMsgs = prevMessages[conversationId] || [];
+        const updatedConvMsgs = convMsgs.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, content: accumulatedResponse }
+            : msg
+        );
+        return { ...prevMessages, [conversationId]: updatedConvMsgs };
+      });
 
       // Save final message
       if (isGuestMode) {
