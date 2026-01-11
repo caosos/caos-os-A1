@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2, ArrowLeft, FileText, HardDrive, Timer } from 'lucide-react';
+import { RefreshCw, Activity, MessageSquare, Zap, DollarSign, AlertTriangle, Database, Clock, Mic, Volume2, ArrowLeft, FileText, HardDrive, Timer, Terminal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { base44 } from '@/api/base44Client';
+import SSHConsole from '@/components/console/SSHConsole';
+import WebSocketAttach from '@/components/console/WebSocketAttach';
 
 export default function Console() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export default function Console() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [pendingIntent, setPendingIntent] = useState(null);
+  const [terminalMode, setTerminalMode] = useState('metrics'); // 'metrics', 'ssh', 'websocket'
   const recognitionRef = useRef(null);
 
   const CAOS_SERVER = "https://nonextractive-son-ichnographical.ngrok-free.dev";
@@ -221,11 +224,49 @@ export default function Console() {
       <div className="relative z-10 h-full flex flex-col p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-wider">C-A-O-S D-U-I</h1>
-            <p className="text-white/60 text-xs">
-              CONTEXTUALLY ADAPTIVE OPERATING SYSTEM
-            </p>
+          <div className="flex-1">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-wider">C-A-O-S D-U-I</h1>
+                <p className="text-white/60 text-xs">
+                  {terminalMode === 'metrics' && 'CONTEXTUALLY ADAPTIVE OPERATING SYSTEM'}
+                  {terminalMode === 'ssh' && 'SSH DIRECT ACCESS - LAYER 0'}
+                  {terminalMode === 'websocket' && 'WEBSOCKET DAEMON ATTACH'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTerminalMode('metrics')}
+                  className={`px-3 py-1 rounded text-xs transition-colors ${
+                    terminalMode === 'metrics'
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+                >
+                  Metrics
+                </button>
+                <button
+                  onClick={() => setTerminalMode('ssh')}
+                  className={`px-3 py-1 rounded text-xs transition-colors ${
+                    terminalMode === 'ssh'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+                >
+                  SSH
+                </button>
+                <button
+                  onClick={() => setTerminalMode('websocket')}
+                  className={`px-3 py-1 rounded text-xs transition-colors ${
+                    terminalMode === 'websocket'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+                >
+                  WebSocket
+                </button>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -294,7 +335,22 @@ export default function Console() {
           </div>
         )}
 
+        {/* SSH Console Mode */}
+        {terminalMode === 'ssh' && (
+          <div className="flex-1 overflow-auto">
+            <SSHConsole />
+          </div>
+        )}
+
+        {/* WebSocket Attach Mode */}
+        {terminalMode === 'websocket' && (
+          <div className="flex-1 overflow-auto">
+            <WebSocketAttach onClose={() => setTerminalMode('metrics')} />
+          </div>
+        )}
+
         {/* Main Grid Layout */}
+        {terminalMode === 'metrics' && (
         <div className="flex-1 grid grid-cols-12 gap-3 overflow-hidden" style={{ gridTemplateRows: 'repeat(8, 1fr)' }}>
           {/* Top Left - Real-Time Query */}
           <Card className="col-span-4 row-span-2 bg-[#0a1628]/90 border-cyan-500/30 backdrop-blur-sm overflow-hidden">
@@ -690,7 +746,8 @@ export default function Console() {
               </div>
             </CardContent>
           </Card>
-          </div>
+        </div>
+        )}
       </div>
     </div>
   );
