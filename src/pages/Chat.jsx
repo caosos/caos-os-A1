@@ -951,6 +951,7 @@ export default function Chat() {
         onClose={() => setShowThreads(false)}
         conversations={conversations}
         currentConversationId={currentConversationId}
+        messages={messages}
         onSelectConversation={(id) => {
           setCurrentConversationId(id);
           localStorage.setItem('caos_last_conversation', id);
