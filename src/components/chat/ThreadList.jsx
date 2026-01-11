@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Trash2, Edit2, Check } from 'lucide-react';
+import { X, MessageSquare, Trash2, Edit2, Check, Search } from 'lucide-react';
 import moment from 'moment';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,45 @@ export default function ThreadList({
   currentConversationId, 
   onSelectConversation,
   onDeleteConversation,
-  onRenameConversation
+  onRenameConversation,
+  messages = {}
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results = [];
+    const lowerQuery = query.toLowerCase();
+
+    conversations.forEach(conv => {
+      const convMessages = messages[conv.id] || [];
+      const matchingMessages = convMessages.filter(msg => 
+        msg.content?.toLowerCase().includes(lowerQuery)
+      );
+
+      if (matchingMessages.length > 0) {
+        results.push({
+          conversation: conv,
+          matches: matchingMessages.map(msg => ({
+            content: msg.content,
+            role: msg.role,
+            timestamp: msg.timestamp
+          }))
+        });
+      }
+    });
+
+    setSearchResults(results);
+  };
   
   return (
     <AnimatePresence>
@@ -37,19 +72,72 @@ export default function ThreadList({
             className="fixed left-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-r border-white/10 flex flex-col"
             style={{ zIndex: 9999 }}
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h2 className="text-white font-semibold">Previous Threads</h2>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <X className="w-5 h-5 text-white/70" />
-              </button>
+            <div className="p-4 border-b border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-white font-semibold">Previous Threads</h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5 text-white/70" />
+                </button>
+              </div>
+              
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="text"
+                  placeholder="Search all messages..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-3 py-2 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-white/30"
+                />
+              </div>
             </div>
             
             <ScrollArea className="flex-1">
               <div className="p-2">
-                {conversations.length === 0 ? (
+                {searchQuery && searchResults.length > 0 ? (
+                  <>
+                    <div className="text-white/60 text-xs mb-2 px-2">
+                      Found in {searchResults.length} thread{searchResults.length !== 1 ? 's' : ''}
+                    </div>
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.conversation.id}
+                        className="mb-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => {
+                          onSelectConversation(result.conversation.id);
+                          onClose();
+                        }}
+                      >
+                        <div className="text-white font-medium text-sm mb-2">
+                          {result.conversation.title}
+                        </div>
+                        {result.matches.slice(0, 2).map((match, idx) => (
+                          <div key={idx} className="text-white/60 text-xs mb-1 line-clamp-2">
+                            <span className="text-white/40">{match.role === 'user' ? 'You' : 'CAOS'}:</span> {match.content}
+                          </div>
+                        ))}
+                        {result.matches.length > 2 && (
+                          <div className="text-white/40 text-xs mt-1">
+                            +{result.matches.length - 2} more match{result.matches.length - 2 !== 1 ? 'es' : ''}
+                          </div>
+                        )}
+                        <div className="text-white/30 text-xs mt-2">
+                          {moment(result.conversation.last_message_time || result.conversation.created_date).fromNow()}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : searchQuery && searchResults.length === 0 ? (
+                  <div className="text-center py-8 text-white/50">
+                    <Search className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No messages found</p>
+                    <p className="text-xs text-white/30 mt-1">"{searchQuery}"</p>
+                  </div>
+                ) : conversations.length === 0 ? (
                   <div className="text-center py-8 text-white/50">
                     <MessageSquare className="w-10 h-10 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No conversations yet</p>
