@@ -95,11 +95,65 @@ curl -X POST https://your-server/api/message \\
         </div>
       </section>
 
+      {/* Storage Layer */}
+      <section className="mb-8 bg-white/5 border border-white/10 rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Database className="w-5 h-5 text-cyan-400" />
+          Storage Layer: Filesystem Isolation
+        </h2>
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-white/90 mb-2">Account-Level Directory Isolation</h3>
+            <p className="text-white/70 text-sm mb-3">
+              Each user account gets a completely isolated directory structure. All data (Plane B, indexes, exports, metrics, sessions) 
+              are stored in account-specific directories, ensuring filesystem-level isolation.
+            </p>
+            <pre className="text-xs text-white/70 bg-black/30 p-4 rounded overflow-x-auto">
+{`/data/
+├── accounts/
+│   ├── michael-chambers/          # Account 1
+│   │   ├── plane_b/                # SQLite database (authoritative)
+│   │   ├── anchor_index/           # Anchor mapping tables
+│   │   ├── exports/                # JSONL export files
+│   │   ├── metrics/                # Performance metrics
+│   │   └── sessions/               # Session-specific data
+│   │
+│   ├── user_<uuid_1>/             # Account 2
+│   │   ├── plane_b/
+│   │   ├── anchor_index/
+│   │   ├── exports/
+│   │   ├── metrics/
+│   │   └── sessions/
+│   │
+│   └── user_<uuid_n>/             # Account N
+│       └── ...                     # Fully isolated
+│
+└── system/                         # Shared system resources
+    ├── schemas/                    # Anchor schema definitions
+    ├── policies/                   # Access control policies
+    ├── evaluators/                 # Validation rules
+    └── tooling/                    # Admin utilities`}</pre>
+          </div>
+
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded p-4">
+            <h3 className="font-semibold text-cyan-300 text-sm mb-2">Isolation Benefits</h3>
+            <ul className="text-xs text-white/70 space-y-1">
+              <li>• <strong>Physical separation:</strong> No shared database files between accounts</li>
+              <li>• <strong>Backup isolation:</strong> Account data can be backed up independently</li>
+              <li>• <strong>Migration:</strong> Entire account can be moved without affecting others</li>
+              <li>• <strong>Deletion:</strong> Account removal is a simple directory delete</li>
+              <li>• <strong>Quotas:</strong> Filesystem quotas can be enforced per account</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* Backend Layer */}
       <section className="mb-8 bg-white/5 border border-white/10 rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Database className="w-5 h-5 text-blue-400" />
-          Backend: Storage & Isolation Strategy
+          Backend: Session-Level SQLite Isolation
         </h2>
 
         <div className="space-y-4">
