@@ -103,6 +103,11 @@ GET  https://your-caos-server.com/health`}
             </Card>
           </TabsContent>
 
+          {/* FILESYSTEM ISOLATION */}
+          <TabsContent value="filesystem">
+            <FilesystemIsolation />
+          </TabsContent>
+
           {/* PROJECT STRUCTURE */}
           <TabsContent value="structure">
             <Card className="bg-slate-800/50 border-slate-700">
