@@ -95,38 +95,70 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     const reactions = Array.isArray(message.reactions) ? [...message.reactions] : [];
     reactions.push({ emoji, selected_text: text });
     
-    // Get AI acknowledgment of the reaction
-    const aiResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are CAOS. The user just reacted with ${emoji} to this part of your message: "${text}"\n\nBriefly acknowledge their reaction in a natural, conversational way.`,
-      add_context_from_internet: false,
-    });
+    // Get AI acknowledgment from CAOS backend
+    try {
+      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
+        body: JSON.stringify({
+          message: `[USER REACTED WITH ${emoji} TO: "${text}"]`,
+          session: message.conversation_id,
+          context_type: "inline_reaction"
+        })
+      });
 
-    const replies = Array.isArray(message.replies) ? [...message.replies] : [];
-    replies.push({ 
-      selected_text: text, 
-      user_reply: `Reacted with ${emoji}`,
-      ai_response: aiResponse,
-      timestamp: new Date().toISOString()
-    });
-    
-    onUpdateMessage(message.id, { reactions, replies });
+      const data = await response.json();
+      const aiResponse = data.reply || data.content || data.message || `Acknowledged ${emoji}`;
+
+      const replies = Array.isArray(message.replies) ? [...message.replies] : [];
+      replies.push({ 
+        selected_text: text, 
+        user_reply: `Reacted with ${emoji}`,
+        ai_response: aiResponse,
+        timestamp: new Date().toISOString()
+      });
+      
+      onUpdateMessage(message.id, { reactions, replies });
+    } catch (error) {
+      console.error('Error getting reaction response:', error);
+      toast.error('Failed to get response');
+    }
   };
 
   const handleReply = async (text, replyContent) => {
-    // Get AI response
-    const aiResponse = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are CAOS. The user is responding to this specific part of your previous message: "${text}"\n\nUser's reply: ${replyContent}\n\nProvide a brief, focused response to their reply.`,
-      add_context_from_internet: false,
-    });
+    try {
+      // Get AI response from CAOS backend
+      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
+        },
+        body: JSON.stringify({
+          message: `[USER REPLIED TO: "${text}"]\n\nUser's reply: ${replyContent}`,
+          session: message.conversation_id,
+          context_type: "inline_reply"
+        })
+      });
 
-    const replies = Array.isArray(message.replies) ? [...message.replies] : [];
-    replies.push({ 
-      selected_text: text, 
-      user_reply: replyContent,
-      ai_response: aiResponse,
-      timestamp: new Date().toISOString()
-    });
-    onUpdateMessage(message.id, { replies });
+      const data = await response.json();
+      const aiResponse = data.reply || data.content || data.message || 'Response received';
+
+      const replies = Array.isArray(message.replies) ? [...message.replies] : [];
+      replies.push({ 
+        selected_text: text, 
+        user_reply: replyContent,
+        ai_response: aiResponse,
+        timestamp: new Date().toISOString()
+      });
+      onUpdateMessage(message.id, { replies });
+    } catch (error) {
+      console.error('Error getting reply response:', error);
+      toast.error('Failed to get response');
+    }
   };
   const getYouTubeId = (url) => {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
