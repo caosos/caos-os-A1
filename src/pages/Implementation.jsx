@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import CAOSBlueprint from '@/components/docs/CAOSBlueprint';
+import FilesystemIsolation from '@/components/docs/FilesystemIsolation';
 
 export default function Implementation() {
   return (
