@@ -30,9 +30,10 @@ export default function Implementation() {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-slate-800/50 mb-6">
+          <TabsList className="grid w-full grid-cols-7 bg-slate-800/50 mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="structure">Structure</TabsTrigger>
+            <TabsTrigger value="filesystem">Filesystem</TabsTrigger>
             <TabsTrigger value="plane_b">Plane B</TabsTrigger>
             <TabsTrigger value="anchors">Anchors</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
