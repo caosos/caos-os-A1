@@ -160,11 +160,18 @@ export default function Chat() {
   const handleJumpToMessage = (messageId) => {
     const element = messageRefs.current[messageId];
     if (element) {
+      // Scroll with smooth behavior
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+
+      // Highlight with flash effect
+      element.style.transition = 'background-color 0.3s ease';
+      element.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+
       setTimeout(() => {
         element.style.backgroundColor = '';
       }, 2000);
+    } else {
+      console.log('Message element not found:', messageId);
     }
   };
 
