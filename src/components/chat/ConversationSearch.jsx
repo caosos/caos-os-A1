@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ConversationSearch({ messages, onJumpToMessage }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState([]);
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (!query.trim()) {
       setMatches([]);
-      setCurrentMatchIndex(0);
+      setShowDropdown(false);
       return;
     }
 
@@ -21,28 +23,43 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
       .filter(({ msg }) => msg.content?.toLowerCase().includes(lowerQuery));
 
     setMatches(foundMatches);
-    setCurrentMatchIndex(0);
+    setShowDropdown(foundMatches.length > 0);
   }, [query, messages]);
 
-  const handleNext = () => {
-    if (matches.length === 0) return;
-    const nextIndex = (currentMatchIndex + 1) % matches.length;
-    setCurrentMatchIndex(nextIndex);
-    onJumpToMessage(matches[nextIndex].msg.id);
-  };
-
-  const handlePrev = () => {
-    if (matches.length === 0) return;
-    const prevIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
-    setCurrentMatchIndex(prevIndex);
-    onJumpToMessage(matches[prevIndex].msg.id);
-  };
-
   useEffect(() => {
-    if (matches.length > 0 && query) {
-      onJumpToMessage(matches[currentMatchIndex].msg.id);
-    }
-  }, [currentMatchIndex, matches, query]);
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getSnippet = (content, query) => {
+    const lowerContent = content.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const index = lowerContent.indexOf(lowerQuery);
+    
+    if (index === -1) return content.substring(0, 100);
+    
+    const start = Math.max(0, index - 30);
+    const end = Math.min(content.length, index + query.length + 50);
+    const snippet = content.substring(start, end);
+    
+    return (start > 0 ? '...' : '') + snippet + (end < content.length ? '...' : '');
+  };
+
+  const highlightMatch = (text, query) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? <span key={i} className="bg-yellow-400/30 text-yellow-200">{part}</span>
+        : part
+    );
+  };
 
   if (!isOpen) {
     return (
@@ -57,7 +74,7 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
   }
 
   return (
-    <AnimatePresence>
+    <div className="relative" ref={dropdownRef}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -69,42 +86,66 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => matches.length > 0 && setShowDropdown(true)}
           placeholder="Search messages..."
           className="bg-transparent text-white text-sm outline-none w-32"
           autoFocus
         />
         {matches.length > 0 && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-white/60">
-              {currentMatchIndex + 1}/{matches.length}
-            </span>
-            <button
-              onClick={handlePrev}
-              className="p-1 rounded hover:bg-white/10 transition-colors"
-              title="Previous"
-            >
-              <ChevronUp className="w-3.5 h-3.5 text-white/70" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="p-1 rounded hover:bg-white/10 transition-colors"
-              title="Next"
-            >
-              <ChevronDown className="w-3.5 h-3.5 text-white/70" />
-            </button>
-          </div>
+          <span className="text-xs text-white/60 flex-shrink-0">
+            {matches.length}
+          </span>
         )}
         <button
           onClick={() => {
             setIsOpen(false);
             setQuery('');
             setMatches([]);
+            setShowDropdown(false);
           }}
           className="p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
         >
           <X className="w-3.5 h-3.5 text-white/70" />
         </button>
       </motion.div>
-    </AnimatePresence>
+
+      <AnimatePresence>
+        {showDropdown && matches.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="absolute right-0 top-full mt-2 w-80 bg-[#0f1f3d]/98 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl overflow-hidden z-50"
+          >
+            <ScrollArea className="max-h-96">
+              <div className="p-2">
+                {matches.map(({ msg, idx }, matchIdx) => (
+                  <button
+                    key={msg.id}
+                    onClick={() => {
+                      onJumpToMessage(msg.id);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-white/10 transition-colors mb-1 border border-white/5 hover:border-white/20"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-white/40">#{matchIdx + 1}</span>
+                      <span className={`text-xs font-medium ${
+                        msg.role === 'user' ? 'text-blue-400' : 'text-purple-400'
+                      }`}>
+                        {msg.role === 'user' ? 'You' : 'CAOS'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-white/80 leading-relaxed">
+                      {highlightMatch(getSnippet(msg.content, query), query)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
