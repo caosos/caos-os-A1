@@ -845,13 +845,18 @@ export default function Chat() {
                 )}
 
                 {currentMessages.map((message) => (
-                  <ChatBubble 
-                    key={message.id} 
-                    message={message} 
-                    isUser={message.role === 'user'}
-                    onUpdateMessage={handleUpdateMessage}
-                    closeMenuTrigger={closeMenuTrigger}
-                  />
+                  <div
+                    key={message.id}
+                    ref={(el) => messageRefs.current[message.id] = el}
+                    style={{ transition: 'background-color 0.3s' }}
+                  >
+                    <ChatBubble 
+                      message={message} 
+                      isUser={message.role === 'user'}
+                      onUpdateMessage={handleUpdateMessage}
+                      closeMenuTrigger={closeMenuTrigger}
+                    />
+                  </div>
                 ))}
 
                 {isLoading && (
