@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { FileCode, Database, Zap, GitBranch, Server, CheckCircle } from 'lucide-react';
+import { FileCode, Database, Zap, GitBranch, Server, CheckCircle, Lock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import CAOSBlueprint from '@/components/docs/CAOSBlueprint';
 
 export default function Implementation() {
@@ -11,8 +13,19 @@ export default function Implementation() {
       <div className="max-w-7xl mx-auto">
         <CAOSBlueprint />
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">CAOS-A1 Implementation Blueprints</h1>
-          <p className="text-slate-400">v1.5 Architecture — External Python Service</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">CAOS-A1 Implementation Blueprints</h1>
+              <p className="text-slate-400">v1.5 Architecture — External Python Service</p>
+            </div>
+            <Link
+              to={createPageUrl('MemoryIsolation')}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-lg text-purple-300 transition-colors"
+            >
+              <Lock className="w-4 h-4" />
+              Memory Isolation Blueprint
+            </Link>
+          </div>
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
