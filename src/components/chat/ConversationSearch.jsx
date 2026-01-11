@@ -115,34 +115,34 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="absolute right-0 top-full mt-2 w-80 bg-[#0f1f3d]/98 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl overflow-hidden z-50"
+            className="absolute right-0 top-full mt-2 w-80 bg-[#0f1f3d]/98 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl z-50"
           >
-            <ScrollArea className="max-h-96">
-              <div className="p-2">
-                {matches.map(({ msg, idx }, matchIdx) => (
-                  <button
-                    key={msg.id}
-                    onClick={() => {
-                      onJumpToMessage(msg.id);
-                      setShowDropdown(false);
-                    }}
-                    className="w-full text-left p-3 rounded-lg hover:bg-white/10 transition-colors mb-1 border border-white/5 hover:border-white/20"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-white/40">#{matchIdx + 1}</span>
-                      <span className={`text-xs font-medium ${
-                        msg.role === 'user' ? 'text-blue-400' : 'text-purple-400'
-                      }`}>
-                        {msg.role === 'user' ? 'You' : 'CAOS'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-white/80 leading-relaxed">
-                      {highlightMatch(getSnippet(msg.content, query), query)}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="max-h-96 overflow-y-auto p-2">
+              {matches.map(({ msg, idx }, matchIdx) => (
+                <button
+                  key={msg.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onJumpToMessage(msg.id);
+                    setShowDropdown(false);
+                  }}
+                  className="w-full text-left p-3 rounded-lg hover:bg-white/10 transition-colors mb-1 border border-white/5 hover:border-white/20 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-white/40">#{matchIdx + 1}</span>
+                    <span className={`text-xs font-medium ${
+                      msg.role === 'user' ? 'text-blue-400' : 'text-purple-400'
+                    }`}>
+                      {msg.role === 'user' ? 'You' : 'CAOS'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/80 leading-relaxed">
+                    {highlightMatch(getSnippet(msg.content, query), query)}
+                  </p>
+                </button>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
