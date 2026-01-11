@@ -112,11 +112,11 @@ export default function ThreadList({
                           onClose();
                         }}
                       >
-                        <div className="text-white font-medium text-sm mb-2">
+                        <div className="text-white font-medium text-sm mb-2" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                           {result.conversation.title}
                         </div>
                         {result.matches.slice(0, 2).map((match, idx) => (
-                          <div key={idx} className="text-white/60 text-xs mb-1 line-clamp-2">
+                          <div key={idx} className="text-white/60 text-xs mb-1" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             <span className="text-white/40">{match.role === 'user' ? 'You' : 'CAOS'}:</span> {match.content}
                           </div>
                         ))}
