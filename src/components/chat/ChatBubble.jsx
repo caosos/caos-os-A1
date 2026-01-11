@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
+import CopyBlock from './CopyBlock';
 
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
@@ -180,6 +181,19 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     let content = message.content;
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
+    // Check for copy blocks: ```copy or ```copyblock
+    const copyBlockRegex = /```(?:copy|copyblock)(?:\s+title:([^\n]+))?\n([\s\S]*?)```/g;
+    const copyBlocks = [];
+    let copyMatch;
+    
+    while ((copyMatch = copyBlockRegex.exec(message.content)) !== null) {
+      const title = copyMatch[1]?.trim();
+      const blockContent = copyMatch[2];
+      copyBlocks.push({ title, content: blockContent });
+      // Remove from main content
+      content = content.replace(copyMatch[0], '');
+    }
+    
     // Check for file content in code blocks
     const codeBlockRegex = /```(filename:[^\n]+)\n([\s\S]*?)```/g;
     const fileBlocks = [];
@@ -231,7 +245,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     return (
       <div className="space-y-3">
-        {content && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content}</p>}
+        {content && content.trim() && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content.trim()}</p>}
+        
+        {/* Copy Blocks */}
+        {copyBlocks.map((block, index) => (
+          <CopyBlock
+            key={index}
+            content={block.content}
+            title={block.title}
+          />
+        ))}
         
         {/* Display attached files */}
         {attachedFiles.length > 0 && (
