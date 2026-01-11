@@ -1,16 +1,16 @@
 import Chat from './pages/Chat';
 import Console from './pages/Console';
 import Implementation from './pages/Implementation';
-import Welcome from './pages/Welcome';
 import MemoryIsolation from './pages/MemoryIsolation';
+import Welcome from './pages/Welcome';
 
 
 export const PAGES = {
     "Chat": Chat,
     "Console": Console,
     "Implementation": Implementation,
-    "Welcome": Welcome,
     "MemoryIsolation": MemoryIsolation,
+    "Welcome": Welcome,
 }
 
 export const pagesConfig = {
