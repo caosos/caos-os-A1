@@ -11,6 +11,7 @@ import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
 import ContinuityToken from '@/components/chat/ContinuityToken';
+import ConversationSearch from '@/components/chat/ConversationSearch';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
 import GameView from '@/components/game/GameView';
 import { createPageUrl } from '@/utils';
@@ -36,6 +37,7 @@ export default function Chat() {
   const [availableTokens, setAvailableTokens] = useState(0);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const messageRefs = useRef({});
   const navigate = useNavigate();
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
@@ -153,6 +155,17 @@ export default function Chat() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleJumpToMessage = (messageId) => {
+    const element = messageRefs.current[messageId];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+      setTimeout(() => {
+        element.style.backgroundColor = '';
+      }, 2000);
+    }
   };
 
   const handleNewThread = async () => {
@@ -632,13 +645,23 @@ export default function Chat() {
       </div>
 
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
-        <ChatHeader 
-          user={user}
-          onNewThread={handleNewThread}
-          onShowThreads={() => setShowThreads(true)}
-          onShowProfile={() => setShowProfile(true)}
-          currentConversation={conversations.find(c => c.id === currentConversationId)}
-        />
+        <div className="flex items-center justify-between gap-2 px-4 py-2">
+          <div className="flex-1 min-w-0">
+            <ChatHeader 
+              user={user}
+              onNewThread={handleNewThread}
+              onShowThreads={() => setShowThreads(true)}
+              onShowProfile={() => setShowProfile(true)}
+              currentConversation={conversations.find(c => c.id === currentConversationId)}
+            />
+          </div>
+          {currentConversationId && currentMessages.length > 0 && (
+            <ConversationSearch
+              messages={currentMessages}
+              onJumpToMessage={handleJumpToMessage}
+            />
+          )}
+        </div>
       </div>
 
       <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
@@ -655,13 +678,18 @@ export default function Chat() {
               )}
 
               {currentMessages.map((message) => (
-                <ChatBubble 
-                  key={message.id} 
-                  message={message} 
-                  isUser={message.role === 'user'}
-                  onUpdateMessage={handleUpdateMessage}
-                  closeMenuTrigger={closeMenuTrigger}
-                />
+                <div
+                  key={message.id}
+                  ref={(el) => messageRefs.current[message.id] = el}
+                  style={{ transition: 'background-color 0.3s' }}
+                >
+                  <ChatBubble 
+                    message={message} 
+                    isUser={message.role === 'user'}
+                    onUpdateMessage={handleUpdateMessage}
+                    closeMenuTrigger={closeMenuTrigger}
+                  />
+                </div>
               ))}
 
               {isLoading && (
