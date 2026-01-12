@@ -97,7 +97,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     // Get AI acknowledgment from CAOS backend
     try {
-      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const response = await fetch("http://172.234.25.199:3001/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -131,7 +131,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const handleReply = async (text, replyContent) => {
     try {
       // Get AI response from CAOS backend
-      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const response = await fetch("http://172.234.25.199:3001/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
