@@ -3,6 +3,7 @@ import Console from './pages/Console';
 import Implementation from './pages/Implementation';
 import MemoryIsolation from './pages/MemoryIsolation';
 import Welcome from './pages/Welcome';
+import TerminalBlueprint from './pages/TerminalBlueprint';
 
 
 export const PAGES = {
@@ -11,6 +12,7 @@ export const PAGES = {
     "Implementation": Implementation,
     "MemoryIsolation": MemoryIsolation,
     "Welcome": Welcome,
+    "TerminalBlueprint": TerminalBlueprint,
 }
 
 export const pagesConfig = {
