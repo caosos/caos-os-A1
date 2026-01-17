@@ -416,7 +416,7 @@ UPLOAD (Local → Remote):
 - Resume on disconnect (optional)
 
 DOWNLOAD (Remote → Local):
-- Command: `caos-download /path/to/file`
+- Command: \`caos-download /path/to/file\`
 - Backend streams file over WebSocket
 - Browser triggers download
 - Supports large files (chunked)
@@ -428,7 +428,7 @@ INLINE PREVIEW:
 - JSON: collapsible tree view
 
 SCP REPLACEMENT:
-- `caos-scp user@host:/path /local/path`
+- \`caos-scp user@host:/path /local/path\`
 - Backend handles transfer via SSH
 - No separate tool needed
 
