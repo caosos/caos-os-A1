@@ -293,7 +293,7 @@ export default function Chat() {
   const handleSessionResume = async (sessionId) => {
     try {
       const conversation = conversations.find(c => c.id === sessionId);
-      const response = await fetch("http://172.234.25.199:3001/api/message", {
+      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
