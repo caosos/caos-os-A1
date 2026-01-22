@@ -450,16 +450,18 @@ export default function Chat() {
       // Add placeholder to UI
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
-      // Send to CAOS - it returns ONLY the new reply, NOT history
+      // Send to CAOS per exact spec
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
+          "ngrok-skip-browser-warning": "1"
         },
         body: JSON.stringify({
           session_id: conversationId,
-          input: messageWithFiles
+          input: messageWithFiles,
+          anchors: ["topic:bootloader"],
+          limit: 20
         })
       });
 
@@ -468,6 +470,7 @@ export default function Chat() {
       }
 
       const data = await caosResponse.json();
+      // Display ONLY response.reply - DO NOT reuse/append prior buffers
       const assistantReply = data.reply || '';
 
       // Replace placeholder with actual response
