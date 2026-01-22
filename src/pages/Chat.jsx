@@ -348,6 +348,8 @@ export default function Chat() {
           localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
           setCurrentConversationId(conversationId);
           setMessages({ ...messages, [conversationId]: [] });
+          // Clear previous reply tracking for new conversation
+          previousReplyRef.current[conversationId] = '';
         } else {
           conversation = await base44.entities.Conversation.create({
             title: title,
@@ -359,6 +361,8 @@ export default function Chat() {
           setCurrentConversationId(conversationId);
           localStorage.setItem('caos_last_conversation', conversationId);
           setMessages({ ...messages, [conversationId]: [] });
+          // Clear previous reply tracking for new conversation
+          previousReplyRef.current[conversationId] = '';
         }
       }
 
@@ -944,6 +948,8 @@ export default function Chat() {
         onSelectConversation={(id) => {
           setCurrentConversationId(id);
           localStorage.setItem('caos_last_conversation', id);
+          // Clear previous reply tracking when switching conversations
+          previousReplyRef.current[id] = '';
           handleSessionResume(id);
         }}
         onDeleteConversation={handleDeleteConversation}
