@@ -450,59 +450,9 @@ export default function Chat() {
       // Add placeholder to UI
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
-      // Get AI response from CAOS server
-      const history = convMessages.map(msg => {
-        let content = msg.content;
-
-        // Add reactions context
-        if (msg.reactions && msg.reactions.length > 0) {
-          const reactionsText = msg.reactions.map(r => 
-            `[User reacted ${r.emoji} to: "${r.selected_text}"]`
-          ).join('\n');
-          content += '\n' + reactionsText;
-        }
-
-        // Add replies context
-        if (msg.replies && msg.replies.length > 0) {
-          const repliesText = msg.replies.map(r => 
-            `[User replied to "${r.selected_text}": ${r.user_reply}]\n[CAOS responded: ${r.ai_response}]`
-          ).join('\n');
-          content += '\n' + repliesText;
-        }
-
-        return {
-          role: msg.role,
-          content: content
-        };
-      });
-
-      const rememberConversations = localStorage.getItem('caos_remember_conversations') !== 'false';
-
-      // CAOS-A1 Session-Implied Recall: Session continuity is ephemeral context, always allowed
-      // Cross-session recall requires explicit keywords
-      const memoryKeywords = ['earlier', 'before', 'previously', 'last time', 'you said', 'i said', 'what did', 'remember', 'recall'];
-      const hasExplicitRecallQuery = memoryKeywords.some(kw => messageWithFiles.toLowerCase().includes(kw));
-
-      // Session recall: implicit (L4 raw, session-bounded)
-      // Cross-session recall: explicit request only (L2 reconstructive)
-      const memory_gate = {
-        allowed: rememberConversations,
-        scope: 'session',
-        explicit_recall: hasExplicitRecallQuery,
-        reason: rememberConversations 
-          ? (hasExplicitRecallQuery ? 'Explicit recall requested' : 'Session continuity enabled') 
-          : 'Memory disabled by user'
-      };
-
-      // CAOS-A1: Explicit recall directive
-      const recall_directive = rememberConversations ? {
-        mode: 'session_tail',
-        limit: 20
-      } : undefined;
-
       // Create abort controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for streaming
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
 
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
@@ -511,21 +461,10 @@ export default function Chat() {
           "ngrok-skip-browser-warning": "true"
         },
         body: JSON.stringify({
-          message: messageWithFiles,
-          session: conversationId,
-          memory_gate: memory_gate,
-          recall: recall_directive,
-          images: images.length > 0 ? images : undefined,
-          capabilities: {
-            file_operations: {
-              read: true,
-              create: true,
-              modify: true,
-              description: "Files are provided by the UI/caller. You can read provided files and create new files as output."
-            },
-            vision: images.length > 0,
-            internet_access: memory_gate.allowed && memory_gate.explicit_recall
-          }
+          session_id: conversationId,
+          input: messageWithFiles,
+          anchors: ["topic:conversation"],
+          limit: 20
         }),
         signal: controller.signal
       });
@@ -536,18 +475,19 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      // Handle non-streaming JSON response
+      // Handle response with recall array
       const responseData = await caosResponse.json();
       let accumulatedResponse = '';
 
-      // Check for session alignment
-      if (responseData.session && responseData.session !== conversationId) {
-        console.error('SESSION DESYNC:', { expected: conversationId, received: responseData.session });
-        throw new Error('Session mismatch');
+      // Use recall array if present, otherwise fall back to reply
+      if (responseData.recall && Array.isArray(responseData.recall) && responseData.recall.length > 0) {
+        // Get the last recalled message
+        const lastRecall = responseData.recall[responseData.recall.length - 1];
+        accumulatedResponse = lastRecall?.payload?.text || lastRecall?.payload?.content || '';
+      } else {
+        // Fallback to reply field (for backwards compatibility or debug)
+        accumulatedResponse = responseData.reply || responseData.content || responseData.message || '';
       }
-
-      // Extract reply from CAOS response
-      accumulatedResponse = responseData.reply || responseData.content || responseData.message || '';
 
       // Update message with complete response
       setMessages(prevMessages => {
