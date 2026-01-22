@@ -478,8 +478,12 @@ export default function Chat() {
       // Handle response - use server's reply directly
       const responseData = await caosResponse.json();
 
+      console.log('CAOS Response:', responseData);
+
       // Use response.reply as the assistant output (do NOT echo user input)
       const accumulatedResponse = responseData.reply || '';
+
+      console.log('Extracted reply:', accumulatedResponse);
 
       // Update message with complete response
       setMessages(prevMessages => {
