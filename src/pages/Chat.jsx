@@ -38,6 +38,7 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
+  const previousReplyRef = useRef({});
   const navigate = useNavigate();
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
@@ -480,10 +481,22 @@ export default function Chat() {
 
       console.log('CAOS Response:', responseData);
 
-      // Use response.reply as the assistant output (do NOT echo user input)
-      const accumulatedResponse = responseData.reply || '';
+      // Server returns cumulative conversation - extract only NEW content
+      const fullReply = responseData.reply || '';
+      const previousReply = previousReplyRef.current[conversationId] || '';
 
-      console.log('Extracted reply:', accumulatedResponse);
+      // Extract only the new portion by removing the previous reply
+      let accumulatedResponse = fullReply;
+      if (previousReply && fullReply.startsWith(previousReply)) {
+        accumulatedResponse = fullReply.slice(previousReply.length).replace(/^\n+/, '');
+      }
+
+      // Store current reply for next comparison
+      previousReplyRef.current[conversationId] = fullReply;
+
+      console.log('Previous reply:', previousReply);
+      console.log('Full reply:', fullReply);
+      console.log('Extracted new content:', accumulatedResponse);
 
       // Update message with complete response
       setMessages(prevMessages => {
