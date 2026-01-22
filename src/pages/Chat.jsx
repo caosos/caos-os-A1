@@ -38,7 +38,6 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
-  const previousReplyRef = useRef({});
   const navigate = useNavigate();
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
@@ -81,16 +80,6 @@ export default function Chat() {
 
           const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
           setMessages(guestMessages);
-          
-          // Initialize previous reply tracking for guest conversations
-          Object.keys(guestMessages).forEach(convId => {
-            const convMsgs = guestMessages[convId] || [];
-            const allAssistantMessages = convMsgs.filter(m => m.role === 'assistant');
-            if (allAssistantMessages.length > 0) {
-              const cumulativeReply = allAssistantMessages.map(m => m.content).join('\n');
-              previousReplyRef.current[convId] = cumulativeReply;
-            }
-          });
 
           setDataLoaded(true);
           return;
@@ -117,15 +106,6 @@ export default function Chat() {
             1000
           );
           messagesMap[conv.id] = convMessages;
-          
-          // Initialize previous reply tracking with last assistant message
-          const lastAssistantMsg = convMessages.filter(m => m.role === 'assistant').pop();
-          if (lastAssistantMsg) {
-            // Server returns cumulative, so we need to build the cumulative state
-            const allAssistantMessages = convMessages.filter(m => m.role === 'assistant');
-            const cumulativeReply = allAssistantMessages.map(m => m.content).join('\n');
-            previousReplyRef.current[conv.id] = cumulativeReply;
-          }
         }
         setMessages(messagesMap);
 
@@ -367,8 +347,6 @@ export default function Chat() {
           localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
           setCurrentConversationId(conversationId);
           setMessages({ ...messages, [conversationId]: [] });
-          // Clear previous reply tracking for new conversation
-          previousReplyRef.current[conversationId] = '';
         } else {
           conversation = await base44.entities.Conversation.create({
             title: title,
@@ -380,8 +358,6 @@ export default function Chat() {
           setCurrentConversationId(conversationId);
           localStorage.setItem('caos_last_conversation', conversationId);
           setMessages({ ...messages, [conversationId]: [] });
-          // Clear previous reply tracking for new conversation
-          previousReplyRef.current[conversationId] = '';
         }
       }
 
@@ -506,18 +482,27 @@ export default function Chat() {
 
       // Server returns cumulative conversation - extract only NEW content
       const fullReply = responseData.reply || '';
-      const previousReply = previousReplyRef.current[conversationId] || '';
 
-      // Extract only the new portion by removing the previous reply
+      // Build cumulative from current conversation messages
+      const currentAssistantMessages = convMessages.filter(m => m.role === 'assistant');
+      const currentCumulative = currentAssistantMessages.map(m => m.content).join('\n');
+
+      // Extract only the new portion by removing what we already have
       let accumulatedResponse = fullReply;
-      if (previousReply && fullReply.startsWith(previousReply)) {
-        accumulatedResponse = fullReply.slice(previousReply.length).replace(/^\n+/, '');
+      if (currentCumulative && fullReply.startsWith(currentCumulative)) {
+        accumulatedResponse = fullReply.slice(currentCumulative.length).replace(/^\n+/, '');
+      } else if (!currentCumulative) {
+        // First message in conversation - use full reply
+        accumulatedResponse = fullReply;
+      } else {
+        // Fallback: split by newlines and take segments we don't have
+        const fullLines = fullReply.split('\n');
+        const currentLines = currentCumulative.split('\n');
+        const newLines = fullLines.slice(currentLines.length);
+        accumulatedResponse = newLines.join('\n');
       }
 
-      // Store current reply for next comparison
-      previousReplyRef.current[conversationId] = fullReply;
-
-      console.log('Previous reply:', previousReply);
+      console.log('Current cumulative:', currentCumulative);
       console.log('Full reply:', fullReply);
       console.log('Extracted new content:', accumulatedResponse);
 
@@ -967,8 +952,6 @@ export default function Chat() {
         onSelectConversation={(id) => {
           setCurrentConversationId(id);
           localStorage.setItem('caos_last_conversation', id);
-          // Clear previous reply tracking when switching conversations
-          previousReplyRef.current[id] = '';
           handleSessionResume(id);
         }}
         onDeleteConversation={handleDeleteConversation}
