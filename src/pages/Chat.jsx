@@ -415,8 +415,9 @@ export default function Chat() {
 
       const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
 
-      // Create user message
+      // Create user message (optimistic UI update)
       const userMessage = {
+        id: 'temp_user_' + Date.now(),
         conversation_id: conversationId,
         role: 'user',
         content: content || '📎 Sent file(s)',
@@ -425,15 +426,11 @@ export default function Chat() {
         created_by: user.email
       };
 
-      if (isGuestMode) {
-        userMessage.id = 'guest_msg_' + Date.now();
-      } else {
-        const savedUserMessage = await base44.entities.Message.create(userMessage);
-        userMessage.id = savedUserMessage.id;
-      }
-
-      // Show user message in UI
-      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
+      // Show user message immediately
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), userMessage]
+      }));
 
       // Send to CAOS - one POST, one reply
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
@@ -457,8 +454,47 @@ export default function Chat() {
       const data = await caosResponse.json();
       const assistantReply = data.reply || '';
 
-      // Create assistant message with actual reply (no placeholder, no echo)
+      // Now save both messages to storage
+      if (isGuestMode) {
+        userMessage.id = 'guest_msg_' + Date.now();
+        const aiMessage = {
+          id: 'guest_msg_' + Date.now() + '_ai',
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        };
+        
+        const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
+        const existingMsgs = stored[conversationId] || [];
+        stored[conversationId] = [...existingMsgs.filter(m => m.id !== userMessage.id), userMessage, aiMessage];
+        localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
+      } else {
+        // Save to database
+        const savedUser = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'user',
+          content: content || '📎 Sent file(s)',
+          file_urls: fileUrls,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        });
+        
+        const savedAi = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        });
+        
+        userMessage.id = savedUser.id;
+      }
+
+      // Update UI with assistant reply
       const aiMessage = {
+        id: isGuestMode ? 'guest_msg_' + Date.now() + '_ai' : 'temp_ai_' + Date.now(),
         conversation_id: conversationId,
         role: 'assistant',
         content: assistantReply,
@@ -466,17 +502,6 @@ export default function Chat() {
         created_by: user.email
       };
 
-      if (isGuestMode) {
-        aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
-        const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-        stored[conversationId] = [...(stored[conversationId] || []), userMessage, aiMessage];
-        localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
-      } else {
-        const savedAiMessage = await base44.entities.Message.create(aiMessage);
-        aiMessage.id = savedAiMessage.id;
-      }
-
-      // Add assistant reply to UI
       setMessages(prev => ({
         ...prev,
         [conversationId]: [...(prev[conversationId] || []), aiMessage]
