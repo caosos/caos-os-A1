@@ -478,72 +478,57 @@ export default function Chat() {
       // Handle response
       const responseData = await caosResponse.json();
 
-      console.log('=== BACKEND RESPONSE ===');
-      console.log('Full response:', JSON.stringify(responseData, null, 2));
+      // Get the latest assistant message from recall array
+      const latestMessage = responseData.recall && responseData.recall.length > 0 
+        ? responseData.recall[responseData.recall.length - 1]
+        : null;
 
-      // Backend returns cumulative conversation - we need ONLY the new assistant message
-      const fullReply = responseData.reply || '';
+      const assistantReply = latestMessage?.payload?.text || responseData.reply || '';
 
-      // Build what we already have: all previous assistant messages
-      const existingAssistantContent = convMessages
-        .filter(m => m.role === 'assistant')
-        .map(m => m.content)
-        .join('\n');
+      console.log('Backend response:', assistantReply);
 
-      console.log('Existing assistant content:', existingAssistantContent);
-      console.log('Full reply from backend:', fullReply);
-
-      // Extract only the new message by removing what we already have
-      let assistantReply = fullReply;
-      if (existingAssistantContent && fullReply.includes(existingAssistantContent)) {
-        // Remove the existing content and any leading newlines
-        assistantReply = fullReply.replace(existingAssistantContent, '').replace(/^\n+/, '');
-      }
-
-      console.log('NEW assistant message extracted:', assistantReply);
-      console.log('======================');
-
-      // Update message with complete response
-      setMessages(prevMessages => {
-        const convMsgs = prevMessages[conversationId] || [];
-        const updatedConvMsgs = convMsgs.map(msg => 
-          msg.id === aiMessageId 
-            ? { ...msg, content: assistantReply }
-            : msg
-        );
-        return { ...prevMessages, [conversationId]: updatedConvMsgs };
-      });
-
-      // Save final message
-      if (isGuestMode) {
-        const finalMessages = { ...messages };
-        const convMsgs = finalMessages[conversationId] || [];
-        const finalConvMsgs = convMsgs.map(msg => 
-          msg.id === aiMessageId 
-            ? { ...msg, content: assistantReply }
-            : msg
-        );
-        finalMessages[conversationId] = finalConvMsgs;
-        localStorage.setItem('caos_guest_messages', JSON.stringify(finalMessages));
-      } else {
-        const savedAiMessage = await base44.entities.Message.create({
+      // Save final message to database first
+      let savedAiMessage;
+      if (!isGuestMode) {
+        savedAiMessage = await base44.entities.Message.create({
           conversation_id: conversationId,
           role: 'assistant',
           content: assistantReply,
           timestamp: new Date().toISOString(),
           created_by: user.email
         });
+      }
 
-        // Update with real ID
-        setMessages(prevMessages => {
-          const convMsgs = prevMessages[conversationId] || [];
-          const updatedConvMsgs = convMsgs.map(msg => 
-            msg.id === aiMessageId 
-              ? { ...msg, id: savedAiMessage.id }
-              : msg
-          );
-          return { ...prevMessages, [conversationId]: updatedConvMsgs };
+      // Update UI with real message
+      setMessages(prevMessages => {
+        const convMsgs = prevMessages[conversationId] || [];
+        // Remove placeholder and add real message
+        const withoutPlaceholder = convMsgs.filter(msg => msg.id !== aiMessageId);
+        const realMessage = {
+          id: savedAiMessage?.id || aiMessageId,
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        };
+        return { ...prevMessages, [conversationId]: [...withoutPlaceholder, realMessage] };
+      });
+
+      // Save to localStorage if guest
+      if (isGuestMode) {
+        const finalMessages = { ...messages };
+        const convMsgs = (finalMessages[conversationId] || []).filter(msg => msg.id !== aiMessageId);
+        convMsgs.push({
+          id: aiMessageId,
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
         });
+        finalMessages[conversationId] = convMsgs;
+        localStorage.setItem('caos_guest_messages', JSON.stringify(finalMessages));
       }
 
       const response = assistantReply;
