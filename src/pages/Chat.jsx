@@ -450,7 +450,7 @@ export default function Chat() {
       // Add placeholder to UI
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
-      // Send to CAOS backend with include_recall to get the new message
+      // Send to CAOS - it returns ONLY the new reply, NOT history
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -459,10 +459,7 @@ export default function Chat() {
         },
         body: JSON.stringify({
           session_id: conversationId,
-          input: messageWithFiles,
-          anchors: ["topic:conversation"],
-          include_recall: true,
-          limit: 1
+          input: messageWithFiles
         })
       });
 
@@ -470,40 +467,35 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      const responseData = await caosResponse.json();
+      const data = await caosResponse.json();
+      const assistantReply = data.reply || '';
 
-      // Get ONLY the latest message from recall array - reply is NOT conversation history
-      const latestMessage = responseData.recall?.[responseData.recall.length - 1];
-      const assistantReply = latestMessage?.payload?.text || '';
-
-      // Update the placeholder message with the real response
-      const finalAiMessage = {
-        id: aiMessageId,
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: assistantReply,
-        timestamp: new Date().toISOString(),
-        created_by: user.email
-      };
-
-      // Update UI
+      // Replace placeholder with actual response
       setMessages(prev => {
         const msgs = prev[conversationId] || [];
         return {
           ...prev,
-          [conversationId]: msgs.map(m => m.id === aiMessageId ? finalAiMessage : m)
+          [conversationId]: msgs.map(m => 
+            m.id === aiMessageId ? { ...m, content: assistantReply } : m
+          )
         };
       });
 
-      // Save to database or localStorage
+      // Save to storage
       if (isGuestMode) {
-        const allMessages = { ...messages };
-        allMessages[conversationId] = (allMessages[conversationId] || []).map(m => 
-          m.id === aiMessageId ? finalAiMessage : m
+        const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
+        stored[conversationId] = (stored[conversationId] || []).map(m => 
+          m.id === aiMessageId ? { ...m, content: assistantReply } : m
         );
-        localStorage.setItem('caos_guest_messages', JSON.stringify(allMessages));
+        localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
       } else {
-        await base44.entities.Message.create(finalAiMessage);
+        await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        });
       }
 
       const response = assistantReply;
