@@ -450,10 +450,7 @@ export default function Chat() {
       // Add placeholder to UI
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
-      // Create abort controller for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000);
-
+      // Send to CAOS backend
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -465,70 +462,47 @@ export default function Chat() {
           input: messageWithFiles,
           anchors: ["topic:conversation"],
           limit: 20
-        }),
-        signal: controller.signal
+        })
       });
-
-      clearTimeout(timeoutId);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      // Handle response
       const responseData = await caosResponse.json();
 
-      // Get the latest assistant message from recall array
-      const latestMessage = responseData.recall && responseData.recall.length > 0 
-        ? responseData.recall[responseData.recall.length - 1]
-        : null;
+      // Get the assistant's reply - use the latest message from recall array
+      const latestRecall = responseData.recall?.[responseData.recall.length - 1];
+      const assistantReply = latestRecall?.payload?.text || '';
 
-      const assistantReply = latestMessage?.payload?.text || responseData.reply || '';
+      // Update the placeholder message with the real response
+      const finalAiMessage = {
+        id: aiMessageId,
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: assistantReply,
+        timestamp: new Date().toISOString(),
+        created_by: user.email
+      };
 
-      console.log('Backend response:', assistantReply);
-
-      // Save final message to database first
-      let savedAiMessage;
-      if (!isGuestMode) {
-        savedAiMessage = await base44.entities.Message.create({
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: assistantReply,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
-        });
-      }
-
-      // Update UI with real message
-      setMessages(prevMessages => {
-        const convMsgs = prevMessages[conversationId] || [];
-        // Remove placeholder and add real message
-        const withoutPlaceholder = convMsgs.filter(msg => msg.id !== aiMessageId);
-        const realMessage = {
-          id: savedAiMessage?.id || aiMessageId,
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: assistantReply,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
+      // Update UI
+      setMessages(prev => {
+        const msgs = prev[conversationId] || [];
+        return {
+          ...prev,
+          [conversationId]: msgs.map(m => m.id === aiMessageId ? finalAiMessage : m)
         };
-        return { ...prevMessages, [conversationId]: [...withoutPlaceholder, realMessage] };
       });
 
-      // Save to localStorage if guest
+      // Save to database or localStorage
       if (isGuestMode) {
-        const finalMessages = { ...messages };
-        const convMsgs = (finalMessages[conversationId] || []).filter(msg => msg.id !== aiMessageId);
-        convMsgs.push({
-          id: aiMessageId,
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: assistantReply,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
-        });
-        finalMessages[conversationId] = convMsgs;
-        localStorage.setItem('caos_guest_messages', JSON.stringify(finalMessages));
+        const allMessages = { ...messages };
+        allMessages[conversationId] = (allMessages[conversationId] || []).map(m => 
+          m.id === aiMessageId ? finalAiMessage : m
+        );
+        localStorage.setItem('caos_guest_messages', JSON.stringify(allMessages));
+      } else {
+        await base44.entities.Message.create(finalAiMessage);
       }
 
       const response = assistantReply;
