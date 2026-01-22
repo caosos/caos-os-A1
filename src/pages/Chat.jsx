@@ -432,25 +432,10 @@ export default function Chat() {
         userMessage.id = savedUserMessage.id;
       }
 
-      // Add user message to UI immediately
-      const updatedWithUser = { ...messages, [conversationId]: [...convMessages, userMessage] };
-      setMessages(updatedWithUser);
+      // Show user message in UI
+      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage] });
 
-      // Create placeholder AI message for streaming
-      const aiMessageId = isGuestMode ? 'guest_msg_' + Date.now() + '_ai' : 'temp_' + Date.now();
-      const aiMessage = {
-        id: aiMessageId,
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date().toISOString(),
-        created_by: user.email
-      };
-
-      // Add placeholder to UI
-      setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
-
-      // Send to CAOS per exact spec
+      // Send to CAOS - one POST, one reply
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -470,39 +455,34 @@ export default function Chat() {
       }
 
       const data = await caosResponse.json();
-      // Display ONLY response.reply - DO NOT reuse/append prior buffers
       const assistantReply = data.reply || '';
 
-      // Replace placeholder with actual response
-      setMessages(prev => {
-        const msgs = prev[conversationId] || [];
-        return {
-          ...prev,
-          [conversationId]: msgs.map(m => 
-            m.id === aiMessageId ? { ...m, content: assistantReply } : m
-          )
-        };
-      });
+      // Create assistant message with actual reply (no placeholder, no echo)
+      const aiMessage = {
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: assistantReply,
+        timestamp: new Date().toISOString(),
+        created_by: user.email
+      };
 
-      // Save to storage
       if (isGuestMode) {
+        aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
         const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-        stored[conversationId] = (stored[conversationId] || []).map(m => 
-          m.id === aiMessageId ? { ...m, content: assistantReply } : m
-        );
+        stored[conversationId] = [...(stored[conversationId] || []), userMessage, aiMessage];
         localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
       } else {
-        await base44.entities.Message.create({
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: assistantReply,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
-        });
+        const savedAiMessage = await base44.entities.Message.create(aiMessage);
+        aiMessage.id = savedAiMessage.id;
       }
 
+      // Add assistant reply to UI
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), aiMessage]
+      }));
+
       const response = assistantReply;
-      const updatedMessages = messages;
 
       // Update conversation with sort order
       const updatedConvo = {
