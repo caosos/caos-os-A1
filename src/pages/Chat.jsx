@@ -450,7 +450,7 @@ export default function Chat() {
       // Add placeholder to UI
       setMessages({ ...messages, [conversationId]: [...convMessages, userMessage, aiMessage] });
 
-      // Send to CAOS backend
+      // Send to CAOS backend with include_recall to get the new message
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -461,7 +461,8 @@ export default function Chat() {
           session_id: conversationId,
           input: messageWithFiles,
           anchors: ["topic:conversation"],
-          limit: 20
+          include_recall: true,
+          limit: 1
         })
       });
 
@@ -471,9 +472,9 @@ export default function Chat() {
 
       const responseData = await caosResponse.json();
 
-      // Get the assistant's reply - use the latest message from recall array
-      const latestRecall = responseData.recall?.[responseData.recall.length - 1];
-      const assistantReply = latestRecall?.payload?.text || '';
+      // Get ONLY the latest message from recall array - reply is NOT conversation history
+      const latestMessage = responseData.recall?.[responseData.recall.length - 1];
+      const assistantReply = latestMessage?.payload?.text || '';
 
       // Update the placeholder message with the real response
       const finalAiMessage = {
