@@ -415,7 +415,23 @@ export default function Chat() {
 
       const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
 
-      // Send to CAOS - one POST, one reply
+      // Show user's message in UI
+      const userMessage = {
+        id: 'temp_user_' + Date.now(),
+        conversation_id: conversationId,
+        role: 'user',
+        content: content || '📎 Sent file(s)',
+        file_urls: fileUrls,
+        timestamp: new Date().toISOString(),
+        created_by: user.email
+      };
+
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), userMessage]
+      }));
+
+      // Send to CAOS
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -435,9 +451,11 @@ export default function Chat() {
       }
 
       const data = await caosResponse.json();
-      const assistantReply = data.reply || '';
+      
+      // ONLY render response.reply as assistant message
+      const assistantReply = data.reply || data.text || data.content || '';
 
-      // Create message from server response
+      // Create assistant message from ONLY server reply
       const aiMessage = {
         conversation_id: conversationId,
         role: 'assistant',
@@ -447,16 +465,25 @@ export default function Chat() {
       };
 
       if (isGuestMode) {
-        aiMessage.id = 'guest_msg_' + Date.now();
+        userMessage.id = 'guest_msg_' + Date.now();
+        aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
         const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-        stored[conversationId] = [...(stored[conversationId] || []), aiMessage];
+        stored[conversationId] = [...(stored[conversationId] || []).filter(m => m.id !== 'temp_user_' + Date.now()), userMessage, aiMessage];
         localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
       } else {
-        const saved = await base44.entities.Message.create(aiMessage);
-        aiMessage.id = saved.id;
+        const savedUser = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'user',
+          content: content || '📎 Sent file(s)',
+          file_urls: fileUrls,
+          timestamp: new Date().toISOString()
+        });
+        const savedAi = await base44.entities.Message.create(aiMessage);
+        userMessage.id = savedUser.id;
+        aiMessage.id = savedAi.id;
       }
 
-      // Render ONLY response.reply
+      // Add assistant reply to UI (response.reply ONLY, never echo user input)
       setMessages(prev => ({
         ...prev,
         [conversationId]: [...(prev[conversationId] || []), aiMessage]
