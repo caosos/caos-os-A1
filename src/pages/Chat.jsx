@@ -475,36 +475,13 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      // Handle response - use server's reply directly
+      // Handle response
       const responseData = await caosResponse.json();
 
       console.log('CAOS Response:', responseData);
 
-      // Server returns cumulative conversation - extract only NEW content
-      const fullReply = responseData.reply || '';
-
-      // Build cumulative from current conversation messages
-      const currentAssistantMessages = convMessages.filter(m => m.role === 'assistant');
-      const currentCumulative = currentAssistantMessages.map(m => m.content).join('\n');
-
-      // Extract only the new portion by removing what we already have
-      let accumulatedResponse = fullReply;
-      if (currentCumulative && fullReply.startsWith(currentCumulative)) {
-        accumulatedResponse = fullReply.slice(currentCumulative.length).replace(/^\n+/, '');
-      } else if (!currentCumulative) {
-        // First message in conversation - use full reply
-        accumulatedResponse = fullReply;
-      } else {
-        // Fallback: split by newlines and take segments we don't have
-        const fullLines = fullReply.split('\n');
-        const currentLines = currentCumulative.split('\n');
-        const newLines = fullLines.slice(currentLines.length);
-        accumulatedResponse = newLines.join('\n');
-      }
-
-      console.log('Current cumulative:', currentCumulative);
-      console.log('Full reply:', fullReply);
-      console.log('Extracted new content:', accumulatedResponse);
+      // Use server's reply directly as the new assistant message
+      const accumulatedResponse = responseData.reply || '';
 
       // Update message with complete response
       setMessages(prevMessages => {
