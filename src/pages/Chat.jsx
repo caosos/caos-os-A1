@@ -475,19 +475,11 @@ export default function Chat() {
         throw new Error(`Server error: ${caosResponse.status}`);
       }
 
-      // Handle response with recall array
+      // Handle response - use server's reply directly
       const responseData = await caosResponse.json();
-      let accumulatedResponse = '';
 
-      // Use recall array if present, otherwise fall back to reply
-      if (responseData.recall && Array.isArray(responseData.recall) && responseData.recall.length > 0) {
-        // Get the last recalled message
-        const lastRecall = responseData.recall[responseData.recall.length - 1];
-        accumulatedResponse = lastRecall?.payload?.text || lastRecall?.payload?.content || '';
-      } else {
-        // Fallback to reply field (for backwards compatibility or debug)
-        accumulatedResponse = responseData.reply || responseData.content || responseData.message || '';
-      }
+      // Use response.reply as the assistant output (do NOT echo user input)
+      const accumulatedResponse = responseData.reply || '';
 
       // Update message with complete response
       setMessages(prevMessages => {
