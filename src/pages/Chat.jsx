@@ -478,26 +478,30 @@ export default function Chat() {
       // Handle response
       const responseData = await caosResponse.json();
 
-      console.log('CAOS Response:', responseData);
+      console.log('=== BACKEND RESPONSE ===');
+      console.log('Full response:', JSON.stringify(responseData, null, 2));
 
-      // Extract the assistant's reply from the response
-      // The backend may return just the new content or wrapped in a structure
-      let assistantReply = '';
+      // Backend returns cumulative conversation - we need ONLY the new assistant message
+      const fullReply = responseData.reply || '';
 
-      if (responseData.reply) {
-        // If reply is a string, use it directly
-        if (typeof responseData.reply === 'string') {
-          assistantReply = responseData.reply;
-        } else if (responseData.reply.content) {
-          assistantReply = responseData.reply.content;
-        }
-      } else if (responseData.content) {
-        assistantReply = responseData.content;
-      } else if (responseData.message) {
-        assistantReply = responseData.message;
+      // Build what we already have: all previous assistant messages
+      const existingAssistantContent = convMessages
+        .filter(m => m.role === 'assistant')
+        .map(m => m.content)
+        .join('\n');
+
+      console.log('Existing assistant content:', existingAssistantContent);
+      console.log('Full reply from backend:', fullReply);
+
+      // Extract only the new message by removing what we already have
+      let assistantReply = fullReply;
+      if (existingAssistantContent && fullReply.includes(existingAssistantContent)) {
+        // Remove the existing content and any leading newlines
+        assistantReply = fullReply.replace(existingAssistantContent, '').replace(/^\n+/, '');
       }
 
-      console.log('Extracted assistant reply:', assistantReply);
+      console.log('NEW assistant message extracted:', assistantReply);
+      console.log('======================');
 
       // Update message with complete response
       setMessages(prevMessages => {
