@@ -480,15 +480,31 @@ export default function Chat() {
 
       console.log('CAOS Response:', responseData);
 
-      // Use server's reply directly as the new assistant message
-      const accumulatedResponse = responseData.reply || '';
+      // Extract the assistant's reply from the response
+      // The backend may return just the new content or wrapped in a structure
+      let assistantReply = '';
+
+      if (responseData.reply) {
+        // If reply is a string, use it directly
+        if (typeof responseData.reply === 'string') {
+          assistantReply = responseData.reply;
+        } else if (responseData.reply.content) {
+          assistantReply = responseData.reply.content;
+        }
+      } else if (responseData.content) {
+        assistantReply = responseData.content;
+      } else if (responseData.message) {
+        assistantReply = responseData.message;
+      }
+
+      console.log('Extracted assistant reply:', assistantReply);
 
       // Update message with complete response
       setMessages(prevMessages => {
         const convMsgs = prevMessages[conversationId] || [];
         const updatedConvMsgs = convMsgs.map(msg => 
           msg.id === aiMessageId 
-            ? { ...msg, content: accumulatedResponse }
+            ? { ...msg, content: assistantReply }
             : msg
         );
         return { ...prevMessages, [conversationId]: updatedConvMsgs };
@@ -500,7 +516,7 @@ export default function Chat() {
         const convMsgs = finalMessages[conversationId] || [];
         const finalConvMsgs = convMsgs.map(msg => 
           msg.id === aiMessageId 
-            ? { ...msg, content: accumulatedResponse }
+            ? { ...msg, content: assistantReply }
             : msg
         );
         finalMessages[conversationId] = finalConvMsgs;
@@ -509,7 +525,7 @@ export default function Chat() {
         const savedAiMessage = await base44.entities.Message.create({
           conversation_id: conversationId,
           role: 'assistant',
-          content: accumulatedResponse,
+          content: assistantReply,
           timestamp: new Date().toISOString(),
           created_by: user.email
         });
@@ -526,7 +542,7 @@ export default function Chat() {
         });
       }
 
-      const response = accumulatedResponse;
+      const response = assistantReply;
       const updatedMessages = messages;
 
       // Update conversation with sort order
