@@ -415,9 +415,9 @@ export default function Chat() {
 
       const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
 
-      // Show user's message in UI
+      const tempUserId = 'temp_' + Date.now();
       const userMessage = {
-        id: 'temp_user_' + Date.now(),
+        id: tempUserId,
         conversation_id: conversationId,
         role: 'user',
         content: content || '📎 Sent file(s)',
@@ -431,7 +431,6 @@ export default function Chat() {
         [conversationId]: [...(prev[conversationId] || []), userMessage]
       }));
 
-      // Send to CAOS
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -451,11 +450,8 @@ export default function Chat() {
       }
 
       const data = await caosResponse.json();
-      
-      // ONLY render response.reply as assistant message
       const assistantReply = data.reply || data.text || data.content || '';
 
-      // Create assistant message from ONLY server reply
       const aiMessage = {
         conversation_id: conversationId,
         role: 'assistant',
@@ -468,8 +464,13 @@ export default function Chat() {
         userMessage.id = 'guest_msg_' + Date.now();
         aiMessage.id = 'guest_msg_' + Date.now() + '_ai';
         const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-        stored[conversationId] = [...(stored[conversationId] || []).filter(m => m.id !== 'temp_user_' + Date.now()), userMessage, aiMessage];
+        stored[conversationId] = [...(stored[conversationId] || []), userMessage, aiMessage];
         localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
+        
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), userMessage, aiMessage]
+        }));
       } else {
         const savedUser = await base44.entities.Message.create({
           conversation_id: conversationId,
@@ -479,15 +480,15 @@ export default function Chat() {
           timestamp: new Date().toISOString()
         });
         const savedAi = await base44.entities.Message.create(aiMessage);
+        
         userMessage.id = savedUser.id;
         aiMessage.id = savedAi.id;
+        
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), userMessage, aiMessage]
+        }));
       }
-
-      // Add assistant reply to UI (response.reply ONLY, never echo user input)
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), aiMessage]
-      }));
 
       const response = assistantReply;
 
