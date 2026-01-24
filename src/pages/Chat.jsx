@@ -86,20 +86,6 @@ export default function Chat() {
         }
 
         // For authenticated users - check if logged in
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (!isAuthenticated) {
-          // Not authenticated - use guest mode or redirect
-          const guestUser = {
-            full_name: 'Guest User',
-            email: `guest_${Date.now()}@caos.local`,
-            isGuest: true
-          };
-          localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-          setUser(guestUser);
-          setDataLoaded(true);
-          return;
-        }
-
         const currentUser = await base44.auth.me();
         setUser(currentUser);
 
