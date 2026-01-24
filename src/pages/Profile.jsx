@@ -9,6 +9,7 @@ import { createPageUrl } from '@/utils';
 import VotingRecord from '@/components/profile/VotingRecord';
 import Funding from '@/components/profile/Funding';
 import NetworkView from '@/components/profile/NetworkView';
+import PublicRecords from '@/components/profile/PublicRecords';
 
 export default function Profile() {
   const [candidate, setCandidate] = useState(null);
@@ -117,10 +118,11 @@ export default function Profile() {
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsList className="grid w-full grid-cols-6 mb-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="voting">Voting Record</TabsTrigger>
             <TabsTrigger value="money">Money</TabsTrigger>
+            <TabsTrigger value="records">Public Record</TabsTrigger>
             <TabsTrigger value="network">Network</TabsTrigger>
             <TabsTrigger value="summary">Summary</TabsTrigger>
           </TabsList>
@@ -160,6 +162,10 @@ export default function Profile() {
 
           <TabsContent value="money">
             <Funding candidateId={candidate.id} />
+          </TabsContent>
+
+          <TabsContent value="records">
+            <PublicRecords candidateId={candidate.id} />
           </TabsContent>
 
           <TabsContent value="network">
