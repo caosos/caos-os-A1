@@ -20,7 +20,7 @@ export default function Home() {
   const handleBallotLookup = (e) => {
     e.preventDefault();
     if (zipCode.trim() && /^\d{5}$/.test(zipCode.trim())) {
-      navigate(createPageUrl('Ballot') + `?zip=${zipCode.trim()}`);
+      navigate(createPageUrl('District') + `?zip=${zipCode.trim()}`);
     }
   };
 
@@ -33,8 +33,19 @@ export default function Home() {
             <Scale className="w-8 h-8 text-blue-600" />
             <h1 className="text-2xl font-bold text-slate-900">Voter Ledger</h1>
           </div>
-          <div className="text-sm text-slate-600">
-            Candidate & Issue Intelligence
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(createPageUrl('Statistics'))}
+            >
+              Statistics
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate(createPageUrl('MyProfile'))}
+            >
+              My Profile
+            </Button>
           </div>
         </div>
       </header>
@@ -42,11 +53,11 @@ export default function Home() {
       {/* Hero */}
       <div className="max-w-5xl mx-auto px-4 py-16 text-center">
         <h2 className="text-5xl font-bold text-slate-900 mb-4">
-          Know Who You're Voting For
+          Investigate Who You're Voting For
         </h2>
         <p className="text-xl text-slate-600 mb-12 max-w-2xl mx-auto">
-          SEC-filing-level transparency on political candidates and ballot measures.
-          Every claim backed by authoritative sources.
+          Deep intelligence on political candidates and ballot measures.
+          Every claim backed by authoritative sources. Zero party bias.
         </p>
 
         {/* Search Box */}
@@ -66,19 +77,19 @@ export default function Home() {
           </div>
         </form>
 
-        {/* Ballot Lookup */}
+        {/* District Lookup */}
         <form onSubmit={handleBallotLookup} className="max-w-md mx-auto">
           <div className="flex gap-2">
             <Input
               type="text"
-              placeholder="Enter ZIP code for your ballot"
+              placeholder="Enter ZIP code for your district"
               value={zipCode}
               onChange={(e) => setZipCode(e.target.value)}
               maxLength={5}
               className="flex-1"
             />
             <Button type="submit" variant="outline">
-              View My Ballot
+              View My District
             </Button>
           </div>
         </form>

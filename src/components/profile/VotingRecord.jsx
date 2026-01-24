@@ -10,12 +10,24 @@ export default function VotingRecord({ candidateId }) {
   const [bills, setBills] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [issueFilter, setIssueFilter] = useState('all');
+  const [attendance, setAttendance] = useState(null);
 
   useEffect(() => {
     const loadVotes = async () => {
       try {
         const voteData = await base44.entities.Vote.filter({ candidate_id: candidateId }, '-vote_date', 100);
         setVotes(voteData);
+
+        // Calculate attendance (mock calculation)
+        const totalVotes = voteData.length;
+        const missedVotes = voteData.filter(v => v.position === 'Not Voting').length;
+        const attendanceRate = totalVotes > 0 ? ((totalVotes - missedVotes) / totalVotes * 100).toFixed(1) : 0;
+        setAttendance({
+          total: totalVotes,
+          attended: totalVotes - missedVotes,
+          missed: missedVotes,
+          rate: attendanceRate
+        });
 
         // Load bill details for each vote
         const billIds = [...new Set(voteData.map(v => v.bill_id).filter(Boolean))];
@@ -69,6 +81,31 @@ export default function VotingRecord({ candidateId }) {
 
   return (
     <div className="space-y-4">
+      {/* Attendance Stats */}
+      {attendance && (
+        <div className="bg-white rounded-lg border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold mb-4">Voting Attendance</h3>
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-blue-600">{attendance.rate}%</p>
+              <p className="text-sm text-slate-600">Attendance Rate</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">{attendance.attended}</p>
+              <p className="text-sm text-slate-600">Votes Cast</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-red-600">{attendance.missed}</p>
+              <p className="text-sm text-slate-600">Votes Missed</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">{attendance.total}</p>
+              <p className="text-sm text-slate-600">Total Votes</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filter */}
       <div className="bg-white rounded-lg border border-slate-200 p-4">
         <div className="flex items-center gap-4">
