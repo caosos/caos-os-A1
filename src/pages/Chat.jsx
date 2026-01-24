@@ -123,8 +123,8 @@ export default function Chat() {
         setDataLoaded(true);
         } catch (error) {
         console.error('Error loading user data:', error);
-        // Not authenticated - trigger OAuth login
-        base44.auth.redirectToLogin();
+        // Not authenticated - navigate back to welcome
+        navigate(createPageUrl('Welcome'));
         }
     };
 
