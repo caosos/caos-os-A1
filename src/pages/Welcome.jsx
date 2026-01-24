@@ -29,8 +29,14 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleSignIn = () => {
-    navigate(createPageUrl('Chat'));
+  const handleGoogleSignIn = async () => {
+    try {
+      await base44.auth.redirectToLogin(createPageUrl('Chat'));
+    } catch (error) {
+      console.error('Sign in error:', error);
+      // Fallback to guest if auth fails
+      handleGuestContinue();
+    }
   };
 
   const handleEmailSignIn = async (e) => {
