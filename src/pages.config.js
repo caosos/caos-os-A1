@@ -1,4 +1,3 @@
-import Ballot from './pages/Ballot';
 import Chat from './pages/Chat';
 import Console from './pages/Console';
 import Implementation from './pages/Implementation';
@@ -8,7 +7,6 @@ import Welcome from './pages/Welcome';
 
 
 export const PAGES = {
-    "Ballot": Ballot,
     "Chat": Chat,
     "Console": Console,
     "Implementation": Implementation,
