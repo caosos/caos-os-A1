@@ -524,7 +524,6 @@ export default function Chat() {
       setConversations(updatedConvos);
 
       if (isGuestMode) {
-        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedMessages));
         localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
       } else {
         await base44.entities.Conversation.update(conversationId, {
