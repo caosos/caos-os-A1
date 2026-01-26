@@ -212,22 +212,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const renderContent = () => {
     let content = message.content;
     
-    // Handle WROTE: pattern (memory write confirmation)
+    // Strip out WROTE: patterns but keep the rest of the content
     if (content && content.includes('WROTE:')) {
-      const wroteMatch = content.match(/WROTE:([a-f0-9-]+)/);
-      if (wroteMatch) {
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-green-400">✓</span>
-              <span className="text-green-400 font-medium">Memory Saved</span>
-            </div>
-            <p className="text-sm text-white/70">
-              Your message has been committed to session memory.
-            </p>
-          </div>
-        );
-      }
+      content = content.replace(/WROTE:[a-f0-9-]+/g, '').trim();
     }
     
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
