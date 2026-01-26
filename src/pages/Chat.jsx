@@ -450,15 +450,10 @@ export default function Chat() {
       }
 
       const data = await caosResponse.json();
-      console.log('Backend response:', data);
+      console.log('Full backend response:', JSON.stringify(data, null, 2));
 
-      let assistantReply = data.reply || data.text || data.content || data.message || '';
-
-      // Check if backend only returned memory write confirmation
-      if (assistantReply.trim().match(/^WROTE:[a-f0-9-]+$/)) {
-        assistantReply = "⚠️ Backend Error: Server only returned memory write confirmation without conversational response. Check backend logs.";
-        console.error('Backend returned only WROTE: confirmation, no actual response');
-      }
+      // Try all possible response fields
+      const assistantReply = data.reply || data.response || data.text || data.content || data.message || data.output || '';
 
       // Extract recall results if present
       const recallResults = data.recall || [];
