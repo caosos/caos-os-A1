@@ -211,37 +211,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
   const renderContent = () => {
     let content = message.content;
-    
-    // Check if this is a recall result
-    if (content.includes('VOTER.LEA') || content.includes('record_id')) {
-      try {
-        const recallMatch = content.match(/VOTER\.LEA'([a-f0-9-]+)/);
-        if (recallMatch) {
-          const recordId = recallMatch[1];
-          // Extract any additional recall data from message
-          const sessionMatch = content.match(/session:(\S+)/);
-          const session = sessionMatch ? sessionMatch[1] : 'default';
-          
-          return (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-blue-400 font-mono">session:{session}</span>
-                <span className="text-white/50">•</span>
-                <span className="text-white/70">Recalled memory</span>
-              </div>
-              {content.replace(/VOTER\.LEA'[a-f0-9-]+/, '').trim() && (
-                <p className="text-sm text-white/90 leading-relaxed">
-                  {content.replace(/VOTER\.LEA'[a-f0-9-]+/, '').trim()}
-                </p>
-              )}
-            </div>
-          );
-        }
-      } catch (e) {
-        console.error('Error parsing recall:', e);
-      }
-    }
-    
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
     // Check for copy blocks: ```copy or ```copyblock
@@ -308,6 +277,37 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     return (
       <div className="space-y-3">
+        {/* Recall Results */}
+        {message.recall_results && message.recall_results.length > 0 && (
+          <div className="space-y-2 mb-3">
+            <div className="text-xs text-blue-400 font-medium flex items-center gap-2">
+              <span>🧠</span> Recalled Memories ({message.recall_results.length})
+            </div>
+            {message.recall_results.map((recall, idx) => {
+              const preview = recall.payload?.content || recall.payload?.text || '';
+              const previewText = preview.length > 80 ? preview.slice(0, 80) + '...' : preview;
+              const timestamp = recall.ts_ms ? new Date(recall.ts_ms).toLocaleString() : '';
+              
+              return (
+                <div key={idx} className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-blue-400 font-mono">session:{recall.session_id || 'default'}</span>
+                    {timestamp && (
+                      <>
+                        <span className="text-white/30">•</span>
+                        <span className="text-white/50">{timestamp}</span>
+                      </>
+                    )}
+                  </div>
+                  {previewText && (
+                    <p className="text-sm text-white/90 leading-relaxed">{previewText}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
         {content && content.trim() && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content.trim()}</p>}
         
         {/* Copy Blocks */}

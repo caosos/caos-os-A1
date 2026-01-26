@@ -451,6 +451,9 @@ export default function Chat() {
 
       const data = await caosResponse.json();
       const assistantReply = data.reply || data.text || data.content || '';
+      
+      // Extract recall results if present
+      const recallResults = data.recall || [];
 
       if (isGuestMode) {
         const finalUserMsg = {
@@ -467,6 +470,7 @@ export default function Chat() {
           conversation_id: conversationId,
           role: 'assistant',
           content: assistantReply,
+          recall_results: recallResults,
           timestamp: new Date().toISOString(),
           created_by: user.email
         };
@@ -492,6 +496,7 @@ export default function Chat() {
           conversation_id: conversationId,
           role: 'assistant',
           content: assistantReply,
+          recall_results: recallResults,
           timestamp: new Date().toISOString()
         });
         
