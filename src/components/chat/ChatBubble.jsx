@@ -211,6 +211,37 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
   const renderContent = () => {
     let content = message.content;
+    
+    // Check if this is a recall result
+    if (content.includes('VOTER.LEA') || content.includes('record_id')) {
+      try {
+        const recallMatch = content.match(/VOTER\.LEA'([a-f0-9-]+)/);
+        if (recallMatch) {
+          const recordId = recallMatch[1];
+          // Extract any additional recall data from message
+          const sessionMatch = content.match(/session:(\S+)/);
+          const session = sessionMatch ? sessionMatch[1] : 'default';
+          
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-blue-400 font-mono">session:{session}</span>
+                <span className="text-white/50">•</span>
+                <span className="text-white/70">Recalled memory</span>
+              </div>
+              {content.replace(/VOTER\.LEA'[a-f0-9-]+/, '').trim() && (
+                <p className="text-sm text-white/90 leading-relaxed">
+                  {content.replace(/VOTER\.LEA'[a-f0-9-]+/, '').trim()}
+                </p>
+              )}
+            </div>
+          );
+        }
+      } catch (e) {
+        console.error('Error parsing recall:', e);
+      }
+    }
+    
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
     // Check for copy blocks: ```copy or ```copyblock
