@@ -293,6 +293,16 @@ export default function Chat() {
   const handleSessionResume = async (sessionId) => {
     try {
       const conversation = conversations.find(c => c.id === sessionId);
+      const conversationMessages = messages[sessionId] || [];
+      
+      // Format message history for backend
+      const messageHistory = conversationMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        file_urls: msg.file_urls || []
+      }));
+
       const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -305,8 +315,10 @@ export default function Chat() {
           thread_meta: {
             title: conversation?.title || 'Untitled',
             created_ts: conversation?.created_date ? new Date(conversation.created_date).getTime() : Date.now(),
-            last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now()
-          }
+            last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now(),
+            message_count: conversationMessages.length
+          },
+          history: messageHistory
         })
       });
 
