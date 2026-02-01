@@ -130,18 +130,38 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       return;
     }
 
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+    if (isSpeaking && !isPaused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    } else if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
     } else {
       if (lastAssistantMessage) {
         const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+          utteranceRef.current = null;
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          setIsPaused(false);
+          utteranceRef.current = null;
+        };
+        utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
         setIsSpeaking(true);
+        setIsPaused(false);
       }
     }
+  };
+
+  const stopReadAloud = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+    utteranceRef.current = null;
   };
 
   const toggleVoiceRecording = () => {
