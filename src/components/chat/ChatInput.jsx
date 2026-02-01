@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor } from 'lucide-react';
+import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
@@ -10,10 +10,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const fileInputRef = useRef(null);
+  const utteranceRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
