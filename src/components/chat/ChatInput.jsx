@@ -518,14 +518,37 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={toggleReadAloud}
-          disabled={!lastAssistantMessage}
-          className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 ${isSpeaking ? 'bg-blue-100' : ''} disabled:opacity-30 hidden sm:block`}
-        >
-          <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-blue-600 animate-pulse' : 'text-gray-700'}`} />
-        </button>
+        {isSpeaking ? (
+          <>
+            <button
+              type="button"
+              onClick={toggleReadAloud}
+              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 bg-blue-100 hidden sm:block"
+            >
+              {isPaused ? (
+                <Volume2 className="w-4 h-4 text-blue-600" />
+              ) : (
+                <Pause className="w-4 h-4 text-blue-600" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={stopReadAloud}
+              className="p-1.5 rounded-full hover:bg-red-100 transition-colors flex-shrink-0 bg-red-50 hidden sm:block"
+            >
+              <X className="w-4 h-4 text-red-600" />
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleReadAloud}
+            disabled={!lastAssistantMessage}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-30 hidden sm:block"
+          >
+            <Volume2 className="w-4 h-4 text-gray-700" />
+          </button>
+        )}
 
         <input
           ref={fileInputRef}
