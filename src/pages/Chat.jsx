@@ -335,7 +335,6 @@ export default function Chat() {
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
-    console.log("[CHAT DEBUG] handleSendMessage called");
     if (!user) return;
     setIsLoading(true);
 
@@ -444,7 +443,6 @@ export default function Chat() {
         [conversationId]: [...(prev[conversationId] || []), tempUserMessage]
       }));
 
-      console.log("[CHAT DEBUG] about to POST to CAOS API");
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
@@ -458,8 +456,6 @@ export default function Chat() {
           limit: 20
         })
       });
-
-      console.log("[CHAT DEBUG] fetch resolved", caosResponse);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
@@ -548,7 +544,6 @@ export default function Chat() {
         });
       }
     } catch (error) {
-      console.error("[CHAT DEBUG] fetch error", error);
       console.error('Error sending message:', error);
 
       // Show more specific error messages
