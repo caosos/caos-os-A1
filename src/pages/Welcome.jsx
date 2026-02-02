@@ -30,8 +30,7 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = async () => {
-    // Google auth not configured - use email instead
-    setShowEmailSignIn(true);
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   const handleEmailSignIn = async (e) => {
