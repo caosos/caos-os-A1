@@ -30,7 +30,9 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    base44.auth.redirectToLogin();
+    // Direct OAuth redirect
+    const currentUrl = window.location.origin;
+    window.location.href = `${currentUrl}/api/auth/google`;
   };
 
   const handleEmailSignIn = async (e) => {
