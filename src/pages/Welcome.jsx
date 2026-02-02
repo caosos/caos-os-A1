@@ -29,8 +29,8 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleSignIn = () => {
-    window.location.href = '/api/auth/google?provider=google';
+  const handleGoogleSignIn = async () => {
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=' + encodeURIComponent(window.location.origin + '/api/auth/callback') + '&response_type=code&scope=email%20profile';
   };
 
   const handleEmailSignIn = async (e) => {
