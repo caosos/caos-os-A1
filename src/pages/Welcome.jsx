@@ -29,20 +29,8 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleSignIn = async () => {
-    // Check if user is already logged in
-    try {
-      const currentUser = await base44.auth.me();
-      if (currentUser && !currentUser.isGuest) {
-        navigate(createPageUrl('Chat'));
-        return;
-      }
-    } catch (error) {
-      // Not logged in, continue with guest flow
-    }
-    
-    // Use email sign-in as fallback
-    setShowEmailSignIn(true);
+  const handleGoogleSignIn = () => {
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   const handleEmailSignIn = async (e) => {
