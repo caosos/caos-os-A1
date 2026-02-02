@@ -30,7 +30,10 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    // Use full URL for Base44 auth redirect
+    const currentUrl = window.location.origin;
+    const chatUrl = currentUrl + createPageUrl('Chat');
+    base44.auth.redirectToLogin(chatUrl);
   };
 
   const handleEmailSignIn = async (e) => {
