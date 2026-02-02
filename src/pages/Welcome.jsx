@@ -30,24 +30,8 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = async () => {
-    try {
-      // Try Base44 OAuth first
-      await base44.auth.redirectToLogin();
-    } catch (error) {
-      // If OAuth not configured, prompt for email
-      const email = prompt('Enter your email to continue:');
-      if (email && email.includes('@')) {
-        const user = {
-          full_name: email.split('@')[0],
-          email: email,
-          isGuest: true
-        };
-        localStorage.setItem('caos_guest_user', JSON.stringify(user));
-        setTimeout(() => {
-          navigate(createPageUrl('Chat'));
-        }, 100);
-      }
-    }
+    // Direct navigation to Chat - Base44 will handle auth check there
+    navigate(createPageUrl('Chat'));
   };
 
   const handleEmailSignIn = async (e) => {
