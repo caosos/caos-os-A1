@@ -29,8 +29,25 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleSignIn = () => {
-    base44.auth.redirectToLogin();
+  const handleGoogleSignIn = async () => {
+    try {
+      // Try Base44 OAuth first
+      await base44.auth.redirectToLogin();
+    } catch (error) {
+      // If OAuth not configured, prompt for email
+      const email = prompt('Enter your email to continue:');
+      if (email && email.includes('@')) {
+        const user = {
+          full_name: email.split('@')[0],
+          email: email,
+          isGuest: true
+        };
+        localStorage.setItem('caos_guest_user', JSON.stringify(user));
+        setTimeout(() => {
+          navigate(createPageUrl('Chat'));
+        }, 100);
+      }
+    }
   };
 
   const handleEmailSignIn = async (e) => {
