@@ -92,16 +92,6 @@ export default function Welcome() {
           {!showEmailSignIn && !showCreateAccount ? (
             <>
               <motion.button
-                onClick={handleGoogleSignIn}
-                className="w-full bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mb-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <LogIn className="w-5 h-5" />
-                Sign In with Google
-              </motion.button>
-
-              <motion.button
                 onClick={() => setShowEmailSignIn(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mb-3"
                 whileHover={{ scale: 1.02 }}
