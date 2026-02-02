@@ -30,7 +30,12 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    try {
+      base44.auth.redirectToLogin(createPageUrl('Chat'));
+    } catch (error) {
+      console.error('Google Sign-In failed, using guest mode:', error);
+      handleGuestContinue();
+    }
   };
 
   const handleEmailSignIn = async (e) => {

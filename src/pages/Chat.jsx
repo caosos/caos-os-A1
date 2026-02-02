@@ -86,8 +86,15 @@ export default function Chat() {
         }
 
         // For authenticated users - check if logged in
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
+        try {
+          const currentUser = await base44.auth.me();
+          setUser(currentUser);
+        } catch (authError) {
+          // Auth failed - redirect to welcome
+          console.error('Authentication failed:', authError);
+          navigate(createPageUrl('Welcome'));
+          return;
+        }
 
         // Load conversations for this user
         const userConvos = await base44.entities.Conversation.filter(
