@@ -38,8 +38,9 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       localStorage.clear();
       sessionStorage.clear();
       
-      // Call Base44 logout - this will redirect to Welcome and clear the session
-      await base44.auth.logout(createPageUrl('Welcome'));
+      // Call Base44 logout and manually navigate
+      await base44.auth.logout();
+      navigate(createPageUrl('Welcome'));
     }
   };
 
