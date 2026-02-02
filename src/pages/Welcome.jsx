@@ -30,8 +30,8 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    // Don't pass nextUrl - let Base44 handle the redirect
-    base44.auth.redirectToLogin();
+    // Base44 auth not configured - use guest mode
+    handleGuestContinue();
   };
 
   const handleEmailSignIn = async (e) => {
