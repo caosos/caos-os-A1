@@ -30,9 +30,7 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    // Direct OAuth redirect
-    const currentUrl = window.location.origin;
-    window.location.href = `${currentUrl}/api/auth/google`;
+    window.location.href = '/api/auth/google?provider=google';
   };
 
   const handleEmailSignIn = async (e) => {
