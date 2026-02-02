@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake, Gamepad2, Lock, Unlock } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake, Gamepad2, Lock, Unlock, Folder, FileText, Image as ImageIcon, HardDrive } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
+import FileManager from '../files/FileManager';
 
 export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
   const [rememberConversations, setRememberConversations] = useState(true);
@@ -13,6 +14,7 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   const [birthday, setBirthday] = useState('');
   const [availableTokens, setAvailableTokens] = useState(0);
   const [gameModeEnabled, setGameModeEnabled] = useState(false);
+  const [activeView, setActiveView] = useState('profile'); // 'profile', 'desktop', 'files', 'folders', 'photos'
 
   useEffect(() => {
     const saved = localStorage.getItem('caos_remember_conversations');
@@ -100,7 +102,17 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
             className="fixed right-0 top-0 bottom-0 w-80 bg-[#0f1f3d]/95 backdrop-blur-xl border-l border-white/10 z-50 flex flex-col overflow-hidden"
           >
             <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
-              <h2 className="text-white font-semibold">Profile</h2>
+              <div className="flex items-center gap-2">
+                {activeView !== 'profile' && (
+                  <button
+                    onClick={() => setActiveView('profile')}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white/70" />
+                  </button>
+                )}
+                <h2 className="text-white font-semibold capitalize">{activeView}</h2>
+              </div>
               <button
                 onClick={onClose}
                 className="p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -109,7 +121,9 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
               </button>
             </div>
             
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 overflow-hidden">
+              {activeView === 'profile' ? (
+                <div className="p-6 overflow-y-auto h-full">
               {/* Avatar */}
               <div className="flex flex-col items-center mb-6">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xl font-medium mb-3">
@@ -117,6 +131,38 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                 </div>
                 <h3 className="text-white font-semibold text-base">{user?.full_name || 'User'}</h3>
                 <span className="text-white/50 text-xs capitalize">{user?.role || 'user'}</span>
+              </div>
+
+              {/* File Management Buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                <button
+                  onClick={() => setActiveView('desktop')}
+                  className="flex items-center gap-2 p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg border border-blue-500/30 transition-colors"
+                >
+                  <HardDrive className="w-4 h-4 text-blue-400" />
+                  <span className="text-white text-xs">Desktop</span>
+                </button>
+                <button
+                  onClick={() => setActiveView('files')}
+                  className="flex items-center gap-2 p-3 bg-green-500/10 hover:bg-green-500/20 rounded-lg border border-green-500/30 transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-green-400" />
+                  <span className="text-white text-xs">Files</span>
+                </button>
+                <button
+                  onClick={() => setActiveView('folders')}
+                  className="flex items-center gap-2 p-3 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg border border-yellow-500/30 transition-colors"
+                >
+                  <Folder className="w-4 h-4 text-yellow-400" />
+                  <span className="text-white text-xs">Folders</span>
+                </button>
+                <button
+                  onClick={() => setActiveView('photos')}
+                  className="flex items-center gap-2 p-3 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg border border-purple-500/30 transition-colors"
+                >
+                  <ImageIcon className="w-4 h-4 text-purple-400" />
+                  <span className="text-white text-xs">Photos</span>
+                </button>
               </div>
 
               {/* User Info */}
@@ -304,6 +350,13 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   </>
                 )}
               </div>
+            </div>
+              ) : (
+                <FileManager 
+                  user={user} 
+                  viewType={activeView === 'desktop' ? 'desktop' : activeView}
+                />
+              )}
             </div>
           </motion.div>
         </>
