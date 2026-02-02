@@ -29,9 +29,8 @@ export default function Welcome() {
     navigate(createPageUrl('Chat'));
   };
 
-  const handleGoogleSignIn = async () => {
-    // Direct navigation to Chat - Base44 will handle auth check there
-    navigate(createPageUrl('Chat'));
+  const handleGoogleSignIn = () => {
+    base44.auth.redirectToLogin(createPageUrl('Chat'));
   };
 
   const handleEmailSignIn = async (e) => {
