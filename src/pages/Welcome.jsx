@@ -14,9 +14,16 @@ export default function Welcome() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  // Clear the logout flag on mount
+  // Clear the logout flag and any stale auth state on mount
   React.useEffect(() => {
     sessionStorage.removeItem('just_logged_out');
+    localStorage.removeItem('caos_last_conversation');
+    // Clear any stale Base44 auth tokens
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      console.error('Could not clear session storage:', e);
+    }
   }, []);
 
   const handleGuestContinue = () => {
@@ -30,12 +37,9 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = () => {
-    try {
-      base44.auth.redirectToLogin(createPageUrl('Chat'));
-    } catch (error) {
-      console.error('Google Sign-In failed, using guest mode:', error);
-      handleGuestContinue();
-    }
+    // Force redirect to Base44 login with proper next URL
+    const nextUrl = window.location.origin + createPageUrl('Chat');
+    base44.auth.redirectToLogin(nextUrl);
   };
 
   const handleEmailSignIn = async (e) => {
