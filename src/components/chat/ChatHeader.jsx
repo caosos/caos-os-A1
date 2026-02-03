@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, currentConversation }) {
+export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation }) {
   const navigate = useNavigate();
   const [showGuestLogoutDialog, setShowGuestLogoutDialog] = useState(false);
   
@@ -84,15 +84,15 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent className="bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white min-w-[140px]" sideOffset={4}>
-                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                <DropdownMenuItem onClick={() => onShowFiles('files')} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
                   <FileText className="w-3.5 h-3.5 text-blue-400" />
                   <span>Files</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                <DropdownMenuItem onClick={() => onShowFiles('photos')} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
                   <Image className="w-3.5 h-3.5 text-blue-400" />
                   <span>Photos</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                <DropdownMenuItem onClick={() => onShowFiles('folders')} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
                   <Folder className="w-3.5 h-3.5 text-blue-400" />
                   <span>Folders</span>
                 </DropdownMenuItem>

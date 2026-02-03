@@ -26,6 +26,7 @@ export default function Chat() {
   const [messages, setMessages] = useState({});
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [fileView, setFileView] = useState(null);
   const [showToken, setShowToken] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -586,6 +587,10 @@ export default function Chat() {
               onNewThread={handleNewThread}
               onShowThreads={() => setShowThreads(true)}
               onShowProfile={() => setShowProfile(true)}
+              onShowFiles={(view) => {
+                setFileView(view);
+                setShowProfile(true);
+              }}
               currentConversation={conversations.find(c => c.id === currentConversationId)}
             />
           </div>
@@ -930,13 +935,17 @@ export default function Chat() {
 
       <ProfilePanel
         isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
+        onClose={() => {
+          setShowProfile(false);
+          setFileView(null);
+        }}
         user={user}
         multiAgentMode={multiAgentMode}
         onMultiAgentModeChange={(enabled) => {
           setMultiAgentMode(enabled);
           localStorage.setItem('caos_multi_agent_mode', enabled);
         }}
+        initialView={fileView}
       />
 
       <Dialog open={showToken} onOpenChange={setShowToken}>
