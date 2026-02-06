@@ -14,15 +14,23 @@ export default function Welcome() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  // Clear the logout flag on mount and prevent any background polling
+  // Check authentication status on mount
   React.useEffect(() => {
     sessionStorage.removeItem('just_logged_out');
     
-    // Disable any automatic auth checks or polling
-    return () => {
-      // Cleanup on unmount
+    const checkAuth = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (isAuth) {
+          navigate(createPageUrl('Chat'));
+        }
+      } catch (error) {
+        // Not authenticated, stay on welcome
+      }
     };
-  }, []);
+    
+    checkAuth();
+  }, [navigate]);
 
   const handleGuestContinue = () => {
     const user = {
