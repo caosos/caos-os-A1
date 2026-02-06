@@ -568,11 +568,15 @@ export default function Chat() {
           recall_results: recallResults,
           timestamp: new Date().toISOString()
         });
-        
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), savedUser, savedAi]
-        }));
+
+        // Build final message list
+        const currentMessages = messages[conversationId] || [];
+        const withoutTemp = currentMessages.filter(m => m.id !== tempUserId);
+        const finalMessages = [...withoutTemp, savedUser, savedAi];
+
+        // Update state
+        const updatedAllMessages = { ...messages, [conversationId]: finalMessages };
+        setMessages(updatedAllMessages);
       }
 
       const response = assistantReply;
