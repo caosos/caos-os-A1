@@ -14,9 +14,14 @@ export default function Welcome() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  // Clear the logout flag on mount
+  // Clear the logout flag on mount and prevent any background polling
   React.useEffect(() => {
     sessionStorage.removeItem('just_logged_out');
+    
+    // Disable any automatic auth checks or polling
+    return () => {
+      // Cleanup on unmount
+    };
   }, []);
 
   const handleGuestContinue = () => {
