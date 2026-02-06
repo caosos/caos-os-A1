@@ -336,17 +336,7 @@ export default function Chat() {
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
-    console.log("[CHAT DEBUG] ========== START handleSendMessage ==========");
-    console.log("[CHAT DEBUG] Content:", content);
-    console.log("[CHAT DEBUG] User:", user);
-    console.log("[CHAT DEBUG] IsGuestMode:", isGuestMode);
-    console.log("[CHAT DEBUG] CurrentConversationId:", currentConversationId);
-    
-    if (!user) {
-      console.error("[CHAT DEBUG] NO USER - ABORTING");
-      toast.error("User not loaded - refresh page");
-      return;
-    }
+    if (!user || !content?.trim() && fileUrls?.length === 0) return;
     
     setIsLoading(true);
 
