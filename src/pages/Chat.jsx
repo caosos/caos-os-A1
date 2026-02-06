@@ -541,16 +541,18 @@ export default function Chat() {
           timestamp: new Date().toISOString(),
           created_by: user.email
         };
-        
-        const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-        const existingMsgs = stored[conversationId] || [];
-        stored[conversationId] = [...existingMsgs, finalUserMsg, finalAiMsg];
-        localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
-        
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), finalUserMsg, finalAiMsg]
-        }));
+
+        // Build final message list
+        const currentMessages = messages[conversationId] || [];
+        const withoutTemp = currentMessages.filter(m => m.id !== tempUserId);
+        const finalMessages = [...withoutTemp, finalUserMsg, finalAiMsg];
+
+        // Update state
+        const updatedAllMessages = { ...messages, [conversationId]: finalMessages };
+        setMessages(updatedAllMessages);
+
+        // Save to localStorage
+        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedAllMessages));
       } else {
         const savedUser = await base44.entities.Message.create({
           conversation_id: conversationId,
