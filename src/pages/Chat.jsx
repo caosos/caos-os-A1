@@ -337,55 +337,229 @@ export default function Chat() {
 
   const handleSendMessage = async (content, fileUrls = []) => {
     console.log("[CHAT DEBUG] handleSendMessage called", { content, fileUrls });
+    if (!user) return;
     setIsLoading(true);
 
     try {
-      // FORCED MINIMAL FETCH - NO GUARDS
-      const res = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      let conversationId = currentConversationId;
+      let conversation = conversations.find(c => c.id === conversationId);
+
+      // Create new conversation if none exists
+      if (!conversationId) {
+        const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
+
+        if (isGuestMode) {
+          conversation = {
+            id: 'guest_' + Date.now(),
+            title: title,
+            last_message_time: new Date().toISOString(),
+            created_by: user.email
+          };
+          conversationId = conversation.id;
+          const updatedConvos = [conversation, ...conversations];
+          setConversations(updatedConvos);
+          localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+          setCurrentConversationId(conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+        } else {
+          conversation = await base44.entities.Conversation.create({
+            title: title,
+            last_message_time: new Date().toISOString(),
+            created_by: user.email
+          });
+          conversationId = conversation.id;
+          setConversations([conversation, ...conversations]);
+          setCurrentConversationId(conversationId);
+          localStorage.setItem('caos_last_conversation', conversationId);
+          setMessages({ ...messages, [conversationId]: [] });
+        }
+      }
+
+      const convMessages = messages[conversationId] || [];
+
+      // Process files per CAOS-A1 contract
+      let fileContents = '';
+      const images = [];
+      const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
+
+      if (fileUrls.length > 0) {
+        for (let i = 0; i < fileUrls.length; i++) {
+          const fileUrl = fileUrls[i];
+          try {
+            const fileName = fileUrl.split('/').pop();
+            const extension = fileName.split('.').pop()?.toLowerCase();
+
+            const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+            const documentExtensions = ['pdf', 'doc', 'docx'];
+
+            if (textExtensions.includes(extension)) {
+              const response = await fetch(fileUrl);
+              const fileContent = await response.text();
+              fileContents += `\n\n=== TEXT FILE: ${fileName} ===\n${fileContent}\n=== END TEXT FILE ===\n`;
+              fileSummary.text++;
+            } else if (imageExtensions.includes(extension)) {
+              images.push({ url: fileUrl });
+              fileContents += `\n\n[IMAGE ${i + 1}: "${fileName}" - USE VISION TO ANALYZE AND DESCRIBE IN DETAIL]\n`;
+              fileSummary.image++;
+            } else if (documentExtensions.includes(extension)) {
+              fileContents += `\n\n[DOCUMENT ${i + 1}: "${fileName}" - EXTRACT TEXT, SUMMARIZE KEY POINTS]\n`;
+              fileSummary.document++;
+            } else {
+              fileContents += `\n\n[BINARY FILE ${i + 1}: "${fileName}" (${extension}) - PROVIDE METADATA]\n`;
+              fileSummary.other++;
+            }
+          } catch (error) {
+            console.error('Error reading file:', error);
+            fileContents += `\n\n[ERROR: Could not read "${fileUrl.split('/').pop()}"]\n`;
+          }
+        }
+
+        // Add synthesis instruction if multiple files
+        if (fileUrls.length > 1) {
+          const fileTypesList = [];
+          if (fileSummary.text > 0) fileTypesList.push(`${fileSummary.text} text file${fileSummary.text > 1 ? 's' : ''}`);
+          if (fileSummary.image > 0) fileTypesList.push(`${fileSummary.image} image${fileSummary.image > 1 ? 's' : ''}`);
+          if (fileSummary.document > 0) fileTypesList.push(`${fileSummary.document} document${fileSummary.document > 1 ? 's' : ''}`);
+          if (fileSummary.other > 0) fileTypesList.push(`${fileSummary.other} other file${fileSummary.other > 1 ? 's' : ''}`);
+
+          fileContents = `\n\n[MULTI-FILE REQUEST: ${fileUrls.length} files provided - ${fileTypesList.join(', ')}]\n[INSTRUCTION: Analyze each file according to its type, then synthesize findings into a cohesive response]\n` + fileContents;
+        }
+      }
+
+      const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
+
+      const tempUserId = 'temp_' + Date.now();
+      const tempUserMessage = {
+        id: tempUserId,
+        conversation_id: conversationId,
+        role: 'user',
+        content: content || '📎 Sent file(s)',
+        file_urls: fileUrls,
+        timestamp: new Date().toISOString(),
+        created_by: user.email
+      };
+
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), tempUserMessage]
+      }));
+
+      console.log("[CHAT DEBUG] About to POST to server");
+      const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "1"
         },
         body: JSON.stringify({
-          session_id: currentConversationId || "live",
-          input: content || "test message",
-          anchors: ["session:live"],
-          limit: 10
+          session_id: conversationId,
+          input: messageWithFiles,
+          anchors: ["topic:bootloader"],
+          limit: 20
         })
       });
+      console.log("[CHAT DEBUG] POST completed, status:", caosResponse.status);
 
-      const data = await res.json();
-      console.log("[CHAT DEBUG] reply received", data);
+      if (!caosResponse.ok) {
+        throw new Error(`Server error: ${caosResponse.status}`);
+      }
 
-      // Add message to UI
-      const assistantReply = data.reply || data.response || data.text || data.content || data.message || data.output || 'No response';
-      
-      setMessages(prev => {
-        const conversationId = currentConversationId || "live";
-        return {
-          ...prev,
-          [conversationId]: [
-            ...(prev[conversationId] || []),
-            { 
-              id: 'user_' + Date.now(), 
-              role: 'user', 
-              content: content,
-              timestamp: new Date().toISOString()
-            },
-            { 
-              id: 'ai_' + Date.now(), 
-              role: 'assistant', 
-              content: assistantReply,
-              timestamp: new Date().toISOString()
-            }
-          ]
+      const data = await caosResponse.json();
+      console.log('[CHAT DEBUG] Reply received:', JSON.stringify(data, null, 2));
+
+      // Try all possible response fields
+      const assistantReply = data.reply || data.response || data.text || data.content || data.message || data.output || '';
+
+      // Extract recall results if present
+      const recallResults = data.recall || [];
+
+      if (isGuestMode) {
+        const finalUserMsg = {
+          id: 'guest_msg_' + Date.now(),
+          conversation_id: conversationId,
+          role: 'user',
+          content: content || '📎 Sent file(s)',
+          file_urls: fileUrls,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
         };
-      });
+        const finalAiMsg = {
+          id: 'guest_msg_' + Date.now() + '_ai',
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          recall_results: recallResults,
+          timestamp: new Date().toISOString(),
+          created_by: user.email
+        };
+        
+        const stored = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
+        const existingMsgs = stored[conversationId] || [];
+        stored[conversationId] = [...existingMsgs, finalUserMsg, finalAiMsg];
+        localStorage.setItem('caos_guest_messages', JSON.stringify(stored));
+        
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), finalUserMsg, finalAiMsg]
+        }));
+      } else {
+        const savedUser = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'user',
+          content: content || '📎 Sent file(s)',
+          file_urls: fileUrls,
+          timestamp: new Date().toISOString()
+        });
+        const savedAi = await base44.entities.Message.create({
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: assistantReply,
+          recall_results: recallResults,
+          timestamp: new Date().toISOString()
+        });
+        
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempUserId), savedUser, savedAi]
+        }));
+      }
 
+      const response = assistantReply;
+
+      // Update conversation with sort order
+      const updatedConvo = {
+        ...conversation,
+        last_message_preview: response.substring(0, 100),
+        last_message_time: new Date().toISOString()
+      };
+      const updatedConvos = [
+        updatedConvo,
+        ...conversations.filter(c => c.id !== conversationId)
+      ];
+      setConversations(updatedConvos);
+
+      if (isGuestMode) {
+        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+      } else {
+        await base44.entities.Conversation.update(conversationId, {
+          last_message_preview: response.substring(0, 100),
+          last_message_time: new Date().toISOString()
+        });
+      }
     } catch (error) {
-      console.error('[CHAT DEBUG] Error:', error);
-      toast.error('Failed to send message: ' + error.message);
+      console.error('[CHAT DEBUG] Error sending message:', error);
+
+      // Show more specific error messages
+      if (error.name === 'AbortError') {
+        toast.error('Request timed out after 60 seconds. The server may be processing a large file.');
+      } else if (error.message.includes('Failed to fetch')) {
+        toast.error('Cannot reach CAOS server. Please check if the server is running.');
+      } else if (error.message.includes('Server error')) {
+        toast.error('Server error. The message may be too large or malformed.');
+      } else {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
