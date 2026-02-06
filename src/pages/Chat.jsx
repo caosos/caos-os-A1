@@ -342,57 +342,38 @@ export default function Chat() {
 
     try {
       let conversationId = currentConversationId;
-      let conversation = conversations.find(c => c.id === conversationId);
       
-      console.log("[CHAT DEBUG] Initial conversationId:", conversationId);
-
-      // Create new conversation if none exists
       if (!conversationId) {
-        console.log("[CHAT DEBUG] No conversation, creating new one...");
-        const title = content ? content.substring(0, 50) + (content.length > 50 ? '...' : '') : 'File attachment';
-
+        const title = content ? content.substring(0, 50) : 'File attachment';
+        
         if (isGuestMode) {
-          console.log("[CHAT DEBUG] Creating guest conversation");
-          conversation = {
-            id: 'guest_' + Date.now(),
-            title: title,
+          conversationId = 'guest_' + Date.now();
+          const newConvo = {
+            id: conversationId,
+            title,
             last_message_time: new Date().toISOString(),
             created_by: user.email
           };
-          conversationId = conversation.id;
           
-          // Update state synchronously
-          const updatedConvos = [conversation, ...conversations];
-          const newMessages = { ...messages, [conversationId]: [] };
-          
-          setConversations(updatedConvos);
+          setConversations(prev => [newConvo, ...prev]);
           setCurrentConversationId(conversationId);
-          setMessages(newMessages);
+          setMessages(prev => ({ ...prev, [conversationId]: [] }));
           
+          const updatedConvos = [newConvo, ...conversations];
           localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
-          localStorage.setItem('caos_guest_messages', JSON.stringify(newMessages));
-          
-          console.log("[CHAT DEBUG] Guest conversation created:", conversationId);
         } else {
-          console.log("[CHAT DEBUG] Creating authenticated conversation");
-          conversation = await base44.entities.Conversation.create({
-            title: title,
-            last_message_time: new Date().toISOString(),
-            created_by: user.email
+          const newConvo = await base44.entities.Conversation.create({
+            title,
+            last_message_time: new Date().toISOString()
           });
-          conversationId = conversation.id;
-          setConversations([conversation, ...conversations]);
+          conversationId = newConvo.id;
+          
+          setConversations(prev => [newConvo, ...prev]);
           setCurrentConversationId(conversationId);
+          setMessages(prev => ({ ...prev, [conversationId]: [] }));
           localStorage.setItem('caos_last_conversation', conversationId);
-          setMessages({ ...messages, [conversationId]: [] });
-          console.log("[CHAT DEBUG] Authenticated conversation created:", conversationId);
         }
-      } else {
-        console.log("[CHAT DEBUG] Using existing conversation:", conversationId);
       }
-
-      const convMessages = messages[conversationId] || [];
-      console.log("[CHAT DEBUG] Conversation has", convMessages.length, "messages");
 
       // Process files per CAOS-A1 contract
       let fileContents = '';
