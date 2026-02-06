@@ -304,26 +304,17 @@ export default function Chat() {
         file_urls: msg.file_urls || []
       }));
 
-      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
+      const { data } = await base44.functions.invoke('proxyMessage', {
+        type: "__SESSION_RESUME__",
+        session: sessionId,
+        thread_meta: {
+          title: conversation?.title || 'Untitled',
+          created_ts: conversation?.created_date ? new Date(conversation.created_date).getTime() : Date.now(),
+          last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now(),
+          message_count: conversationMessages.length
         },
-        body: JSON.stringify({
-          type: "__SESSION_RESUME__",
-          session: sessionId,
-          thread_meta: {
-            title: conversation?.title || 'Untitled',
-            created_ts: conversation?.created_date ? new Date(conversation.created_date).getTime() : Date.now(),
-            last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now(),
-            message_count: conversationMessages.length
-          },
-          history: messageHistory
-        })
+        history: messageHistory
       });
-
-      const data = await response.json();
 
       // Verify session alignment per CAOS-A1 contract
       if (data.session && data.session !== sessionId) {
@@ -437,23 +428,14 @@ export default function Chat() {
         }]
       }));
 
-      const res = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        },
-        body: JSON.stringify({
-          session_id: conversationId,
-          input: fullMessage,
-          anchors: ["topic:bootloader"],
-          limit: 20
-        })
+      const { data } = await base44.functions.invoke('proxyMessage', {
+        session_id: conversationId,
+        input: fullMessage,
+        anchors: ["topic:bootloader"],
+        limit: 20
       });
 
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-      const data = await res.json();
+      if (!data) throw new Error('No response from server');
       const reply = data.reply || data.response || data.text || '';
 
       if (isGuestMode) {
