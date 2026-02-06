@@ -376,6 +376,7 @@ export default function Chat() {
       }
 
       let fileContents = '';
+      const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
       
       if (fileUrls?.length > 0) {
         for (let i = 0; i < fileUrls.length; i++) {
@@ -394,7 +395,6 @@ export default function Chat() {
               fileContents += `\n\n=== TEXT FILE: ${fileName} ===\n${fileContent}\n=== END TEXT FILE ===\n`;
               fileSummary.text++;
             } else if (imageExtensions.includes(extension)) {
-              images.push({ url: fileUrl });
               fileContents += `\n\n[IMAGE ${i + 1}: "${fileName}" - USE VISION TO ANALYZE AND DESCRIBE IN DETAIL]\n`;
               fileSummary.image++;
             } else if (documentExtensions.includes(extension)) {
@@ -410,7 +410,6 @@ export default function Chat() {
           }
         }
 
-        // Add synthesis instruction if multiple files
         if (fileUrls.length > 1) {
           const fileTypesList = [];
           if (fileSummary.text > 0) fileTypesList.push(`${fileSummary.text} text file${fileSummary.text > 1 ? 's' : ''}`);
