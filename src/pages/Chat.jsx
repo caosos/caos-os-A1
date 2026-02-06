@@ -505,44 +505,25 @@ export default function Chat() {
 
       const response = reply;
 
-      // Update conversation with sort order
-      const updatedConvo = {
-        ...conversation,
-        last_message_preview: response.substring(0, 100),
-        last_message_time: new Date().toISOString()
-      };
-      const updatedConvos = [
-        updatedConvo,
-        ...conversations.filter(c => c.id !== conversationId)
-      ];
-      setConversations(updatedConvos);
+      setConversations(prev => {
+        const updated = [
+          { ...prev.find(c => c.id === conversationId), last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() },
+          ...prev.filter(c => c.id !== conversationId)
+        ];
+        if (isGuestMode) localStorage.setItem('caos_guest_conversations', JSON.stringify(updated));
+        return updated;
+      });
 
-      if (isGuestMode) {
-        localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
-      } else {
+      if (!isGuestMode) {
         await base44.entities.Conversation.update(conversationId, {
           last_message_preview: response.substring(0, 100),
           last_message_time: new Date().toISOString()
         });
       }
     } catch (error) {
-      console.error('[CHAT DEBUG] ========== ERROR CAUGHT ==========');
-      console.error('[CHAT DEBUG] Error name:', error.name);
-      console.error('[CHAT DEBUG] Error message:', error.message);
-      console.error('[CHAT DEBUG] Error stack:', error.stack);
-
-      // Show more specific error messages
-      if (error.name === 'AbortError') {
-        toast.error('Request timed out after 60 seconds. The server may be processing a large file.');
-      } else if (error.message.includes('Failed to fetch')) {
-        toast.error('Cannot reach CAOS server. Please check if the server is running.');
-      } else if (error.message.includes('Server error')) {
-        toast.error('Server error. The message may be too large or malformed.');
-      } else {
-        toast.error('Failed to send message: ' + error.message);
-      }
+      console.error('Send error:', error);
+      toast.error(error.message || 'Failed to send message');
     } finally {
-      console.log('[CHAT DEBUG] ========== FINALLY BLOCK - Setting loading to false ==========');
       setIsLoading(false);
     }
   };
