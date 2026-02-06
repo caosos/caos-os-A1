@@ -304,11 +304,10 @@ export default function Chat() {
         file_urls: msg.file_urls || []
       }));
 
-      const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const response = await fetch("http://localhost:3001/api/message", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           type: "__SESSION_RESUME__",
@@ -437,11 +436,10 @@ export default function Chat() {
         }]
       }));
 
-      const res = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const res = await fetch("http://localhost:3001/api/message", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "1"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           session_id: conversationId,
