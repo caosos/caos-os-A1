@@ -450,6 +450,7 @@ export default function Chat() {
       }
 
       const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
+      console.log("[CHAT DEBUG] Final message length:", messageWithFiles.length, "chars");
 
       const tempUserId = 'temp_' + Date.now();
       const tempUserMessage = {
@@ -462,6 +463,7 @@ export default function Chat() {
         created_by: user.email
       };
 
+      console.log("[CHAT DEBUG] Adding temp message to UI");
       setMessages(prev => ({
         ...prev,
         [conversationId]: [...(prev[conversationId] || []), tempUserMessage]
@@ -473,7 +475,10 @@ export default function Chat() {
         anchors: ["topic:bootloader"],
         limit: 20
       };
-      console.log("[CHAT DEBUG] About to POST to server with payload:", payload);
+      
+      console.log("[CHAT DEBUG] ========== ABOUT TO POST ==========");
+      console.log("[CHAT DEBUG] URL: https://nonextractive-son-ichnographical.ngrok-free.dev/api/message");
+      console.log("[CHAT DEBUG] Payload:", JSON.stringify(payload).substring(0, 200) + "...");
       
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
@@ -483,7 +488,11 @@ export default function Chat() {
         },
         body: JSON.stringify(payload)
       });
-      console.log("[CHAT DEBUG] POST completed, status:", caosResponse.status, "ok:", caosResponse.ok);
+      
+      console.log("[CHAT DEBUG] ========== POST COMPLETED ==========");
+      console.log("[CHAT DEBUG] Status:", caosResponse.status);
+      console.log("[CHAT DEBUG] OK:", caosResponse.ok);
+      console.log("[CHAT DEBUG] StatusText:", caosResponse.statusText);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
