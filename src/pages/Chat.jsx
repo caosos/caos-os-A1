@@ -452,77 +452,58 @@ export default function Chat() {
         })
       });
 
-      if (!caosResponse.ok) {
-        throw new Error(`Server error: ${caosResponse.status}`);
-      }
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const data = await caosResponse.json();
-      console.log('[CHAT DEBUG] Reply received:', JSON.stringify(data, null, 2));
-
-      // Try all possible response fields
-      const assistantReply = data.reply || data.response || data.text || data.content || data.message || data.output || '';
-
-      // Extract recall results if present
-      const recallResults = data.recall || [];
+      const data = await res.json();
+      const reply = data.reply || data.response || data.text || '';
 
       if (isGuestMode) {
-        const finalUserMsg = {
-          id: 'guest_msg_' + Date.now(),
+        const userMsg = {
+          id: 'msg_' + Date.now(),
           conversation_id: conversationId,
           role: 'user',
-          content: content || '📎 Sent file(s)',
+          content: messageText,
           file_urls: fileUrls,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
+          timestamp: new Date().toISOString()
         };
-        const finalAiMsg = {
-          id: 'guest_msg_' + Date.now() + '_ai',
+        const aiMsg = {
+          id: 'msg_' + Date.now() + '_ai',
           conversation_id: conversationId,
           role: 'assistant',
-          content: assistantReply,
-          recall_results: recallResults,
-          timestamp: new Date().toISOString(),
-          created_by: user.email
+          content: reply,
+          timestamp: new Date().toISOString()
         };
 
-        // Build final message list
-        const currentMessages = messages[conversationId] || [];
-        const withoutTemp = currentMessages.filter(m => m.id !== tempUserId);
-        const finalMessages = [...withoutTemp, finalUserMsg, finalAiMsg];
-
-        // Update state
-        const updatedAllMessages = { ...messages, [conversationId]: finalMessages };
-        setMessages(updatedAllMessages);
-
-        // Save to localStorage
-        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedAllMessages));
+        setMessages(prev => {
+          const updated = {
+            ...prev,
+            [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
+          };
+          localStorage.setItem('caos_guest_messages', JSON.stringify(updated));
+          return updated;
+        });
       } else {
-        const savedUser = await base44.entities.Message.create({
+        const userMsg = await base44.entities.Message.create({
           conversation_id: conversationId,
           role: 'user',
-          content: content || '📎 Sent file(s)',
+          content: messageText,
           file_urls: fileUrls,
           timestamp: new Date().toISOString()
         });
-        const savedAi = await base44.entities.Message.create({
+        const aiMsg = await base44.entities.Message.create({
           conversation_id: conversationId,
           role: 'assistant',
-          content: assistantReply,
-          recall_results: recallResults,
+          content: reply,
           timestamp: new Date().toISOString()
         });
 
-        // Build final message list
-        const currentMessages = messages[conversationId] || [];
-        const withoutTemp = currentMessages.filter(m => m.id !== tempUserId);
-        const finalMessages = [...withoutTemp, savedUser, savedAi];
-
-        // Update state
-        const updatedAllMessages = { ...messages, [conversationId]: finalMessages };
-        setMessages(updatedAllMessages);
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
+        }));
       }
 
-      const response = assistantReply;
+      const response = reply;
 
       // Update conversation with sort order
       const updatedConvo = {
