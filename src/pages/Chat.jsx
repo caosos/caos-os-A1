@@ -395,11 +395,14 @@ export default function Chat() {
       }
 
       const convMessages = messages[conversationId] || [];
+      console.log("[CHAT DEBUG] Conversation has", convMessages.length, "messages");
 
       // Process files per CAOS-A1 contract
       let fileContents = '';
       const images = [];
       const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
+      
+      console.log("[CHAT DEBUG] Processing", fileUrls.length, "files");
 
       if (fileUrls.length > 0) {
         for (let i = 0; i < fileUrls.length; i++) {
