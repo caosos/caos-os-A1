@@ -471,10 +471,18 @@ export default function Chat() {
       };
 
       console.log("[CHAT DEBUG] Adding temp message to UI");
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), tempUserMessage]
-      }));
+      
+      // Update messages state directly
+      const currentConvMessages = messages[conversationId] || [];
+      const updatedConvMessages = [...currentConvMessages, tempUserMessage];
+      const updatedAllMessages = { ...messages, [conversationId]: updatedConvMessages };
+      
+      setMessages(updatedAllMessages);
+      
+      // Save to localStorage immediately for guest users
+      if (isGuestMode) {
+        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedAllMessages));
+      }
 
       const payload = {
         session_id: conversationId,
