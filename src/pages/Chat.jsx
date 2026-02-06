@@ -438,30 +438,19 @@ export default function Chat() {
         }]
       }));
 
-      const payload = {
-        session_id: conversationId,
-        input: messageWithFiles,
-        anchors: ["topic:bootloader"],
-        limit: 20
-      };
-      
-      console.log("[CHAT DEBUG] ========== ABOUT TO POST ==========");
-      console.log("[CHAT DEBUG] URL: https://nonextractive-son-ichnographical.ngrok-free.dev/api/message");
-      console.log("[CHAT DEBUG] Payload:", JSON.stringify(payload).substring(0, 200) + "...");
-      
-      const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
+      const res = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "1"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          session_id: conversationId,
+          input: fullMessage,
+          anchors: ["topic:bootloader"],
+          limit: 20
+        })
       });
-      
-      console.log("[CHAT DEBUG] ========== POST COMPLETED ==========");
-      console.log("[CHAT DEBUG] Status:", caosResponse.status);
-      console.log("[CHAT DEBUG] OK:", caosResponse.ok);
-      console.log("[CHAT DEBUG] StatusText:", caosResponse.statusText);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
