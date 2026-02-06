@@ -450,21 +450,23 @@ export default function Chat() {
         [conversationId]: [...(prev[conversationId] || []), tempUserMessage]
       }));
 
-      console.log("[CHAT DEBUG] About to POST to server");
+      const payload = {
+        session_id: conversationId,
+        input: messageWithFiles,
+        anchors: ["topic:bootloader"],
+        limit: 20
+      };
+      console.log("[CHAT DEBUG] About to POST to server with payload:", payload);
+      
       const caosResponse = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "1"
         },
-        body: JSON.stringify({
-          session_id: conversationId,
-          input: messageWithFiles,
-          anchors: ["topic:bootloader"],
-          limit: 20
-        })
+        body: JSON.stringify(payload)
       });
-      console.log("[CHAT DEBUG] POST completed, status:", caosResponse.status);
+      console.log("[CHAT DEBUG] POST completed, status:", caosResponse.status, "ok:", caosResponse.ok);
 
       if (!caosResponse.ok) {
         throw new Error(`Server error: ${caosResponse.status}`);
