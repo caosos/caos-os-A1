@@ -581,7 +581,10 @@ export default function Chat() {
         });
       }
     } catch (error) {
-      console.error('[CHAT DEBUG] Error sending message:', error);
+      console.error('[CHAT DEBUG] ========== ERROR CAUGHT ==========');
+      console.error('[CHAT DEBUG] Error name:', error.name);
+      console.error('[CHAT DEBUG] Error message:', error.message);
+      console.error('[CHAT DEBUG] Error stack:', error.stack);
 
       // Show more specific error messages
       if (error.name === 'AbortError') {
@@ -591,9 +594,10 @@ export default function Chat() {
       } else if (error.message.includes('Server error')) {
         toast.error('Server error. The message may be too large or malformed.');
       } else {
-        toast.error('Failed to send message. Please try again.');
+        toast.error('Failed to send message: ' + error.message);
       }
     } finally {
+      console.log('[CHAT DEBUG] ========== FINALLY BLOCK - Setting loading to false ==========');
       setIsLoading(false);
     }
   };
