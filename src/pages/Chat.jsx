@@ -422,33 +422,21 @@ export default function Chat() {
         }
       }
 
-      const messageWithFiles = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
-      console.log("[CHAT DEBUG] Final message length:", messageWithFiles.length, "chars");
-
-      const tempUserId = 'temp_' + Date.now();
-      const tempUserMessage = {
-        id: tempUserId,
-        conversation_id: conversationId,
-        role: 'user',
-        content: content || '📎 Sent file(s)',
-        file_urls: fileUrls,
-        timestamp: new Date().toISOString(),
-        created_by: user.email
-      };
-
-      console.log("[CHAT DEBUG] Adding temp message to UI");
+      const messageText = content || '📎 File(s)';
+      const fullMessage = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
       
-      // Update messages state directly
-      const currentConvMessages = messages[conversationId] || [];
-      const updatedConvMessages = [...currentConvMessages, tempUserMessage];
-      const updatedAllMessages = { ...messages, [conversationId]: updatedConvMessages };
-      
-      setMessages(updatedAllMessages);
-      
-      // Save to localStorage immediately for guest users
-      if (isGuestMode) {
-        localStorage.setItem('caos_guest_messages', JSON.stringify(updatedAllMessages));
-      }
+      const tempId = 'temp_' + Date.now();
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: [...(prev[conversationId] || []), {
+          id: tempId,
+          conversation_id: conversationId,
+          role: 'user',
+          content: messageText,
+          file_urls: fileUrls,
+          timestamp: new Date().toISOString()
+        }]
+      }));
 
       const payload = {
         session_id: conversationId,
