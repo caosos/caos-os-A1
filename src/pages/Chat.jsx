@@ -370,11 +370,18 @@ export default function Chat() {
             created_by: user.email
           };
           conversationId = conversation.id;
+          
+          // Update state synchronously
           const updatedConvos = [conversation, ...conversations];
+          const newMessages = { ...messages, [conversationId]: [] };
+          
           setConversations(updatedConvos);
-          localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
           setCurrentConversationId(conversationId);
-          setMessages({ ...messages, [conversationId]: [] });
+          setMessages(newMessages);
+          
+          localStorage.setItem('caos_guest_conversations', JSON.stringify(updatedConvos));
+          localStorage.setItem('caos_guest_messages', JSON.stringify(newMessages));
+          
           console.log("[CHAT DEBUG] Guest conversation created:", conversationId);
         } else {
           console.log("[CHAT DEBUG] Creating authenticated conversation");
