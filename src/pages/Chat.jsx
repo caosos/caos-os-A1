@@ -336,8 +336,13 @@ export default function Chat() {
   };
 
   const handleSendMessage = async (content, fileUrls = []) => {
-    console.log("[CHAT DEBUG] handleSendMessage called", { content, fileUrls });
-    if (!user) return;
+    console.log("[CHAT DEBUG] handleSendMessage called", { content, fileUrls, user });
+    if (!user) {
+      console.error("[CHAT DEBUG] NO USER - ABORTING");
+      toast.error("User not loaded - refresh page");
+      return;
+    }
+    console.log("[CHAT DEBUG] User check passed, setting loading...");
     setIsLoading(true);
 
     try {
