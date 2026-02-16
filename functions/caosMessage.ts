@@ -36,9 +36,23 @@ Deno.serve(async (req) => {
         const ts_snapshot_iso = now.toISOString();
         const ts_snapshot_ms = now.getTime();
 
-        // Get session context
+        // Get session context (should exist after Selector call)
         let sessionContexts = await base44.asServiceRole.entities.SessionContext.filter({ session_id });
         let sessionContext = sessionContexts[0];
+
+        if (!sessionContext) {
+            // Fallback: create if somehow missing
+            sessionContext = await base44.asServiceRole.entities.SessionContext.create({
+                session_id,
+                lane_id: user.email,
+                wcw_budget: 8000,
+                wcw_used: 0,
+                last_seq: 0,
+                context_paths: [],
+                kernel_context_valid: true,
+                bootloader_context_valid: true
+            });
+        }
 
         // Generate sequence
         const seq = sessionContext.last_seq + 1;
