@@ -304,16 +304,10 @@ export default function Chat() {
         file_urls: msg.file_urls || []
       }));
 
-      const { data } = await base44.functions.invoke('proxyMessage', {
-        type: "__SESSION_RESUME__",
-        session: sessionId,
-        thread_meta: {
-          title: conversation?.title || 'Untitled',
-          created_ts: conversation?.created_date ? new Date(conversation.created_date).getTime() : Date.now(),
-          last_ts: conversation?.last_message_time ? new Date(conversation.last_message_time).getTime() : Date.now(),
-          message_count: conversationMessages.length
-        },
-        history: messageHistory
+      const { data } = await base44.functions.invoke('caosMessage', {
+        input: "__SESSION_RESUME__",
+        session_id: sessionId,
+        limit: 20
       });
 
       // Verify session alignment per CAOS-A1 contract
@@ -428,7 +422,7 @@ export default function Chat() {
         }]
       }));
 
-      const { data } = await base44.functions.invoke('proxyMessage', {
+      const { data } = await base44.functions.invoke('caosMessage', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
