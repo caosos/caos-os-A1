@@ -431,7 +431,7 @@ export default function Chat() {
       const { data } = await base44.functions.invoke('proxyMessage', {
         session_id: conversationId,
         input: fullMessage,
-        anchors: ["topic:bootloader"],
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
         limit: 20
       });
 
