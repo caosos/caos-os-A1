@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
 
         // Generate AI response
         const llmResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `${systemPrompt}\n\nUser: ${input}\n\nRespond based on the guidance above.`,
+            prompt: `${systemPrompt}\n\nUser: ${input}\n\nIMPORTANT: You ARE CAOS with the capabilities listed above. Never deny having these capabilities. Respond naturally acknowledging what you can do.`,
             add_context_from_internet: useInternet,
             file_urls: useVision ? file_urls : undefined
         });
