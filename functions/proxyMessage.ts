@@ -11,17 +11,15 @@ Deno.serve(async (req) => {
 
         const body = await req.json();
 
-        const response = await fetch("https://nonextractive-son-ichnographical.ngrok-free.dev/api/message", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "true"
-            },
-            body: JSON.stringify(body)
+        // Call Base44-native CAOS backend
+        const result = await base44.functions.invoke('caosMessage', {
+            input: body.input,
+            session_id: body.session_id || body.session,
+            anchors: body.anchors,
+            limit: body.limit || 20
         });
 
-        const data = await response.json();
-        return Response.json(data);
+        return Response.json(result.data);
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
