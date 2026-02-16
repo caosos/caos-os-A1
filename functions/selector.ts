@@ -30,6 +30,10 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input, session_id, intent } = body;
 
+        if (!input || !session_id) {
+            return Response.json({ error: 'Missing input or session_id' }, { status: 400 });
+        }
+
         // Generate decision ID
         const decision_id = `sel_${session_id}_${Date.now()}`;
 
@@ -81,7 +85,7 @@ Deno.serve(async (req) => {
         }
 
         // Analyze input for recall intent
-        const inputLower = input.toLowerCase();
+        const inputLower = (input || '').toLowerCase();
         const recallSignals = [
             'remember', 'recall', 'earlier', 'before', 'last time',
             'you said', 'we talked about', 'mentioned', 'discussed',
