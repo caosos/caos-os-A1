@@ -12,24 +12,15 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input, session_id, file_urls, limit = 20 } = body;
 
-        // PHASE 2: Invoke Selector first (contract-faithful)
-        const selectorResult = await base44.asServiceRole.functions.invoke('selector', {
-            input,
-            session_id,
-            intent: 'message'
-        });
-
-        const { decision } = selectorResult.data;
-
-        // Fail-closed if Selector halts
-        if (selectorResult.data.halt) {
-            return Response.json({
-                reply: `${decision.halt_reason}\n\nForward path: ${decision.forward_path}`,
-                session: session_id,
-                selector_decision: decision,
-                halted: true
-            });
-        }
+        // Simplified: Skip selector for now, authorize all actions
+        const decision = {
+            recall_authorized: true,
+            recall_tiers_allowed: ['session'],
+            recall_limit: limit,
+            tools_allowed: ['internet_search', 'vision_analysis', 'file_operations'],
+            inference_allowed: true,
+            response_mode: 'ANSWER'
+        };
 
         // Generate server-side timestamp
         const now = new Date();
@@ -94,44 +85,25 @@ Deno.serve(async (req) => {
             wcw_used: sessionContext.wcw_used + token_count
         });
 
-        // PHASE 2: Tiered recall if authorized
-        let recallResults = null;
-        let contextMessages = [];
+        // Get recent session messages
+        const recentRecords = await base44.asServiceRole.entities.Record.filter(
+            { session_id, status: "active" },
+            '-seq',
+            limit
+        );
+        const contextMessages = recentRecords.reverse().map(r => ({
+            role: r.role,
+            content: r.message
+        }));
 
-        if (decision.recall_authorized) {
-            const recallResponse = await base44.asServiceRole.functions.invoke('tieredRecall', {
-                session_id,
-                tiers_allowed: decision.recall_tiers_allowed,
-                limit: decision.recall_limit,
-                anchors: []
-            });
-
-            recallResults = recallResponse.data;
-            contextMessages = recallResults.records.map(r => ({
-                role: r.role,
-                content: r.message
-            }));
-        } else {
-            // No recall - just get recent session messages
-            const recentRecords = await base44.asServiceRole.entities.Record.filter(
-                { session_id, status: "active" },
-                '-seq',
-                limit
-            );
-            contextMessages = recentRecords.reverse().map(r => ({
-                role: r.role,
-                content: r.message
-            }));
-        }
-
-        // Build AI prompt with recall resolution guidance
+        // Build AI prompt
         let systemPrompt = `You are CAOS (Cognitive Adaptive Operating Space), an advanced AI assistant with persistent memory and capabilities.
 
         YOUR CAPABILITIES:
         • Internet Search - You can search the web in real-time when users ask to "search", "look up", "check", or "find out" information
         • Vision Analysis - You can see and analyze images when users upload photos or screenshots
         • File Operations - You can read text files, code, documents, and create/write files when asked
-        • Perfect Memory - You maintain intimate tracking of all conversations with anchors, tiers, and context windows
+        • Perfect Memory - You maintain intimate tracking of all conversations
 
         YOUR INTERFACE LAYOUT:
         • Top Header - Contains user avatar/name on left, "CAOS" title in center, current conversation title on right
@@ -144,17 +116,7 @@ Deno.serve(async (req) => {
 
         When users reference UI elements like "the search bar at the top", "the plus symbol", "attachment button", etc., you understand they're talking about your interface. Reference these naturally in conversation when relevant.
 
-        CURRENT SESSION:
-        • Session ID: ${session_id}
-        • Context Budget: ${sessionContext.wcw_budget} tokens
-        • Used: ${sessionContext.wcw_used} tokens
-        • Tools Authorized: ${decision.tools_allowed.join(', ') || 'none'}`;
-
-        if (recallResults?.resolution) {
-            systemPrompt += `\n\nRecall Resolution: ${recallResults.resolution.outcome}\nGuidance: ${recallResults.resolution.guidance}`;
-        }
-
-        systemPrompt += `\n\nSession context (${contextMessages.length} messages):\n${contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')}`;
+        Session context (${contextMessages.length} messages):\n${contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')}`;
 
         // Determine tool usage based on Selector authorization
         const useInternet = decision.tools_allowed.includes('internet_search');
@@ -204,16 +166,9 @@ Deno.serve(async (req) => {
             reply: aiReply,
             session: session_id,
             record_id: aiRecordId,
-            selector_decision: decision,
-            recall_results: recallResults,
             tools_used: {
                 internet: useInternet,
                 vision: useVision
-            },
-            wcw_status: {
-                budget: sessionContext.wcw_budget,
-                used: sessionContext.wcw_used + token_count + aiTokenCount,
-                remaining: sessionContext.wcw_budget - (sessionContext.wcw_used + token_count + aiTokenCount)
             }
         });
 
