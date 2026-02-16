@@ -123,8 +123,26 @@ Deno.serve(async (req) => {
             return Response.json({ decision, halt: true });
         }
 
+        // Determine tool authorization
+        const tools_allowed = [];
+        
+        // Internet capability via InvokeLLM with context_from_internet
+        if (inputLower.includes('search') || inputLower.includes('look up') || inputLower.includes('find out') || inputLower.includes('check')) {
+            tools_allowed.push('internet_search');
+        }
+        
+        // Vision capability via InvokeLLM with file_urls
+        if (inputLower.includes('image') || inputLower.includes('photo') || inputLower.includes('picture') || inputLower.includes('see')) {
+            tools_allowed.push('vision_analysis');
+        }
+        
+        // File operations
+        if (inputLower.includes('file') || inputLower.includes('create') || inputLower.includes('write') || inputLower.includes('save')) {
+            tools_allowed.push('file_operations');
+        }
+
         // Determine inference permission
-        const inference_allowed = context_valid && !recallImplied; // For now, allow inference if no recall needed
+        const inference_allowed = context_valid; // Allow inference when context valid
 
         // Determine response mode
         let response_mode = "ANSWER"; // Default
@@ -139,7 +157,7 @@ Deno.serve(async (req) => {
             recall_tiers_allowed,
             recall_limit,
             inference_allowed,
-            tools_allowed: [], // Phase 2
+            tools_allowed,
             response_mode,
             wcw_impact_estimate
         });
