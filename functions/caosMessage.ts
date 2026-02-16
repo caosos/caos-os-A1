@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         const { input, session_id, file_urls, limit = 20 } = body;
 
         // PHASE 2: Invoke Selector first (contract-faithful)
-        const selectorResult = await base44.functions.invoke('selector', {
+        const selectorResult = await base44.asServiceRole.functions.invoke('selector', {
             input,
             session_id,
             intent: 'message'
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         let contextMessages = [];
 
         if (decision.recall_authorized) {
-            const recallResponse = await base44.functions.invoke('tieredRecall', {
+            const recallResponse = await base44.asServiceRole.functions.invoke('tieredRecall', {
                 session_id,
                 tiers_allowed: decision.recall_tiers_allowed,
                 limit: decision.recall_limit,
