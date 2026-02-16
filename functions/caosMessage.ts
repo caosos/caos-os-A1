@@ -3,14 +3,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
 
-        // Try to get user, but allow service role calls (from proxyMessage)
-        let user = null;
-        try {
-            user = await base44.auth.me();
-        } catch (e) {
-            // If auth fails, this might be a service role call from proxyMessage
-            // Continue without user context
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await req.json();
@@ -63,12 +59,11 @@ Deno.serve(async (req) => {
         const record_id = `${session_id}_${seq}_${ts_snapshot_ms}`;
         const lineage_id = `lineage_${ts_snapshot_ms}`;
 
-        // Extract anchors (auto-generated) - use lane_id from session if no user
-        const userEmail = user?.email || sessionContext.lane_id;
+        // Extract anchors (auto-generated)
         const anchors = [
             { class: "session", value: session_id },
-            { class: "lane", value: userEmail },
-            { class: "user", value: userEmail },
+            { class: "lane", value: user.email },
+            { class: "user", value: user.email },
             { class: "date", value: now.toISOString().split('T')[0] },
             { class: "time", value: now.toTimeString().split(' ')[0].substring(0, 5) }
         ];
@@ -81,7 +76,7 @@ Deno.serve(async (req) => {
             record_id,
             lineage_id,
             session_id,
-            lane_id: userEmail,
+            lane_id: user.email,
             tier: 'session',
             seq,
             ts_snapshot_iso,
@@ -184,7 +179,7 @@ Deno.serve(async (req) => {
             record_id: aiRecordId,
             lineage_id: aiLineageId,
             session_id,
-            lane_id: userEmail,
+            lane_id: user.email,
             tier: 'session',
             seq: aiSeq,
             ts_snapshot_iso: new Date().toISOString(),
