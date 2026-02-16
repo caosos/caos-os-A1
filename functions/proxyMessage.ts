@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
         const result = await base44.functions.invoke('caosMessage', {
             input: body.input,
             session_id: body.session_id || body.session,
-            anchors: body.anchors,
             limit: body.limit || 20
         });
 
