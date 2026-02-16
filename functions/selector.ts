@@ -38,19 +38,24 @@ Deno.serve(async (req) => {
         let sessionContext = sessionContexts[0];
 
         if (!sessionContext) {
-            sessionContext = await base44.asServiceRole.entities.SessionContext.create({
+            // Initialize context journal for new session
+            const journalResult = await base44.functions.invoke('contextJournal', {
                 session_id,
-                lane_id: user.email, // Lane scoped to user for now
-                wcw_budget: 8000,
-                wcw_used: 0,
-                last_seq: 0,
-                kernel_context_valid: true, // Bootstrap - will be proper in Phase 3
-                bootloader_context_valid: true
+                action: 'bootstrap'
             });
+
+            // Fetch newly created session context
+            sessionContexts = await base44.asServiceRole.entities.SessionContext.filter({ session_id });
+            sessionContext = sessionContexts[0];
         }
 
-        // Context validation (simplified for Phase 1)
-        const context_valid = sessionContext.kernel_context_valid && sessionContext.bootloader_context_valid;
+        // PHASE 3: Validate context journal
+        const journalValidation = await base44.functions.invoke('contextJournal', {
+            session_id,
+            action: 'validate'
+        });
+
+        const context_valid = journalValidation.data.valid;
 
         if (!context_valid) {
             // FAIL-CLOSED: Invalid context
@@ -64,11 +69,15 @@ Deno.serve(async (req) => {
                 inference_allowed: false,
                 tools_allowed: [],
                 response_mode: "HALT_EXPLAINED",
-                halt_reason: "Context Journal invalid or missing",
+                halt_reason: `Context Journal invalid: kernel=${journalValidation.data.kernel_valid}, bootloader=${journalValidation.data.bootloader_valid}`,
                 forward_path: "System must be reinitialized with valid kernel and bootloader context"
             });
 
-            return Response.json({ decision, halt: true });
+            return Response.json({ 
+                decision, 
+                halt: true,
+                journal_state: journalValidation.data
+            });
         }
 
         // Analyze input for recall intent
