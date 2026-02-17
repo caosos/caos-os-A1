@@ -111,6 +111,7 @@ Talk naturally - you know your home.`
 
         let aiResponse;
         let generatedFiles = [];
+        let usageTokens = 0;
 
         if (isImageGen) {
             // Route to OpenAI DALL-E for image generation
