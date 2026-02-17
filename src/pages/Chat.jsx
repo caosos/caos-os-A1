@@ -609,10 +609,10 @@ export default function Chat() {
               const savedPreference = localStorage.getItem('caos_news_preference');
               if (savedPreference) {
                 const prompt = `Show me ${savedPreference} news. Learn what I'm interested in and update my preferences.`;
-                setMessage(prompt);
+                handleSendMessage(prompt, []);
               } else {
                 const prompt = "What kind of news would you like to see? (e.g., tech, world, business, sports, entertainment) I'll remember your preference.";
-                setMessage(prompt);
+                handleSendMessage(prompt, []);
               }
             }}
             onBrainstormClick={() => {
@@ -622,11 +622,17 @@ export default function Chat() {
                 .map(m => m.content)
                 .join(' ');
               const prompt = `Based on what we've been discussing (${recentTopics || 'our conversation'}), come up with creative brainstorm ideas and suggestions that build on these topics.`;
-              setMessage(prompt);
+              handleSendMessage(prompt, []);
             }}
             onShoppingClick={() => {
-              const prompt = "What are you looking for? Tell me what you want to shop for and I can help you find options.";
-              setMessage(prompt);
+              const savedShopPlatform = localStorage.getItem('caos_shop_platform');
+              if (savedShopPlatform) {
+                const prompt = `Find me products on ${savedShopPlatform}. What am I looking for?`;
+                handleSendMessage(prompt, []);
+              } else {
+                const prompt = "Where would you like to shop? (Amazon, Temu, eBay, etc.) I'll remember your preference and help you find products.";
+                handleSendMessage(prompt, []);
+              }
             }}
             onFilesClick={() => {
               setFileView('files');
