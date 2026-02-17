@@ -513,6 +513,7 @@ export default function Chat() {
           conversation_id: conversationId,
           role: 'assistant',
           content: reply,
+          token_count: data.usage_tokens || 0,
           generated_files: data.generatedFiles || [],
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
