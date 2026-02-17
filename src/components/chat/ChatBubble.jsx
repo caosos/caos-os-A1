@@ -260,6 +260,22 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     return text.match(urlRegex) || [];
   };
 
+  const getYouTubeId = (url) => {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+  };
+
+  const getVimeoId = (url) => {
+    const regExp = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^/]*)\/videos\/|album\/(\d+)\/video\/|)(\d+)(?:$|\/|\?)/;
+    const match = url.match(regExp);
+    return match ? match[3] : null;
+  };
+
+  const isVideoUrl = (url) => {
+    return getYouTubeId(url) || getVimeoId(url);
+  };
+
   const formatDateTime = (timestamp) => {
     return moment(timestamp).format('MMM D, YYYY • h:mm A');
   };
