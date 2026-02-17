@@ -41,6 +41,20 @@ export default function Chat() {
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
   const navigate = useNavigate();
+  const [messageInputValue, setMessageInputValue] = useState('');
+
+  // Helper to set message in input
+  const setMessage = (text) => {
+    setMessageInputValue(text);
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[placeholder="Type a message..."]');
+      if (textarea) {
+        textarea.focus();
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 168) + 'px';
+      }
+    }, 0);
+  };
   
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
   const isGameMode = localStorage.getItem('caos_game_mode') === 'true';
