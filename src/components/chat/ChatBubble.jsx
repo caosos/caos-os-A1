@@ -1,12 +1,98 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2 } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
 import CopyBlock from './CopyBlock';
+
+const FunctionDisplay = ({ toolCall }) => {
+  const [expanded, setExpanded] = useState(false);
+  const name = toolCall?.name || 'Function';
+  const status = toolCall?.status || 'completed';
+  const results = toolCall?.results;
+  
+  const parsedResults = (() => {
+    if (!results) return null;
+    try {
+      return typeof results === 'string' ? JSON.parse(results) : results;
+    } catch {
+      return results;
+    }
+  })();
+  
+  const isError = results && (
+    (typeof results === 'string' && /error|failed/i.test(results)) ||
+    (parsedResults?.success === false)
+  );
+  
+  const statusConfig = {
+    pending: { icon: Clock, color: 'text-slate-400', text: 'Pending' },
+    running: { icon: Loader2, color: 'text-slate-500', text: 'Running...', spin: true },
+    completed: isError ? 
+      { icon: AlertCircle, color: 'text-red-500', text: 'Failed' } : 
+      { icon: CheckCircle2, color: 'text-green-600', text: 'Success' },
+    success: { icon: CheckCircle2, color: 'text-green-600', text: 'Success' },
+    failed: { icon: AlertCircle, color: 'text-red-500', text: 'Failed' }
+  }[status] || { icon: Zap, color: 'text-slate-500', text: '' };
+  
+  const Icon = statusConfig.icon;
+  const formattedName = name.split('.').reverse().join(' ').toLowerCase();
+  
+  return (
+    <div className="mt-2 text-xs">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+          expanded ? "bg-white/5 border-white/30" : "bg-white/[0.02] border-white/10"
+        }`}
+      >
+        <Icon className={`h-3 w-3 ${statusConfig.color} ${statusConfig.spin ? 'animate-spin' : ''}`} />
+        <span className="text-white/70">{formattedName}</span>
+        {statusConfig.text && (
+          <span className={`text-white/50 ${isError ? 'text-red-400' : ''}`}>
+            • {statusConfig.text}
+          </span>
+        )}
+        {!statusConfig.spin && (toolCall.arguments_string || results) && (
+          <ChevronRight className={`h-3 w-3 text-white/40 transition-transform ml-auto ${
+            expanded ? 'rotate-90' : ''
+          }`} />
+        )}
+      </button>
+      
+      {expanded && !statusConfig.spin && (
+        <div className="mt-1.5 ml-3 pl-3 border-l-2 border-white/20 space-y-2">
+          {toolCall.arguments_string && (
+            <div>
+              <div className="text-xs text-white/50 mb-1">Parameters:</div>
+              <pre className="bg-white/5 rounded-md p-2 text-xs text-white/70 whitespace-pre-wrap">
+                {(() => {
+                  try {
+                    return JSON.stringify(JSON.parse(toolCall.arguments_string), null, 2);
+                  } catch {
+                    return toolCall.arguments_string;
+                  }
+                })()}
+              </pre>
+            </div>
+          )}
+          {parsedResults && (
+            <div>
+              <div className="text-xs text-white/50 mb-1">Result:</div>
+              <pre className="bg-white/5 rounded-md p-2 text-xs text-white/70 whitespace-pre-wrap max-h-48 overflow-auto">
+                {typeof parsedResults === 'object' ? 
+                  JSON.stringify(parsedResults, null, 2) : parsedResults}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
@@ -512,9 +598,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           {renderContent()}
           {message.timestamp && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
-              <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
-                {formatDateTime(message.timestamp)}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
+                  {formatDateTime(message.timestamp)}
+                </p>
+                {!isUser && message.response_time_ms && (
+                  <span className="text-xs text-green-400/70">
+                    • {(message.response_time_ms / 1000).toFixed(1)}s
+                  </span>
+                )}
+              </div>
               {!isUser && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
@@ -544,13 +637,22 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     title="Email this"
                   >
                     <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                    </button>
+                    </div>
+                    )}
+                    </div>
+                    )}
 
-              {/* Reactions */}
+                    {/* Tool Calls */}
+                    {message.tool_calls?.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                    {message.tool_calls.map((toolCall, idx) => (
+                    <FunctionDisplay key={idx} toolCall={toolCall} />
+                    ))}
+                    </div>
+                    )}
+
+                    {/* Reactions */}
               {message.reactions && message.reactions.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
               {message.reactions.map((reaction, idx) => (

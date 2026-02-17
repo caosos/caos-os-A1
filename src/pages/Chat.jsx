@@ -324,6 +324,13 @@ export default function Chat() {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
     
     setIsLoading(true);
+    const startTime = Date.now();
+    
+    // Timeout handler
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      toast.error('Request timed out. Please try again.');
+    }, 60000); // 60 second timeout
 
     try {
       let conversationId = currentConversationId;
@@ -429,6 +436,9 @@ export default function Chat() {
         limit: 20
       });
 
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
+
       if (!data) throw new Error('No response from server');
       const reply = data.reply || data.response || data.text || '';
 
@@ -447,6 +457,8 @@ export default function Chat() {
           role: 'assistant',
           content: reply,
           generated_files: data.generatedFiles || [],
+          tool_calls: data.tool_calls || [],
+          response_time_ms: responseTime,
           timestamp: new Date().toISOString()
         };
 
@@ -471,6 +483,8 @@ export default function Chat() {
           role: 'assistant',
           content: reply,
           generated_files: data.generatedFiles || [],
+          tool_calls: data.tool_calls || [],
+          response_time_ms: responseTime,
           timestamp: new Date().toISOString()
         });
 
@@ -498,8 +512,23 @@ export default function Chat() {
         });
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Send error:', error);
       toast.error(error.message || 'Failed to send message');
+
+      // Remove temporary message on error
+      if (isGuestMode) {
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: (prev[conversationId] || []).filter(m => !m.id.startsWith('temp_'))
+        }));
+        localStorage.setItem('caos_guest_messages', JSON.stringify(messages));
+      } else {
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: (prev[conversationId] || []).filter(m => !m.id.startsWith('temp_'))
+        }));
+      }
     } finally {
       setIsLoading(false);
     }
