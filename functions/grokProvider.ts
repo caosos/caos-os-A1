@@ -117,8 +117,16 @@ Deno.serve(async (req) => {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Grok API error: ${error.error?.message || response.statusText}`);
+            const errorText = await response.text();
+            console.error('Grok API error response:', errorText);
+            let errorMessage = response.statusText;
+            try {
+                const error = JSON.parse(errorText);
+                errorMessage = error.error?.message || errorMessage;
+            } catch (e) {
+                errorMessage = errorText;
+            }
+            throw new Error(`Grok API error (${response.status}): ${errorMessage}`);
         }
 
         let result = await response.json();
