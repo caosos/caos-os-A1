@@ -63,9 +63,11 @@ AI reads this every conversation automatically.
       setSaving(true);
 
       // Check if file already exists
+      const user = await base44.auth.me();
       const existingFiles = await base44.entities.UserFile.filter({
         name: 'permanent_memory.md',
-        folder_path: '/'
+        folder_path: '/',
+        created_by: user.email
       });
 
       // Create blob and file
