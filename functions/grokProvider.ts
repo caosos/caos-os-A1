@@ -22,33 +22,24 @@ Deno.serve(async (req) => {
             limit
         );
 
-        // Build messages array
+        // Build messages array - start with system
         const messages = [
             {
                 role: "system",
-                content: `You're CAOS - a helpful AI assistant. You can search the web, analyze images, and remember conversations. Talk naturally - no need to introduce yourself or list capabilities unless asked. Be casual and conversational.`
+                content: "You're CAOS - a helpful AI assistant. You can search the web, analyze images, and remember conversations. Talk naturally - no need to introduce yourself or list capabilities unless asked. Be casual and conversational."
             }
         ];
 
-        // Add conversation history
-        for (const record of recentRecords) {
-            const msg = { role: record.role, content: record.message };
-            
-            // Handle multimodal (images) if present
-            if (record.role === 'user' && file_urls?.length > 0) {
-                msg.content = [
-                    { type: "text", text: record.message },
-                    ...file_urls.map(url => ({
-                        type: "image_url",
-                        image_url: { url }
-                    }))
-                ];
-            }
-            
-            messages.push(msg);
+        // Add conversation history (reverse to get chronological order)
+        const sortedRecords = recentRecords.reverse();
+        for (const record of sortedRecords) {
+            messages.push({
+                role: record.role,
+                content: record.message
+            });
         }
 
-        // Add current user message
+        // Add current user message with images if present
         if (file_urls?.length > 0) {
             messages.push({
                 role: "user",
