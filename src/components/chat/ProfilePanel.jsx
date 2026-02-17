@@ -86,6 +86,8 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
     return moment().diff(moment(dob), 'years');
   };
   return (
+    <>
+    {showMemoryPanel && <MemoryPanel onClose={() => setShowMemoryPanel(false)} />}
     <AnimatePresence>
       {isOpen && (
         <>
