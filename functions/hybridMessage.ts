@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
 
         // Detect task type - route to OpenAI for file/image generation
         const lowerInput = input.toLowerCase();
+        const hasFileExtension = /\.(txt|json|md|pdf|csv|log|xml|yaml|html|css|js|py)[\s\b]/.test(lowerInput);
         const isFileGen = lowerInput.includes('create file') || 
                          lowerInput.includes('create a file') ||
                          lowerInput.includes('generate file') ||
@@ -37,7 +38,9 @@ Deno.serve(async (req) => {
                          (lowerInput.includes('save') && (lowerInput.includes('txt') || lowerInput.includes('json') || lowerInput.includes('pdf'))) ||
                          lowerInput.includes('export') ||
                          lowerInput.includes('generate a text') ||
-                         lowerInput.includes('make a file');
+                         lowerInput.includes('make a file') ||
+                         (lowerInput.includes('create') && hasFileExtension) ||
+                         (lowerInput.includes('generate') && hasFileExtension);
         const isImageGen = lowerInput.includes('create image') || 
                           lowerInput.includes('create an image') ||
                           lowerInput.includes('generate image') ||
