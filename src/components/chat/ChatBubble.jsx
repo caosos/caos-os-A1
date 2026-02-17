@@ -7,6 +7,7 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
 import CopyBlock from './CopyBlock';
+import LinkPreview from './LinkPreview';
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);
