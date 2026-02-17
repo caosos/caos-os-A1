@@ -203,7 +203,7 @@ export default function ThreadList({
                               {moment(conv.last_message_time || conv.created_date).fromNow()}
                             </p>
                             <div className="mt-2 text-xs">
-                              <TokenMeter tokens={(messages[conv.id] || []).length * 800} />
+                              <TokenMeter messages={messages[conv.id] || []} />
                             </div>
                           </div>
                           
