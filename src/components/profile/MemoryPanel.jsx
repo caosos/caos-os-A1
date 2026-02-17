@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, X, FileText } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 
