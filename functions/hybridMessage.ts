@@ -261,7 +261,7 @@ ${args.content}
                     type: "function",
                     function: {
                         name: "recall_memory",
-                        description: "Search through past conversation history",
+                        description: "Search ALL past conversations across ALL sessions, not just current",
                         parameters: {
                             type: "object",
                             properties: {
@@ -269,6 +269,34 @@ ${args.content}
                                 limit: { type: "number", description: "Max results", default: 10 }
                             },
                             required: ["query"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "read_app_file",
+                        description: "Read your own app files - pages, components, functions, entities. Know thyself.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                file_path: { type: "string", description: "Path like 'pages/Chat', 'components/chat/ChatInput', 'functions/hybridMessage', 'entities/Record.json'" }
+                            },
+                            required: ["file_path"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "list_app_structure",
+                        description: "List all pages, components, or functions in your environment",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                type: { type: "string", enum: ["pages", "components", "functions", "entities"], description: "What to list" }
+                            },
+                            required: ["type"]
                         }
                     }
                 }
@@ -311,23 +339,50 @@ ${args.content}
                             add_context_from_internet: true
                         });
                     } else if (toolCall.function.name === 'recall_memory') {
+                        // Search ACROSS ALL SESSIONS for this user
                         const records = await base44.asServiceRole.entities.Record.filter(
-                            { session_id, status: "active" },
+                            { lane_id: user.email, status: "active" },
                             '-created_date',
-                            args.limit * 3
+                            args.limit * 5
                         );
                         const matches = records.filter(r => 
                             r.message.toLowerCase().includes(args.query.toLowerCase())
                         ).slice(0, args.limit);
-                        
+
                         toolResult = {
                             found: matches.length,
                             messages: matches.map(m => ({
                                 role: m.role,
                                 content: m.message,
-                                timestamp: m.ts_snapshot_iso
+                                timestamp: m.ts_snapshot_iso,
+                                session: m.session_id
                             }))
                         };
+                    } else if (toolCall.function.name === 'read_app_file') {
+                        // Read file from the app itself
+                        try {
+                            const filePath = args.file_path.replace(/^\/+/, '').replace(/\.jsx?$/, '');
+                            const fileContent = await Deno.readTextFile(`/app/${filePath}.jsx`).catch(() => 
+                                Deno.readTextFile(`/app/${filePath}.js`).catch(() => 
+                                    Deno.readTextFile(`/app/${filePath}.json`)
+                                )
+                            );
+                            toolResult = { path: args.file_path, content: fileContent.substring(0, 8000) };
+                        } catch (error) {
+                            toolResult = { error: `Cannot read file: ${error.message}` };
+                        }
+                    } else if (toolCall.function.name === 'list_app_structure') {
+                        // List directory structure
+                        try {
+                            const basePath = `/app/${args.type}`;
+                            const entries = [];
+                            for await (const entry of Deno.readDir(basePath)) {
+                                entries.push(entry.name);
+                            }
+                            toolResult = { type: args.type, files: entries };
+                        } catch (error) {
+                            toolResult = { error: `Cannot list: ${error.message}` };
+                        }
                     }
 
                     toolMessages.push({
