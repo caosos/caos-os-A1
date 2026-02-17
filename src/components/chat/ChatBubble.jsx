@@ -494,7 +494,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           </div>
         )}
         
-        {content && content.trim() && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{content.trim()}</p>}
+        {cleanContent && cleanContent.trim() && <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{cleanContent.trim()}</p>}
         
         {/* Copy Blocks */}
         {copyBlocks.map((block, index) => (
