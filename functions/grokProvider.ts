@@ -15,6 +15,10 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input, session_id, file_urls, limit = 20 } = body;
 
+        if (!GROK_API_KEY) {
+            throw new Error('XAI_API_KEY not configured. Please set it in app settings.');
+        }
+
         // Load conversation history
         const recentRecords = await base44.asServiceRole.entities.Record.filter(
             { session_id, status: "active" },
