@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
         // Call Grok
         const requestBody = {
-            model: 'grok-4.1',
+            model: 'grok-beta',
             messages,
             tools,
             tool_choice: 'auto',
