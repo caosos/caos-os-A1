@@ -1,6 +1,8 @@
 import React from 'react';
 
-export default function TokenMeter({ tokens = 0, maxTokens = 128000 }) {
+export default function TokenMeter({ messages = [], maxTokens = 128000 }) {
+  // Calculate actual tokens from Record entity token_count if available
+  const tokens = messages.reduce((sum, msg) => sum + (msg.token_count || 0), 0);
   const percentage = (tokens / maxTokens) * 100;
   
   let colorClass = 'bg-green-500';
