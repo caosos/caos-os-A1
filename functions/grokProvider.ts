@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
         if (modelsResponse.ok) {
             const modelsData = await modelsResponse.json();
             console.log('Available models:', JSON.stringify(modelsData, null, 2));
+        } else {
+            console.log('Models API error:', modelsResponse.status, await modelsResponse.text());
         }
 
         // Call Grok
