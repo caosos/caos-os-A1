@@ -422,7 +422,7 @@ export default function Chat() {
         }]
       }));
 
-      const { data } = await base44.functions.invoke('caosMessage', {
+      const { data } = await base44.functions.invoke('grokProvider', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
