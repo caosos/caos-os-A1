@@ -106,18 +106,22 @@ Deno.serve(async (req) => {
         ];
 
         // Call Grok
+        const requestBody = {
+            model: 'grok-beta',
+            messages,
+            tools,
+            tool_choice: 'auto'
+        };
+
+        console.log('Calling Grok with:', JSON.stringify(requestBody, null, 2));
+
         let response = await fetch(GROK_API_URL, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${GROK_API_KEY}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                model: 'grok-beta',
-                messages,
-                tools,
-                tool_choice: 'auto'
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
