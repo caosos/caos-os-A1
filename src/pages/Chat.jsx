@@ -155,7 +155,21 @@ export default function Chat() {
   }, [currentMessages.length]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToTop = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollByAmount = (amount) => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollBy({ top: amount, behavior: 'smooth' });
+    }
   };
 
   const handleJumpToMessage = (messageId) => {
