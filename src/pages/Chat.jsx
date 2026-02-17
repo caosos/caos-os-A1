@@ -867,6 +867,8 @@ export default function Chat() {
                   lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
                   onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
                   multiAgentMode={multiAgentMode}
+                  messageValue={messageInputValue}
+                  onMessageChange={setMessageInputValue}
                 />
               </div>
 
