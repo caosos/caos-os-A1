@@ -4,6 +4,7 @@ import { X, MessageSquare, Trash2, Edit2, Check, Search } from 'lucide-react';
 import moment from 'moment';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import TokenMeter from './TokenMeter';
 
 export default function ThreadList({ 
   isOpen, 
