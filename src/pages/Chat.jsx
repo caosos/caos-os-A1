@@ -325,6 +325,7 @@ export default function Chat() {
     
     setIsLoading(true);
     const startTime = Date.now();
+    let conversationId = null;
     
     // Timeout handler
     const timeoutId = setTimeout(() => {
@@ -333,7 +334,7 @@ export default function Chat() {
     }, 60000); // 60 second timeout
 
     try {
-      let conversationId = currentConversationId;
+      conversationId = currentConversationId;
       
       if (!conversationId) {
         const title = content ? content.substring(0, 50) : 'File attachment';
