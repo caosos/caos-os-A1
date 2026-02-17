@@ -7,6 +7,7 @@ import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import moment from 'moment';
 import FileManager from '../files/FileManager';
+import MemoryPanel from '@/components/profile/MemoryPanel';
 
 export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
   const [rememberConversations, setRememberConversations] = useState(true);
@@ -14,7 +15,8 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   const [birthday, setBirthday] = useState('');
   const [availableTokens, setAvailableTokens] = useState(0);
   const [gameModeEnabled, setGameModeEnabled] = useState(false);
-  const [activeView, setActiveView] = useState('profile'); // 'profile', 'desktop', 'files', 'folders', 'photos'
+  const [activeView, setActiveView] = useState('profile'); // 'profile', 'desktop', 'files', 'folders', 'photos', 'memory'
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('caos_remember_conversations');
