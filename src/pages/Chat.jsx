@@ -432,11 +432,6 @@ export default function Chat() {
       if (!data) throw new Error('No response from server');
       const reply = data.reply || data.response || data.text || '';
 
-      // Handle generated files if any
-      if (data.generatedFiles && data.generatedFiles.length > 0) {
-        setGeneratedFiles(prev => [...prev, ...data.generatedFiles]);
-      }
-
       if (isGuestMode) {
         const userMsg = {
           id: 'msg_' + Date.now(),
@@ -451,6 +446,7 @@ export default function Chat() {
           conversation_id: conversationId,
           role: 'assistant',
           content: reply,
+          generated_files: data.generatedFiles || [],
           timestamp: new Date().toISOString()
         };
 
@@ -474,6 +470,7 @@ export default function Chat() {
           conversation_id: conversationId,
           role: 'assistant',
           content: reply,
+          generated_files: data.generatedFiles || [],
           timestamp: new Date().toISOString()
         });
 
@@ -755,36 +752,7 @@ export default function Chat() {
                 />
               </div>
 
-              {generatedFiles.length > 0 && (
-                <div className="pointer-events-auto max-w-4xl mx-auto px-4 mt-3">
-                  <div className="bg-[#0f1f3d]/95 backdrop-blur-xl border border-white/10 rounded-lg p-3">
-                    <div className="text-xs text-white/50 mb-2 flex items-center gap-2">
-                      <span>📁</span> Generated Files
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {generatedFiles.map((file, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            const blob = new Blob([file.content], { type: 'text/plain' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = file.name;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/20 rounded px-3 py-2 text-left transition-colors group"
-                        >
-                          <span className="text-blue-400">📄</span>
-                          <span className="text-white/80 text-sm flex-1 truncate">{file.name}</span>
-                          <span className="text-white/40 text-xs group-hover:text-white/60">Download</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         )}
