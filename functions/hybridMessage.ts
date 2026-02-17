@@ -559,7 +559,7 @@ Talk naturally - you know your home.`
         return Response.json({
             reply: aiResponse,
             session: session_id,
-            generatedFiles: generatedFiles.length > 0 ? generatedFiles : undefined
+            generatedFiles: generatedFiles
         });
 
     } catch (error) {
