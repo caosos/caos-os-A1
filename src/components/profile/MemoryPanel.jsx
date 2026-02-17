@@ -154,9 +154,25 @@ AI reads this every conversation automatically.
             </>
           ) : (
             <>
-              <pre className="flex-1 p-4 bg-white/5 border border-white/10 text-white/90 overflow-auto font-mono text-sm whitespace-pre-wrap break-words">
-                {memoryContent}
-              </pre>
+              <div className="flex-1 p-4 bg-white/5 border border-white/10 text-white/90 overflow-auto text-sm">
+                <ReactMarkdown 
+                  className="prose prose-sm prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                  components={{
+                    h1: ({ children }) => <h1 className="text-lg font-bold mt-4 mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-1.5">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-bold mt-2.5 mb-1">{children}</h3>,
+                    p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+                    li: ({ children }) => <li className="mb-0">{children}</li>,
+                    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-white/80">{children}</em>,
+                    code: ({ children }) => <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs">{children}</code>,
+                  }}
+                >
+                  {memoryContent}
+                </ReactMarkdown>
+              </div>
               <div className="flex gap-2 p-4 border-t border-white/10">
                 <button
                   onClick={() => setEditing(true)}
