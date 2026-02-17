@@ -583,7 +583,8 @@ Talk naturally - you know your home.`
         return Response.json({
             reply: aiResponse,
             session: session_id,
-            generatedFiles: generatedFiles
+            generatedFiles: generatedFiles,
+            usage_tokens: usageTokens
         });
 
     } catch (error) {
