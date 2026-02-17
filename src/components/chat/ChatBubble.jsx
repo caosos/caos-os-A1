@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -202,6 +202,27 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success('Opening email client...');
   };
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    toast.success('Copied to clipboard');
+  };
+
+  const handleReadAloud = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      window.speechSynthesis.speak(utterance);
+      toast.success('Reading aloud...');
+    } else {
+      toast.error('Text-to-speech not supported');
+    }
+  };
+
+  const handleRegenerate = () => {
+    // Trigger regeneration through parent component
+    toast.info('Regenerate feature coming soon');
+  };
+
   const extractFilename = (langString) => {
     if (langString && langString.startsWith('filename:')) {
       return langString.replace('filename:', '');
@@ -398,24 +419,50 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             onContextMenu={handleTextSelection}
           >
-          {!isUser && isEmailableContent(message.content) && (
-            <button
-              onClick={handleEmailContent}
-              className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all opacity-0 group-hover:opacity-100"
-              title="Email this content"
-            >
-              <Mail className="w-3.5 h-3.5 text-white" />
-            </button>
-          )}
+
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
           )}
           {renderContent()}
           {message.timestamp && (
-            <p className={`text-xs mt-1.5 ${isUser ? 'text-white/60' : 'text-white/40'}`}>
-              {formatDateTime(message.timestamp)}
+            <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
+              <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
+                {formatDateTime(message.timestamp)}
               </p>
+              {!isUser && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={handleCopy}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Copy"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                  </button>
+                  <button
+                    onClick={handleRegenerate}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Regenerate"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                  </button>
+                  <button
+                    onClick={handleReadAloud}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Read aloud"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                  </button>
+                  <button
+                    onClick={handleEmailContent}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Email this"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                  </button>
+                </div>
               )}
+            </div>
+          )}
 
               {/* Reactions */}
               {message.reactions && message.reactions.length > 0 && (
