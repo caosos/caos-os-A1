@@ -596,15 +596,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
           )}
           {renderContent()}
-          {message.timestamp && (
+          {(message.timestamp || (!isUser && message.response_time_ms)) && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
               <div className="flex items-center gap-2">
-                <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
-                  {formatDateTime(message.timestamp)}
-                </p>
+                {message.timestamp && (
+                  <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
+                    {formatDateTime(message.timestamp)}
+                  </p>
+                )}
                 {!isUser && message.response_time_ms && (
-                  <span className="text-xs text-green-400/70">
-                    • {(message.response_time_ms / 1000).toFixed(1)}s
+                  <span className="text-xs text-green-400/70 flex items-center gap-1">
+                    {message.timestamp && <span>•</span>}
+                    ⏱️ {(message.response_time_ms / 1000).toFixed(1)}s
                   </span>
                 )}
               </div>

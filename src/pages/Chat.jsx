@@ -331,7 +331,7 @@ export default function Chat() {
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
       toast.error('Request timed out. Please try again.');
-    }, 60000); // 60 second timeout
+    }, 120000); // 120 second timeout for file generation
 
     try {
       conversationId = currentConversationId;
