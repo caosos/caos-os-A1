@@ -246,9 +246,23 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                <button
+                  onClick={() => setShowMemoryPanel(true)}
+                  className="w-full flex items-center justify-between p-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 hover:border-white/20 transition-colors text-left"
+                >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Brain className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-xs">Permanent Memories</p>
+                      <p className="text-white/50 text-[10px]">View & edit</p>
+                    </div>
+                  </div>
+                  <span className="text-white/30 text-xs flex-shrink-0 ml-2">→</span>
+                </button>
+
+                <div className="flex items-center justify-between p-2.5 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Brain className="w-4 h-4 text-green-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-white text-xs">Remember Conversations</p>
                       <p className="text-white/50 text-[10px]">Enable memory</p>
