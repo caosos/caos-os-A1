@@ -222,12 +222,16 @@ Talk naturally - you know your home.`
             if (message.tool_calls) {
                 for (const toolCall of message.tool_calls) {
                     const args = JSON.parse(toolCall.function.arguments);
-                    
+
                     if (toolCall.function.name === 'create_text_file') {
+                        // Convert string content to Blob then File
+                        const blob = new Blob([args.content], { type: 'text/plain' });
+                        const file = new File([blob], args.filename, { type: 'text/plain' });
+
                         const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ 
-                            file: args.content
+                            file
                         });
-                        
+
                         // Save to UserFile entity
                         await base44.asServiceRole.entities.UserFile.create({
                             name: args.filename,
@@ -237,7 +241,7 @@ Talk naturally - you know your home.`
                             mime_type: 'text/plain',
                             size: args.content.length
                         });
-                        
+
                         generatedFiles.push({
                             name: args.filename,
                             url: uploadResult.file_url,
@@ -247,11 +251,13 @@ Talk naturally - you know your home.`
                     } else if (toolCall.function.name === 'create_pdf') {
                         // Generate PDF using Core integration
                         const pdfContent = `Title: ${args.title || 'Document'}\n\n${args.content}`;
-                        
+                        const blob = new Blob([pdfContent], { type: 'application/pdf' });
+                        const file = new File([blob], args.filename, { type: 'application/pdf' });
+
                         const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ 
-                            file: pdfContent
+                            file
                         });
-                        
+
                         // Save to UserFile entity
                         await base44.asServiceRole.entities.UserFile.create({
                             name: args.filename,
@@ -261,7 +267,7 @@ Talk naturally - you know your home.`
                             mime_type: 'application/pdf',
                             size: pdfContent.length
                         });
-                        
+
                         generatedFiles.push({
                             name: args.filename,
                             url: uploadResult.file_url,
