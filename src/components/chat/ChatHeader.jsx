@@ -149,14 +149,24 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
           <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
         </div>
 
-        {/* Right - Thread Title */}
-        {currentConversation && (
-          <div className="text-right max-w-[120px] sm:max-w-[200px] ml-auto pointer-events-none">
-            <p className="text-white/90 text-xs font-medium truncate">
-              {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
-            </p>
-          </div>
-        )}
+        {/* Right - Thread Title and Files */}
+        <div className="flex items-center gap-2 ml-auto">
+          {sessionFilesCount > 0 && (
+            <button
+              onClick={() => onShowFiles('files')}
+              className="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded text-xs text-blue-300 transition-colors flex items-center gap-1.5"
+            >
+              📁 {sessionFilesCount}
+            </button>
+          )}
+          {currentConversation && (
+            <div className="text-right max-w-[120px] sm:max-w-[200px] pointer-events-none">
+              <p className="text-white/90 text-xs font-medium truncate">
+                {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
+              </p>
+            </div>
+          )}
+        </div>
         </div>
 
         <AlertDialog open={showGuestLogoutDialog} onOpenChange={setShowGuestLogoutDialog}>
