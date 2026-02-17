@@ -105,6 +105,20 @@ Deno.serve(async (req) => {
             }
         ];
 
+        // First, check available models
+        console.log('Checking available models...');
+        const modelsResponse = await fetch('https://api.x.ai/v1/models', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${GROK_API_KEY}`
+            }
+        });
+        
+        if (modelsResponse.ok) {
+            const modelsData = await modelsResponse.json();
+            console.log('Available models:', JSON.stringify(modelsData, null, 2));
+        }
+
         // Call Grok
         const requestBody = {
             model: 'grok-2-latest',
