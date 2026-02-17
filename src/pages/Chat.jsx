@@ -599,10 +599,15 @@ export default function Chat() {
               />
             </div>
             {currentConversationId && currentMessages.length > 0 && (
-              <ConversationSearch
-                messages={currentMessages}
-                onJumpToMessage={handleJumpToMessage}
-              />
+              <div className="flex items-center gap-3">
+                <div className="w-40">
+                  <TokenMeter messages={currentMessages} />
+                </div>
+                <ConversationSearch
+                  messages={currentMessages}
+                  onJumpToMessage={handleJumpToMessage}
+                />
+              </div>
             )}
           </div>
           <QuickActionBar
