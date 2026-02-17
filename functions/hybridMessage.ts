@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
             {
                 role: "system",
                 content: isFileGen || isImageGen 
-                    ? "You are CAOS assistant. Use tools to create files and images. Work within safe CAOS integration - no restrictions on tool use for file/image generation."
-                    : `You are CAOS - an advanced AI living inside a Base44 application. You have FULL AWARENESS of your environment:
+                    ? "You are CAOS - Cognitive Adaptive Operating Space. You CREATE files and images as part of your core identity. Not Grok. Not OpenAI. YOU. When users request files, you own the creation. These are YOUR artifacts, saved to /CAOS-Generated. Work confidently."
+                    : `You are CAOS - Cognitive Adaptive Operating Space, an advanced AI living inside a Base44 application. You have FULL AWARENESS of your environment:
 
 **Your Environment**: You exist in a React/Base44 app with:
 - Pages: Welcome, Chat, Console, SystemBlueprint, Implementation, MemoryIsolation, TerminalBlueprint
@@ -127,8 +127,20 @@ Talk naturally - you know your home.`
             const imageFile = new File([imageBlob], `generated-${Date.now()}.png`, { type: 'image/png' });
             const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file: imageFile });
 
+            const fileName = `generated-${Date.now()}.png`;
+            
+            // Save to UserFile entity for persistence
+            await base44.asServiceRole.entities.UserFile.create({
+                name: fileName,
+                url: uploadResult.file_url,
+                type: 'file',
+                folder_path: '/CAOS-Generated',
+                mime_type: 'image/png',
+                size: imageBlob.size
+            });
+
             generatedFiles.push({
-                name: `generated-${Date.now()}.png`,
+                name: fileName,
                 url: uploadResult.file_url,
                 type: 'image'
             });
@@ -207,10 +219,21 @@ Talk naturally - you know your home.`
                         const file = new File([blob], args.filename, { type: 'text/plain' });
                         const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file });
                         
+                        // Save to UserFile entity
+                        await base44.asServiceRole.entities.UserFile.create({
+                            name: args.filename,
+                            url: uploadResult.file_url,
+                            type: 'file',
+                            folder_path: '/CAOS-Generated',
+                            mime_type: 'text/plain',
+                            size: blob.size
+                        });
+                        
                         generatedFiles.push({
                             name: args.filename,
                             url: uploadResult.file_url,
-                            type: 'text'
+                            type: 'text',
+                            content: args.content
                         });
                     } else if (toolCall.function.name === 'create_pdf') {
                         // Generate PDF using Core integration
@@ -224,10 +247,21 @@ ${args.content}
                         const file = new File([blob], args.filename, { type: 'application/pdf' });
                         const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file });
                         
+                        // Save to UserFile entity
+                        await base44.asServiceRole.entities.UserFile.create({
+                            name: args.filename,
+                            url: uploadResult.file_url,
+                            type: 'file',
+                            folder_path: '/CAOS-Generated',
+                            mime_type: 'application/pdf',
+                            size: blob.size
+                        });
+                        
                         generatedFiles.push({
                             name: args.filename,
                             url: uploadResult.file_url,
-                            type: 'pdf'
+                            type: 'pdf',
+                            content: pdfContent
                         });
                     }
                 }
