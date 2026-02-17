@@ -12,6 +12,7 @@ import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
 import ProfilePanel from '@/components/chat/ProfilePanel';
 import ContinuityToken from '@/components/chat/ContinuityToken';
 import ConversationSearch from '@/components/chat/ConversationSearch';
+import QuickActionBar from '@/components/chat/QuickActionBar';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
 import GameView from '@/components/game/GameView';
 import { createPageUrl } from '@/utils';
