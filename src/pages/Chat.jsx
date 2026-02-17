@@ -15,6 +15,7 @@ import ConversationSearch from '@/components/chat/ConversationSearch';
 import QuickActionBar from '@/components/chat/QuickActionBar';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
 import GameView from '@/components/game/GameView';
+import TokenMeter from '@/components/chat/TokenMeter';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';

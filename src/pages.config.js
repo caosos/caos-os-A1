@@ -51,10 +51,10 @@ import Chat from './pages/Chat';
 import Console from './pages/Console';
 import Implementation from './pages/Implementation';
 import MemoryIsolation from './pages/MemoryIsolation';
+import News from './pages/News';
 import SystemBlueprint from './pages/SystemBlueprint';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
-import News from './pages/News';
 
 
 export const PAGES = {
@@ -62,10 +62,10 @@ export const PAGES = {
     "Console": Console,
     "Implementation": Implementation,
     "MemoryIsolation": MemoryIsolation,
+    "News": News,
     "SystemBlueprint": SystemBlueprint,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
-    "News": News,
 }
 
 export const pagesConfig = {
