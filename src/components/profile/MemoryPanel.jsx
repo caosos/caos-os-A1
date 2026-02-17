@@ -17,10 +17,13 @@ export default function MemoryPanel({ onClose }) {
   const loadMemory = async () => {
     try {
       setLoading(true);
+      // Get current user to filter by created_by
+      const user = await base44.auth.me();
       // Try to get existing memory file
       const files = await base44.entities.UserFile.filter({
         name: 'permanent_memory.md',
-        folder_path: '/'
+        folder_path: '/',
+        created_by: user.email
       });
 
       if (files.length > 0) {
