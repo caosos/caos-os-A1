@@ -472,10 +472,56 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     return (
       <div className="space-y-3">
-        {/* Link Previews */}
-        {urls.length > 0 && (
+        {/* Embedded Videos */}
+        {videoUrls.length > 0 && (
           <div className="space-y-2">
-            {urls.map((url, idx) => (
+            {videoUrls.map((url, idx) => {
+              const youtubeId = getYouTubeId(url);
+              const vimeoId = getVimeoId(url);
+
+              if (youtubeId) {
+                return (
+                  <div key={idx} className="w-full rounded-lg overflow-hidden">
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                      <iframe
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                        src={`https://www.youtube.com/embed/${youtubeId}`}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </div>
+                );
+              }
+
+              if (vimeoId) {
+                return (
+                  <div key={idx} className="w-full rounded-lg overflow-hidden">
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                      <iframe
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                        src={`https://player.vimeo.com/video/${vimeoId}`}
+                        frameBorder="0"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })}
+          </div>
+        )}
+
+        {/* Link Previews (non-video) */}
+        {otherUrls.length > 0 && (
+          <div className="space-y-2">
+            {otherUrls.map((url, idx) => (
               <LinkPreview key={idx} url={url} />
             ))}
           </div>
