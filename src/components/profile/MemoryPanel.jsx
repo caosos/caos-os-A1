@@ -57,7 +57,7 @@ AI reads this every conversation automatically.
   const saveMemory = async () => {
     try {
       setSaving(true);
-      
+
       // Check if file already exists
       const existingFiles = await base44.entities.UserFile.filter({
         name: 'permanent_memory.md',
@@ -88,6 +88,9 @@ AI reads this every conversation automatically.
 
       setEditing(false);
       toast.success('💾 Memory saved! AI will use this context.');
+
+      // Reload content to show what was saved
+      await loadMemory();
     } catch (error) {
       console.error('Error saving memory:', error);
       toast.error('Failed to save memory');
