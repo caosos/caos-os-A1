@@ -169,68 +169,96 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (isSpeaking && !isPaused) {
       window.speechSynthesis.pause();
       setIsPaused(true);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
     } else if (isPaused) {
       window.speechSynthesis.resume();
       setIsPaused(false);
+      // Resume progress tracking
+      if (utteranceRef.current && lastAssistantMessage) {
+        const messageLength = lastAssistantMessage.length;
+        const estimatedDuration = (messageLength / 15) / speechRate;
+        const currentProgress = speechProgress;
+        const remainingTime = estimatedDuration * ((100 - currentProgress) / 100);
+        const startTime = Date.now();
+        
+        progressInterval.current = setInterval(() => {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const additionalProgress = (elapsed / remainingTime) * (100 - currentProgress);
+          const progress = Math.min(currentProgress + additionalProgress, 99);
+          setSpeechProgress(progress);
+        }, 100);
+      }
     } else {
       if (lastAssistantMessage) {
-        // Cancel any existing speech
+        // Cancel any existing speech and wait a moment
         window.speechSynthesis.cancel();
         
-        const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
-        
-        // Apply selected voice - get voices fresh
-        const voices = window.speechSynthesis.getVoices();
-        if (selectedVoice) {
-          const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
-          if (voice) utterance.voice = voice;
-        }
-        
-        // Apply user settings
-        utterance.rate = speechRate;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        
-        const messageLength = lastAssistantMessage.length;
-        const estimatedDuration = (messageLength / 15) / speechRate; // ~15 chars per second
-        
-        utterance.onstart = () => {
-          setSpeechProgress(0);
-          const startTime = Date.now();
-          progressInterval.current = setInterval(() => {
-            const elapsed = (Date.now() - startTime) / 1000;
-            const progress = Math.min((elapsed / estimatedDuration) * 100, 99);
-            setSpeechProgress(progress);
-          }, 100);
-        };
-        
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          setIsPaused(false);
-          setSpeechProgress(0);
-          if (progressInterval.current) {
-            clearInterval(progressInterval.current);
-            progressInterval.current = null;
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
+          
+          // Get voices and apply selection
+          const voices = window.speechSynthesis.getVoices();
+          if (selectedVoice) {
+            const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
+            if (voice) {
+              utterance.voice = voice;
+            }
           }
-          utteranceRef.current = null;
-        };
-        
-        utterance.onerror = (e) => {
-          console.error('Speech error:', e);
-          setIsSpeaking(false);
+          
+          // Apply settings
+          utterance.rate = speechRate;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+          utterance.lang = 'en-US';
+          
+          const messageLength = lastAssistantMessage.length;
+          const estimatedDuration = (messageLength / 15) / speechRate;
+          
+          utterance.onstart = () => {
+            console.log('Speech started');
+            setSpeechProgress(0);
+            const startTime = Date.now();
+            progressInterval.current = setInterval(() => {
+              const elapsed = (Date.now() - startTime) / 1000;
+              const progress = Math.min((elapsed / estimatedDuration) * 100, 99);
+              setSpeechProgress(progress);
+            }, 100);
+          };
+          
+          utterance.onend = () => {
+            console.log('Speech ended');
+            setIsSpeaking(false);
+            setIsPaused(false);
+            setSpeechProgress(100);
+            setTimeout(() => setSpeechProgress(0), 500);
+            if (progressInterval.current) {
+              clearInterval(progressInterval.current);
+              progressInterval.current = null;
+            }
+            utteranceRef.current = null;
+          };
+          
+          utterance.onerror = (e) => {
+            console.error('Speech error:', e);
+            setIsSpeaking(false);
+            setIsPaused(false);
+            setSpeechProgress(0);
+            if (progressInterval.current) {
+              clearInterval(progressInterval.current);
+              progressInterval.current = null;
+            }
+            utteranceRef.current = null;
+          };
+          
+          utteranceRef.current = utterance;
+          setIsSpeaking(true);
           setIsPaused(false);
-          setSpeechProgress(0);
-          if (progressInterval.current) {
-            clearInterval(progressInterval.current);
-            progressInterval.current = null;
-          }
-          utteranceRef.current = null;
-        };
-        
-        utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
-        setIsSpeaking(true);
-        setIsPaused(false);
+          window.speechSynthesis.speak(utterance);
+          console.log('Speaking:', utterance);
+        }, 100);
       }
     }
   };
