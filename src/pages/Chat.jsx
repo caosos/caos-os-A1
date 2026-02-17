@@ -736,6 +736,8 @@ export default function Chat() {
                 onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
                 multiAgentMode={multiAgentMode}
                 conversationId={currentConversationId}
+                messageValue={messageInputValue}
+                onMessageChange={setMessageInputValue}
               />
             </div>
 
