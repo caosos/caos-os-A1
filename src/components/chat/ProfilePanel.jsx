@@ -380,5 +380,6 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
         </>
       )}
     </AnimatePresence>
+    </>
   );
 }
