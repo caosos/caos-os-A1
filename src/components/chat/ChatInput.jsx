@@ -555,7 +555,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           type="file"
           multiple
           max="5"
-          accept="image/*,application/pdf,.doc,.docx,.txt,.js,.jsx,.ts,.tsx,.py,.json,.csv,.xml,.html,.css"
           onChange={handleFileSelect}
           className="hidden"
         />
