@@ -596,6 +596,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           value={message}
           onChange={(e) => {
             setMessage(e.target.value);
+            onMessageChange?.(e.target.value);
             e.target.style.height = 'auto';
             const newHeight = Math.min(e.target.scrollHeight, 168);
             e.target.style.height = newHeight + 'px';
