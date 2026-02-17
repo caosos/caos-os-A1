@@ -606,11 +606,22 @@ export default function Chat() {
           </div>
           <QuickActionBar
             onNewsClick={() => {
-              const prompt = "What kind of news would you like to see? (e.g., tech, world, business, sports, entertainment)";
-              setMessage(prompt);
+              const savedPreference = localStorage.getItem('caos_news_preference');
+              if (savedPreference) {
+                const prompt = `Show me ${savedPreference} news. Learn what I'm interested in and update my preferences.`;
+                setMessage(prompt);
+              } else {
+                const prompt = "What kind of news would you like to see? (e.g., tech, world, business, sports, entertainment) I'll remember your preference.";
+                setMessage(prompt);
+              }
             }}
             onBrainstormClick={() => {
-              const prompt = "What would you like to brainstorm about? Give me a topic or idea.";
+              const recentTopics = currentMessages
+                .slice(-10)
+                .filter(m => m.role === 'user')
+                .map(m => m.content)
+                .join(' ');
+              const prompt = `Based on what we've been discussing (${recentTopics || 'our conversation'}), come up with creative brainstorm ideas and suggestions that build on these topics.`;
               setMessage(prompt);
             }}
             onShoppingClick={() => {
