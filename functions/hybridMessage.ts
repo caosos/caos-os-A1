@@ -406,25 +406,37 @@ Talk naturally - you know your home.`
                             add_context_from_internet: true
                         });
                     } else if (toolCall.function.name === 'recall_memory') {
-                        // Search ACROSS ALL SESSIONS for this user
-                        const records = await base44.asServiceRole.entities.Record.filter(
-                            { lane_id: user.email, status: "active" },
-                            '-created_date',
-                            args.limit * 5
-                        );
-                        const matches = records.filter(r => 
-                            r.message.toLowerCase().includes(args.query.toLowerCase())
-                        ).slice(0, args.limit);
+                        // Search ACROSS ALL SESSIONS for this user (not current session)
+                        try {
+                            // Get all records for this user across all sessions
+                            const allRecords = await base44.asServiceRole.entities.Record.filter(
+                                { created_by: user.email, status: "active" },
+                                '-ts_snapshot_ms',
+                                args.limit * 10
+                            );
 
-                        toolResult = {
-                            found: matches.length,
-                            messages: matches.map(m => ({
-                                role: m.role,
-                                content: m.message,
-                                timestamp: m.ts_snapshot_iso,
-                                session: m.session_id
-                            }))
-                        };
+                            // Filter out current session and search by keyword
+                            const matches = allRecords
+                                .filter(r => r.session_id !== session_id && r.message.toLowerCase().includes(args.query.toLowerCase()))
+                                .slice(0, args.limit);
+
+                            toolResult = {
+                                found: matches.length,
+                                query: args.query,
+                                messages: matches.map(m => ({
+                                    role: m.role,
+                                    content: m.message.substring(0, 500),
+                                    timestamp: m.ts_snapshot_iso,
+                                    session: m.session_id
+                                }))
+                            };
+                        } catch (error) {
+                            toolResult = { 
+                                found: 0, 
+                                error: `Recall failed: ${error.message}`,
+                                messages: []
+                            };
+                        }
                     } else if (toolCall.function.name === 'read_app_file') {
                         // Read file from the app itself
                         try {
