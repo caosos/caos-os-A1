@@ -107,10 +107,11 @@ Deno.serve(async (req) => {
 
         // Call Grok
         const requestBody = {
-            model: 'grok-beta',
+            model: 'grok-2-latest',
             messages,
             tools,
-            tool_choice: 'auto'
+            tool_choice: 'auto',
+            temperature: 0.7
         };
 
         console.log('Calling Grok API...');
@@ -169,8 +170,9 @@ Deno.serve(async (req) => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'grok-beta',
-                    messages: [...messages, ...toolMessages]
+                    model: 'grok-2-latest',
+                    messages: [...messages, ...toolMessages],
+                    temperature: 0.7
                 })
             });
 
