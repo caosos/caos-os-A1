@@ -5,8 +5,12 @@ import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(messageValue);
   const [attachedFiles, setAttachedFiles] = useState([]);
+  
+  useEffect(() => {
+    setMessage(messageValue);
+  }, [messageValue]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
