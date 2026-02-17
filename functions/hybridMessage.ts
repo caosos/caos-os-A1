@@ -207,7 +207,7 @@ Talk naturally - you know your home.`
                     model: 'gpt-4o',
                     messages,
                     tools,
-                    tool_choice: 'auto'
+                    tool_choice: 'required'
                 })
             });
 
