@@ -195,9 +195,25 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       if (lastAssistantMessage) {
         // Cancel any existing speech and wait a moment
         window.speechSynthesis.cancel();
-        
+
+        // Clean markdown formatting for natural speech
+        const cleanText = lastAssistantMessage
+          .replace(/#{1,6}\s/g, '') // Remove markdown headers
+          .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
+          .replace(/\*(.+?)\*/g, '$1') // Remove italic
+          .replace(/_(.+?)_/g, '$1') // Remove underscore italic
+          .replace(/`(.+?)`/g, '$1') // Remove inline code
+          .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+          .replace(/^[-*+]\s/gm, '') // Remove list markers
+          .replace(/^\d+\.\s/gm, '') // Remove numbered lists
+          .replace(/>/g, '') // Remove blockquotes
+          .replace(/\|/g, '') // Remove table pipes
+          .replace(/---+/g, '') // Remove horizontal rules
+          .replace(/\n{3,}/g, '\n\n') // Reduce multiple newlines
+          .trim();
+
         setTimeout(() => {
-          const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
+          const utterance = new SpeechSynthesisUtterance(cleanText);
           
           // Get voices and apply selection
           const voices = window.speechSynthesis.getVoices();
@@ -213,8 +229,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           utterance.pitch = 1.0;
           utterance.volume = 1.0;
           utterance.lang = 'en-US';
-          
-          const messageLength = lastAssistantMessage.length;
+
+          const messageLength = cleanText.length;
           const estimatedDuration = (messageLength / 15) / speechRate;
           
           utterance.onstart = () => {
