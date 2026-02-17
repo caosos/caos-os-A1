@@ -378,12 +378,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
   const renderContent = () => {
     let content = message.content;
-    
+
     // Strip out WROTE: patterns but keep the rest of the content
     if (content && content.includes('WROTE:')) {
       content = content.replace(/WROTE:[a-f0-9-]+/g, '').trim();
     }
-    
+
+    // Extract standalone URLs before other processing
+    const urls = extractUrls(content);
+    const cleanContent = urls.reduce((text, url) => text.replace(url, ''), content).trim();
+
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
     // Check for copy blocks: ```copy or ```copyblock
