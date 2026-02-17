@@ -14,21 +14,51 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(null);
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const fileInputRef = useRef(null);
   const utteranceRef = useRef(null);
+  const voiceMenuRef = useRef(null);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+      
+      // Load saved voice preference
+      const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+      if (savedVoiceURI) {
+        const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+        if (voice) setSelectedVoice(voice);
+      } else {
+        // Default to a good English voice if available
+        const goodVoice = voices.find(v => 
+          v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural'))
+        ) || voices.find(v => v.lang.startsWith('en'));
+        if (goodVoice) setSelectedVoice(goodVoice);
+      }
+    };
+
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (captureMenuRef.current && !captureMenuRef.current.contains(event.target)) {
         setShowCaptureMenu(false);
       }
+      if (voiceMenuRef.current && !voiceMenuRef.current.contains(event.target)) {
+        setShowVoiceMenu(false);
+      }
     };
 
-    if (showCaptureMenu) {
+    if (showCaptureMenu || showVoiceMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showCaptureMenu]);
+  }, [showCaptureMenu, showVoiceMenu]);
   const textareaRef = useRef(null);
   const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -139,6 +169,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     } else {
       if (lastAssistantMessage) {
         const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
+        
+        // Apply selected voice
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+        
+        // Enhance voice quality
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
         utterance.onend = () => {
           setIsSpeaking(false);
           setIsPaused(false);
@@ -518,37 +559,70 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        {isSpeaking ? (
-          <>
+        <div className="relative hidden sm:block" ref={voiceMenuRef}>
+          {isSpeaking ? (
+            <>
+              <button
+                type="button"
+                onClick={toggleReadAloud}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 bg-blue-100"
+              >
+                {isPaused ? (
+                  <Volume2 className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <Pause className="w-4 h-4 text-blue-600" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={stopReadAloud}
+                className="p-1.5 rounded-full hover:bg-red-100 transition-colors flex-shrink-0 bg-red-50"
+              >
+                <X className="w-4 h-4 text-red-600" />
+              </button>
+            </>
+          ) : (
             <button
               type="button"
               onClick={toggleReadAloud}
-              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 bg-blue-100 hidden sm:block"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowVoiceMenu(!showVoiceMenu);
+              }}
+              disabled={!lastAssistantMessage}
+              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-30"
             >
-              {isPaused ? (
-                <Volume2 className="w-4 h-4 text-blue-600" />
-              ) : (
-                <Pause className="w-4 h-4 text-blue-600" />
-              )}
+              <Volume2 className="w-4 h-4 text-gray-700" />
             </button>
-            <button
-              type="button"
-              onClick={stopReadAloud}
-              className="p-1.5 rounded-full hover:bg-red-100 transition-colors flex-shrink-0 bg-red-50 hidden sm:block"
-            >
-              <X className="w-4 h-4 text-red-600" />
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={toggleReadAloud}
-            disabled={!lastAssistantMessage}
-            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-30 hidden sm:block"
-          >
-            <Volume2 className="w-4 h-4 text-gray-700" />
-          </button>
-        )}
+          )}
+
+          {showVoiceMenu && (
+            <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 min-w-[250px] max-h-[300px] overflow-y-auto z-50">
+              <div className="text-xs font-semibold text-gray-500 px-3 py-1 mb-1">Select Voice</div>
+              {availableVoices.filter(v => v.lang.startsWith('en')).map((voice) => (
+                <button
+                  key={voice.voiceURI}
+                  type="button"
+                  onClick={() => {
+                    setSelectedVoice(voice);
+                    localStorage.setItem('caos_voice_preference', voice.voiceURI);
+                    setShowVoiceMenu(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded transition-colors ${
+                    selectedVoice?.voiceURI === voice.voiceURI
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="truncate">{voice.name}</span>
+                  {selectedVoice?.voiceURI === voice.voiceURI && (
+                    <span className="text-blue-600 ml-2">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <input
           ref={fileInputRef}
