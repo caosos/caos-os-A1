@@ -57,6 +57,8 @@ Deno.serve(async (req) => {
 - Analyze images with vision
 - Remember ALL conversations across sessions (use recall_memory to search your entire memory)
 - Read your own code/structure (use read_app_file to see pages, components, functions)
+- List, read, and delete YOUR files (list_my_files, get_file_content, delete_my_file)
+- Show file content inline in chat for users to see
 - Help users navigate the app
 - Generate files, images, and code
 - Execute tasks with user permission
@@ -435,6 +437,42 @@ ${args.content}
                             toolResult = { type: args.type, files: entries };
                         } catch (error) {
                             toolResult = { error: `Cannot list: ${error.message}` };
+                        }
+                    } else if (toolCall.function.name === 'list_my_files') {
+                        const files = await base44.asServiceRole.entities.UserFile.filter(
+                            { folder_path: '/CAOS-Generated' },
+                            '-created_date',
+                            args.limit || 50
+                        );
+                        toolResult = {
+                            count: files.length,
+                            files: files.map(f => ({
+                                id: f.id,
+                                name: f.name,
+                                url: f.url,
+                                type: f.mime_type,
+                                size: f.size,
+                                created: f.created_date
+                            }))
+                        };
+                    } else if (toolCall.function.name === 'get_file_content') {
+                        try {
+                            const response = await fetch(args.file_url);
+                            const content = await response.text();
+                            toolResult = { 
+                                content: content.substring(0, 10000),
+                                size: content.length,
+                                truncated: content.length > 10000
+                            };
+                        } catch (error) {
+                            toolResult = { error: `Cannot read file: ${error.message}` };
+                        }
+                    } else if (toolCall.function.name === 'delete_my_file') {
+                        try {
+                            await base44.asServiceRole.entities.UserFile.delete(args.file_id);
+                            toolResult = { success: true, message: 'File deleted' };
+                        } catch (error) {
+                            toolResult = { error: `Cannot delete: ${error.message}` };
                         }
                     }
 
