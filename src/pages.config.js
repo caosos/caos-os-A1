@@ -53,6 +53,7 @@ import Implementation from './pages/Implementation';
 import MemoryIsolation from './pages/MemoryIsolation';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
+import SystemBlueprint from './pages/SystemBlueprint';
 
 
 export const PAGES = {
@@ -62,6 +63,7 @@ export const PAGES = {
     "MemoryIsolation": MemoryIsolation,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
+    "SystemBlueprint": SystemBlueprint,
 }
 
 export const pagesConfig = {
