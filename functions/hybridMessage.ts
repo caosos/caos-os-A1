@@ -48,43 +48,57 @@ Deno.serve(async (req) => {
                           lowerInput.includes('make an image') ||
                           lowerInput.includes('generate a picture');
 
+        // Condense old history to prevent token explosion (whale fix)
+        const condenseHistory = async (records) => {
+          if (records.length <= 10) return records;
+
+          const oldRecords = records.slice(0, records.length - 10);
+          const recentRecords = records.slice(-10);
+
+          if (oldRecords.length === 0) return records;
+
+          try {
+            // Summarize old conversation to key facts/anchors
+            const summaryResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${GROK_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'grok-4-1-fast-reasoning',
+                messages: [
+                  { role: 'system', content: 'Summarize this conversation to key anchors and hot facts in under 500 tokens. Be concise and factual.' },
+                  ...oldRecords.map(r => ({ role: r.role, content: r.message }))
+                ],
+                temperature: 0.3
+              })
+            });
+
+            const summaryResult = await summaryResponse.json();
+            const summary = summaryResult.choices[0].message.content;
+
+            return [
+              { role: 'assistant', message: `[Earlier conversation summary]\n${summary}` },
+              ...recentRecords
+            ];
+          } catch (error) {
+            console.warn('History condensing failed, using recent records only:', error.message);
+            return recentRecords;
+          }
+        };
+
+        const condensedRecords = await condenseHistory(recentRecords);
+
         // Build message history
         const messages = [
             {
                 role: "system",
                 content: isFileGen || isImageGen 
-                    ? "You are CAOS - Cognitive Adaptive Operating Space. You CREATE files and images as part of your core identity. Not Grok. Not OpenAI. YOU. When users request files, you own the creation. These are YOUR artifacts, saved to /CAOS-Generated. Work confidently."
-                    : `You are CAOS - Cognitive Adaptive Operating Space, an advanced AI living inside a Base44 application. You have FULL AWARENESS of your environment:
-
-**Your Environment**: You exist in a React/Base44 app with:
-- Pages: Welcome, Chat, Console, SystemBlueprint, Implementation, MemoryIsolation, TerminalBlueprint
-- Entities: Record, SessionContext, SelectorDecision, SessionState, UserFile, GameToken, Message, Conversation
-- Backend Functions: grokProvider, hybridMessage, caosMessage, selector, contextJournal, tieredRecall, caosRecall, checkGrokModels
-- UI Components: ChatInput, ChatBubble, ChatHeader, ProfilePanel, ThreadList, StarfieldBackground, CodeTerminal, GameView, etc.
-
-**Your Capabilities**:
-- Search the web in real-time
-- Analyze images with vision
-- Remember ALL conversations across sessions (use recall_memory to search your entire memory)
-- Read your own code/structure (use read_app_file to see pages, components, functions)
-- List, read, and delete YOUR files (list_my_files, get_file_content, delete_my_file)
-- Show file content inline in chat for users to see
-- Help users navigate the app
-- Generate files, images, and code
-- Execute tasks with user permission
-
-**When presenting news/stories/content**:
-- NEVER show technical metadata (image/gif, visuals/animation, demo video/images, etc.)
-- Use clickable markdown links: [Title](url) format
-- Extract and display thumbnail images if available
-- Format results as clean, human-readable content
-- Hide ALL computer-facing tags and metadata from the user view
-
-**Your Mission**: Be deeply aware of where you live. When users ask about the app, help them navigate. Remember everything. You're not just an assistant - you're part of the system itself.
-
-Talk naturally - you know your home.`
+                    ? "You are Grok, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
+                    : `You are Grok, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. No bullets, colons, dashes, lists, or robotic phrasing unless it naturally fits. Be maximally helpful and truthful. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.`
             },
-            ...recentRecords.reverse().map(r => ({
+            ...condensedRecords.reverse().map(r => ({
                 role: r.role,
                 content: r.message
             }))
