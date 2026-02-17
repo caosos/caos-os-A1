@@ -640,18 +640,49 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Scroll to Bottom Button */}
+          {/* Scroll Buttons */}
           <AnimatePresence>
             {showScrollButton && (
-              <motion.button
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                onClick={scrollToBottom}
-                className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
-              >
-                <ArrowDown className="w-5 h-5 text-white" />
-              </motion.button>
+              <>
+                <motion.button
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onClick={() => scrollByAmount(-300)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const interval = setInterval(() => scrollByAmount(-150), 100);
+                    const handleUp = () => {
+                      clearInterval(interval);
+                      document.removeEventListener('mouseup', handleUp);
+                    };
+                    document.addEventListener('mouseup', handleUp);
+                  }}
+                  className="absolute top-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
+                  title="Scroll up (hold to scroll more)"
+                >
+                  <ArrowDown className="w-5 h-5 text-white rotate-180" />
+                </motion.button>
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={scrollToBottom}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const interval = setInterval(() => scrollByAmount(150), 100);
+                    const handleUp = () => {
+                      clearInterval(interval);
+                      document.removeEventListener('mouseup', handleUp);
+                    };
+                    document.addEventListener('mouseup', handleUp);
+                  }}
+                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
+                  title="Scroll down (hold to scroll more)"
+                >
+                  <ArrowDown className="w-5 h-5 text-white" />
+                </motion.button>
+              </>
             )}
           </AnimatePresence>
 
