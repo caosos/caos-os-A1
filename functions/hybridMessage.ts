@@ -576,7 +576,7 @@ Talk naturally - you know your home.`
                 { class: "session", value: session_id },
                 { class: "lane", value: user.email }
             ],
-            token_count: Math.ceil(aiResponse.length / 4),
+            token_count: usageTokens,
             status: "active"
         });
 
