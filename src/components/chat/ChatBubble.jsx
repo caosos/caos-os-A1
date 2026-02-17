@@ -255,6 +255,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     return (match && match[7].length === 11) ? match[7] : null;
   };
 
+  const extractUrls = (text) => {
+    const urlRegex = /https?:\/\/[^\s)]+/g;
+    return text.match(urlRegex) || [];
+  };
+
   const formatDateTime = (timestamp) => {
     return moment(timestamp).format('MMM D, YYYY • h:mm A');
   };
