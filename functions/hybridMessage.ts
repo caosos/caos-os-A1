@@ -41,8 +41,7 @@ Deno.serve(async (req) => {
         const isImageGen = lowerInput.includes('create image') || 
                           lowerInput.includes('create an image') ||
                           lowerInput.includes('generate image') ||
-                          lowerInput.includes('draw') ||
-                          lowerInput.includes('picture of') ||
+                          (lowerInput.includes('draw') && (lowerInput.includes('image') || lowerInput.includes('picture'))) ||
                           lowerInput.includes('make an image') ||
                           lowerInput.includes('generate a picture');
 
