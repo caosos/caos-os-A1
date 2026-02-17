@@ -398,6 +398,7 @@ Talk naturally - you know your home.`
 
             const result = await response.json();
             const message = result.choices[0].message;
+            const usageTokens = result.usage?.total_tokens || Math.ceil(input.length / 4);
 
             // Handle Grok tool calls
             if (message.tool_calls) {
