@@ -12,7 +12,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const justSelectedRef = React.useRef(false);
+  const utteranceRef = React.useRef(null);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -208,14 +210,64 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(message.content);
-      window.speechSynthesis.speak(utterance);
-      toast.success('Reading aloud...');
-    } else {
+    if (!('speechSynthesis' in window)) {
       toast.error('Text-to-speech not supported');
+      return;
     }
+
+    if (isSpeaking) {
+      // Stop speaking
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      utteranceRef.current = null;
+      return;
+    }
+
+    // Start speaking
+    window.speechSynthesis.cancel(); // Cancel any other speech
+    
+    // Clean markdown for natural speech
+    const cleanText = message.content
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+      .replace(/^[-*+]\s/gm, '')
+      .replace(/^\d+\.\s/gm, '')
+      .replace(/>/g, '')
+      .replace(/\|/g, '')
+      .replace(/---+/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Apply saved voice preference
+    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+    const voices = window.speechSynthesis.getVoices();
+    if (savedVoiceURI) {
+      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+      if (voice) utterance.voice = voice;
+    }
+    
+    // Apply saved speed
+    const savedRate = localStorage.getItem('caos_speech_rate');
+    utterance.rate = savedRate ? parseFloat(savedRate) : 1.0;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      utteranceRef.current = null;
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      utteranceRef.current = null;
+    };
+    
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleRegenerate = () => {
@@ -447,10 +499,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   </button>
                   <button
                     onClick={handleReadAloud}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Read aloud"
+                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
+                    title={isSpeaking ? "Stop reading" : "Read aloud"}
                   >
-                    <Volume2 className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                   </button>
                   <button
                     onClick={handleEmailContent}
