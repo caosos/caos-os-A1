@@ -259,7 +259,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const downloadFile = (content, filename) => {
-    const blob = new Blob([content], { type: 'text/plain' });
+    const mimeType = filename.endsWith('.pdf') ? 'application/pdf' : 'text/plain';
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -268,6 +269,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${filename}`);
   };
 
   const isEmailableContent = (content) => {
@@ -519,7 +521,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             </div>
             {message.generated_files.map((file, index) => {
               const isImage = file.type === 'image' || /image/.test(file.type);
-              
+
               return isImage && file.url ? (
                 <div key={index} className="rounded-lg overflow-hidden border border-green-400/30">
                   <img src={file.url} alt={file.name} className="max-w-full h-auto" />
@@ -527,18 +529,27 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               ) : (
                 <button
                   key={index}
-                  onClick={() => {
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     if (file.url) {
-                      window.open(file.url, '_blank');
+                      const a = document.createElement('a');
+                      a.href = file.url;
+                      a.download = file.name;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      toast.success(`Downloaded ${file.name}`);
                     } else if (file.content) {
                       downloadFile(file.content, file.name);
                     }
                   }}
-                  className="w-full flex items-center gap-2 bg-green-500/10 border border-green-400/30 rounded-lg px-3 py-2 hover:bg-green-500/20 transition-colors text-left"
+                  className="w-full flex items-center gap-2 bg-green-500/10 border border-green-400/30 rounded-lg px-3 py-2 hover:bg-green-500/20 transition-colors text-left cursor-pointer"
                 >
-                  <Download className="w-4 h-4 text-green-400" />
-                  <span className="text-sm text-white/90 flex-1">{file.name}</span>
-                  <span className="text-xs text-green-400">Click to download</span>
+                  <Download className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <span className="text-sm text-white/90 flex-1 truncate">{file.name}</span>
+                  <span className="text-xs text-green-400 whitespace-nowrap">Download</span>
                 </button>
               );
             })}
