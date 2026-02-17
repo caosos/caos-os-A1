@@ -281,7 +281,7 @@ ${args.content}
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'grok-beta',
+                    model: 'grok-4-1-fast-reasoning',
                     messages,
                     tools,
                     tool_choice: 'auto',
@@ -346,7 +346,7 @@ ${args.content}
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'grok-beta',
+                        model: 'grok-4-1-fast-reasoning',
                         messages: [...messages, ...toolMessages],
                         temperature: 0.7
                     })
