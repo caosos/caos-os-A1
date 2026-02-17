@@ -422,7 +422,7 @@ export default function Chat() {
         }]
       }));
 
-      const { data } = await base44.functions.invoke('grokProvider', {
+      const { data } = await base44.functions.invoke('hybridMessage', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
@@ -431,6 +431,11 @@ export default function Chat() {
 
       if (!data) throw new Error('No response from server');
       const reply = data.reply || data.response || data.text || '';
+
+      // Handle generated files if any
+      if (data.generatedFiles && data.generatedFiles.length > 0) {
+        setGeneratedFiles(prev => [...prev, ...data.generatedFiles]);
+      }
 
       if (isGuestMode) {
         const userMsg = {
