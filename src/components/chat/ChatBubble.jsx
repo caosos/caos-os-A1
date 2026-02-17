@@ -454,6 +454,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     
     return (
       <div className="space-y-3">
+        {/* Link Previews */}
+        {urls.length > 0 && (
+          <div className="space-y-2">
+            {urls.map((url, idx) => (
+              <LinkPreview key={idx} url={url} />
+            ))}
+          </div>
+        )}
+
         {/* Recall Results */}
         {message.recall_results && message.recall_results.length > 0 && (
           <div className="space-y-2 mb-3">
