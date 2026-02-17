@@ -379,7 +379,7 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
     </>
   );
 }
