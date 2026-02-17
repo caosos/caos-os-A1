@@ -217,9 +217,9 @@ Talk naturally - you know your home.`
                     const args = JSON.parse(toolCall.function.arguments);
                     
                     if (toolCall.function.name === 'create_text_file') {
-                        const blob = new Blob([args.content], { type: 'text/plain' });
-                        const file = new File([blob], args.filename, { type: 'text/plain' });
-                        const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file });
+                        const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ 
+                            file: args.content
+                        });
                         
                         // Save to UserFile entity
                         await base44.asServiceRole.entities.UserFile.create({
@@ -228,7 +228,7 @@ Talk naturally - you know your home.`
                             type: 'file',
                             folder_path: '/CAOS-Generated',
                             mime_type: 'text/plain',
-                            size: blob.size
+                            size: args.content.length
                         });
                         
                         generatedFiles.push({
@@ -239,15 +239,11 @@ Talk naturally - you know your home.`
                         });
                     } else if (toolCall.function.name === 'create_pdf') {
                         // Generate PDF using Core integration
-                        const pdfContent = `
-Title: ${args.title || 'Document'}
-
-${args.content}
-                        `.trim();
+                        const pdfContent = `Title: ${args.title || 'Document'}\n\n${args.content}`;
                         
-                        const blob = new Blob([pdfContent], { type: 'application/pdf' });
-                        const file = new File([blob], args.filename, { type: 'application/pdf' });
-                        const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file });
+                        const uploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ 
+                            file: pdfContent
+                        });
                         
                         // Save to UserFile entity
                         await base44.asServiceRole.entities.UserFile.create({
@@ -256,7 +252,7 @@ ${args.content}
                             type: 'file',
                             folder_path: '/CAOS-Generated',
                             mime_type: 'application/pdf',
-                            size: blob.size
+                            size: pdfContent.length
                         });
                         
                         generatedFiles.push({
