@@ -320,7 +320,7 @@ export default function Chat() {
     }
   };
 
-  const handleSendMessage = async (content, fileUrls = []) => {
+  const handleSendMessage = async (content, fileUrls = [], selectedAgents = null) => {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
     
     setIsLoading(true);
@@ -622,6 +622,7 @@ export default function Chat() {
                 lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
                 onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
                 multiAgentMode={multiAgentMode}
+                conversationId={currentConversationId}
               />
             </div>
 

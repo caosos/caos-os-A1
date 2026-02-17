@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 
-export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode }) {
+export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId }) {
   const [message, setMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -97,12 +97,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           type: file.type,
         });
         
-        // Save to UserFile entity for persistent storage
+        // Save to UserFile entity - organize by conversation
+        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Uploads';
         await base44.entities.UserFile.create({
           name: file.name,
           url: result.file_url,
           type: isImage ? 'photo' : 'file',
-          folder_path: '/',
+          folder_path: folderPath,
           mime_type: file.type,
           size: file.size
         });
@@ -132,12 +133,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
         const result = await base44.integrations.Core.UploadFile({ file });
         
-        // Save to UserFile entity
+        // Save to UserFile entity - organize by conversation
+        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Screenshots';
         await base44.entities.UserFile.create({
           name: file.name,
           url: result.file_url,
           type: 'photo',
-          folder_path: '/',
+          folder_path: folderPath,
           mime_type: 'image/png',
           size: blob.size
         });
@@ -168,12 +170,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
       
-      // Save to UserFile entity
+      // Save to UserFile entity - organize by conversation
+      const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Photos';
       await base44.entities.UserFile.create({
         name: file.name,
         url: result.file_url,
         type: 'photo',
-        folder_path: '/',
+        folder_path: folderPath,
         mime_type: file.type,
         size: file.size
       });
