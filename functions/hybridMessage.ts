@@ -29,14 +29,22 @@ Deno.serve(async (req) => {
         // Detect task type - route to OpenAI for file/image generation
         const lowerInput = input.toLowerCase();
         const isFileGen = lowerInput.includes('create file') || 
+                         lowerInput.includes('create a file') ||
+                         lowerInput.includes('generate file') ||
                          lowerInput.includes('generate pdf') || 
-                         lowerInput.includes('save') && (lowerInput.includes('txt') || lowerInput.includes('json') || lowerInput.includes('pdf')) ||
-                         lowerInput.includes('export');
+                         lowerInput.includes('write file') ||
+                         lowerInput.includes('save file') ||
+                         (lowerInput.includes('save') && (lowerInput.includes('txt') || lowerInput.includes('json') || lowerInput.includes('pdf'))) ||
+                         lowerInput.includes('export') ||
+                         lowerInput.includes('generate a text') ||
+                         lowerInput.includes('make a file');
         const isImageGen = lowerInput.includes('create image') || 
+                          lowerInput.includes('create an image') ||
                           lowerInput.includes('generate image') ||
                           lowerInput.includes('draw') ||
                           lowerInput.includes('picture of') ||
-                          lowerInput.includes('make an image');
+                          lowerInput.includes('make an image') ||
+                          lowerInput.includes('generate a picture');
 
         // Build message history
         const messages = [
