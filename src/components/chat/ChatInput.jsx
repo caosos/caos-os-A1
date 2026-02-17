@@ -89,10 +89,22 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const uploadedFiles = [];
       for (const file of files) {
         const result = await base44.integrations.Core.UploadFile({ file });
+        const isImage = file.type.startsWith('image/');
+        
         uploadedFiles.push({
           name: file.name,
           url: result.file_url,
           type: file.type,
+        });
+        
+        // Save to UserFile entity for persistent storage
+        await base44.entities.UserFile.create({
+          name: file.name,
+          url: result.file_url,
+          type: isImage ? 'photo' : 'file',
+          folder_path: '/',
+          mime_type: file.type,
+          size: file.size
         });
       }
       setAttachedFiles([...attachedFiles, ...uploadedFiles]);
@@ -119,6 +131,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       canvas.toBlob(async (blob) => {
         const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
         const result = await base44.integrations.Core.UploadFile({ file });
+        
+        // Save to UserFile entity
+        await base44.entities.UserFile.create({
+          name: file.name,
+          url: result.file_url,
+          type: 'photo',
+          folder_path: '/',
+          mime_type: 'image/png',
+          size: blob.size
+        });
+        
         setAttachedFiles([...attachedFiles, {
           name: file.name,
           url: result.file_url,
@@ -144,6 +167,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setUploading(true);
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
+      
+      // Save to UserFile entity
+      await base44.entities.UserFile.create({
+        name: file.name,
+        url: result.file_url,
+        type: 'photo',
+        folder_path: '/',
+        mime_type: file.type,
+        size: file.size
+      });
+      
       setAttachedFiles([...attachedFiles, {
         name: file.name,
         url: result.file_url,
