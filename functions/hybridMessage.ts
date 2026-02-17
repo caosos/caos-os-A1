@@ -532,6 +532,7 @@ Talk naturally - you know your home.`
 
                 const finalResult = await finalResponse.json();
                 aiResponse = finalResult.choices[0].message.content;
+                if (finalResult.usage?.total_tokens) usageTokens = finalResult.usage.total_tokens;
             } else {
                 aiResponse = message.content;
             }
