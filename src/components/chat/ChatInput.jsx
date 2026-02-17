@@ -17,9 +17,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
+  const [speechRate, setSpeechRate] = useState(() => {
+    const saved = localStorage.getItem('caos_speech_rate');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+  const [speechProgress, setSpeechProgress] = useState(0);
   const fileInputRef = useRef(null);
   const utteranceRef = useRef(null);
   const voiceMenuRef = useRef(null);
+  const progressInterval = useRef(null);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -168,28 +174,59 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setIsPaused(false);
     } else {
       if (lastAssistantMessage) {
+        // Cancel any existing speech
+        window.speechSynthesis.cancel();
+        
         const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
         
-        // Apply selected voice
+        // Apply selected voice - get voices fresh
+        const voices = window.speechSynthesis.getVoices();
         if (selectedVoice) {
-          utterance.voice = selectedVoice;
+          const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
+          if (voice) utterance.voice = voice;
         }
         
-        // Enhance voice quality
-        utterance.rate = 1.0;
+        // Apply user settings
+        utterance.rate = speechRate;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
+        
+        const messageLength = lastAssistantMessage.length;
+        const estimatedDuration = (messageLength / 15) / speechRate; // ~15 chars per second
+        
+        utterance.onstart = () => {
+          setSpeechProgress(0);
+          const startTime = Date.now();
+          progressInterval.current = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const progress = Math.min((elapsed / estimatedDuration) * 100, 99);
+            setSpeechProgress(progress);
+          }, 100);
+        };
         
         utterance.onend = () => {
           setIsSpeaking(false);
           setIsPaused(false);
+          setSpeechProgress(0);
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+            progressInterval.current = null;
+          }
           utteranceRef.current = null;
         };
-        utterance.onerror = () => {
+        
+        utterance.onerror = (e) => {
+          console.error('Speech error:', e);
           setIsSpeaking(false);
           setIsPaused(false);
+          setSpeechProgress(0);
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+            progressInterval.current = null;
+          }
           utteranceRef.current = null;
         };
+        
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
         setIsSpeaking(true);
@@ -202,6 +239,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
+    setSpeechProgress(0);
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+      progressInterval.current = null;
+    }
     utteranceRef.current = null;
   };
 
@@ -597,8 +639,32 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
 
           {showVoiceMenu && (
-            <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 min-w-[250px] max-h-[300px] overflow-y-auto z-50">
-              <div className="text-xs font-semibold text-gray-500 px-3 py-1 mb-1">Select Voice</div>
+            <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[280px] max-h-[400px] overflow-y-auto z-50">
+              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-2">Voice Settings</div>
+              
+              {/* Speed Control */}
+              <div className="px-2 py-2 mb-3 border-b border-gray-200">
+                <label className="text-xs text-gray-600 mb-1 block">Speed: {speechRate.toFixed(1)}x</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2.0"
+                  step="0.1"
+                  value={speechRate}
+                  onChange={(e) => {
+                    const rate = parseFloat(e.target.value);
+                    setSpeechRate(rate);
+                    localStorage.setItem('caos_speech_rate', rate.toString());
+                  }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>Slow</span>
+                  <span>Fast</span>
+                </div>
+              </div>
+
+              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-1">Select Voice</div>
               {availableVoices.filter(v => v.lang.startsWith('en')).map((voice) => (
                 <button
                   key={voice.voiceURI}
@@ -620,6 +686,21 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   )}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          {isSpeaking && (
+            <div className="absolute bottom-full right-0 mb-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-600 transition-all duration-100"
+                    style={{ width: `${speechProgress}%` }}
+                  />
+                </div>
+                <span className="text-xs text-gray-600">{Math.round(speechProgress)}%</span>
+              </div>
             </div>
           )}
         </div>
