@@ -410,7 +410,7 @@ Talk naturally - you know your home.`
                         try {
                             // Get all records for this user across all sessions
                             const allRecords = await base44.asServiceRole.entities.Record.filter(
-                                { created_by: user.email, status: "active" },
+                                { lane_id: user.email, status: "active" },
                                 '-ts_snapshot_ms',
                                 args.limit * 10
                             );
