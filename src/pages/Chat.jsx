@@ -568,29 +568,64 @@ export default function Chat() {
       </div>
 
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
-        <div className="flex items-center justify-between gap-2 px-4 py-2">
-          <div className="flex-1 min-w-0">
-            <ChatHeader 
-              user={user}
-              onNewThread={handleNewThread}
-              onShowThreads={() => setShowThreads(true)}
-              onShowProfile={() => setShowProfile(true)}
-              onShowFiles={(view) => {
-                setFileView(view);
-                setShowProfile(true);
-              }}
-              currentConversation={conversations.find(c => c.id === currentConversationId)}
-              sessionFilesCount={generatedFiles.length}
-            />
+          <div className="flex items-center justify-between gap-2 px-4 py-2">
+            <div className="flex-1 min-w-0">
+              <ChatHeader 
+                user={user}
+                onNewThread={handleNewThread}
+                onShowThreads={() => setShowThreads(true)}
+                onShowProfile={() => setShowProfile(true)}
+                onShowFiles={(view) => {
+                  setFileView(view);
+                  setShowProfile(true);
+                }}
+                currentConversation={conversations.find(c => c.id === currentConversationId)}
+                sessionFilesCount={generatedFiles.length}
+              />
+            </div>
+            {currentConversationId && currentMessages.length > 0 && (
+              <ConversationSearch
+                messages={currentMessages}
+                onJumpToMessage={handleJumpToMessage}
+              />
+            )}
           </div>
-          {currentConversationId && currentMessages.length > 0 && (
-            <ConversationSearch
-              messages={currentMessages}
-              onJumpToMessage={handleJumpToMessage}
-            />
-          )}
+          <QuickActionBar
+            onNewsClick={() => {
+              const prompt = "What kind of news would you like to see? (e.g., tech, world, business, sports, entertainment)";
+              setMessage(prompt);
+            }}
+            onBrainstormClick={() => {
+              const prompt = "What would you like to brainstorm about? Give me a topic or idea.";
+              setMessage(prompt);
+            }}
+            onShoppingClick={() => {
+              const prompt = "What are you looking for? Tell me what you want to shop for and I can help you find options.";
+              setMessage(prompt);
+            }}
+            onFilesClick={() => {
+              setFileView('files');
+              setShowProfile(true);
+            }}
+            onTerminalToggle={() => setShowTerminal(!showTerminal)}
+            onGameModeToggle={() => {
+              const newGameMode = !isGameMode;
+              localStorage.setItem('caos_game_mode', newGameMode);
+              window.location.reload();
+            }}
+            isDeveloperMode={isDeveloperMode}
+            isGameMode={isGameMode}
+            isMultiAgentMode={multiAgentMode}
+            onMultiAgentToggle={() => {
+              setMultiAgentMode(!multiAgentMode);
+              localStorage.setItem('caos_multi_agent_mode', !multiAgentMode);
+            }}
+            onDeveloperToggle={() => {
+              localStorage.setItem('caos_developer_mode', !isDeveloperMode);
+              window.location.reload();
+            }}
+          />
         </div>
-      </div>
 
       <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
         {(isDeveloperMode || isGameMode) ? (
