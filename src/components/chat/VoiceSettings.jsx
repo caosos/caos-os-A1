@@ -117,8 +117,8 @@ export default function VoiceSettings({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0f1f3d] border border-white/20 rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 pb-24">
+      <div className="bg-[#0f1f3d] border border-white/20 rounded-lg w-full max-w-md max-h-[70vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Volume2 className="w-5 h-5 text-blue-400" />
@@ -148,12 +148,12 @@ export default function VoiceSettings({ isOpen, onClose }) {
           </div>
 
           <div>
-            <label className="text-sm text-white/70 mb-2 block">Select Voice (OpenAI TTS)</label>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <label className="text-sm text-white/70 mb-2 block">Select Voice</label>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
               {voices.map((voice) => (
                 <div
                   key={voice.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
+                  className={`flex items-center justify-between p-2 rounded-lg border transition-colors cursor-pointer ${
                     selectedVoice === voice.id
                       ? 'bg-blue-500/20 border-blue-500/50'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
