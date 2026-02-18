@@ -13,22 +13,47 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { input, session_id, file_urls, rotation_seed } = body;
+        const { input, session_id, file_urls, rotation_seed, current_lane } = body;
 
         if (!GROK_API_KEY) {
             throw new Error('XAI_API_KEY not configured');
         }
 
-        // Smart context loading: only last 15 messages for working window
+        // Detect topic lane from input
+        const detectLane = (text) => {
+            const lower = text.toLowerCase();
+            if (/\b(ui|interface|design|button|style|layout|component)\b/.test(lower)) return 'ui';
+            if (/\b(immigr|visa|ice|border|deportation|asylum)\b/.test(lower)) return 'immigration';
+            if (/\b(token|context|memory|recall|limit|rotation)\b/.test(lower)) return 'tokens';
+            if (/\b(function|backend|api|code|debug|fix|error)\b/.test(lower)) return 'backend';
+            if (/\b(news|current|today|latest|happening)\b/.test(lower)) return 'news';
+            return 'general';
+        };
+
+        const activeLane = current_lane || detectLane(input);
+
+        // Load lane-specific hot context (last 5 msgs per lane)
+        const lanes = await base44.asServiceRole.entities.Lane.filter(
+            { session_id },
+            '-updated_date',
+            10
+        );
+
+        const currentLaneData = lanes.find(l => l.lane_name === activeLane);
+        const laneHotMessages = currentLaneData?.hot_messages || [];
+        const laneSummary = currentLaneData?.summary || '';
+
+        // Also grab 3 most recent cross-lane messages for continuity
         const recentRecords = await base44.asServiceRole.entities.Record.filter(
             { session_id, status: "active" },
             '-seq',
-            15  // Keep working context small
+            3
         );
 
-        // Calculate current token usage
-        const currentTokens = recentRecords.reduce((sum, r) => sum + (r.token_count || 0), 0);
-        const rotationNeeded = currentTokens > 100000;
+        // Calculate token usage from lanes
+        const allLaneMessages = lanes.flatMap(l => l.hot_messages || []);
+        const currentTokens = allLaneMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0);
+        const rotationNeeded = currentTokens > 90000;
 
         // Detect task type - route to OpenAI for file/image generation
         const lowerInput = input.toLowerCase();
@@ -52,12 +77,18 @@ Deno.serve(async (req) => {
                           lowerInput.includes('make an image') ||
                           lowerInput.includes('generate a picture');
 
-        // Generate context seed if rotation needed
+        // Generate compressed seed if rotation needed
         let contextSeed = rotation_seed || null;
         
         if (rotationNeeded && !rotation_seed) {
-            // Generate compressed seed for next thread
             try {
+                // Compress all lanes into ultra-compact seed
+                const laneContexts = lanes.map(lane => ({
+                    lane: lane.lane_name,
+                    summary: lane.summary || 'No summary',
+                    hot: lane.hot_messages?.slice(-2).map(m => `${m.role}: ${m.content.substring(0, 100)}`).join(' | ') || ''
+                }));
+
                 const seedResponse = await fetch('https://api.x.ai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -67,8 +98,8 @@ Deno.serve(async (req) => {
                     body: JSON.stringify({
                         model: 'grok-4-1-fast-reasoning',
                         messages: [
-                            { role: 'system', content: 'Extract ONLY key facts, decisions, preferences, and context that must carry forward. Ultra-compressed. Under 1000 tokens.' },
-                            ...recentRecords.map(r => ({ role: r.role, content: r.message }))
+                            { role: 'system', content: 'Compress this multi-lane context into ultra-compact seed (2-3k chars max). Format: "CAOS v3 Seed: [Lane summaries]. Hot: [Key recent items]. Personality: Grok casual/witty."' },
+                            { role: 'user', content: JSON.stringify(laneContexts) }
                         ],
                         temperature: 0.2
                     })
@@ -80,16 +111,22 @@ Deno.serve(async (req) => {
             }
         }
 
-        const workingRecords = recentRecords.reverse();
+        // Build working context: lane-specific + recent cross-lane
+        const workingRecords = [
+            ...laneHotMessages.map(m => ({ role: m.role, message: m.content })),
+            ...recentRecords.reverse()
+        ];
 
         // Build message history with optional seed injection
         const systemPrompt = isFileGen || isImageGen 
             ? "You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
             : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.`;
 
+        const laneContext = laneSummary ? `\n[Lane: ${activeLane} | ${laneSummary}]` : `\n[Active Lane: ${activeLane}]`;
+
         const messages = [
-            { role: "system", content: systemPrompt },
-            ...(contextSeed ? [{ role: "system", content: `[Context from previous thread]\n${contextSeed}` }] : []),
+            { role: "system", content: systemPrompt + laneContext },
+            ...(contextSeed ? [{ role: "system", content: `[Seed from previous thread]\n${contextSeed}` }] : []),
             ...workingRecords.map(r => ({
                 role: r.role,
                 content: r.message
@@ -587,6 +624,58 @@ Deno.serve(async (req) => {
             status: "active"
         });
 
+        // Update lane hot context (keep last 5 messages)
+        const laneRecord = lanes.find(l => l.lane_name === activeLane);
+        const updatedHotMessages = [
+            ...(laneRecord?.hot_messages || []).slice(-4),
+            { role: 'user', content: input, timestamp: now.toISOString() },
+            { role: 'assistant', content: aiResponse, timestamp: new Date().toISOString() }
+        ];
+
+        if (laneRecord) {
+            await base44.asServiceRole.entities.Lane.update(laneRecord.id, {
+                hot_messages: updatedHotMessages,
+                message_count: (laneRecord.message_count || 0) + 2
+            });
+        } else {
+            await base44.asServiceRole.entities.Lane.create({
+                session_id,
+                lane_name: activeLane,
+                hot_messages: updatedHotMessages,
+                message_count: 2
+            });
+        }
+
+        // Archive lane summary every 10 messages
+        if (updatedHotMessages.length >= 10) {
+            try {
+                const summaryResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'grok-4-1-fast-reasoning',
+                        messages: [
+                            { role: 'system', content: 'Summarize this lane topic in under 200 tokens. Key facts only.' },
+                            ...updatedHotMessages.slice(0, -5).map(m => ({ role: m.role, content: m.content }))
+                        ],
+                        temperature: 0.3
+                    })
+                });
+                const summaryResult = await summaryResponse.json();
+                const summary = summaryResult.choices[0].message.content;
+
+                await base44.asServiceRole.entities.Lane.update(laneRecord.id, {
+                    summary,
+                    hot_messages: updatedHotMessages.slice(-5)
+                });
+            } catch (error) {
+                console.warn('Lane summary failed:', error.message);
+            }
+        }
+
         return Response.json({
             reply: aiResponse,
             session: session_id,
@@ -594,7 +683,9 @@ Deno.serve(async (req) => {
             usage_tokens: usageTokens,
             rotation_needed: rotationNeeded,
             context_seed: rotationNeeded ? contextSeed : null,
-            current_tokens: currentTokens
+            current_tokens: currentTokens,
+            active_lane: activeLane,
+            lane_count: lanes.length
         });
 
     } catch (error) {

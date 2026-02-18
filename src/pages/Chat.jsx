@@ -16,6 +16,7 @@ import QuickActionBar from '@/components/chat/QuickActionBar';
 import CodeTerminal from '@/components/terminal/CodeTerminal';
 import GameView from '@/components/game/GameView';
 import TokenMeter from '@/components/chat/TokenMeter';
+import LaneSelector from '@/components/chat/LaneSelector';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ export default function Chat() {
   const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [availableTokens, setAvailableTokens] = useState(0);
+  const [currentLane, setCurrentLane] = useState(() => localStorage.getItem('caos_current_lane') || 'general');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
@@ -461,12 +463,14 @@ export default function Chat() {
       }));
 
       const contextSeed = localStorage.getItem(`caos_seed_${conversationId}`);
+      const currentLane = localStorage.getItem(`caos_current_lane`) || 'general';
       
       const { data } = await base44.functions.invoke('hybridMessage', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-        rotation_seed: contextSeed
+        rotation_seed: contextSeed,
+        current_lane: currentLane
       });
 
       clearTimeout(timeoutId);
@@ -641,6 +645,10 @@ export default function Chat() {
             </div>
             {currentConversationId && currentMessages.length > 0 && (
               <div className="flex items-center gap-3">
+                <LaneSelector 
+                  currentLane={currentLane}
+                  onLaneChange={setCurrentLane}
+                />
                 <div className="w-40">
                   <TokenMeter messages={currentMessages} />
                 </div>
