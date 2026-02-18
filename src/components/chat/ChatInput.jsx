@@ -437,13 +437,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         lastTranscriptRef.current = '';
       }
 
-      onSend(message.trim(), attachedFiles.map(f => f.url), multiAgentMode ? selectedAgents : null);
+      // Capture message and files before clearing
+      const messageToSend = message.trim();
+      const filesToSend = attachedFiles.map(f => f.url);
+      
+      // Clear UI immediately
       setMessage('');
       setAttachedFiles([]);
-      // Reset textarea height
+      onMessageChange?.('');
       if (textareaRef.current) {
         textareaRef.current.style.height = '24px';
       }
+      
+      // Send after clearing
+      onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
     }
   };
 
@@ -614,16 +621,21 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   setIsRecording(false);
                   lastTranscriptRef.current = '';
                 }
-                onSend(message.trim(), attachedFiles.map(f => f.url), multiAgentMode ? selectedAgents : null);
                 
-                // Clear message and files immediately
-                setTimeout(() => {
-                  setMessage('');
-                  setAttachedFiles([]);
-                  if (textareaRef.current) {
-                    textareaRef.current.style.height = '24px';
-                  }
-                }, 0);
+                // Capture message and files before clearing
+                const messageToSend = message.trim();
+                const filesToSend = attachedFiles.map(f => f.url);
+                
+                // Clear immediately
+                setMessage('');
+                setAttachedFiles([]);
+                onMessageChange?.('');
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = '24px';
+                }
+                
+                // Send after clearing UI
+                onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
               }
               return false;
             }
