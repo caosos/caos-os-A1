@@ -595,8 +595,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             setMessage(e.target.value);
             onMessageChange?.(e.target.value);
             e.target.style.height = 'auto';
-            const newHeight = Math.min(e.target.scrollHeight, 168);
-            e.target.style.height = newHeight + 'px';
+            e.target.style.height = e.target.scrollHeight + 'px';
           }}
           onKeyPress={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -633,7 +632,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onFocus={() => onTypingStart?.()}
           placeholder="Type a message..."
           className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-sm px-2 resize-none overflow-y-auto"
-          style={{ minHeight: '24px', height: '24px', maxHeight: '168px' }}
+          style={{ minHeight: '24px', height: '24px', maxHeight: 'none' }}
           disabled={isLoading}
         />
         
