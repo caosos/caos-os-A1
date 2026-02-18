@@ -434,21 +434,26 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         recognitionRef.current?.stop();
         setIsRecording(false);
         
-        // Wait 150ms for final speech results to be processed
+        // Wait 200ms for final speech results to be processed
         setTimeout(() => {
-          const messageToSend = message.trim();
-          const filesToSend = attachedFiles.map(f => f.url);
+          // Capture from textarea value as final source of truth
+          const finalMessage = textareaRef.current?.value || message;
+          const messageToSend = finalMessage.trim();
+          const filesToSend = [...attachedFiles].map(f => f.url);
           
           setMessage('');
           setAttachedFiles([]);
           onMessageChange?.('');
           lastTranscriptRef.current = '';
           if (textareaRef.current) {
+            textareaRef.current.value = '';
             textareaRef.current.style.height = '24px';
           }
           
-          onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
-        }, 150);
+          if (messageToSend || filesToSend.length > 0) {
+            onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+          }
+        }, 200);
         return;
       }
 
@@ -635,19 +640,23 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   
                   // Wait for final speech results
                   setTimeout(() => {
-                    const messageToSend = message.trim();
-                    const filesToSend = attachedFiles.map(f => f.url);
+                    const finalMessage = textareaRef.current?.value || message;
+                    const messageToSend = finalMessage.trim();
+                    const filesToSend = [...attachedFiles].map(f => f.url);
                     
                     setMessage('');
                     setAttachedFiles([]);
                     onMessageChange?.('');
                     lastTranscriptRef.current = '';
                     if (textareaRef.current) {
+                      textareaRef.current.value = '';
                       textareaRef.current.style.height = '24px';
                     }
                     
-                    onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
-                  }, 150);
+                    if (messageToSend || filesToSend.length > 0) {
+                      onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+                    }
+                  }, 200);
                   return false;
                 }
                 
