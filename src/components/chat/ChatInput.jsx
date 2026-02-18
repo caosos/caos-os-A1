@@ -357,20 +357,19 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       lastTranscriptRef.current = '';
 
       recognition.onresult = (event) => {
-        // Build complete transcript from all final results
+        // Build complete transcript from all results (including interim)
         let fullTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            fullTranscript += event.results[i][0].transcript + ' ';
-          }
+          fullTranscript += event.results[i][0].transcript + ' ';
         }
         
         // Only add the NEW part that wasn't in our last transcript
         if (fullTranscript && fullTranscript !== lastTranscriptRef.current) {
           const newPart = fullTranscript.slice(lastTranscriptRef.current.length);
           if (newPart.trim()) {
-            // CAOS-A1: Raw transcript added to input (untrusted)
-            setMessage(prev => prev + (prev ? ' ' : '') + newPart.trim());
+            const updatedMessage = message + (message ? ' ' : '') + newPart.trim();
+            setMessage(updatedMessage);
+            onMessageChange?.(updatedMessage);
             
             if (textareaRef.current) {
               textareaRef.current.style.height = 'auto';
@@ -429,19 +428,34 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const handleSubmit = (e) => {
     e?.preventDefault();
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-      // Stop recording if active
+      // If recording, stop and wait for final results
       if (isRecording) {
         isRecordingRef.current = false;
         recognitionRef.current?.stop();
         setIsRecording(false);
-        lastTranscriptRef.current = '';
+        
+        // Wait 150ms for final speech results to be processed
+        setTimeout(() => {
+          const messageToSend = message.trim();
+          const filesToSend = attachedFiles.map(f => f.url);
+          
+          setMessage('');
+          setAttachedFiles([]);
+          onMessageChange?.('');
+          lastTranscriptRef.current = '';
+          if (textareaRef.current) {
+            textareaRef.current.style.height = '24px';
+          }
+          
+          onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+        }, 150);
+        return;
       }
 
-      // Capture message and files before clearing
+      // Normal send (not recording)
       const messageToSend = message.trim();
       const filesToSend = attachedFiles.map(f => f.url);
       
-      // Clear UI immediately
       setMessage('');
       setAttachedFiles([]);
       onMessageChange?.('');
@@ -449,7 +463,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         textareaRef.current.style.height = '24px';
       }
       
-      // Send after clearing
       onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
     }
   };
@@ -619,14 +632,29 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   isRecordingRef.current = false;
                   recognitionRef.current?.stop();
                   setIsRecording(false);
-                  lastTranscriptRef.current = '';
+                  
+                  // Wait for final speech results
+                  setTimeout(() => {
+                    const messageToSend = message.trim();
+                    const filesToSend = attachedFiles.map(f => f.url);
+                    
+                    setMessage('');
+                    setAttachedFiles([]);
+                    onMessageChange?.('');
+                    lastTranscriptRef.current = '';
+                    if (textareaRef.current) {
+                      textareaRef.current.style.height = '24px';
+                    }
+                    
+                    onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+                  }, 150);
+                  return false;
                 }
                 
-                // Capture message and files before clearing
+                // Normal send (not recording)
                 const messageToSend = message.trim();
                 const filesToSend = attachedFiles.map(f => f.url);
                 
-                // Clear immediately
                 setMessage('');
                 setAttachedFiles([]);
                 onMessageChange?.('');
@@ -634,7 +662,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   textareaRef.current.style.height = '24px';
                 }
                 
-                // Send after clearing UI
                 onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
               }
               return false;
