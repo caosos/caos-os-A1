@@ -321,17 +321,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
 
     if (isSpeaking) {
-      // Stop speaking
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
       utteranceRef.current = null;
       return;
     }
 
-    // Start speaking
-    window.speechSynthesis.cancel(); // Cancel any other speech
+    window.speechSynthesis.cancel();
     
-    // Clean markdown for natural speech
+    // Enhanced markdown cleaning with natural pauses
     const cleanText = message.content
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -339,27 +337,58 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/_(.+?)_/g, '$1')
       .replace(/`(.+?)`/g, '$1')
       .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-      .replace(/^[-*+]\s/gm, '')
-      .replace(/^\d+\.\s/gm, '')
+      .replace(/^[-*+]\s/gm, '... ')  // Add pause for list items
+      .replace(/^\d+\.\s/gm, '... ')  // Add pause for numbered lists
       .replace(/>/g, '')
       .replace(/\|/g, '')
-      .replace(/---+/g, '')
-      .replace(/\n{3,}/g, '\n\n')
+      .replace(/---+/g, '. ')  // Convert horizontal rules to pauses
+      .replace(/\n\n+/g, '. ')  // Paragraph breaks become pauses
+      .replace(/\n/g, ', ')  // Line breaks become shorter pauses
       .trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     
-    // Apply saved voice preference
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+    // Get available voices
     const voices = window.speechSynthesis.getVoices();
+    
+    // Prefer natural-sounding voices
+    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+    let selectedVoice = null;
+    
     if (savedVoiceURI) {
-      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-      if (voice) utterance.voice = voice;
+      selectedVoice = voices.find(v => v.voiceURI === savedVoiceURI);
     }
     
-    // Apply saved speed
+    if (!selectedVoice) {
+      // Auto-select most natural voice
+      const preferredVoices = [
+        'Google US English',
+        'Microsoft Aria Online',
+        'Samantha',
+        'Alex',
+        'Karen',
+        'Daniel',
+        'Fiona'
+      ];
+      
+      for (const preferred of preferredVoices) {
+        selectedVoice = voices.find(v => v.name.includes(preferred));
+        if (selectedVoice) break;
+      }
+      
+      // Fallback to any English voice
+      if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.startsWith('en'));
+      }
+    }
+    
+    if (selectedVoice) utterance.voice = selectedVoice;
+    
+    // Natural speech parameters
     const savedRate = localStorage.getItem('caos_speech_rate');
-    utterance.rate = savedRate ? parseFloat(savedRate) : 1.0;
+    utterance.rate = savedRate ? parseFloat(savedRate) : 0.95;  // Slightly slower for clarity
+    utterance.pitch = 1.0;  // Natural pitch
+    utterance.volume = 0.9;  // Slightly softer
     
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => {
