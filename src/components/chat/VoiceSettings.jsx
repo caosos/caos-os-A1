@@ -184,7 +184,40 @@ export default function VoiceSettings({ isOpen, onClose }) {
           </div>
         </div>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <Button 
+            onClick={async () => {
+              try {
+                const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
+                  },
+                  body: JSON.stringify({
+                    text: "This is a test of the selected voice and speed settings.",
+                    voice: selectedVoice,
+                    speed: rate
+                  })
+                });
+
+                if (!response.ok) throw new Error('Failed');
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+                toast.success('Playing with current settings');
+              } catch (error) {
+                toast.error('Failed to play');
+              }
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            <Volume2 className="w-4 h-4 mr-2" />
+            Read Aloud with These Settings
+          </Button>
           <Button onClick={saveSettings} className="w-full bg-blue-600 hover:bg-blue-700">
             Save Settings
           </Button>

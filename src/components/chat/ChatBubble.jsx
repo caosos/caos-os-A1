@@ -759,23 +759,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
                   <button
-                    onClick={handleRegenerate}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Regenerate"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                  </button>
-                  <button
-                    onClick={handleReadAloud}
-                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
-                    title={isSpeaking ? "Stop reading" : "Read aloud"}
-                  >
-                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
-                  </button>
-                  <button
                     onClick={() => setShowVoiceSettings(true)}
                     className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Voice settings"
+                    title="Voice settings & read aloud"
                   >
                     <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
