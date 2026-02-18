@@ -332,17 +332,23 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-      const result = await base44.functions.invoke('textToSpeech', {
-        text: message.content,
-        voice: savedVoice,
-        speed: savedRate
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: message.content,
+          voice: savedVoice,
+          speed: savedRate
+        })
       });
 
-      if (!result.data || result.data.error) {
-        throw new Error(result.data?.error || 'Failed to generate speech');
+      if (!response.ok) {
+        throw new Error('Failed to generate speech');
       }
 
-      const audioBlob = new Blob([result.data], { type: 'audio/mpeg' });
+      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       

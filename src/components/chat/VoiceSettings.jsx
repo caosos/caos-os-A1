@@ -47,18 +47,23 @@ export default function VoiceSettings({ isOpen, onClose }) {
     setTestingVoice(voiceId);
 
     try {
-      const result = await base44.functions.invoke('textToSpeech', {
-        text: "Hey, I'm Aria. How does this voice sound?",
-        voice: voiceId,
-        speed: rate
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: "Hey, I'm Aria. How does this voice sound?",
+          voice: voiceId,
+          speed: rate
+        })
       });
 
-      if (!result.data || result.data.error) {
-        throw new Error(result.data?.error || 'Failed to generate speech');
+      if (!response.ok) {
+        throw new Error('Failed to generate speech');
       }
 
-      // The function returns binary audio data
-      const audioBlob = new Blob([result.data], { type: 'audio/mpeg' });
+      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
