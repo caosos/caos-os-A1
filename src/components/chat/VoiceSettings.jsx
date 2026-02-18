@@ -46,6 +46,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
     }
 
     setTestingVoice(voiceId);
+    toast.loading('Generating speech...');
 
     try {
       const functionUrl = `/api/functions/textToSpeech`;
@@ -62,30 +63,51 @@ export default function VoiceSettings({ isOpen, onClose }) {
         })
       });
 
-      if (!response.ok) throw new Error('Failed to generate speech');
+      toast.dismiss();
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('TTS Error:', errorText);
+        throw new Error(`Failed: ${response.status}`);
+      }
 
       const audioBlob = await response.blob();
+      console.log('Audio blob received:', audioBlob.size, 'bytes');
+      
+      if (audioBlob.size === 0) {
+        throw new Error('Empty audio file received');
+      }
+
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
       audioRef.current = audio;
+      
       audio.onended = () => {
         setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
       };
-      audio.onerror = () => {
+      
+      audio.onerror = (e) => {
+        console.error('Audio playback error:', e);
         setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
-        toast.error('Audio playback failed');
+        toast.error('Playback failed');
+      };
+
+      audio.oncanplaythrough = () => {
+        console.log('Audio ready to play');
       };
 
       await audio.play();
+      toast.success('Playing voice sample');
     } catch (error) {
       console.error('Test voice error:', error);
       setTestingVoice(null);
-      toast.error('Failed to test voice');
+      toast.dismiss();
+      toast.error(`Error: ${error.message}`);
     }
   };
 
