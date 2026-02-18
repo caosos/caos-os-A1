@@ -156,8 +156,8 @@ Deno.serve(async (req) => {
         let generatedFiles = [];
         let usageTokens = 0;
 
-        // Hybrid mode: Grok + OpenAI collaboration for enhanced responses
-        const useHybridMode = !isFileGen && !isImageGen && input.length > 100;
+        // Hybrid mode: Grok + OpenAI collaboration for ALL regular chat (no limits)
+        const useHybridMode = !isFileGen && !isImageGen;
 
         if (useHybridMode) {
             // HYBRID: Grok generates, OpenAI refines/polishes
