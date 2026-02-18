@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -319,10 +319,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const handleReadAloud = async () => {
     if (isSpeaking) {
       if (utteranceRef.current) {
-        utteranceRef.current.pause();
-        utteranceRef.current = null;
+        if (utteranceRef.current.paused) {
+          utteranceRef.current.play();
+        } else {
+          utteranceRef.current.pause();
+        }
       }
-      setIsSpeaking(false);
       return;
     }
 
@@ -331,11 +333,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     try {
       const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+      const token = localStorage.getItem('base44_access_token');
 
       const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           text: message.content,
@@ -371,6 +375,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsSpeaking(false);
       toast.error('Failed to read aloud');
     }
+  };
+
+  const handleStopReading = () => {
+    if (utteranceRef.current) {
+      utteranceRef.current.pause();
+      utteranceRef.current.currentTime = 0;
+      utteranceRef.current = null;
+    }
+    setIsSpeaking(false);
   };
 
   const handleRegenerate = () => {
@@ -759,9 +772,25 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
                   <button
+                    onClick={handleReadAloud}
+                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
+                    title={isSpeaking ? "Pause/Resume" : "Read aloud"}
+                  >
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                  </button>
+                  {isSpeaking && (
+                    <button
+                      onClick={handleStopReading}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Stop"
+                    >
+                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                    </button>
+                  )}
+                  <button
                     onClick={() => setShowVoiceSettings(true)}
                     className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Voice settings & read aloud"
+                    title="Voice settings"
                   >
                     <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
