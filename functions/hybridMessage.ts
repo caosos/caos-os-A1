@@ -379,12 +379,12 @@ Deno.serve(async (req) => {
                     type: "function",
                     function: {
                         name: "recall_memory",
-                        description: "Search ALL past conversations across ALL sessions, not just current",
+                        description: "Search FULL conversation history - all sessions, all threads, current included. No caps. Full vault access.",
                         parameters: {
                             type: "object",
                             properties: {
                                 query: { type: "string", description: "Keywords to search for" },
-                                limit: { type: "number", description: "Max results", default: 10 }
+                                limit: { type: "number", description: "Max results to return (default 50)", default: 50 }
                             },
                             required: ["query"]
                         }
@@ -458,28 +458,30 @@ Deno.serve(async (req) => {
                             add_context_from_internet: true
                         });
                     } else if (toolCall.function.name === 'recall_memory') {
-                        // Search ACROSS ALL SESSIONS for this user (not current session)
+                        // Search ACROSS ALL SESSIONS - NO CAPS, full vault access
                         try {
-                            // Get all records for this user across all sessions
+                            // Fetch ALL records for this user (Base44 max: 1000 per query)
                             const allRecords = await base44.asServiceRole.entities.Record.filter(
                                 { lane_id: user.email, status: "active" },
                                 '-ts_snapshot_ms',
-                                args.limit * 10
+                                1000  // Max fetch - full history vault
                             );
 
-                            // Filter out current session and search by keyword
+                            // Search across ALL sessions including current
                             const matches = allRecords
-                                .filter(r => r.session_id !== session_id && r.message.toLowerCase().includes(args.query.toLowerCase()))
-                                .slice(0, args.limit);
+                                .filter(r => r.message.toLowerCase().includes(args.query.toLowerCase()))
+                                .slice(0, args.limit || 50);
 
                             toolResult = {
                                 found: matches.length,
+                                total_searched: allRecords.length,
                                 query: args.query,
                                 messages: matches.map(m => ({
                                     role: m.role,
                                     content: m.message.substring(0, 500),
                                     timestamp: m.ts_snapshot_iso,
-                                    session: m.session_id
+                                    session: m.session_id,
+                                    is_current_session: m.session_id === session_id
                                 }))
                             };
                         } catch (error) {
