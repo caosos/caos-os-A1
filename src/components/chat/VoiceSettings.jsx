@@ -45,12 +45,17 @@ export default function VoiceSettings({ isOpen, onClose }) {
     }
 
     setTestingVoice(voiceId);
+    console.log('Testing voice:', voiceId);
 
     try {
+      const token = localStorage.getItem('base44_access_token');
+      console.log('Token exists:', !!token);
+      
       const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           text: "Hey, I'm Aria. How does this voice sound?",
@@ -59,34 +64,46 @@ export default function VoiceSettings({ isOpen, onClose }) {
         })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response content type:', response.headers.get('content-type'));
+
       if (!response.ok) {
-        throw new Error('Failed to generate speech');
+        const error = await response.text();
+        console.error('TTS error response:', error);
+        throw new Error(`Failed: ${response.status}`);
       }
 
       const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+      console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
       
+      const audioUrl = URL.createObjectURL(audioBlob);
+      console.log('Audio URL created:', audioUrl);
+      
+      const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
       audio.onended = () => {
+        console.log('Audio ended');
         setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
       };
       
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error('Audio error:', e);
         setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
         toast.error('Playback failed');
       };
 
+      console.log('Starting playback...');
       await audio.play();
+      console.log('Audio playing');
     } catch (error) {
       console.error('Test voice error:', error);
       setTestingVoice(null);
-      toast.error('Failed to play voice');
+      toast.error(`Error: ${error.message}`);
     }
   };
 
