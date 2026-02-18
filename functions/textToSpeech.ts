@@ -38,7 +38,11 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
             const error = await response.text();
-            throw new Error(`OpenAI TTS error: ${error}`);
+            console.error('OpenAI API Response:', response.status, error);
+            return Response.json({ 
+                error: `OpenAI API error (${response.status}): ${error}`,
+                status_code: response.status 
+            }, { status: response.status });
         }
 
         // Get audio data
