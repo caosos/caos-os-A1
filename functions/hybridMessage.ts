@@ -156,7 +156,69 @@ Deno.serve(async (req) => {
         let generatedFiles = [];
         let usageTokens = 0;
 
-        if (isImageGen) {
+        // Hybrid mode: Grok + OpenAI collaboration for enhanced responses
+        const useHybridMode = !isFileGen && !isImageGen && input.length > 100;
+
+        if (useHybridMode) {
+            // HYBRID: Grok generates, OpenAI refines/polishes
+            try {
+                const grokResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'grok-4-1-fast-reasoning',
+                        messages,
+                        temperature: 0.7
+                    })
+                });
+
+                const grokResult = await grokResponse.json();
+                const grokContent = grokResult.choices[0].message.content;
+                usageTokens = grokResult.usage?.total_tokens || 0;
+
+                // OpenAI refines formatting & clarity
+                const refineResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        messages: [
+                            { role: 'system', content: 'Enhance formatting, clarity, and polish while keeping exact same voice and content. Stay concise.' },
+                            { role: 'user', content: `Original:\n\n${grokContent}\n\nRefine presentation only.` }
+                        ],
+                        temperature: 0.3
+                    })
+                });
+
+                const refineResult = await refineResponse.json();
+                aiResponse = refineResult.choices[0].message.content;
+                usageTokens += refineResult.usage?.total_tokens || 0;
+
+            } catch (error) {
+                console.warn('Hybrid failed, falling back to Grok:', error);
+                const fallbackResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'grok-4-1-fast-reasoning',
+                        messages,
+                        temperature: 0.7
+                    })
+                });
+                const fallbackResult = await fallbackResponse.json();
+                aiResponse = fallbackResult.choices[0].message.content;
+                usageTokens = fallbackResult.usage?.total_tokens || 0;
+            }
+        } else if (isImageGen) {
             // Route to OpenAI DALL-E for image generation
             if (!OPENAI_API_KEY) {
                 throw new Error('OPENAI_API_KEY not configured');
