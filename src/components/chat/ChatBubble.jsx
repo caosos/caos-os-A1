@@ -702,9 +702,26 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 code: ({ inline, className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || '');
                   return !inline && match ? (
-                    <div className="relative group/code my-3">
-                      <pre className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto">
+                    <div className="relative group/code my-3 max-w-full">
+                      <pre className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto max-w-full">
                         <code className={className} {...props}>{children}</code>
+                      </pre>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover/code:opacity-100 bg-slate-800 hover:bg-slate-700"
+                        onClick={() => {
+                          navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+                          toast.success('Code copied');
+                        }}
+                      >
+                        <Copy className="h-3 w-3 text-slate-400" />
+                      </Button>
+                    </div>
+                  ) : !inline ? (
+                    <div className="relative group/code my-3 max-w-full">
+                      <pre className="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto max-w-full whitespace-pre-wrap break-words">
+                        <code {...props}>{children}</code>
                       </pre>
                       <Button
                         size="icon"
