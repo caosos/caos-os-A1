@@ -460,11 +460,13 @@ export default function Chat() {
         }]
       }));
 
+      const contextSeed = localStorage.getItem(`caos_seed_${conversationId}`);
+      
       const { data } = await base44.functions.invoke('hybridMessage', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-        limit: 20
+        rotation_seed: contextSeed
       });
 
       clearTimeout(timeoutId);
@@ -472,6 +474,44 @@ export default function Chat() {
 
       if (!data) throw new Error('No response from server');
       const reply = data.reply || data.response || data.text || '';
+      
+      // Handle auto-rotation if needed
+      if (data.rotation_needed && data.context_seed) {
+        toast.info(`Approaching token limit (${Math.round(data.current_tokens / 1000)}K). Starting fresh thread with context carryover...`);
+        
+        // Create new conversation with seed
+        const newTitle = `${conversations.find(c => c.id === conversationId)?.title || 'Conversation'} (continued)`;
+        
+        if (isGuestMode) {
+          const newConvoId = 'guest_' + Date.now();
+          const newConvo = {
+            id: newConvoId,
+            title: newTitle,
+            last_message_time: new Date().toISOString(),
+            created_by: user.email
+          };
+          
+          setConversations(prev => [newConvo, ...prev]);
+          setCurrentConversationId(newConvoId);
+          setMessages(prev => ({ ...prev, [newConvoId]: [] }));
+          
+          localStorage.setItem(`caos_seed_${newConvoId}`, data.context_seed);
+          localStorage.setItem('caos_guest_conversations', JSON.stringify([newConvo, ...conversations]));
+        } else {
+          const newConvo = await base44.entities.Conversation.create({
+            title: newTitle,
+            last_message_time: new Date().toISOString()
+          });
+          
+          setConversations(prev => [newConvo, ...prev]);
+          setCurrentConversationId(newConvo.id);
+          setMessages(prev => ({ ...prev, [newConvo.id]: [] }));
+          localStorage.setItem(`caos_seed_${newConvo.id}`, data.context_seed);
+          localStorage.setItem('caos_last_conversation', newConvo.id);
+        }
+        
+        return; // Don't save messages to old thread
+      }
 
       if (isGuestMode) {
         const userMsg = {
