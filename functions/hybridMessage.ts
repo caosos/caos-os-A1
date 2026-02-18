@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { input, session_id, file_urls, limit = 20 } = body;
+        const { input, session_id, file_urls, limit = 1000 } = body;
 
         if (!GROK_API_KEY) {
             throw new Error('XAI_API_KEY not configured');
