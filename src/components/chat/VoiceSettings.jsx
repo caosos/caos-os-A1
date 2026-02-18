@@ -3,6 +3,7 @@ import { X, Volume2, Play, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
+import { base44 } from '@/api/base44Client';
 
 export default function VoiceSettings({ isOpen, onClose }) {
   // OpenAI TTS voices - high quality, natural sounding
@@ -41,19 +42,14 @@ export default function VoiceSettings({ isOpen, onClose }) {
     setTestingSpeech(true);
 
     try {
-      const response = await fetch('/api/functions/textToSpeech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: "Hey, I'm Aria. How does this voice sound?",
-          voice: voiceId,
-          speed: rate
-        })
+      const response = await base44.functions.invoke('textToSpeech', {
+        text: "Hey, I'm Aria. How does this voice sound?",
+        voice: voiceId,
+        speed: rate
       });
 
-      if (!response.ok) throw new Error('Failed to generate speech');
-
-      const audioBlob = await response.blob();
+      // Response.data is the audio blob from backend
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
@@ -65,6 +61,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
       audio.onerror = () => {
         setTestingSpeech(false);
         URL.revokeObjectURL(audioUrl);
+        toast.error('Audio playback failed');
       };
 
       await audio.play();
