@@ -13,18 +13,22 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { input, session_id, file_urls, limit = 1000 } = body;
+        const { input, session_id, file_urls, rotation_seed } = body;
 
         if (!GROK_API_KEY) {
             throw new Error('XAI_API_KEY not configured');
         }
 
-        // Load conversation history
+        // Smart context loading: only last 15 messages for working window
         const recentRecords = await base44.asServiceRole.entities.Record.filter(
             { session_id, status: "active" },
             '-seq',
-            limit
+            15  // Keep working context small
         );
+
+        // Calculate current token usage
+        const currentTokens = recentRecords.reduce((sum, r) => sum + (r.token_count || 0), 0);
+        const rotationNeeded = currentTokens > 100000;
 
         // Detect task type - route to OpenAI for file/image generation
         const lowerInput = input.toLowerCase();
@@ -48,57 +52,45 @@ Deno.serve(async (req) => {
                           lowerInput.includes('make an image') ||
                           lowerInput.includes('generate a picture');
 
-        // Condense old history to prevent token explosion (whale fix)
-        const condenseHistory = async (records) => {
-          if (records.length <= 10) return records;
+        // Generate context seed if rotation needed
+        let contextSeed = rotation_seed || null;
+        
+        if (rotationNeeded && !rotation_seed) {
+            // Generate compressed seed for next thread
+            try {
+                const seedResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'grok-4-1-fast-reasoning',
+                        messages: [
+                            { role: 'system', content: 'Extract ONLY key facts, decisions, preferences, and context that must carry forward. Ultra-compressed. Under 1000 tokens.' },
+                            ...recentRecords.map(r => ({ role: r.role, content: r.message }))
+                        ],
+                        temperature: 0.2
+                    })
+                });
+                const seedResult = await seedResponse.json();
+                contextSeed = seedResult.choices[0].message.content;
+            } catch (error) {
+                console.warn('Seed generation failed:', error.message);
+            }
+        }
 
-          const oldRecords = records.slice(0, records.length - 10);
-          const recentRecords = records.slice(-10);
+        const workingRecords = recentRecords.reverse();
 
-          if (oldRecords.length === 0) return records;
+        // Build message history with optional seed injection
+        const systemPrompt = isFileGen || isImageGen 
+            ? "You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
+            : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.`;
 
-          try {
-            // Summarize old conversation to key facts/anchors
-            const summaryResponse = await fetch('https://api.x.ai/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${GROK_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: 'grok-4-1-fast-reasoning',
-                messages: [
-                  { role: 'system', content: 'Summarize this conversation to key anchors/hot facts in under 500 tokens. Be concise and natural.' },
-                  ...oldRecords.map(r => ({ role: r.role, content: r.message }))
-                ],
-                temperature: 0.3
-              })
-            });
-
-            const summaryResult = await summaryResponse.json();
-            const summary = summaryResult.choices[0].message.content;
-
-            return [
-              { role: 'assistant', message: `[Earlier conversation summary]\n${summary}` },
-              ...recentRecords
-            ];
-          } catch (error) {
-            console.warn('History condensing failed, using recent records only:', error.message);
-            return recentRecords;
-          }
-        };
-
-        const condensedRecords = await condenseHistory(recentRecords);
-
-        // Build message history
         const messages = [
-            {
-                role: "system",
-                content: isFileGen || isImageGen 
-                    ? "You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
-                    : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.`
-            },
-            ...condensedRecords.reverse().map(r => ({
+            { role: "system", content: systemPrompt },
+            ...(contextSeed ? [{ role: "system", content: `[Context from previous thread]\n${contextSeed}` }] : []),
+            ...workingRecords.map(r => ({
                 role: r.role,
                 content: r.message
             }))
@@ -599,7 +591,10 @@ Deno.serve(async (req) => {
             reply: aiResponse,
             session: session_id,
             generatedFiles: generatedFiles,
-            usage_tokens: usageTokens
+            usage_tokens: usageTokens,
+            rotation_needed: rotationNeeded,
+            context_seed: rotationNeeded ? contextSeed : null,
+            current_tokens: currentTokens
         });
 
     } catch (error) {
