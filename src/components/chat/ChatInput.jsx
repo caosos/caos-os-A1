@@ -26,10 +26,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     return saved ? parseFloat(saved) : 1.0;
   });
   const [speechProgress, setSpeechProgress] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef(null);
   const utteranceRef = useRef(null);
   const voiceMenuRef = useRef(null);
   const progressInterval = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -70,10 +73,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   }, [showCaptureMenu, showVoiceMenu]);
   const textareaRef = useRef(null);
-  const recognitionRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const lastTranscriptRef = useRef('');
-  const isRecordingRef = useRef(false);
   const captureMenuRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -332,42 +332,42 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     utteranceRef.current = null;
   };
 
-  const toggleVoiceRecording = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in your browser');
-      return;
-    }
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-    if (isRecording) {
-      isRecordingRef.current = false;
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      lastTranscriptRef.current = '';
-    } else {
-      // CAOS-A1: Base44 UI Layer handles speech-to-text (Whisper equivalent)
-      // Output is UNTRUSTED and will be sent to CAOS for normalization
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      isRecordingRef.current = true;
-      lastTranscriptRef.current = '';
-
-      recognition.onresult = (event) => {
-        // Build complete transcript from all results (including interim)
-        let fullTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript + ' ';
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
         
-        // Only add the NEW part that wasn't in our last transcript
-        if (fullTranscript && fullTranscript !== lastTranscriptRef.current) {
-          const newPart = fullTranscript.slice(lastTranscriptRef.current.length);
-          if (newPart.trim()) {
-            const updatedMessage = message + (message ? ' ' : '') + newPart.trim();
+        setIsTranscribing(true);
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob);
+          
+          const token = localStorage.getItem('base44_access_token');
+          const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/transcribeAudio', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (!response.ok) throw new Error('Transcription failed');
+          
+          const data = await response.json();
+          if (data.success && data.text) {
+            const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
             onMessageChange?.(updatedMessage);
             
@@ -376,72 +376,48 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
             }
           }
-          lastTranscriptRef.current = fullTranscript;
+        } catch (error) {
+          console.error('Transcription error:', error);
+          alert('Failed to transcribe audio');
+        } finally {
+          setIsTranscribing(false);
         }
       };
-      
-      recognition.onerror = (event) => {
-        console.error('[Whisper UI] Speech recognition error', event.error);
-        if (event.error !== 'aborted' && isRecordingRef.current) {
-          setTimeout(() => {
-            if (isRecordingRef.current) {
-              try {
-                recognition.start();
-              } catch (e) {
-                console.error('[Whisper UI] Restart failed:', e);
-              }
-            }
-          }, 5000);
-        } else {
-          isRecordingRef.current = false;
-          setIsRecording(false);
-          lastTranscriptRef.current = '';
-        }
-      };
-      
-      recognition.onend = () => {
-        if (isRecordingRef.current) {
-          setTimeout(() => {
-            if (isRecordingRef.current) {
-              try {
-                recognition.start();
-              } catch (e) {
-                console.error('[Whisper UI] Restart failed:', e);
-                isRecordingRef.current = false;
-                setIsRecording(false);
-                lastTranscriptRef.current = '';
-              }
-            }
-          }, 5000);
-        } else {
-          setIsRecording(false);
-          lastTranscriptRef.current = '';
-        }
-      };
-      
-      recognitionRef.current = recognition;
-      recognition.start();
+
+      mediaRecorder.start();
       setIsRecording(true);
+    } catch (error) {
+      console.error('Microphone error:', error);
+      alert('Could not access microphone');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const toggleVoiceRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
   const handleSubmit = (e) => {
     e?.preventDefault();
     
-    // If transcribing, wait
-    if (isTranscribing) {
-      toast.info('Transcribing audio...');
-      return;
-    }
+    if (isTranscribing) return;
     
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-      // If recording, stop and wait for transcription
       if (isRecording) {
         stopRecording();
         return;
       }
 
-      // Normal send
       const messageToSend = message.trim();
       const filesToSend = attachedFiles.map(f => f.url);
       
@@ -592,11 +568,23 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <button
           type="button"
           onClick={toggleVoiceRecording}
-          className={`p-1.5 rounded-full transition-colors flex-shrink-0 relative ${isRecording ? 'bg-red-100 animate-pulse' : 'hover:bg-gray-100'}`}
+          disabled={isTranscribing}
+          className={`p-1.5 rounded-full transition-colors flex-shrink-0 relative ${
+            isRecording ? 'bg-red-100 animate-pulse' : 
+            isTranscribing ? 'bg-blue-100' : 
+            'hover:bg-gray-100'
+          }`}
+          title={isTranscribing ? 'Transcribing...' : isRecording ? 'Stop' : 'Start recording'}
         >
-          <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500' : 'text-gray-700'}`} />
-          {isRecording && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+          {isTranscribing ? (
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <>
+              <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500' : 'text-gray-700'}`} />
+              {isRecording && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+              )}
+            </>
           )}
         </button>
 
@@ -615,11 +603,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               e.preventDefault();
               e.stopPropagation();
 
-              // Send message directly without form submission
-              if (isTranscribing) {
-                toast.info('Transcribing audio...');
-                return false;
-              }
+              if (isTranscribing) return false;
               
               if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
                 if (isRecording) {
@@ -627,7 +611,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   return false;
                 }
                 
-                // Normal send
                 const messageToSend = message.trim();
                 const filesToSend = attachedFiles.map(f => f.url);
                 
