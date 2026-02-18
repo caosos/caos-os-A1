@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
 import CopyBlock from './CopyBlock';
 import LinkPreview from './LinkPreview';
+import VoiceSettings from './VoiceSettings';
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);
@@ -101,6 +102,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const justSelectedRef = React.useRef(false);
   const utteranceRef = React.useRef(null);
 
@@ -804,6 +806,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                   </button>
                   <button
+                    onClick={() => setShowVoiceSettings(true)}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Voice settings"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                  </button>
+                  <button
                     onClick={handleEmailContent}
                     className="p-1 hover:bg-white/10 rounded transition-colors"
                     title="Email this"
@@ -879,6 +888,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               />
               </div>
               )}
+
+              <VoiceSettings 
+                isOpen={showVoiceSettings}
+                onClose={() => setShowVoiceSettings(false)}
+              />
               </>
               );
               }
