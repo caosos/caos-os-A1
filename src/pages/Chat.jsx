@@ -629,7 +629,7 @@ export default function Chat() {
 
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
           <div className="flex items-center justify-between gap-2 px-4 py-2">
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
               <ChatHeader 
                 user={user}
                 onNewThread={handleNewThread}
@@ -642,6 +642,12 @@ export default function Chat() {
                 currentConversation={conversations.find(c => c.id === currentConversationId)}
                 sessionFilesCount={generatedFiles.length}
               />
+              {currentConversationId && currentMessages.length > 0 && (
+                <ConversationSearch
+                  messages={currentMessages}
+                  onJumpToMessage={handleJumpToMessage}
+                />
+              )}
             </div>
             {currentConversationId && currentMessages.length > 0 && (
               <div className="flex items-center gap-3">
@@ -652,10 +658,6 @@ export default function Chat() {
                 <div className="w-40">
                   <TokenMeter messages={currentMessages} />
                 </div>
-                <ConversationSearch
-                  messages={currentMessages}
-                  onJumpToMessage={handleJumpToMessage}
-                />
               </div>
             )}
           </div>
