@@ -18,7 +18,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
 
   const [selectedVoice, setSelectedVoice] = useState('nova');
   const [rate, setRate] = useState(1.0);
-  const [testingSpeech, setTestingSpeech] = useState(false);
+  const [testingVoice, setTestingVoice] = useState(null);
   const audioRef = React.useRef(null);
 
   useEffect(() => {
@@ -30,19 +30,24 @@ export default function VoiceSettings({ isOpen, onClose }) {
   }, []);
 
   const testVoice = async (voiceId) => {
-    if (testingSpeech) {
+    if (testingVoice === voiceId) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      setTestingSpeech(false);
+      setTestingVoice(null);
       return;
     }
 
-    setTestingSpeech(true);
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setTestingVoice(voiceId);
 
     try {
-      // Get function URL and call directly to get binary response
       const functionUrl = `/api/functions/textToSpeech`;
       const response = await fetch(functionUrl, {
         method: 'POST',
@@ -65,19 +70,21 @@ export default function VoiceSettings({ isOpen, onClose }) {
       
       audioRef.current = audio;
       audio.onended = () => {
-        setTestingSpeech(false);
+        setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
       };
       audio.onerror = () => {
-        setTestingSpeech(false);
+        setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
         toast.error('Audio playback failed');
       };
 
       await audio.play();
     } catch (error) {
       console.error('Test voice error:', error);
-      setTestingSpeech(false);
+      setTestingVoice(null);
       toast.error('Failed to test voice');
     }
   };
@@ -149,9 +156,8 @@ export default function VoiceSettings({ isOpen, onClose }) {
                         testVoice(voice.id);
                       }}
                       className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                      disabled={testingSpeech}
                     >
-                      <Play className={`w-4 h-4 ${testingSpeech ? 'text-blue-400' : 'text-white/70'}`} />
+                      <Play className={`w-4 h-4 ${testingVoice === voice.id ? 'text-blue-400' : 'text-white/70'}`} />
                     </button>
                   </div>
                 </div>
