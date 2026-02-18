@@ -42,14 +42,24 @@ export default function VoiceSettings({ isOpen, onClose }) {
     setTestingSpeech(true);
 
     try {
-      const response = await base44.functions.invoke('textToSpeech', {
-        text: "Hey, I'm Aria. How does this voice sound?",
-        voice: voiceId,
-        speed: rate
+      // Get function URL and call directly to get binary response
+      const functionUrl = `/api/functions/textToSpeech`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
+        },
+        body: JSON.stringify({
+          text: "Hey, I'm Aria. How does this voice sound?",
+          voice: voiceId,
+          speed: rate
+        })
       });
 
-      // Response.data is the audio blob from backend
-      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      if (!response.ok) throw new Error('Failed to generate speech');
+
+      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
