@@ -39,45 +39,26 @@ export default function VoiceSettings({ isOpen, onClose }) {
       return;
     }
 
-    // Stop any currently playing audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
     setTestingVoice(voiceId);
-    toast.loading('Generating speech...');
 
     try {
-      const functionUrl = `/api/functions/textToSpeech`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
-        },
-        body: JSON.stringify({
-          text: "Hey, I'm Aria. How does this voice sound?",
-          voice: voiceId,
-          speed: rate
-        })
+      const result = await base44.functions.invoke('textToSpeech', {
+        text: "Hey, I'm Aria. How does this voice sound?",
+        voice: voiceId,
+        speed: rate
       });
 
-      toast.dismiss();
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('TTS Error:', errorText);
-        throw new Error(`Failed: ${response.status}`);
+      if (!result.data || result.data.error) {
+        throw new Error(result.data?.error || 'Failed to generate speech');
       }
 
-      const audioBlob = await response.blob();
-      console.log('Audio blob received:', audioBlob.size, 'bytes');
-      
-      if (audioBlob.size === 0) {
-        throw new Error('Empty audio file received');
-      }
-
+      // The function returns binary audio data
+      const audioBlob = new Blob([result.data], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
@@ -89,25 +70,18 @@ export default function VoiceSettings({ isOpen, onClose }) {
         audioRef.current = null;
       };
       
-      audio.onerror = (e) => {
-        console.error('Audio playback error:', e);
+      audio.onerror = () => {
         setTestingVoice(null);
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
         toast.error('Playback failed');
       };
 
-      audio.oncanplaythrough = () => {
-        console.log('Audio ready to play');
-      };
-
       await audio.play();
-      toast.success('Playing voice sample');
     } catch (error) {
       console.error('Test voice error:', error);
       setTestingVoice(null);
-      toast.dismiss();
-      toast.error(`Error: ${error.message}`);
+      toast.error('Failed to play voice');
     }
   };
 
