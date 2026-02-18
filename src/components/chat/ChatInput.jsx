@@ -427,37 +427,21 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const handleSubmit = (e) => {
     e?.preventDefault();
+    
+    // If transcribing, wait
+    if (isTranscribing) {
+      toast.info('Transcribing audio...');
+      return;
+    }
+    
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-      // If recording, stop and wait for final results
+      // If recording, stop and wait for transcription
       if (isRecording) {
-        isRecordingRef.current = false;
-        recognitionRef.current?.stop();
-        setIsRecording(false);
-        
-        // Wait 200ms for final speech results to be processed
-        setTimeout(() => {
-          // Capture from textarea value as final source of truth
-          const finalMessage = textareaRef.current?.value || message;
-          const messageToSend = finalMessage.trim();
-          const filesToSend = [...attachedFiles].map(f => f.url);
-          
-          setMessage('');
-          setAttachedFiles([]);
-          onMessageChange?.('');
-          lastTranscriptRef.current = '';
-          if (textareaRef.current) {
-            textareaRef.current.value = '';
-            textareaRef.current.style.height = '24px';
-          }
-          
-          if (messageToSend || filesToSend.length > 0) {
-            onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
-          }
-        }, 200);
+        stopRecording();
         return;
       }
 
-      // Normal send (not recording)
+      // Normal send
       const messageToSend = message.trim();
       const filesToSend = attachedFiles.map(f => f.url);
       
@@ -632,35 +616,18 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               e.stopPropagation();
 
               // Send message directly without form submission
+              if (isTranscribing) {
+                toast.info('Transcribing audio...');
+                return false;
+              }
+              
               if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
                 if (isRecording) {
-                  isRecordingRef.current = false;
-                  recognitionRef.current?.stop();
-                  setIsRecording(false);
-                  
-                  // Wait for final speech results
-                  setTimeout(() => {
-                    const finalMessage = textareaRef.current?.value || message;
-                    const messageToSend = finalMessage.trim();
-                    const filesToSend = [...attachedFiles].map(f => f.url);
-                    
-                    setMessage('');
-                    setAttachedFiles([]);
-                    onMessageChange?.('');
-                    lastTranscriptRef.current = '';
-                    if (textareaRef.current) {
-                      textareaRef.current.value = '';
-                      textareaRef.current.style.height = '24px';
-                    }
-                    
-                    if (messageToSend || filesToSend.length > 0) {
-                      onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
-                    }
-                  }, 200);
+                  stopRecording();
                   return false;
                 }
                 
-                // Normal send (not recording)
+                // Normal send
                 const messageToSend = message.trim();
                 const filesToSend = attachedFiles.map(f => f.url);
                 
