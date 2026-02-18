@@ -316,94 +316,53 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success('Copied to clipboard');
   };
 
-  const handleReadAloud = () => {
-    if (!('speechSynthesis' in window)) {
-      toast.error('Text-to-speech not supported');
-      return;
-    }
-
+  const handleReadAloud = async () => {
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      if (utteranceRef.current) {
+        utteranceRef.current.pause();
+        utteranceRef.current = null;
+      }
       setIsSpeaking(false);
-      utteranceRef.current = null;
       return;
     }
 
-    window.speechSynthesis.cancel();
-    
-    // Enhanced markdown cleaning with natural pauses
-    const cleanText = message.content
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/\*(.+?)\*/g, '$1')
-      .replace(/_(.+?)_/g, '$1')
-      .replace(/`(.+?)`/g, '$1')
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-      .replace(/^[-*+]\s/gm, '... ')  // Add pause for list items
-      .replace(/^\d+\.\s/gm, '... ')  // Add pause for numbered lists
-      .replace(/>/g, '')
-      .replace(/\|/g, '')
-      .replace(/---+/g, '. ')  // Convert horizontal rules to pauses
-      .replace(/\n\n+/g, '. ')  // Paragraph breaks become pauses
-      .replace(/\n/g, ', ')  // Line breaks become shorter pauses
-      .trim();
+    setIsSpeaking(true);
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    // Get available voices
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Prefer natural-sounding voices
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
-    let selectedVoice = null;
-    
-    if (savedVoiceURI) {
-      selectedVoice = voices.find(v => v.voiceURI === savedVoiceURI);
-    }
-    
-    if (!selectedVoice) {
-      // Auto-select most natural voice
-      const preferredVoices = [
-        'Google US English',
-        'Microsoft Aria Online',
-        'Samantha',
-        'Alex',
-        'Karen',
-        'Daniel',
-        'Fiona'
-      ];
+    try {
+      const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
+      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+
+      const response = await base44.functions.invoke('textToSpeech', {
+        text: message.content,
+        voice: savedVoice,
+        speed: savedRate
+      });
+
+      if (!response.data) throw new Error('No audio data');
+
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
       
-      for (const preferred of preferredVoices) {
-        selectedVoice = voices.find(v => v.name.includes(preferred));
-        if (selectedVoice) break;
-      }
-      
-      // Fallback to any English voice
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.startsWith('en'));
-      }
+      utteranceRef.current = audio;
+      audio.onended = () => {
+        setIsSpeaking(false);
+        utteranceRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        utteranceRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+        toast.error('Audio playback failed');
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('Read aloud error:', error);
+      setIsSpeaking(false);
+      toast.error('Failed to read aloud');
     }
-    
-    if (selectedVoice) utterance.voice = selectedVoice;
-    
-    // Natural speech parameters
-    const savedRate = localStorage.getItem('caos_speech_rate');
-    utterance.rate = savedRate ? parseFloat(savedRate) : 0.95;  // Slightly slower for clarity
-    utterance.pitch = 1.0;  // Natural pitch
-    utterance.volume = 0.9;  // Slightly softer
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      utteranceRef.current = null;
-    };
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      utteranceRef.current = null;
-    };
-    
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
   };
 
   const handleRegenerate = () => {

@@ -5,49 +5,74 @@ import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 
 export default function VoiceSettings({ isOpen, onClose }) {
-  const [voices, setVoices] = useState([]);
-  const [selectedVoice, setSelectedVoice] = useState(null);
-  const [rate, setRate] = useState(0.95);
+  // OpenAI TTS voices - high quality, natural sounding
+  const voices = [
+    { id: 'alloy', name: 'Alloy', description: 'Neutral, balanced' },
+    { id: 'echo', name: 'Echo', description: 'Male, clear' },
+    { id: 'fable', name: 'Fable', description: 'British, expressive' },
+    { id: 'onyx', name: 'Onyx', description: 'Male, deep' },
+    { id: 'nova', name: 'Nova', description: 'Female, warm' },
+    { id: 'shimmer', name: 'Shimmer', description: 'Female, soft' }
+  ];
+
+  const [selectedVoice, setSelectedVoice] = useState('nova');
+  const [rate, setRate] = useState(1.0);
   const [testingSpeech, setTestingSpeech] = useState(false);
+  const audioRef = React.useRef(null);
 
   useEffect(() => {
-    const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
-      setVoices(englishVoices);
+    const savedVoice = localStorage.getItem('caos_voice_preference');
+    if (savedVoice) setSelectedVoice(savedVoice);
 
-      const savedVoiceURI = localStorage.getItem('caos_voice_preference');
-      if (savedVoiceURI) {
-        setSelectedVoice(savedVoiceURI);
-      }
-
-      const savedRate = localStorage.getItem('caos_speech_rate');
-      if (savedRate) setRate(parseFloat(savedRate));
-    };
-
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    const savedRate = localStorage.getItem('caos_speech_rate');
+    if (savedRate) setRate(parseFloat(savedRate));
   }, []);
 
-  const testVoice = (voiceURI) => {
+  const testVoice = async (voiceId) => {
     if (testingSpeech) {
-      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       setTestingSpeech(false);
       return;
     }
 
-    const voice = voices.find(v => v.voiceURI === voiceURI);
-    const utterance = new SpeechSynthesisUtterance("Hey, I'm Aria. How does this voice sound?");
-    utterance.voice = voice;
-    utterance.rate = rate;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.9;
+    setTestingSpeech(true);
 
-    utterance.onstart = () => setTestingSpeech(true);
-    utterance.onend = () => setTestingSpeech(false);
-    utterance.onerror = () => setTestingSpeech(false);
+    try {
+      const response = await fetch('/api/functions/textToSpeech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: "Hey, I'm Aria. How does this voice sound?",
+          voice: voiceId,
+          speed: rate
+        })
+      });
 
-    window.speechSynthesis.speak(utterance);
+      if (!response.ok) throw new Error('Failed to generate speech');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      audioRef.current = audio;
+      audio.onended = () => {
+        setTestingSpeech(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+      audio.onerror = () => {
+        setTestingSpeech(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('Test voice error:', error);
+      setTestingSpeech(false);
+      toast.error('Failed to test voice');
+    }
   };
 
   const saveSettings = () => {
@@ -91,34 +116,35 @@ export default function VoiceSettings({ isOpen, onClose }) {
           </div>
 
           <div>
-            <label className="text-sm text-white/70 mb-2 block">Select Voice</label>
+            <label className="text-sm text-white/70 mb-2 block">Select Voice (OpenAI TTS)</label>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {voices.map((voice) => (
                 <div
-                  key={voice.voiceURI}
+                  key={voice.id}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
-                    selectedVoice === voice.voiceURI
+                    selectedVoice === voice.id
                       ? 'bg-blue-500/20 border-blue-500/50'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
                   }`}
-                  onClick={() => setSelectedVoice(voice.voiceURI)}
+                  onClick={() => setSelectedVoice(voice.id)}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{voice.name}</p>
-                    <p className="text-xs text-white/50">{voice.lang}</p>
+                    <p className="text-xs text-white/50">{voice.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {selectedVoice === voice.voiceURI && (
+                    {selectedVoice === voice.id && (
                       <Check className="w-4 h-4 text-blue-400" />
                     )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        testVoice(voice.voiceURI);
+                        testVoice(voice.id);
                       }}
                       className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                      disabled={testingSpeech}
                     >
-                      <Play className="w-4 h-4 text-white/70" />
+                      <Play className={`w-4 h-4 ${testingSpeech ? 'text-blue-400' : 'text-white/70'}`} />
                     </button>
                   </div>
                 </div>
