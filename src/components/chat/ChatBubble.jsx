@@ -380,12 +380,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       utterance.volume = 1.0;
       utterance.lang = 'en-GB';
 
-      // Track word boundaries
+      // Track word boundaries - using charIndex to calculate which word
       utterance.onboundary = (event) => {
         if (event.name === 'word') {
-          const spokenText = cleanText.substring(0, event.charIndex);
-          const wordCount = spokenText.split(/\s+/).filter(w => w.length > 0).length;
-          setCurrentWordIndex(wordCount);
+          // Count words up to current character position
+          const textSoFar = cleanText.substring(0, event.charIndex);
+          const wordsBefore = textSoFar.trim().split(/\s+/).filter(w => w.length > 0).length;
+          setCurrentWordIndex(wordsBefore);
         }
       };
 

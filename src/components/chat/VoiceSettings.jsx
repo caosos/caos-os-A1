@@ -22,7 +22,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
   const audioRef = React.useRef(null);
 
   useEffect(() => {
-    const savedVoice = localStorage.getItem('caos_voice_preference');
+    const savedVoice = localStorage.getItem('caos_voice_preference_message');
     if (savedVoice) setSelectedVoice(savedVoice);
 
     const savedRate = localStorage.getItem('caos_speech_rate');
@@ -108,7 +108,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
   };
 
   const saveSettings = () => {
-    localStorage.setItem('caos_voice_preference', selectedVoice);
+    localStorage.setItem('caos_voice_preference_message', selectedVoice);
     localStorage.setItem('caos_speech_rate', rate.toString());
     toast.success('Voice settings saved');
     onClose();
