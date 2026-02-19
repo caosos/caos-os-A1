@@ -203,121 +203,80 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const toggleReadAloud = async () => {
-    if (isSpeaking) {
-      if (audioRef.current) {
-        if (audioRef.current.paused) {
-          audioRef.current.play();
-          setIsPaused(false);
-        } else {
-          audioRef.current.pause();
-          setIsPaused(true);
-        }
-      }
+  const toggleReadAloud = () => {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in your browser');
       return;
     }
 
-    setIsSpeaking(true);
+    if (isSpeaking && !isPaused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    } else if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    } else {
+      if (lastAssistantMessage) {
+        window.speechSynthesis.cancel();
 
-    try {
-      const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
-      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-      const token = localStorage.getItem('base44_access_token');
+        const cleanText = lastAssistantMessage
+          .replace(/#{1,6}\s/g, '')
+          .replace(/\*\*(.+?)\*\*/g, '$1')
+          .replace(/\*(.+?)\*/g, '$1')
+          .replace(/_(.+?)_/g, '$1')
+          .replace(/`(.+?)`/g, '$1')
+          .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+          .replace(/^[-*+]\s/gm, '')
+          .replace(/^\d+\.\s/gm, '')
+          .replace(/>/g, '')
+          .replace(/\|/g, '')
+          .replace(/---+/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
 
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: lastAssistantMessage,
-          voice: savedVoice,
-          speed: savedRate
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate speech');
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          
+          const voices = window.speechSynthesis.getVoices();
+          if (selectedVoice) {
+            const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
+            if (voice) {
+              utterance.voice = voice;
+            }
+          }
+          
+          utterance.rate = speechRate;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+          utterance.lang = 'en-US';
+          
+          utterance.onend = () => {
+            setIsSpeaking(false);
+            setIsPaused(false);
+            utteranceRef.current = null;
+          };
+          
+          utterance.onerror = (e) => {
+            console.error('Speech error:', e);
+            setIsSpeaking(false);
+            setIsPaused(false);
+            utteranceRef.current = null;
+          };
+          
+          utteranceRef.current = utterance;
+          setIsSpeaking(true);
+          setIsPaused(false);
+          window.speechSynthesis.speak(utterance);
+        }, 100);
       }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      
-      audioRef.current = audio;
-      utteranceRef.current = audio;
-      
-      audio.onloadedmetadata = () => {
-        setAudioDuration(audio.duration);
-      };
-      
-      audio.ontimeupdate = () => {
-        setSpeechProgress(audio.currentTime);
-      };
-      
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setSpeechProgress(0);
-        audioRef.current = null;
-        utteranceRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        setSpeechProgress(0);
-        audioRef.current = null;
-        utteranceRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-        alert('Audio playback failed');
-      };
-
-      await audio.play();
-    } catch (error) {
-      console.error('Read aloud error:', error);
-      setIsSpeaking(false);
-      alert('Failed to read aloud');
     }
   };
 
   const stopReadAloud = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-    if (utteranceRef.current) {
-      utteranceRef.current = null;
-    }
+    window.speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
-    setSpeechProgress(0);
-  };
-
-  const skipBackward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
-    }
-  };
-
-  const skipForward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
-    }
-  };
-
-  const seekTo = (time) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-
-  const formatTime = (seconds) => {
-    if (isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    utteranceRef.current = null;
   };
 
   const startRecording = async () => {
@@ -683,17 +642,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        <div className="relative hidden sm:flex items-center gap-1" ref={voiceMenuRef}>
+        <div className="relative hidden sm:block" ref={voiceMenuRef}>
           {isSpeaking ? (
             <>
-              <button
-                type="button"
-                onClick={skipBackward}
-                className="p-1.5 rounded-full hover:bg-blue-100 transition-colors flex-shrink-0"
-                title="Skip back 10s"
-              >
-                <RotateCcw className="w-4 h-4 text-blue-600" />
-              </button>
               <button
                 type="button"
                 onClick={toggleReadAloud}
@@ -704,14 +655,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 ) : (
                   <Pause className="w-4 h-4 text-blue-600" />
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={skipForward}
-                className="p-1.5 rounded-full hover:bg-blue-100 transition-colors flex-shrink-0"
-                title="Skip forward 10s"
-              >
-                <RotateCcw className="w-4 h-4 text-blue-600 scale-x-[-1]" />
               </button>
               <button
                 type="button"
@@ -787,26 +730,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             </div>
           )}
 
-          {/* Progress Bar */}
-          {isSpeaking && audioDuration > 0 && (
-            <div className="absolute bottom-full right-0 mb-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-              <input
-                type="range"
-                min="0"
-                max={audioDuration}
-                value={speechProgress}
-                onChange={(e) => seekTo(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-1"
-                style={{
-                  background: `linear-gradient(to right, rgb(37 99 235) 0%, rgb(37 99 235) ${(speechProgress / audioDuration) * 100}%, rgb(229 231 235) ${(speechProgress / audioDuration) * 100}%, rgb(229 231 235) 100%)`
-                }}
-              />
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>{formatTime(speechProgress)}</span>
-                <span>{formatTime(audioDuration)}</span>
-              </div>
-            </div>
-          )}
+
         </div>
 
         <input

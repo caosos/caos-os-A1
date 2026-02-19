@@ -319,118 +319,72 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success('Copied to clipboard');
   };
 
-  const handleReadAloud = async () => {
+  const handleReadAloud = () => {
+    if (!('speechSynthesis' in window)) {
+      toast.error('Text-to-speech is not supported');
+      return;
+    }
+
     if (isSpeaking) {
-      if (utteranceRef.current) {
-        if (utteranceRef.current.paused) {
-          utteranceRef.current.play();
-        } else {
-          utteranceRef.current.pause();
-        }
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      } else {
+        window.speechSynthesis.pause();
       }
       return;
     }
 
     setIsSpeaking(true);
 
-    try {
-      const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
-      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-      const token = localStorage.getItem('base44_access_token');
+    const cleanText = message.content
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+      .replace(/^[-*+]\s/gm, '')
+      .replace(/^\d+\.\s/gm, '')
+      .replace(/>/g, '')
+      .replace(/\|/g, '')
+      .replace(/---+/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          text: message.content,
-          voice: savedVoice,
-          speed: savedRate
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate speech');
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      
-      audioRef.current = audio;
-      utteranceRef.current = audio;
-      
-      audio.onloadedmetadata = () => {
-        setAudioDuration(audio.duration);
-      };
-      
-      audio.ontimeupdate = () => {
-        setAudioProgress(audio.currentTime);
-      };
-      
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setAudioProgress(0);
-        audioRef.current = null;
-        utteranceRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        setAudioProgress(0);
-        audioRef.current = null;
-        utteranceRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-        toast.error('Audio playback failed');
-      };
-
-      await audio.play();
-    } catch (error) {
-      console.error('Read aloud error:', error);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+    const voices = window.speechSynthesis.getVoices();
+    if (savedVoiceURI) {
+      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+      if (voice) utterance.voice = voice;
+    }
+    
+    const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+    utterance.rate = savedRate;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      utteranceRef.current = null;
+    };
+    
+    utterance.onerror = (e) => {
+      console.error('Speech error:', e);
       setIsSpeaking(false);
       toast.error('Failed to read aloud');
-    }
+      utteranceRef.current = null;
+    };
+    
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleStopReading = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-    if (utteranceRef.current) {
-      utteranceRef.current = null;
-    }
+    window.speechSynthesis.cancel();
     setIsSpeaking(false);
-    setAudioProgress(0);
-  };
-
-  const skipBackward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
-    }
-  };
-
-  const skipForward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
-    }
-  };
-
-  const seekTo = (time) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-
-  const formatTime = (seconds) => {
-    if (isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    utteranceRef.current = null;
   };
 
   const handleRegenerate = () => {
@@ -835,44 +789,20 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   >
                     <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
-                  {isSpeaking ? (
-                    <>
-                      <button
-                        onClick={skipBackward}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Skip back 10s"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-blue-400 hover:text-blue-300" />
-                      </button>
-                      <button
-                        onClick={handleReadAloud}
-                        className="p-1 hover:bg-white/10 rounded transition-colors bg-blue-500/20"
-                        title="Pause"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-blue-400" />
-                      </button>
-                      <button
-                        onClick={skipForward}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Skip forward 10s"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-blue-400 hover:text-blue-300 scale-x-[-1]" />
-                      </button>
-                      <button
-                        onClick={handleStopReading}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Stop"
-                      >
-                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    onClick={handleReadAloud}
+                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
+                    title={isSpeaking ? "Pause/Resume" : "Read aloud"}
+                  >
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                  </button>
+                  {isSpeaking && (
                     <button
-                      onClick={handleReadAloud}
+                      onClick={handleStopReading}
                       className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Read aloud"
+                      title="Stop"
                     >
-                      <Volume2 className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
                     </button>
                   )}
                   <button
@@ -894,26 +824,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     </div>
                     )}
 
-                    {/* Audio Progress Bar */}
-                    {isSpeaking && audioDuration > 0 && (
-                    <div className="mt-2 space-y-1">
-                      <input
-                        type="range"
-                        min="0"
-                        max={audioDuration}
-                        value={audioProgress}
-                        onChange={(e) => seekTo(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-blue-400"
-                        style={{
-                          background: `linear-gradient(to right, rgb(96 165 250) 0%, rgb(96 165 250) ${(audioProgress / audioDuration) * 100}%, rgba(255,255,255,0.2) ${(audioProgress / audioDuration) * 100}%, rgba(255,255,255,0.2) 100%)`
-                        }}
-                      />
-                      <div className="flex justify-between text-xs text-white/50">
-                        <span>{formatTime(audioProgress)}</span>
-                        <span>{formatTime(audioDuration)}</span>
-                      </div>
-                    </div>
-                    )}
+
 
                     {/* Tool Calls */}
                     {message.tool_calls?.length > 0 && (
