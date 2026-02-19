@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause } from 'lucide-react';
+import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, RotateCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
@@ -203,140 +203,96 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const toggleReadAloud = () => {
-    if (!('speechSynthesis' in window)) {
-      alert('Text-to-speech is not supported in your browser');
+  const toggleReadAloud = async () => {
+    if (isSpeaking) {
+      if (audioRef.current) {
+        if (audioRef.current.paused) {
+          audioRef.current.play();
+          setIsPaused(false);
+        } else {
+          audioRef.current.pause();
+          setIsPaused(true);
+        }
+      }
       return;
     }
 
-    if (isSpeaking && !isPaused) {
-      window.speechSynthesis.pause();
-      setIsPaused(true);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-    } else if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-      // Resume progress tracking
-      if (utteranceRef.current && lastAssistantMessage) {
-        const messageLength = lastAssistantMessage.length;
-        const estimatedDuration = (messageLength / 15) / speechRate;
-        const currentProgress = speechProgress;
-        const remainingTime = estimatedDuration * ((100 - currentProgress) / 100);
-        const startTime = Date.now();
-        
-        progressInterval.current = setInterval(() => {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const additionalProgress = (elapsed / remainingTime) * (100 - currentProgress);
-          const progress = Math.min(currentProgress + additionalProgress, 99);
-          setSpeechProgress(progress);
-        }, 100);
-      }
-    } else {
-      if (lastAssistantMessage) {
-        // Cancel any existing speech and wait a moment
-        window.speechSynthesis.cancel();
+    setIsSpeaking(true);
 
-        // Clean markdown formatting for natural speech
-        const cleanText = lastAssistantMessage
-          .replace(/#{1,6}\s/g, '') // Remove markdown headers
-          .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
-          .replace(/\*(.+?)\*/g, '$1') // Remove italic
-          .replace(/_(.+?)_/g, '$1') // Remove underscore italic
-          .replace(/`(.+?)`/g, '$1') // Remove inline code
-          .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
-          .replace(/^[-*+]\s/gm, '') // Remove list markers
-          .replace(/^\d+\.\s/gm, '') // Remove numbered lists
-          .replace(/>/g, '') // Remove blockquotes
-          .replace(/\|/g, '') // Remove table pipes
-          .replace(/---+/g, '') // Remove horizontal rules
-          .replace(/\n{3,}/g, '\n\n') // Reduce multiple newlines
-          .trim();
+    try {
+      const savedVoice = localStorage.getItem('caos_voice_preference') || 'nova';
+      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+      const token = localStorage.getItem('base44_access_token');
 
-        setTimeout(() => {
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          
-          // Get voices and apply selection
-          const voices = window.speechSynthesis.getVoices();
-          if (selectedVoice) {
-            const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
-            if (voice) {
-              utterance.voice = voice;
-            }
-          }
-          
-          // Apply settings
-          utterance.rate = speechRate;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-          utterance.lang = 'en-US';
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          text: lastAssistantMessage,
+          voice: savedVoice,
+          speed: savedRate
+        })
+      });
 
-          const messageLength = cleanText.length;
-          const estimatedDuration = (messageLength / 15) / speechRate;
-          
-          utterance.onstart = () => {
-            console.log('Speech started');
-            setSpeechProgress(0);
-            const startTime = Date.now();
-            progressInterval.current = setInterval(() => {
-              const elapsed = (Date.now() - startTime) / 1000;
-              const progress = Math.min((elapsed / estimatedDuration) * 100, 99);
-              setSpeechProgress(progress);
-            }, 100);
-          };
-          
-          utterance.onend = () => {
-            console.log('Speech ended');
-            setIsSpeaking(false);
-            setIsPaused(false);
-            setSpeechProgress(100);
-            setTimeout(() => setSpeechProgress(0), 500);
-            if (progressInterval.current) {
-              clearInterval(progressInterval.current);
-              progressInterval.current = null;
-            }
-            utteranceRef.current = null;
-          };
-          
-          utterance.onerror = (e) => {
-            console.error('Speech error:', e);
-            setIsSpeaking(false);
-            setIsPaused(false);
-            setSpeechProgress(0);
-            if (progressInterval.current) {
-              clearInterval(progressInterval.current);
-              progressInterval.current = null;
-            }
-            utteranceRef.current = null;
-          };
-          
-          utteranceRef.current = utterance;
-          setIsSpeaking(true);
-          setIsPaused(false);
-          window.speechSynthesis.speak(utterance);
-          console.log('Speaking:', utterance);
-        }, 100);
+      if (!response.ok) {
+        throw new Error('Failed to generate speech');
       }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      audioRef.current = audio;
+      utteranceRef.current = audio;
+      
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration);
+      };
+      
+      audio.ontimeupdate = () => {
+        setSpeechProgress(audio.currentTime);
+      };
+      
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setSpeechProgress(0);
+        audioRef.current = null;
+        utteranceRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setSpeechProgress(0);
+        audioRef.current = null;
+        utteranceRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+        alert('Audio playback failed');
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('Read aloud error:', error);
+      setIsSpeaking(false);
+      alert('Failed to read aloud');
     }
   };
 
   const stopReadAloud = () => {
-    window.speechSynthesis.cancel();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
+    if (utteranceRef.current) {
+      utteranceRef.current = null;
+    }
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeechProgress(0);
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
-    }
-    utteranceRef.current = null;
   };
 
   const skipBackward = () => {
