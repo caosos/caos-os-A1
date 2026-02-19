@@ -1029,7 +1029,10 @@ export default function Chat() {
       />
 
       <Dialog open={showToken} onOpenChange={setShowToken}>
-        <DialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white max-w-3xl">
+        <DialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white">Session Token</DialogTitle>
+          </DialogHeader>
           <ContinuityToken
             sessionId={currentConversationId}
             userId={user?.email}
