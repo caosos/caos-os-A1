@@ -24,10 +24,13 @@ Deno.serve(async (req) => {
     // Convert to File object for OpenAI
     const file = new File([audioFile], 'audio.webm', { type: 'audio/webm' });
 
+    // OpenAI Whisper supports files up to 25MB and unlimited duration
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: 'whisper-1',
       language: 'en',
+      response_format: 'verbose_json',
+      timestamp_granularities: ['segment']
     });
 
     return Response.json({ 

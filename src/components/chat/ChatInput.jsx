@@ -348,29 +348,40 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         stream.getTracks().forEach(track => track.stop());
-        
+
         setIsTranscribing(true);
         try {
           const formData = new FormData();
           formData.append('audio', audioBlob);
-          
+
           const token = localStorage.getItem('base44_access_token');
+
+          // Extended timeout for longer recordings (5 min max)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 300000);
+
           const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/transcribeAudio', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
             },
-            body: formData
+            body: formData,
+            signal: controller.signal
           });
 
-          if (!response.ok) throw new Error('Transcription failed');
-          
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Transcription failed');
+          }
+
           const data = await response.json();
           if (data.success && data.text) {
             const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
             onMessageChange?.(updatedMessage);
-            
+
             if (textareaRef.current) {
               textareaRef.current.style.height = 'auto';
               textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
@@ -378,7 +389,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           }
         } catch (error) {
           console.error('Transcription error:', error);
-          alert('Failed to transcribe audio');
+          alert(`Transcription failed: ${error.message}`);
         } finally {
           setIsTranscribing(false);
         }
