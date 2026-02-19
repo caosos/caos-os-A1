@@ -365,7 +365,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const utterance = new SpeechSynthesisUtterance(cleanText);
 
       const voices = window.speechSynthesis.getVoices();
-      const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+      const savedVoiceURI = localStorage.getItem('caos_voice_preference_message');
 
       if (savedVoiceURI) {
         const voice = voices.find(v => v.voiceURI === savedVoiceURI);

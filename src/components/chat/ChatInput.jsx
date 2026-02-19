@@ -41,8 +41,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
       
-      // Load saved voice preference
-      const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+      // Load saved voice preference for INPUT BAR
+      const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
       if (savedVoiceURI) {
         const voice = voices.find(v => v.voiceURI === savedVoiceURI);
         if (voice) setSelectedVoice(voice);
@@ -238,7 +238,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           const utterance = new SpeechSynthesisUtterance(cleanText);
           
           const voices = window.speechSynthesis.getVoices();
-          const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+          const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
           
           if (savedVoiceURI) {
             const voice = voices.find(v => v.voiceURI === savedVoiceURI);
@@ -719,7 +719,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                   type="button"
                   onClick={() => {
                     setSelectedVoice(voice);
-                    localStorage.setItem('caos_voice_preference', voice.voiceURI);
+                    localStorage.setItem('caos_voice_preference_input', voice.voiceURI);
                     setShowVoiceMenu(false);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded transition-colors ${
