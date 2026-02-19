@@ -334,6 +334,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       return;
     }
 
+    window.speechSynthesis.cancel();
     setIsSpeaking(true);
 
     const cleanText = message.content
@@ -351,34 +352,40 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference');
-    const voices = window.speechSynthesis.getVoices();
-    if (savedVoiceURI) {
-      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-      if (voice) utterance.voice = voice;
-    }
-    
-    const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-    utterance.rate = savedRate;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      utteranceRef.current = null;
-    };
-    
-    utterance.onerror = (e) => {
-      console.error('Speech error:', e);
-      setIsSpeaking(false);
-      toast.error('Failed to read aloud');
-      utteranceRef.current = null;
-    };
-    
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      
+      const voices = window.speechSynthesis.getVoices();
+      const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+      
+      if (savedVoiceURI) {
+        const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+        if (voice) {
+          utterance.voice = voice;
+        }
+      }
+      
+      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+      utterance.rate = savedRate;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      utterance.lang = 'en-GB';
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        utteranceRef.current = null;
+      };
+      
+      utterance.onerror = (e) => {
+        console.error('Speech error:', e);
+        setIsSpeaking(false);
+        toast.error('Failed to read aloud');
+        utteranceRef.current = null;
+      };
+      
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   };
 
   const handleStopReading = () => {

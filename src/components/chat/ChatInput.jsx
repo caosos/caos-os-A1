@@ -238,7 +238,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           const utterance = new SpeechSynthesisUtterance(cleanText);
           
           const voices = window.speechSynthesis.getVoices();
-          if (selectedVoice) {
+          const savedVoiceURI = localStorage.getItem('caos_voice_preference');
+          
+          if (savedVoiceURI) {
+            const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+            if (voice) {
+              utterance.voice = voice;
+            }
+          } else if (selectedVoice) {
             const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
             if (voice) {
               utterance.voice = voice;
@@ -248,7 +255,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           utterance.rate = speechRate;
           utterance.pitch = 1.0;
           utterance.volume = 1.0;
-          utterance.lang = 'en-US';
+          utterance.lang = 'en-GB';
           
           utterance.onend = () => {
             setIsSpeaking(false);
