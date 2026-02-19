@@ -12,6 +12,19 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Load user profile for persistent context
+        let userProfile = null;
+        try {
+            const profiles = await base44.asServiceRole.entities.UserProfile.filter(
+                { user_email: user.email },
+                '-updated_date',
+                1
+            );
+            userProfile = profiles[0] || null;
+        } catch (error) {
+            console.warn('Profile load failed:', error.message);
+        }
+
         const body = await req.json();
         const { input, session_id, file_urls, rotation_seed, current_lane } = body;
 
@@ -117,10 +130,51 @@ Deno.serve(async (req) => {
             ...recentRecords.reverse()
         ];
 
+        // Build profile context primer
+        let profileContext = '';
+        if (userProfile) {
+            const profile = [];
+
+            if (userProfile.presentation_preferences) {
+                const prefs = userProfile.presentation_preferences;
+                if (prefs.formatting_style) profile.push(`Formatting: ${prefs.formatting_style}`);
+                if (prefs.tone) profile.push(`Tone: ${prefs.tone}`);
+                if (prefs.response_length) profile.push(`Length: ${prefs.response_length}`);
+                if (prefs.code_preferences) profile.push(`Code: ${prefs.code_preferences}`);
+            }
+
+            if (userProfile.visual_context) {
+                const visual = userProfile.visual_context;
+                if (visual.workspace) profile.push(`Workspace: ${visual.workspace}`);
+                if (visual.environment) profile.push(`Environment: ${visual.environment}`);
+                if (visual.projects?.length) profile.push(`Projects: ${visual.projects.join(', ')}`);
+            }
+
+            if (userProfile.interaction_patterns) {
+                const patterns = [];
+                if (userProfile.interaction_patterns.prefers_examples) patterns.push('likes examples');
+                if (userProfile.interaction_patterns.prefers_visuals) patterns.push('likes visuals');
+                if (patterns.length) profile.push(`Patterns: ${patterns.join(', ')}`);
+            }
+
+            if (userProfile.learned_facts?.length) {
+                const facts = userProfile.learned_facts.slice(-5).map(f => f.fact).join('; ');
+                profile.push(`Known: ${facts}`);
+            }
+
+            if (userProfile.interests?.length) {
+                profile.push(`Interests: ${userProfile.interests.join(', ')}`);
+            }
+
+            if (profile.length > 0) {
+                profileContext = `\n\n[USER PROFILE - ALWAYS APPLY]\n${profile.join('\n')}\n[END PROFILE]`;
+            }
+        }
+
         // Build message history with optional seed injection
         const systemPrompt = isFileGen || isImageGen 
             ? "You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
-            : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.`;
+            : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.${profileContext}`;
 
         const laneContext = laneSummary ? `\n[Lane: ${activeLane} | ${laneSummary}]` : `\n[Active Lane: ${activeLane}]`;
 
@@ -479,6 +533,48 @@ Deno.serve(async (req) => {
                             required: ["type"]
                         }
                     }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "update_user_profile",
+                        description: "Learn and store permanent facts about the user - preferences, visual context from images, interaction patterns, interests, goals. This becomes part of who you know the user to be. Use this actively as you learn.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                presentation_preferences: {
+                                    type: "object",
+                                    properties: {
+                                        formatting_style: { type: "string" },
+                                        tone: { type: "string" },
+                                        response_length: { type: "string" },
+                                        code_preferences: { type: "string" }
+                                    }
+                                },
+                                visual_context: {
+                                    type: "object",
+                                    properties: {
+                                        workspace: { type: "string" },
+                                        appearance: { type: "string" },
+                                        projects: { type: "array", items: { type: "string" } },
+                                        environment: { type: "string" }
+                                    }
+                                },
+                                learned_facts: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            fact: { type: "string" },
+                                            category: { type: "string" }
+                                        }
+                                    }
+                                },
+                                interests: { type: "array", items: { type: "string" } },
+                                goals: { type: "array", items: { type: "string" } }
+                            }
+                        }
+                    }
                 }
             ];
 
@@ -613,6 +709,54 @@ Deno.serve(async (req) => {
                             toolResult = { success: true, message: 'File deleted' };
                         } catch (error) {
                             toolResult = { error: `Cannot delete: ${error.message}` };
+                        }
+                    } else if (toolCall.function.name === 'update_user_profile') {
+                        try {
+                            // Merge with existing profile
+                            const currentProfile = userProfile || { user_email: user.email };
+
+                            if (args.presentation_preferences) {
+                                currentProfile.presentation_preferences = {
+                                    ...currentProfile.presentation_preferences,
+                                    ...args.presentation_preferences
+                                };
+                            }
+
+                            if (args.visual_context) {
+                                currentProfile.visual_context = {
+                                    ...currentProfile.visual_context,
+                                    ...args.visual_context
+                                };
+                            }
+
+                            if (args.learned_facts) {
+                                const existingFacts = currentProfile.learned_facts || [];
+                                const newFacts = args.learned_facts.map(f => ({
+                                    ...f,
+                                    learned_date: new Date().toISOString()
+                                }));
+                                currentProfile.learned_facts = [...existingFacts, ...newFacts];
+                            }
+
+                            if (args.interests) {
+                                const existingInterests = currentProfile.interests || [];
+                                currentProfile.interests = [...new Set([...existingInterests, ...args.interests])];
+                            }
+
+                            if (args.goals) {
+                                const existingGoals = currentProfile.goals || [];
+                                currentProfile.goals = [...new Set([...existingGoals, ...args.goals])];
+                            }
+
+                            if (userProfile) {
+                                await base44.asServiceRole.entities.UserProfile.update(userProfile.id, currentProfile);
+                            } else {
+                                await base44.asServiceRole.entities.UserProfile.create(currentProfile);
+                            }
+
+                            toolResult = { success: true, message: 'Profile updated - knowledge retained permanently' };
+                        } catch (error) {
+                            toolResult = { error: `Profile update failed: ${error.message}` };
                         }
                     }
 
