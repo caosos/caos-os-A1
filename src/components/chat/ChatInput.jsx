@@ -26,9 +26,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     return saved ? parseFloat(saved) : 1.0;
   });
   const [speechProgress, setSpeechProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef(null);
   const utteranceRef = useRef(null);
+  const audioRef = useRef(null);
   const voiceMenuRef = useRef(null);
   const progressInterval = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -322,6 +324,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const stopReadAloud = () => {
     window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeechProgress(0);
@@ -330,6 +337,31 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       progressInterval.current = null;
     }
     utteranceRef.current = null;
+  };
+
+  const skipBackward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+    }
+  };
+
+  const skipForward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
+    }
+  };
+
+  const seekTo = (time) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const startRecording = async () => {
@@ -695,9 +727,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        <div className="relative hidden sm:block" ref={voiceMenuRef}>
+        <div className="relative hidden sm:flex items-center gap-1" ref={voiceMenuRef}>
           {isSpeaking ? (
             <>
+              <button
+                type="button"
+                onClick={skipBackward}
+                className="p-1.5 rounded-full hover:bg-blue-100 transition-colors flex-shrink-0"
+                title="Skip back 10s"
+              >
+                <RotateCcw className="w-4 h-4 text-blue-600" />
+              </button>
               <button
                 type="button"
                 onClick={toggleReadAloud}
@@ -708,6 +748,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
                 ) : (
                   <Pause className="w-4 h-4 text-blue-600" />
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={skipForward}
+                className="p-1.5 rounded-full hover:bg-blue-100 transition-colors flex-shrink-0"
+                title="Skip forward 10s"
+              >
+                <RotateCcw className="w-4 h-4 text-blue-600 scale-x-[-1]" />
               </button>
               <button
                 type="button"
@@ -784,16 +832,22 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
 
           {/* Progress Bar */}
-          {isSpeaking && (
-            <div className="absolute bottom-full right-0 mb-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-600 transition-all duration-100"
-                    style={{ width: `${speechProgress}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-600">{Math.round(speechProgress)}%</span>
+          {isSpeaking && audioDuration > 0 && (
+            <div className="absolute bottom-full right-0 mb-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+              <input
+                type="range"
+                min="0"
+                max={audioDuration}
+                value={speechProgress}
+                onChange={(e) => seekTo(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-1"
+                style={{
+                  background: `linear-gradient(to right, rgb(37 99 235) 0%, rgb(37 99 235) ${(speechProgress / audioDuration) * 100}%, rgb(229 231 235) ${(speechProgress / audioDuration) * 100}%, rgb(229 231 235) 100%)`
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{formatTime(speechProgress)}</span>
+                <span>{formatTime(audioDuration)}</span>
               </div>
             </div>
           )}

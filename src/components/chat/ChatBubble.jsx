@@ -103,8 +103,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [selectedText, setSelectedText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const justSelectedRef = React.useRef(false);
   const utteranceRef = React.useRef(null);
+  const audioRef = React.useRef(null);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -356,14 +359,29 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      audioRef.current = audio;
       utteranceRef.current = audio;
+      
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration);
+      };
+      
+      audio.ontimeupdate = () => {
+        setAudioProgress(audio.currentTime);
+      };
+      
       audio.onended = () => {
         setIsSpeaking(false);
+        setAudioProgress(0);
+        audioRef.current = null;
         utteranceRef.current = null;
         URL.revokeObjectURL(audioUrl);
       };
+      
       audio.onerror = () => {
         setIsSpeaking(false);
+        setAudioProgress(0);
+        audioRef.current = null;
         utteranceRef.current = null;
         URL.revokeObjectURL(audioUrl);
         toast.error('Audio playback failed');
@@ -378,12 +396,41 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleStopReading = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
     if (utteranceRef.current) {
-      utteranceRef.current.pause();
-      utteranceRef.current.currentTime = 0;
       utteranceRef.current = null;
     }
     setIsSpeaking(false);
+    setAudioProgress(0);
+  };
+
+  const skipBackward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+    }
+  };
+
+  const skipForward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
+    }
+  };
+
+  const seekTo = (time) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleRegenerate = () => {
@@ -788,20 +835,44 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   >
                     <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                   </button>
-                  <button
-                    onClick={handleReadAloud}
-                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
-                    title={isSpeaking ? "Pause/Resume" : "Read aloud"}
-                  >
-                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
-                  </button>
-                  {isSpeaking && (
+                  {isSpeaking ? (
+                    <>
+                      <button
+                        onClick={skipBackward}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Skip back 10s"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-blue-400 hover:text-blue-300" />
+                      </button>
+                      <button
+                        onClick={handleReadAloud}
+                        className="p-1 hover:bg-white/10 rounded transition-colors bg-blue-500/20"
+                        title="Pause"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+                      </button>
+                      <button
+                        onClick={skipForward}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Skip forward 10s"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-blue-400 hover:text-blue-300 scale-x-[-1]" />
+                      </button>
+                      <button
+                        onClick={handleStopReading}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Stop"
+                      >
+                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={handleStopReading}
+                      onClick={handleReadAloud}
                       className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Stop"
+                      title="Read aloud"
                     >
-                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                      <Volume2 className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                     </button>
                   )}
                   <button
@@ -817,9 +888,30 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     title="Email this"
                   >
                     <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                    </button>
+                  </button>
+                </div>
+              )}
                     </div>
                     )}
+
+                    {/* Audio Progress Bar */}
+                    {isSpeaking && audioDuration > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max={audioDuration}
+                        value={audioProgress}
+                        onChange={(e) => seekTo(parseFloat(e.target.value))}
+                        className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-blue-400"
+                        style={{
+                          background: `linear-gradient(to right, rgb(96 165 250) 0%, rgb(96 165 250) ${(audioProgress / audioDuration) * 100}%, rgba(255,255,255,0.2) ${(audioProgress / audioDuration) * 100}%, rgba(255,255,255,0.2) 100%)`
+                        }}
+                      />
+                      <div className="flex justify-between text-xs text-white/50">
+                        <span>{formatTime(audioProgress)}</span>
+                        <span>{formatTime(audioDuration)}</span>
+                      </div>
                     </div>
                     )}
 
