@@ -359,11 +359,11 @@ export default function Chat() {
     const startTime = Date.now();
     let conversationId = null;
     
-    // Timeout handler
+    // Timeout handler - extended for large messages
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
       toast.error('Request timed out. Please try again.');
-    }, 120000); // 120 second timeout for file generation
+    }, 300000); // 300 second (5 min) timeout for large messages
 
     try {
       conversationId = currentConversationId;
@@ -651,68 +651,13 @@ export default function Chat() {
             </div>
             {currentConversationId && currentMessages.length > 0 && (
               <div className="flex items-center gap-3">
-                <LaneSelector 
-                  currentLane={currentLane}
-                  onLaneChange={setCurrentLane}
-                />
                 <div className="w-40">
                   <TokenMeter messages={currentMessages} />
                 </div>
               </div>
             )}
           </div>
-          <QuickActionBar
-            onNewsClick={() => {
-              const savedPreference = localStorage.getItem('caos_news_preference');
-              if (savedPreference) {
-                const prompt = `Show me ${savedPreference} news. Learn what I'm interested in and update my preferences.`;
-                handleSendMessage(prompt, []);
-              } else {
-                const prompt = "What kind of news would you like to see? (e.g., tech, world, business, sports, entertainment) I'll remember your preference.";
-                handleSendMessage(prompt, []);
-              }
-            }}
-            onBrainstormClick={() => {
-              const recentTopics = currentMessages
-                .slice(-10)
-                .filter(m => m.role === 'user')
-                .map(m => m.content)
-                .join(' ');
-              const prompt = `Based on what we've been discussing (${recentTopics || 'our conversation'}), come up with creative brainstorm ideas and suggestions that build on these topics.`;
-              handleSendMessage(prompt, []);
-            }}
-            onShoppingClick={() => {
-              const savedShopPlatform = localStorage.getItem('caos_shop_platform');
-              if (savedShopPlatform) {
-                const prompt = `Find me products on ${savedShopPlatform}. What am I looking for?`;
-                handleSendMessage(prompt, []);
-              } else {
-                const prompt = "Where would you like to shop? (Amazon, Temu, eBay, etc.) I'll remember your preference and help you find products.";
-                handleSendMessage(prompt, []);
-              }
-            }}
-            onFilesClick={() => {
-              setFileView('files');
-              setShowProfile(true);
-            }}
-            onTerminalToggle={() => setShowTerminal(!showTerminal)}
-            onGameModeToggle={() => {
-              const newGameMode = !isGameMode;
-              localStorage.setItem('caos_game_mode', newGameMode);
-              window.location.reload();
-            }}
-            isDeveloperMode={isDeveloperMode}
-            isGameMode={isGameMode}
-            isMultiAgentMode={multiAgentMode}
-            onMultiAgentToggle={() => {
-              setMultiAgentMode(!multiAgentMode);
-              localStorage.setItem('caos_multi_agent_mode', !multiAgentMode);
-            }}
-            onDeveloperToggle={() => {
-              localStorage.setItem('caos_developer_mode', !isDeveloperMode);
-              window.location.reload();
-            }}
-          />
+
         </div>
 
       <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>

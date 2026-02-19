@@ -556,6 +556,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <textarea
           ref={textareaRef}
           value={message}
+          maxLength={1000000}
           onChange={(e) => {
             setMessage(e.target.value);
             onMessageChange?.(e.target.value);
