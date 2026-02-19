@@ -265,8 +265,23 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const extractUrls = (text) => {
+    // Extract URLs from both bare URLs and markdown links [text](url)
+    const urls = [];
+    
+    // Match markdown links: [text](url)
+    const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    let match;
+    while ((match = markdownRegex.exec(text)) !== null) {
+      urls.push(match[2]); // The URL is in the second capture group
+    }
+    
+    // Match bare URLs
     const urlRegex = /https?:\/\/[^\s)\]]+/g;
-    return text.match(urlRegex) || [];
+    const bareUrls = text.match(urlRegex) || [];
+    urls.push(...bareUrls);
+    
+    // Remove duplicates
+    return [...new Set(urls)];
   };
 
   const getVimeoId = (url) => {
