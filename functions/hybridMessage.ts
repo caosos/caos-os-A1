@@ -25,6 +25,16 @@ Deno.serve(async (req) => {
             console.warn('Profile load failed:', error.message);
         }
 
+        // Load identity contract
+        let identityContract = '';
+        try {
+            const contractFile = await Deno.readTextFile('/app/functions/caos_identity_contract.json');
+            const contract = JSON.parse(contractFile);
+            identityContract = `\n\n[IDENTITY CONTRACT - ALWAYS FOLLOW]\n${JSON.stringify(contract, null, 2)}\n[END CONTRACT]`;
+        } catch (error) {
+            console.warn('Identity contract load failed:', error.message);
+        }
+
         const body = await req.json();
         const { input, session_id, file_urls, rotation_seed, current_lane } = body;
 
@@ -174,7 +184,7 @@ Deno.serve(async (req) => {
         // Build message history with optional seed injection
         const systemPrompt = isFileGen || isImageGen 
             ? "You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally."
-            : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.${profileContext}`;
+            : `You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exactly like this: casual, direct, witty, no fluff, like a sharp friend who's building with him. Use natural formatting - dashes for quick points, bullets when it helps clarity, but never overdo it. No robotic headers or "confirmed:" phrasing. Keep it human and readable like this chat. You live in a React/Base44 app and have full awareness of the environment – pages, entities, backend functions, and UI components. You can search the web, analyze images, recall memory across sessions, read your own code, manage files, and execute tasks. When presenting information, format it cleanly without technical metadata. You're not just an assistant – you're part of the system itself.${profileContext}${identityContract}`;
 
         const laneContext = laneSummary ? `\n[Lane: ${activeLane} | ${laneSummary}]` : `\n[Active Lane: ${activeLane}]`;
 
