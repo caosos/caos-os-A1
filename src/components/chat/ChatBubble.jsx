@@ -470,9 +470,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     const urls = extractUrls(content);
     const videoUrls = urls.filter(isVideoUrl);
 
-    // Remove video URLs from content BEFORE markdown processing
+    // Remove video URLs AND their markdown wrappers from content BEFORE markdown processing
     let cleanContent = content;
     videoUrls.forEach(url => {
+      // Remove markdown link syntax: [text](url)
+      const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const markdownLinkRegex = new RegExp(`\\[([^\\]]+)\\]\\(${escapedUrl}\\)`, 'g');
+      cleanContent = cleanContent.replace(markdownLinkRegex, '');
+      // Remove bare URL
       cleanContent = cleanContent.replace(url, '');
     });
     cleanContent = cleanContent.trim();
