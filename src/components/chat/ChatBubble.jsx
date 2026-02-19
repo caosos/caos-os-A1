@@ -455,7 +455,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     const urls = extractUrls(content);
     const videoUrls = urls.filter(isVideoUrl);
     const otherUrls = urls.filter(url => !isVideoUrl(url));
-    const cleanContent = urls.reduce((text, url) => text.replace(url, ''), content).trim();
+    const cleanContent = videoUrls.reduce((text, url) => text.replace(url, ''), content).trim();
 
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
