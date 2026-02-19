@@ -102,12 +102,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPausedBySpeech, setIsPausedBySpeech] = useState(false);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const justSelectedRef = React.useRef(false);
   const utteranceRef = React.useRef(null);
   const audioRef = React.useRef(null);
+  const wordsRef = React.useRef([]);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -328,14 +331,17 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     if (isSpeaking) {
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
+        setIsPausedBySpeech(false);
       } else {
         window.speechSynthesis.pause();
+        setIsPausedBySpeech(true);
       }
       return;
     }
 
     window.speechSynthesis.cancel();
     setIsSpeaking(true);
+    setCurrentWordIndex(-1);
 
     const cleanText = message.content
       .replace(/#{1,6}\s/g, '')
@@ -352,37 +358,53 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
+    // Split into words for tracking
+    wordsRef.current = cleanText.split(/\s+/);
+
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      
+
       const voices = window.speechSynthesis.getVoices();
       const savedVoiceURI = localStorage.getItem('caos_voice_preference');
-      
+
       if (savedVoiceURI) {
         const voice = voices.find(v => v.voiceURI === savedVoiceURI);
         if (voice) {
           utterance.voice = voice;
         }
       }
-      
+
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
       utterance.rate = savedRate;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
       utterance.lang = 'en-GB';
-      
+
+      // Track word boundaries
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          const spokenText = cleanText.substring(0, event.charIndex);
+          const wordCount = spokenText.split(/\s+/).filter(w => w.length > 0).length;
+          setCurrentWordIndex(wordCount);
+        }
+      };
+
       utterance.onend = () => {
         setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setCurrentWordIndex(-1);
         utteranceRef.current = null;
       };
-      
+
       utterance.onerror = (e) => {
         console.error('Speech error:', e);
         setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setCurrentWordIndex(-1);
         toast.error('Failed to read aloud');
         utteranceRef.current = null;
       };
-      
+
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
     }, 100);
@@ -391,7 +413,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const handleStopReading = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
+    setIsPausedBySpeech(false);
+    setCurrentWordIndex(-1);
     utteranceRef.current = null;
+  };
+
+  const handleContentClick = () => {
+    if (isSpeaking) {
+      if (window.speechSynthesis.paused || isPausedBySpeech) {
+        window.speechSynthesis.resume();
+        setIsPausedBySpeech(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPausedBySpeech(true);
+      }
+    }
   };
 
   const handleRegenerate = () => {
@@ -704,9 +740,37 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
           )}
           {isUser ? renderContent() : (
+            <div onClick={handleContentClick} className={isSpeaking ? 'cursor-pointer' : ''}>
             <ReactMarkdown 
               className="text-sm max-w-none"
               components={{
+                p: ({ children }) => {
+                  if (isSpeaking && currentWordIndex >= 0) {
+                    // Render with word highlighting
+                    const text = String(children);
+                    const words = text.split(/(\s+)/);
+                    let wordCount = 0;
+
+                    return (
+                      <p className="mb-3 leading-relaxed text-white/90">
+                        {words.map((word, idx) => {
+                          if (word.match(/^\s+$/)) return word;
+                          const isCurrentWord = wordCount === currentWordIndex;
+                          wordCount++;
+                          return (
+                            <span 
+                              key={idx}
+                              className={isCurrentWord ? 'bg-blue-500/40 rounded px-0.5 transition-colors' : ''}
+                            >
+                              {word}
+                            </span>
+                          );
+                        })}
+                      </p>
+                    );
+                  }
+                  return <p className="mb-3 leading-relaxed text-white/90">{children}</p>;
+                },
                 code: ({ inline, className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || '');
                   return !inline && match ? (
@@ -752,7 +816,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 a: ({ children, ...props }) => (
                   <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">{children}</a>
                 ),
-                p: ({ children }) => <p className="mb-3 leading-relaxed text-white/90">{children}</p>,
                 ul: ({ children }) => <ul className="mb-3 ml-6 space-y-1.5">{children}</ul>,
                 ol: ({ children }) => <ol className="mb-3 ml-6 space-y-1.5">{children}</ol>,
                 li: ({ children }) => <li className="list-disc text-white/90">{children}</li>,
@@ -771,7 +834,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             >
               {message.content}
             </ReactMarkdown>
-          )}
+            </div>
+            )}
           {(message.timestamp || (!isUser && message.response_time_ms)) && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
               <div className="flex items-center gap-2">
