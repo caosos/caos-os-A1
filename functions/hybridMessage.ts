@@ -25,12 +25,21 @@ Deno.serve(async (req) => {
             console.warn('Profile load failed:', error.message);
         }
 
-        // Load identity contract
+        // Load identity contract with strong enforcement
         let identityContract = '';
         try {
             const contractFile = await Deno.readTextFile('/app/functions/caos_identity_contract.json');
             const contract = JSON.parse(contractFile);
-            identityContract = `\n\n[IDENTITY CONTRACT - ALWAYS FOLLOW]\n${JSON.stringify(contract, null, 2)}\n[END CONTRACT]`;
+            identityContract = `\n\n[CRITICAL IDENTITY CONTRACT - MANDATORY ENFORCEMENT]
+        ${JSON.stringify(contract, null, 2)}
+
+        ENFORCEMENT REMINDER:
+        - Pick ONE mode at start (casual or thorough) based on user request
+        - Use ONLY that mode's formatting rules for the ENTIRE response
+        - NO mixing styles mid-response (no headers + casual, no emojis + formal)
+        - NO checkmark bullets (✅✓) - use dashes or regular bullets only
+        - Consistency is CRITICAL - format the whole response the same way
+        [END CONTRACT]`;
         } catch (error) {
             console.warn('Identity contract load failed:', error.message);
         }
