@@ -338,7 +338,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
             if (textareaRef.current) {
               textareaRef.current.style.height = 'auto';
-              textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
             }
           }
         } catch (error) {
