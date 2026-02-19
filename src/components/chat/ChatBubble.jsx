@@ -265,7 +265,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const extractUrls = (text) => {
-    const urlRegex = /https?:\/\/[^\s)]+/g;
+    const urlRegex = /https?:\/\/[^\s)\]]+/g;
     return text.match(urlRegex) || [];
   };
 
@@ -525,14 +525,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       <div className="space-y-3">
         {/* Embedded Videos */}
         {videoUrls.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {videoUrls.map((url, idx) => {
               const youtubeId = getYouTubeId(url);
               const vimeoId = getVimeoId(url);
 
               if (youtubeId) {
                 return (
-                  <div key={idx} className="w-full rounded-lg overflow-hidden">
+                  <div key={idx} className="w-full rounded-xl overflow-hidden border border-white/20 shadow-lg">
                     <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
                       <iframe
                         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
@@ -540,7 +540,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
-                        className="rounded-lg"
                       />
                     </div>
                   </div>
@@ -549,7 +548,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
               if (vimeoId) {
                 return (
-                  <div key={idx} className="w-full rounded-lg overflow-hidden">
+                  <div key={idx} className="w-full rounded-xl overflow-hidden border border-white/20 shadow-lg">
                     <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
                       <iframe
                         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
@@ -557,7 +556,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                         frameBorder="0"
                         allow="autoplay; fullscreen; picture-in-picture"
                         allowFullScreen
-                        className="rounded-lg"
                       />
                     </div>
                   </div>
@@ -569,14 +567,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           </div>
         )}
 
-        {/* Link Previews (non-video) */}
-        {otherUrls.length > 0 && (
-          <div className="space-y-2">
-            {otherUrls.map((url, idx) => (
-              <LinkPreview key={idx} url={url} />
-            ))}
-          </div>
-        )}
+
 
         {/* Recall Results */}
         {message.recall_results && message.recall_results.length > 0 && (
