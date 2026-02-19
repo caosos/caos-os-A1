@@ -707,13 +707,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         transition={{ duration: 0.3 }}
         className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full max-w-4xl mx-auto px-4`}
       >
-        <div className={`flex items-end gap-2 w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-start gap-2 w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isUser && (
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
             <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
           </div>
         )}
-        
+
+        <div className="flex-1 max-w-3xl">
         <div
             data-message-bubble
             className={`
@@ -935,6 +936,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   ))}
                 </div>
               )}
+              </div>
               </div>
               </div>
               </motion.div>
