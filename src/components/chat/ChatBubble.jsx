@@ -451,11 +451,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       content = content.replace(/WROTE:[a-f0-9-]+/g, '').trim();
     }
 
-    // Extract standalone URLs before other processing
+    // Extract ALL URLs before markdown processing
     const urls = extractUrls(content);
     const videoUrls = urls.filter(isVideoUrl);
-    const otherUrls = urls.filter(url => !isVideoUrl(url));
-    const cleanContent = videoUrls.reduce((text, url) => text.replace(url, ''), content).trim();
+
+    // Remove video URLs from content BEFORE markdown processing
+    let cleanContent = content;
+    videoUrls.forEach(url => {
+      cleanContent = cleanContent.replace(url, '');
+    });
+    cleanContent = cleanContent.trim();
 
     const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
     
