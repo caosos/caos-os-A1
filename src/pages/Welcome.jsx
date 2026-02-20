@@ -13,43 +13,41 @@ export default function Welcome() {
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [checking, setChecking] = useState(true);
 
   // Check authentication status on mount
   React.useEffect(() => {
     let mounted = true;
-    sessionStorage.removeItem('just_logged_out');
+    const hasChecked = sessionStorage.getItem('welcome_auth_checked');
     
     const checkAuth = async () => {
-      // Prevent loop - if we just came from chat, don't redirect back
-      const fromChat = sessionStorage.getItem('from_chat');
-      if (fromChat) {
-        sessionStorage.removeItem('from_chat');
-        if (mounted) {
-          localStorage.removeItem('base44_access_token');
-        }
+      // Only check once per session to prevent loops
+      if (hasChecked) {
+        if (mounted) setChecking(false);
         return;
       }
+      
+      sessionStorage.setItem('welcome_auth_checked', 'true');
       
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (isAuth && mounted) {
-          // Mark that we're going to chat from welcome
-          sessionStorage.setItem('from_welcome', 'true');
           navigate(createPageUrl('Chat'), { replace: true });
+        } else {
+          if (mounted) setChecking(false);
         }
       } catch (error) {
-        // Not authenticated, stay on welcome
         if (mounted) {
           localStorage.removeItem('base44_access_token');
+          setChecking(false);
         }
       }
     };
     
-    // Small delay to prevent rapid redirect loops
-    const timer = setTimeout(checkAuth, 200);
+    checkAuth();
+    
     return () => {
       mounted = false;
-      clearTimeout(timer);
     };
   }, [navigate]);
 
@@ -104,6 +102,15 @@ export default function Welcome() {
       navigate(createPageUrl('Chat'));
     }, 100);
   };
+
+  if (checking) {
+    return (
+      <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center overflow-hidden">
+        <StarfieldBackground />
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center overflow-hidden">

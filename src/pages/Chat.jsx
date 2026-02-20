@@ -152,15 +152,8 @@ export default function Chat() {
         console.error('Error loading user data:', error);
         if (!mounted) return;
         
-        // Check if we just navigated from welcome (prevent loop)
-        const fromWelcome = sessionStorage.getItem('from_welcome');
-        if (fromWelcome) {
-          sessionStorage.removeItem('from_welcome');
-          return; // Don't redirect, stay on chat
-        }
-        
-        // Not authenticated - navigate back to welcome with replace to avoid loops
-        sessionStorage.setItem('from_chat', 'true');
+        // Not authenticated - clear check flag and navigate to welcome
+        sessionStorage.removeItem('welcome_auth_checked');
         navigate(createPageUrl('Welcome'), { replace: true });
       }
     };
