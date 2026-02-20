@@ -758,14 +758,14 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
                 }
 
                 // Get final response with tool results
-                const finalResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'grok-4-1-fast-reasoning',
+                        model: 'gpt-4o',
                         messages: [...messages, ...toolMessages],
                         temperature: 0.7
                     })
@@ -774,29 +774,6 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
                 const finalResult = await finalResponse.json();
                 aiResponse = finalResult.choices[0].message.content;
                 if (finalResult.usage?.total_tokens) usageTokens = finalResult.usage.total_tokens;
-                
-                // VALIDATION: Check if response contradicts tool results
-                const toolResultsText = toolMessages
-                    .filter(m => m.role === 'tool')
-                    .map(m => m.content)
-                    .join(' ');
-                
-                if (toolResultsText && aiResponse) {
-                    // If tool results mention a date/fact but response contradicts it, flag it
-                    const dateMatches = toolResultsText.match(/202\d/g);
-                    const responseDateMatches = aiResponse.match(/202\d/g);
-                    
-                    if (dateMatches && responseDateMatches) {
-                        const toolDates = [...new Set(dateMatches)];
-                        const responseDates = [...new Set(responseDateMatches)];
-                        
-                        // If tool says 2026 but response says 2024, we have a problem
-                        if (toolDates.includes('2026') && responseDates.includes('2024') && !responseDates.includes('2026')) {
-                            console.error('CRITICAL: AI contradicted tool results - correcting');
-                            aiResponse = `I found evidence from web search, but then contradicted it with outdated training data. Let me correct that:\n\n${aiResponse.replace(/2024/g, '2026').replace(/October/gi, 'February')}`;
-                        }
-                    }
-                }
             } else {
                 aiResponse = message.content;
             }
