@@ -372,11 +372,46 @@ export default function Chat() {
     setIsLoading(true);
     const startTime = Date.now();
     let conversationId = null;
+    let errorLogId = null;
+    
+    // Store message in localStorage as backup before sending
+    const backupMessage = {
+      content,
+      fileUrls,
+      timestamp: new Date().toISOString(),
+      conversationId: currentConversationId
+    };
+    localStorage.setItem('caos_last_message_backup', JSON.stringify(backupMessage));
     
     // Timeout handler - extended for large messages
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       setIsLoading(false);
-      toast.error('Request timed out. Please try again.');
+      
+      // Log timeout error
+      try {
+        if (!isGuestMode) {
+          const errorLog = await base44.entities.ErrorLog.create({
+            user_email: user.email,
+            conversation_id: currentConversationId || 'none',
+            error_type: 'timeout',
+            error_message: 'Message send timed out after 5 minutes',
+            lost_message_content: content,
+            lost_message_files: fileUrls,
+            request_payload: { content, fileUrls, selectedAgents }
+          });
+          errorLogId = errorLog.id;
+        }
+      } catch (logError) {
+        console.error('Failed to log timeout error:', logError);
+      }
+      
+      toast.error('Request timed out. Message saved in error log.', {
+        action: {
+          label: 'Retry',
+          onClick: () => handleSendMessage(content, fileUrls, selectedAgents)
+        },
+        duration: 10000
+      });
     }, 300000); // 300 second (5 min) timeout for large messages
 
     try {
