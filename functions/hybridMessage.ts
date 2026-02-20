@@ -464,7 +464,7 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
             }
 
         } else {
-            // Route to Grok for everything else (core reasoning)
+            // Route to OpenAI for everything else (core reasoning)
             const tools = [
                 {
                     type: "function",
