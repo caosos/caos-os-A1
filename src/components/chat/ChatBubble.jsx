@@ -974,9 +974,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             onContextMenu={handleTextSelection}
           >
 
-          {!isUser && (
-            <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
-          )}
+          <p className="text-xs font-medium mb-2">
+            {isUser ? (
+              <span className="text-green-300">{userInitials}</span>
+            ) : (
+              <span className="text-blue-300">CAOS</span>
+            )}
+          </p>
           {message.failed && (
             <div className="mb-2 flex items-center gap-2 text-red-200 text-sm">
               <AlertCircle className="w-4 h-4" />
