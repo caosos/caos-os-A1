@@ -137,6 +137,10 @@ const FunctionDisplay = ({ toolCall }) => {
   );
 };
 
+// Global audio manager - only one audio plays at a time
+let globalAudioInstance = null;
+let globalAudioCleanup = null;
+
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -146,11 +150,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
+  const [isLoading, setIsLoading] = useState(false);
   const justSelectedRef = React.useRef(false);
-  const utteranceRef = React.useRef(null);
   const audioRef = React.useRef(null);
-  const wordsRef = React.useRef([]);
+  const messageIdRef = React.useRef(message.id);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -377,7 +380,27 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success('Copied to clipboard');
   };
 
+  const stopAllAudio = () => {
+    // Stop global audio if it exists
+    if (globalAudioInstance) {
+      globalAudioInstance.pause();
+      globalAudioInstance.currentTime = 0;
+      globalAudioInstance = null;
+    }
+    if (globalAudioCleanup) {
+      globalAudioCleanup();
+      globalAudioCleanup = null;
+    }
+    // Clean up local reference
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+  };
+
   const handleReadAloud = async () => {
+    // If this message is already playing
     if (isSpeaking && audioRef.current) {
       if (audioRef.current.paused) {
         audioRef.current.play();
@@ -389,7 +412,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       return;
     }
 
-    setIsSpeaking(true);
+    // Stop any other audio playing globally
+    stopAllAudio();
+
+    setIsLoading(true);
     setAudioProgress(0);
 
     const cleanText = message.content
@@ -429,6 +455,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      
+      // Set as global instance
+      globalAudioInstance = audio;
       audioRef.current = audio;
 
       audio.ontimeupdate = () => {
@@ -436,37 +465,50 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         setAudioDuration(audio.duration);
       };
 
-      audio.onended = () => {
+      const cleanup = () => {
         setIsSpeaking(false);
         setIsPausedBySpeech(false);
         setAudioProgress(0);
+        setIsLoading(false);
         URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
+        if (globalAudioInstance === audio) globalAudioInstance = null;
+        if (audioRef.current === audio) audioRef.current = null;
       };
 
+      audio.onended = cleanup;
       audio.onerror = () => {
-        setIsSpeaking(false);
+        cleanup();
         toast.error('Playback failed');
-        URL.revokeObjectURL(audioUrl);
       };
 
+      globalAudioCleanup = cleanup;
+
+      setIsLoading(false);
+      setIsSpeaking(true);
       await audio.play();
     } catch (error) {
       setIsSpeaking(false);
+      setIsLoading(false);
       toast.error('Failed to generate speech');
     }
   };
 
   const handleStopReading = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    stopAllAudio();
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
     setAudioProgress(0);
-    audioRef.current = null;
+    setIsLoading(false);
   };
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (audioRef.current === globalAudioInstance) {
+        stopAllAudio();
+      }
+    };
+  }, []);
 
   const skipForward = () => {
     if (audioRef.current) {
