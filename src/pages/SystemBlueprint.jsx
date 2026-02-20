@@ -21,7 +21,8 @@ export default function SystemBlueprint() {
         <div className="max-w-5xl mx-auto space-y-8 pb-8">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold mb-4">CAOS System Blueprint</h1>
-            <p className="text-xl text-blue-300">Complete Technical Specification</p>
+            <p className="text-xl text-blue-300">Complete Technical Specification - OpenAI w/ Multi-Lane Architecture</p>
+            <p className="text-sm text-gray-400 mt-2">Last Updated: Feb 20, 2026</p>
           </div>
 
           {/* ARCHITECTURE OVERVIEW */}
@@ -35,9 +36,10 @@ export default function SystemBlueprint() {
                 <pre className="text-sm overflow-x-auto">{`
 ┌─────────────────────────────────────────────┐
 │           FRONTEND (React)                  │
-│  • Chat UI                                  │
-│  • Message Display                          │
-│  • File Upload                              │
+│  • Chat UI (multi-conversation)             │
+│  • Message Display + Error Handling         │
+│  • File Upload (images, docs, voice)        │
+│  • Token Meter (90K rotation trigger)       │
 └─────────────┬───────────────────────────────┘
               │
               ▼
@@ -45,28 +47,31 @@ export default function SystemBlueprint() {
 │      BACKEND FUNCTIONS (Deno)              │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
-│  │   caosMessage                       │   │
-│  │   • Entry point for all messages    │   │
-│  │   • Session management              │   │
-│  │   • Context assembly                │   │
-│  │   • AI coordination                 │   │
+│  │   hybridMessage (MAIN)              │   │
+│  │   • Session + lane detection        │   │
+│  │   • Profile loading (persistent)    │   │
+│  │   • Multi-lane hot context          │   │
+│  │   • Seed generation at 90K tokens   │   │
+│  │   • OpenAI API coordination         │   │
 │  └─────────────┬───────────────────────┘   │
 │                │                            │
 │                ▼                            │
 │  ┌─────────────────────────────────────┐   │
-│  │   AI PROVIDER API                   │   │
-│  │   • InvokeLLM (current)            │   │
-│  │   • Grok API (proposed)            │   │
-│  │   • With tool definitions          │   │
+│  │   OpenAI API (gpt-4o)               │   │
+│  │   • Native tool calling             │   │
+│  │   • Vision support (images)         │   │
+│  │   • Web search via InvokeLLM        │   │
+│  │   • 128K context window per call    │   │
 │  └─────────────┬───────────────────────┘   │
 │                │                            │
 │                ▼                            │
 │  ┌─────────────────────────────────────┐   │
-│  │   TOOLS (executed by backend)       │   │
-│  │   • Internet Search                 │   │
-│  │   • Vision Analysis                 │   │
-│  │   • File Operations                 │   │
-│  │   • Memory Recall                   │   │
+│  │   TOOLS (OpenAI-executed)           │   │
+│  │   • search_internet                 │   │
+│  │   • recall_memory (full vault)      │   │
+│  │   • read_app_file                   │   │
+│  │   • update_user_profile             │   │
+│  │   • list_app_structure              │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
 └─────────────┬───────────────────────────────┘
@@ -74,9 +79,13 @@ export default function SystemBlueprint() {
               ▼
 ┌─────────────────────────────────────────────┐
 │        DATABASE (Base44 Entities)           │
-│  • Record (messages)                        │
-│  • SessionContext (state)                   │
-│  • UserFile (attachments)                   │
+│  • Record (all messages w/ token_count)     │
+│  • Lane (hot context per topic)             │
+│  • UserProfile (persistent memory)          │
+│  • Conversation (thread metadata)           │
+│  • Message (UI layer)                       │
+│  • UserFile (attachments organized)         │
+│  • ErrorLog (failure tracking)              │
 └─────────────────────────────────────────────┘
                 `}</pre>
               </div>
@@ -85,50 +94,215 @@ export default function SystemBlueprint() {
 
           {/* MESSAGE FLOW */}
           <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">2. Message Flow</h2>
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">2. Message Flow (Current Implementation)</h2>
             
             <div className="space-y-6">
               <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
                 <h3 className="text-lg font-semibold text-green-300 mb-3">Step 1: User sends message</h3>
                 <pre className="text-sm overflow-x-auto text-gray-200">{`
-// Frontend calls backend
-const response = await base44.functions.invoke('caosMessage', {
-  input: "What's the weather like?",
-  session_id: "sess_12345",
-  file_urls: [], // optional attachments
-  limit: 20 // conversation history limit
+// Frontend calls hybridMessage
+const response = await fetch('http://YOUR_API/api/functions/hybridMessage', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    input: "What's the weather like?",
+    session_id: "sess_12345",
+    file_urls: [], // optional images
+    rotation_seed: null, // injected if thread was rotated
+    current_lane: null // auto-detected or manual
+  })
 });
                 `}</pre>
               </div>
 
               <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
-                <h3 className="text-lg font-semibold text-purple-300 mb-3">Step 2: Backend processes</h3>
+                <h3 className="text-lg font-semibold text-purple-300 mb-3">Step 2: Backend processes (hybridMessage)</h3>
                 <pre className="text-sm overflow-x-auto text-gray-200">{`
-// caosMessage function:
-1. Authenticate user
-2. Get/create session context
-3. Load recent conversation history (20 messages)
-4. Detect intent from user message:
-   - Search keywords → enable internet tool
-   - Image upload → enable vision tool
-   - File keywords → enable file tool
-5. Build system prompt + conversation context
-6. Call AI API with tools
-7. Store user message + AI response in database
-8. Return response to frontend
+1. Authenticate user (base44.auth.me())
+2. Load UserProfile (persistent memory across all threads)
+3. Load identity contract (response style enforcement)
+4. Detect active lane: ui, immigration, tokens, backend, news, general
+5. Load lane-specific context:
+   - Hot messages: Last 5 per lane
+   - Lane summary: Compressed warm context
+   - Recent cross-lane: 3 most recent messages
+6. Calculate token usage across all lanes
+7. IF > 90K tokens:
+   - Generate compressed seed (2-3K chars)
+   - Inject into new request as system message
+8. Build working context: profile + lane hot + recent
+9. Call OpenAI gpt-4o with native tools
+10. Store messages in Record entity with token counts
+11. Update Lane hot_messages (rolling window)
+12. Archive lane summary every 10 messages
+13. Return response to frontend
                 `}</pre>
               </div>
 
               <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">Step 3: AI responds</h3>
+                <h3 className="text-lg font-semibold text-blue-300 mb-3">Step 3: AI decides + executes</h3>
                 <pre className="text-sm overflow-x-auto text-gray-200">{`
-AI has access to tools and decides:
-- Just answer → Direct text response
-- Need search → Call internet_search tool
-- Need vision → Call vision_analysis tool
-- Need memory → Call recall_memory tool
+OpenAI receives:
+- System prompt (identity + profile + lane context)
+- Optional rotation seed (if > 90K)
+- Lane hot messages
+- Recent cross-lane messages
+- User's current message
 
-Tools execute, results returned to AI, AI generates final response
+AI can call tools:
+- search_internet → InvokeLLM with web context
+- recall_memory → Search ALL Record history (no caps)
+- read_app_file → Read own source code
+- update_user_profile → Store permanent facts about user
+- list_app_structure → See available pages/components
+
+Tools execute in backend, results returned to OpenAI, final response generated
+                `}</pre>
+              </div>
+            </div>
+          </section>
+          
+          {/* MULTI-LANE CONTEXT SYSTEM */}
+          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">3. Multi-Lane Context Windows</h2>
+            
+            <div className="space-y-6 text-gray-200">
+              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
+                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Problem Solved</h3>
+                <p className="text-sm">Traditional single-thread chat gets bloated over time. Every message adds to context, slowing responses and hitting token limits. CAOS splits conversations into topic-based lanes.</p>
+              </div>
+
+              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
+                <h3 className="text-lg font-semibold text-blue-300 mb-3">Lane Detection (Auto)</h3>
+                <pre className="text-sm overflow-x-auto">{`
+function detectLane(text) {
+  const lower = text.toLowerCase();
+  if (/ui|interface|design|button/.test(lower)) return 'ui';
+  if (/immigr|visa|ice|border/.test(lower)) return 'immigration';
+  if (/token|context|memory|recall/.test(lower)) return 'tokens';
+  if (/function|backend|api|code/.test(lower)) return 'backend';
+  if (/news|current|today|latest/.test(lower)) return 'news';
+  return 'general';
+}
+                `}</pre>
+              </div>
+
+              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
+                <h3 className="text-lg font-semibold text-green-300 mb-3">Context Layers per Lane</h3>
+                <pre className="text-sm overflow-x-auto">{`
+Lane Entity Structure:
+{
+  session_id: "sess_123",
+  lane_name: "ui",
+  hot_messages: [
+    { role: "user", content: "...", timestamp: "..." },
+    { role: "assistant", content: "...", timestamp: "..." }
+    // Last 5 messages kept hot
+  ],
+  summary: "Compressed warm context (archived every 10 msgs)",
+  message_count: 47
+}
+
+Hot Context: Last 5 messages per lane (immediate recall)
+Warm Context: Compressed summary (background knowledge)
+Cold Storage: Full Record history (searchable via tools)
+                `}</pre>
+              </div>
+
+              <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
+                <h3 className="text-lg font-semibold text-purple-300 mb-3">Working Context Assembly</h3>
+                <pre className="text-sm overflow-x-auto">{`
+Per Request to OpenAI:
+1. UserProfile (persistent facts about user)
+2. Identity contract (response style rules)
+3. Active lane hot messages (5 most recent in this topic)
+4. Active lane summary (compressed history)
+5. 3 most recent cross-lane messages (continuity)
+6. Optional: Rotation seed (if previous thread > 90K)
+
+Result: Clean, focused context without bloat
+                `}</pre>
+              </div>
+            </div>
+          </section>
+
+          {/* TOKEN MANAGEMENT & ROTATION */}
+          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">4. Token Management & Rotation</h2>
+            
+            <div className="space-y-6 text-gray-200">
+              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30">
+                <h3 className="text-lg font-semibold text-red-300 mb-3">⚠️ CRITICAL: How Rotation Works</h3>
+                <p className="text-sm mb-3">The 90K rotation trigger is NOT a hard cap. It's a compression checkpoint to prevent thread bloat.</p>
+                <pre className="text-sm overflow-x-auto">{`
+Token Calculation:
+- Sum all hot_messages across ALL lanes
+- Each message: ~length / 4 tokens
+- When total > 90,000 → rotation triggered
+
+What Happens:
+1. Compress all lane contexts into seed (2-3K chars)
+2. Seed injected as system message in NEXT request
+3. Lanes continue normally (no data loss)
+4. Thread stays lean and fast
+                `}</pre>
+              </div>
+
+              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
+                <h3 className="text-lg font-semibold text-blue-300 mb-3">Seed Generation</h3>
+                <pre className="text-sm overflow-x-auto">{`
+When rotation triggered:
+1. Gather all lane summaries + hot messages
+2. Send to OpenAI: "Compress into 2-3K chars max"
+3. Result: Ultra-compact seed with key facts
+4. Example seed:
+   "CAOS v3 Seed: UI lane focused on chat styling, 
+   token system discussion about context rotation, 
+   backend work on error handling. User prefers 
+   casual tone, works on immigration app. Recent: 
+   Fixed message persistence bug."
+   
+5. Seed stored with session
+6. Injected into next OpenAI call as system message
+
+WHEN seed is injected:
+- Only when user sends new message AFTER rotation
+- Not automatically - requires new user input
+- Seed becomes part of system prompt
+- Replaces need to send full history
+                `}</pre>
+              </div>
+
+              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
+                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Why This Prevents Bloat</h3>
+                <ul className="text-sm space-y-2 list-disc list-inside">
+                  <li>Each lane stays lean (5 hot messages max)</li>
+                  <li>Summaries compress every 10 messages</li>
+                  <li>Seeds compress entire conversation history</li>
+                  <li>No exponential growth like traditional chat</li>
+                  <li>Fast responses maintained indefinitely</li>
+                  <li>Full history still searchable via recall_memory tool</li>
+                </ul>
+              </div>
+
+              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
+                <h3 className="text-lg font-semibold text-green-300 mb-3">Token Meter Display</h3>
+                <pre className="text-sm overflow-x-auto">{`
+// What you see in UI
+Token Meter: 30,520 / 2M
+
+What it means:
+- 30,520: Actual tokens in working context (all lanes hot)
+- 2M: Display number (not a hard limit)
+- Real trigger: 90K (for rotation)
+
+Should change to: 30,520 / 90K
+- Shows proximity to rotation
+- More accurate representation
+- No confusion about "2M cap"
                 `}</pre>
               </div>
             </div>
