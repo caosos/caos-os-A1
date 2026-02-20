@@ -308,27 +308,103 @@ Should change to: 30,520 / 90K
             </div>
           </section>
 
-          {/* AI API INTEGRATION */}
+          {/* PERSISTENT MEMORY SYSTEM */}
           <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">3. AI API Integration Points</h2>
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">5. Persistent Memory System</h2>
             
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-white">Current: InvokeLLM</h3>
-                <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-const llmResult = await base44.integrations.Core.InvokeLLM({
-  prompt: systemPrompt + "\\n\\nUser: " + userMessage,
-  add_context_from_internet: true, // enables search
-  file_urls: ["url1", "url2"], // for vision
-  response_json_schema: null // optional structured output
-});
+            <div className="space-y-6 text-gray-200">
+              <div className="bg-indigo-950/50 p-4 rounded-lg border border-indigo-500/30">
+                <h3 className="text-lg font-semibold text-indigo-300 mb-3">UserProfile Entity</h3>
+                <pre className="text-sm overflow-x-auto">{`
+{
+  user_email: "user@example.com",
+  presentation_preferences: {
+    formatting_style: "dashes for lists, clean formatting",
+    tone: "casual, direct, witty",
+    response_length: "concise",
+    code_preferences: "commented examples"
+  },
+  visual_context: {
+    workspace: "Standing desk with 3 monitors",
+    appearance: "Developer in casual attire",
+    projects: ["CAOS", "Immigration app"],
+    environment: "Home office setup"
+  },
+  interaction_patterns: {
+    prefers_examples: true,
+    prefers_visuals: true,
+    common_tasks: ["debugging", "architecture design"]
+  },
+  learned_facts: [
+    {
+      fact: "Works on immigration-related projects",
+      category: "work",
+      learned_date: "2026-02-15"
+    },
+    {
+      fact: "Prefers direct communication",
+      category: "style",
+      learned_date: "2026-02-18"
+    }
+  ],
+  interests: ["AI systems", "memory architecture"],
+  goals: ["Build shippable CAOS", "Integrate Python server"]
+}
 
-// Returns: string response
+This profile is loaded EVERY request and injected into system prompt.
+Result: CAOS remembers you across ALL threads forever.
                 `}</pre>
               </div>
 
+              <div className="bg-cyan-950/50 p-4 rounded-lg border border-cyan-500/30">
+                <h3 className="text-lg font-semibold text-cyan-300 mb-3">How Profile Updates Work</h3>
+                <pre className="text-sm overflow-x-auto">{`
+1. AI recognizes important facts during conversation
+2. AI calls update_user_profile tool with new data
+3. Backend merges with existing profile (no overwrites)
+4. Profile persists forever across all sessions
+5. Next request automatically includes updated profile
+
+Example:
+User: "I work at X company now"
+AI: *calls update_user_profile*
+     {learned_facts: [{fact: "Works at X company"}]}
+Next thread: AI already knows without being told
+                `}</pre>
+              </div>
+
+              <div className="bg-teal-950/50 p-4 rounded-lg border border-teal-500/30">
+                <h3 className="text-lg font-semibold text-teal-300 mb-3">Record vs Lane vs Profile</h3>
+                <pre className="text-sm overflow-x-auto">{`
+Record: Every message ever sent (searchable via recall_memory)
+  - Full conversation history
+  - Timestamped with token counts
+  - Queryable across all sessions
+
+Lane: Topic-specific working memory (ui, backend, tokens, etc.)
+  - Hot: Last 5 messages per lane
+  - Warm: Compressed summaries
+  - Auto-switches based on topic
+
+Profile: Permanent facts about user (YOU)
+  - Name, work, preferences, style
+  - Learned over time
+  - Never expires
+  - Loaded every request
+
+Result: Three-tier memory hierarchy
+                `}</pre>
+              </div>
+            </div>
+          </section>
+
+          {/* AI API INTEGRATION */}
+          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">6. AI API Integration (Current: OpenAI)</h2>
+            
+            <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-white">Proposed: Grok API</h3>
+                <h3 className="text-xl font-semibold mb-4 text-white">OpenAI gpt-4o (Native Tools)</h3>
                 <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
 // Using xAI Grok API
 const response = await fetch('https://api.x.ai/v1/chat/completions', {
