@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function TokenMeter({ messages = [], maxTokens = 90000 }) {
+export default function TokenMeter({ messages = [], maxTokens = 2000000 }) {
   // Calculate actual tokens from all lane hot messages (working context)
   const tokens = messages.reduce((sum, msg) => sum + (msg.token_count || 0), 0);
   const percentage = (tokens / maxTokens) * 100;
@@ -19,7 +19,7 @@ export default function TokenMeter({ messages = [], maxTokens = 90000 }) {
         />
       </div>
       <span className="text-xs text-white/50 whitespace-nowrap">
-        {tokens.toLocaleString()} / 90K
+        {tokens.toLocaleString()} / {maxTokens >= 1000000 ? `${(maxTokens / 1000000).toFixed(1)}M` : `${(maxTokens / 1000).toFixed(0)}K`}
       </span>
     </div>
   );
