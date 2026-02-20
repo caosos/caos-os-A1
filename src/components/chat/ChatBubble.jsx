@@ -1003,12 +1003,20 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   </button>
                   <button
                     onClick={handleReadAloud}
-                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
-                    title={isSpeaking ? "Pause/Resume" : "Read aloud"}
+                    disabled={isGenerating}
+                    className={`p-1 hover:bg-white/10 rounded transition-colors ${(isSpeaking || isGenerating) ? 'bg-blue-500/20' : ''} disabled:opacity-50`}
+                    title={isGenerating ? "Generating speech..." : isSpeaking ? "Pause/Resume" : "Read aloud"}
                   >
-                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                    {isGenerating ? (
+                      <div className="relative w-3.5 h-3.5">
+                        <div className="absolute inset-0 border-2 border-white/20 rounded-full" />
+                        <div className="absolute inset-0 border-2 border-blue-400 rounded-full border-t-transparent animate-spin" />
+                      </div>
+                    ) : (
+                      <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                    )}
                   </button>
-                  {isSpeaking && (
+                  {(isSpeaking || isGenerating) && (
                     <>
                       <button
                         onClick={skipBackward}
