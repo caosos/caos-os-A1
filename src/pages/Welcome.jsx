@@ -20,23 +20,33 @@ export default function Welcome() {
     sessionStorage.removeItem('just_logged_out');
     
     const checkAuth = async () => {
+      // Prevent loop - if we just came from chat, don't redirect back
+      const fromChat = sessionStorage.getItem('from_chat');
+      if (fromChat) {
+        sessionStorage.removeItem('from_chat');
+        if (mounted) {
+          localStorage.removeItem('base44_access_token');
+        }
+        return;
+      }
+      
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (isAuth && mounted) {
-          // Use replace to avoid adding to history stack
+          // Mark that we're going to chat from welcome
+          sessionStorage.setItem('from_welcome', 'true');
           navigate(createPageUrl('Chat'), { replace: true });
         }
       } catch (error) {
         // Not authenticated, stay on welcome
         if (mounted) {
-          // Clear any stale tokens on auth failure
           localStorage.removeItem('base44_access_token');
         }
       }
     };
     
     // Small delay to prevent rapid redirect loops
-    const timer = setTimeout(checkAuth, 100);
+    const timer = setTimeout(checkAuth, 200);
     return () => {
       mounted = false;
       clearTimeout(timer);
