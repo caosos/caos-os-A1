@@ -514,7 +514,9 @@ export default function Chat() {
       const contextSeed = localStorage.getItem(`caos_seed_${conversationId}`);
       const currentLane = localStorage.getItem(`caos_current_lane`) || 'general';
       
-      const { data } = await base44.functions.invoke('hybridMessage', {
+      console.log('Sending message to backend...', { conversationId, messageLength: fullMessage.length });
+      
+      const response = await base44.functions.invoke('hybridMessage', {
         session_id: conversationId,
         input: fullMessage,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
@@ -522,11 +524,30 @@ export default function Chat() {
         current_lane: currentLane
       });
 
+      console.log('Backend response received:', { status: response?.status, hasData: !!response?.data });
+
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
 
-      if (!data) throw new Error('No response from server');
+      // Check for errors in response
+      if (!response || response.status !== 200) {
+        console.error('Backend error response:', response);
+        throw new Error(response?.data?.error || 'Backend returned error status');
+      }
+
+      const { data } = response;
+      if (!data) {
+        console.error('No data in response:', response);
+        throw new Error('No response data from server');
+      }
+      
       const reply = data.reply || data.response || data.text || '';
+      if (!reply) {
+        console.error('Empty reply from backend:', data);
+        throw new Error('Empty response from server');
+      }
+
+      console.log('Message processed successfully, reply length:', reply.length);
       
       // Handle auto-rotation if needed
       if (data.rotation_needed && data.context_seed) {
