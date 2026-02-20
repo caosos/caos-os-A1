@@ -454,10 +454,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsGenerating(true);
     setGenerationProgress(0);
 
-    // Fake progress animation while generating
+    // Optimistic progress animation
     const progressInterval = setInterval(() => {
-      setGenerationProgress(prev => Math.min(prev + 2, 90));
-    }, 100);
+      setGenerationProgress(prev => {
+        if (prev < 70) return prev + 3;
+        if (prev < 85) return prev + 1.5;
+        return Math.min(prev + 0.5, 92);
+      });
+    }, 80);
 
     const cleanText = message.content
       .replace(/#{1,6}\s/g, '')
