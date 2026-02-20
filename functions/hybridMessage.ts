@@ -567,14 +567,14 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
                 }
             ];
 
-            const response = await fetch('https://api.x.ai/v1/chat/completions', {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${GROK_API_KEY}`,
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'grok-4-1-fast-reasoning',
+                    model: 'gpt-4o',
                     messages,
                     tools,
                     tool_choice: 'auto',
@@ -584,14 +584,14 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
 
             if (!response.ok) {
                 const error = await response.text();
-                throw new Error(`Grok error: ${error}`);
+                throw new Error(`OpenAI error: ${error}`);
             }
 
             const result = await response.json();
             const message = result.choices[0].message;
             usageTokens = result.usage?.total_tokens || Math.ceil(input.length / 4);
 
-            // Handle Grok tool calls
+            // Handle OpenAI tool calls
             if (message.tool_calls) {
                 const toolMessages = [message];
                 
