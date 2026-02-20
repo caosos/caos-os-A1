@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, X } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
@@ -337,26 +337,20 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success('Copied to clipboard');
   };
 
-  const handleReadAloud = () => {
-    if (!('speechSynthesis' in window)) {
-      toast.error('Text-to-speech is not supported');
-      return;
-    }
-
-    if (isSpeaking) {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+  const handleReadAloud = async () => {
+    if (isSpeaking && audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
         setIsPausedBySpeech(false);
       } else {
-        window.speechSynthesis.pause();
+        audioRef.current.pause();
         setIsPausedBySpeech(true);
       }
       return;
     }
 
-    window.speechSynthesis.cancel();
     setIsSpeaking(true);
-    setCurrentWordIndex(-1);
+    setAudioProgress(0);
 
     const cleanText = message.content
       .replace(/#{1,6}\s/g, '')
@@ -373,65 +367,84 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    // Split into words for tracking
-    wordsRef.current = cleanText.split(/\s+/);
-
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-
-      const voices = window.speechSynthesis.getVoices();
-      const savedVoiceURI = localStorage.getItem('caos_voice_preference_message');
-
-      if (savedVoiceURI) {
-        const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-        if (voice) {
-          utterance.voice = voice;
-        }
-      }
-
+    try {
+      const savedVoice = localStorage.getItem('caos_voice_preference_message') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-      utterance.rate = savedRate;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      utterance.lang = 'en-GB';
 
-      // Track word boundaries - using charIndex to calculate which word
-      utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-          // Count words up to current character position
-          const textSoFar = cleanText.substring(0, event.charIndex);
-          const wordsBefore = textSoFar.trim().split(/\s+/).filter(w => w.length > 0).length;
-          setCurrentWordIndex(wordsBefore);
-        }
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          voice: savedVoice,
+          speed: savedRate
+        })
+      });
+
+      if (!response.ok) throw new Error('TTS failed');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        setAudioProgress(audio.currentTime);
+        setAudioDuration(audio.duration);
       };
 
-      utterance.onend = () => {
+      audio.onended = () => {
         setIsSpeaking(false);
         setIsPausedBySpeech(false);
-        setCurrentWordIndex(-1);
-        utteranceRef.current = null;
+        setAudioProgress(0);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
       };
 
-      utterance.onerror = (e) => {
-        console.error('Speech error:', e);
+      audio.onerror = () => {
         setIsSpeaking(false);
-        setIsPausedBySpeech(false);
-        setCurrentWordIndex(-1);
-        toast.error('Failed to read aloud');
-        utteranceRef.current = null;
+        toast.error('Playback failed');
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    }, 100);
+      await audio.play();
+    } catch (error) {
+      setIsSpeaking(false);
+      toast.error('Failed to generate speech');
+    }
   };
 
   const handleStopReading = () => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
-    setCurrentWordIndex(-1);
-    utteranceRef.current = null;
+    setAudioProgress(0);
+    audioRef.current = null;
+  };
+
+  const skipForward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 10, audioRef.current.duration);
+    }
+  };
+
+  const skipBackward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 10, 0);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleContentClick = () => {
