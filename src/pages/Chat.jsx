@@ -971,6 +971,7 @@ export default function Chat() {
                       isUser={message.role === 'user'}
                       onUpdateMessage={handleUpdateMessage}
                       closeMenuTrigger={closeMenuTrigger}
+                      userInitials={user?.email ? user.email.substring(0, 2).toUpperCase() : "ME"}
                     />
                   </div>
                 ))}
