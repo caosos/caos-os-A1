@@ -16,20 +16,31 @@ export default function Welcome() {
 
   // Check authentication status on mount
   React.useEffect(() => {
+    let mounted = true;
     sessionStorage.removeItem('just_logged_out');
     
     const checkAuth = async () => {
       try {
         const isAuth = await base44.auth.isAuthenticated();
-        if (isAuth) {
-          navigate(createPageUrl('Chat'));
+        if (isAuth && mounted) {
+          // Use replace to avoid adding to history stack
+          navigate(createPageUrl('Chat'), { replace: true });
         }
       } catch (error) {
         // Not authenticated, stay on welcome
+        if (mounted) {
+          // Clear any stale tokens on auth failure
+          localStorage.removeItem('base44_access_token');
+        }
       }
     };
     
-    checkAuth();
+    // Small delay to prevent rapid redirect loops
+    const timer = setTimeout(checkAuth, 100);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, [navigate]);
 
   const handleGuestContinue = () => {
