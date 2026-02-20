@@ -194,10 +194,21 @@ export default function ThreadList({
                             <h3 className="text-white font-medium text-sm" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                               {conv.title}
                             </h3>
-                            {conv.last_message_preview && (
+                            {conv.summary ? (
+                              <p className="text-white/60 text-xs mt-1" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {conv.summary}
+                              </p>
+                            ) : conv.last_message_preview && (
                               <p className="text-white/50 text-xs mt-1" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {conv.last_message_preview}
                               </p>
+                            )}
+                            {conv.keywords && conv.keywords.length > 0 && (
+                              <div className="flex gap-1 flex-wrap mt-2">
+                                {conv.keywords.slice(0, 3).map((kw, idx) => (
+                                  <span key={idx} className="text-xs bg-white/10 text-blue-400 px-2 py-0.5 rounded-full">{kw}</span>
+                                ))}
+                              </div>
                             )}
                             <p className="text-white/30 text-xs mt-1.5">
                               {moment(conv.last_message_time || conv.created_date).fromNow()}
