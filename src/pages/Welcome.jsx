@@ -18,17 +18,8 @@ export default function Welcome() {
   // Check authentication status on mount
   React.useEffect(() => {
     let mounted = true;
-    const hasChecked = sessionStorage.getItem('welcome_auth_checked');
     
     const checkAuth = async () => {
-      // Only check once per session to prevent loops
-      if (hasChecked) {
-        if (mounted) setChecking(false);
-        return;
-      }
-      
-      sessionStorage.setItem('welcome_auth_checked', 'true');
-      
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (isAuth && mounted) {
@@ -38,18 +29,18 @@ export default function Welcome() {
         }
       } catch (error) {
         if (mounted) {
-          localStorage.removeItem('base44_access_token');
           setChecking(false);
         }
       }
     };
     
-    checkAuth();
+    const timer = setTimeout(checkAuth, 100);
     
     return () => {
       mounted = false;
+      clearTimeout(timer);
     };
-  }, [navigate]);
+  }, []);
 
   const handleGuestContinue = () => {
     const user = {

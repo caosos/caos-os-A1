@@ -152,9 +152,16 @@ export default function Chat() {
         console.error('Error loading user data:', error);
         if (!mounted) return;
         
-        // Not authenticated - clear check flag and navigate to welcome
-        sessionStorage.removeItem('welcome_auth_checked');
-        navigate(createPageUrl('Welcome'), { replace: true });
+        // Not authenticated - become guest instead of redirecting
+        const guestUser = {
+          full_name: 'Guest User',
+          email: `guest_${Date.now()}@caos.local`,
+          isGuest: true
+        };
+        localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
+        localStorage.removeItem('base44_access_token');
+        setUser(guestUser);
+        setDataLoaded(true);
       }
     };
 
