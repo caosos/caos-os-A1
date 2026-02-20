@@ -406,15 +406,15 @@ Result: Three-tier memory hierarchy
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-white">OpenAI gpt-4o (Native Tools)</h3>
                 <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-// Using xAI Grok API
-const response = await fetch('https://api.x.ai/v1/chat/completions', {
+// OpenAI API with native tool calling
+const response = await fetch('https://api.openai.com/v1/chat/completions', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer XAI_API_KEY',
+    'Authorization': 'Bearer OPENAI_API_KEY',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    model: 'grok-beta',
+    model: 'gpt-4o',
     messages: [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
@@ -470,16 +470,23 @@ const response = await fetch('https://api.x.ai/v1/chat/completions', {
   })
 });
 
-// Handle tool calls
+// Handle tool calls (OpenAI executes them natively)
 if (response.choices[0].message.tool_calls) {
   for (const toolCall of response.choices[0].message.tool_calls) {
     const result = await executeToolFunction(
       toolCall.function.name, 
       JSON.parse(toolCall.function.arguments)
     );
-    // Send result back to Grok for final response
+    // Send result back to OpenAI for final response
   }
 }
+
+// Key tools available:
+// - search_internet: InvokeLLM with web context
+// - recall_memory: Search full Record history
+// - read_app_file: Read CAOS source code
+// - update_user_profile: Store permanent facts
+// - list_app_structure: See pages/components
                 `}</pre>
               </div>
             </div>
