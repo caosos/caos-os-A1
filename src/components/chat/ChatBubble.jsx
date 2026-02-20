@@ -498,12 +498,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       if (!response.ok) throw new Error('TTS failed');
 
       const audioBlob = await response.blob();
+      
+      clearInterval(progressInterval);
+      setGenerationProgress(95);
+      
       const audioUrl = URL.createObjectURL(audioBlob);
       
       // Cache the audio
       audioCache.set(cacheKey, { url: audioUrl, blob: audioBlob });
-
-      clearInterval(progressInterval);
+      
       setGenerationProgress(100);
 
       const audio = new Audio(audioUrl);
