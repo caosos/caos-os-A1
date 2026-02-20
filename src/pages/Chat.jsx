@@ -85,11 +85,14 @@ export default function Chat() {
 
   // Load user and their data
   useEffect(() => {
+    let mounted = true;
+    
     const loadUserData = async () => {
       try {
         // Check if guest mode
         const guestUser = localStorage.getItem('caos_guest_user');
         if (guestUser) {
+          if (!mounted) return;
           const currentUser = JSON.parse(guestUser);
           setUser(currentUser);
 
@@ -106,6 +109,8 @@ export default function Chat() {
 
         // For authenticated users - check if logged in
         const currentUser = await base44.auth.me();
+        if (!mounted) return;
+        
         setUser(currentUser);
 
         // Load conversations for this user
@@ -114,6 +119,7 @@ export default function Chat() {
           '-last_message_time',
           100
         );
+        if (!mounted) return;
         setConversations(userConvos);
 
         // Load messages for all conversations
@@ -126,6 +132,7 @@ export default function Chat() {
           );
           messagesMap[conv.id] = convMessages;
         }
+        if (!mounted) return;
         setMessages(messagesMap);
 
         // Load game tokens
@@ -136,18 +143,25 @@ export default function Chat() {
             spent: false
           });
           const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
+          if (!mounted) return;
           setAvailableTokens(total);
         }
 
         setDataLoaded(true);
-        } catch (error) {
+      } catch (error) {
         console.error('Error loading user data:', error);
-        // Not authenticated - navigate back to welcome
-        navigate(createPageUrl('Welcome'));
-        }
+        if (!mounted) return;
+        
+        // Not authenticated - navigate back to welcome with replace to avoid loops
+        navigate(createPageUrl('Welcome'), { replace: true });
+      }
     };
 
     loadUserData();
+    
+    return () => {
+      mounted = false;
+    };
   }, [navigate]);
 
   const isGuestMode = !!localStorage.getItem('caos_guest_user');
