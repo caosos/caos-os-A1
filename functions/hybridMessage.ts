@@ -38,6 +38,12 @@ Deno.serve(async (req) => {
         - NO mixing styles mid-response (no headers + casual, no emojis + formal)
         - NO checkmark bullets (✅✓) - use dashes or regular bullets only
         - Consistency is CRITICAL - format the whole response the same way
+
+        DETERMINISTIC TOOL EXECUTION - NO EXCEPTIONS:
+        - If user says "remember this/that" or ANY memory trigger → MUST call update_user_profile immediately
+        - If user says "find" or "search" past info → MUST call recall_memory
+        - These are NOT optional - they are MANDATORY contracts
+        - Saying "I'll remember that" WITHOUT calling the tool is a CRITICAL FAILURE
         [END CONTRACT]`;
         } catch (error) {
             console.warn('Identity contract load failed:', error.message);
