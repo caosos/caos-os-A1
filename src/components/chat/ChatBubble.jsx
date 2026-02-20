@@ -813,9 +813,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             className={`
               relative group
               px-4 py-3 rounded-2xl select-text break-words overflow-wrap-anywhere
-              ${isUser 
-                ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
-                : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
+              ${message.failed 
+                ? 'bg-red-600/80 backdrop-blur-sm text-white rounded-br-md border-2 border-red-400' 
+                : isUser 
+                  ? 'bg-blue-600/80 backdrop-blur-sm text-white rounded-br-md' 
+                  : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
               }
             `}
             style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
@@ -824,6 +826,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
           {!isUser && (
             <p className="text-xs font-medium text-blue-300 mb-2">CAOS</p>
+          )}
+          {message.failed && (
+            <div className="mb-2 flex items-center gap-2 text-red-200 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              <span>Failed to send: {message.error}</span>
+            </div>
           )}
           {renderContent()}
           {(message.timestamp || (!isUser && message.response_time_ms)) && (
