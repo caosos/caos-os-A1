@@ -141,6 +141,9 @@ const FunctionDisplay = ({ toolCall }) => {
 let globalAudioInstance = null;
 let globalAudioCleanup = null;
 
+// Audio cache - store generated audio per message
+const audioCache = new Map();
+
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -150,10 +153,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
   const justSelectedRef = React.useRef(false);
   const audioRef = React.useRef(null);
-  const messageIdRef = React.useRef(message.id);
+  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -400,7 +404,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = async () => {
-    // If this message is already playing
+    // If this message is already playing - toggle pause/resume
     if (isSpeaking && audioRef.current) {
       if (audioRef.current.paused) {
         audioRef.current.play();
@@ -414,9 +418,46 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
     // Stop any other audio playing globally
     stopAllAudio();
-
-    setIsLoading(true);
     setAudioProgress(0);
+
+    // Check cache first
+    const cached = audioCache.get(cacheKey);
+    if (cached) {
+      // Play cached audio immediately
+      const audio = new Audio(cached.url);
+      globalAudioInstance = audio;
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        setAudioProgress(audio.currentTime);
+        setAudioDuration(audio.duration);
+      };
+
+      const cleanup = () => {
+        setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setAudioProgress(0);
+        if (globalAudioInstance === audio) globalAudioInstance = null;
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
+      audio.onended = cleanup;
+      audio.onerror = cleanup;
+      globalAudioCleanup = cleanup;
+
+      setIsSpeaking(true);
+      audio.play();
+      return;
+    }
+
+    // Generate new audio
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    // Fake progress animation while generating
+    const progressInterval = setInterval(() => {
+      setGenerationProgress(prev => Math.min(prev + 2, 90));
+    }, 100);
 
     const cleanText = message.content
       .replace(/#{1,6}\s/g, '')
@@ -454,9 +495,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
       
-      // Set as global instance
+      // Cache the audio
+      audioCache.set(cacheKey, { url: audioUrl, blob: audioBlob });
+
+      clearInterval(progressInterval);
+      setGenerationProgress(100);
+
+      const audio = new Audio(audioUrl);
       globalAudioInstance = audio;
       audioRef.current = audio;
 
@@ -469,8 +515,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         setIsSpeaking(false);
         setIsPausedBySpeech(false);
         setAudioProgress(0);
-        setIsLoading(false);
-        URL.revokeObjectURL(audioUrl);
         if (globalAudioInstance === audio) globalAudioInstance = null;
         if (audioRef.current === audio) audioRef.current = null;
       };
@@ -483,12 +527,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
       globalAudioCleanup = cleanup;
 
-      setIsLoading(false);
+      setIsGenerating(false);
+      setGenerationProgress(0);
       setIsSpeaking(true);
       await audio.play();
     } catch (error) {
+      clearInterval(progressInterval);
       setIsSpeaking(false);
-      setIsLoading(false);
+      setIsGenerating(false);
+      setGenerationProgress(0);
       toast.error('Failed to generate speech');
     }
   };
@@ -498,7 +545,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
     setAudioProgress(0);
-    setIsLoading(false);
+    setIsGenerating(false);
+    setGenerationProgress(0);
   };
 
   // Cleanup on unmount
