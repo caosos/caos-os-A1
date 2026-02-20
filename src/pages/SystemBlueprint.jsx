@@ -291,18 +291,20 @@ WHEN seed is injected:
               <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
                 <h3 className="text-lg font-semibold text-green-300 mb-3">Token Meter Display</h3>
                 <pre className="text-sm overflow-x-auto">{`
-// What you see in UI
-Token Meter: 30,520 / 2M
+// What you see in UI (NOW UPDATED)
+Token Meter: 30,520 / 90K
 
 What it means:
 - 30,520: Actual tokens in working context (all lanes hot)
-- 2M: Display number (not a hard limit)
-- Real trigger: 90K (for rotation)
+- 90K: Rotation trigger point
+- Shows proximity to rotation threshold
+- Color changes: green → blue → yellow → red
 
-Should change to: 30,520 / 90K
-- Shows proximity to rotation
-- More accurate representation
-- No confusion about "2M cap"
+When meter approaches 90K:
+- System generates compressed seed automatically
+- Next message injects seed + continues normally
+- Meter resets to current working context size
+- No data loss - full history in Record entity
                 `}</pre>
               </div>
             </div>
