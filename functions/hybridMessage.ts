@@ -846,14 +846,14 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
         // Archive lane summary every 10 messages
         if (updatedHotMessages.length >= 10) {
             try {
-                const summaryResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                const summaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'grok-4-1-fast-reasoning',
+                        model: 'gpt-4o',
                         messages: [
                             { role: 'system', content: 'Summarize this lane topic in under 200 tokens. Key facts only.' },
                             ...updatedHotMessages.slice(0, -5).map(m => ({ role: m.role, content: m.content }))
