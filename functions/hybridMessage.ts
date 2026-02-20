@@ -886,7 +886,7 @@ You are Aria, the core of CAOS – Michael's adaptive operating system. Talk exa
         });
 
     } catch (error) {
-        console.error('Hybrid provider error:', error);
+        console.error('OpenAI provider error:', error);
         return Response.json({ 
             error: error.message,
             reply: "I encountered an error. Please try again."
