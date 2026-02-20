@@ -747,7 +747,7 @@ MEMORY & LEARNING - MANDATORY:
                         }
                     } else if (toolCall.function.name === 'update_user_profile') {
                         try {
-                            // Merge with existing profile
+                            // Merge with existing profile - SYSTEM-WIDE, NOT THREAD-BASED
                             const currentProfile = userProfile || { user_email: user.email };
 
                             if (args.presentation_preferences) {
@@ -766,10 +766,14 @@ MEMORY & LEARNING - MANDATORY:
 
                             if (args.learned_facts) {
                                 const existingFacts = currentProfile.learned_facts || [];
-                                const newFacts = args.learned_facts.map(f => ({
-                                    ...f,
-                                    learned_date: new Date().toISOString()
-                                }));
+                                // Don't duplicate facts
+                                const existingFactTexts = new Set(existingFacts.map(f => f.fact.toLowerCase()));
+                                const newFacts = args.learned_facts
+                                    .filter(f => !existingFactTexts.has(f.fact.toLowerCase()))
+                                    .map(f => ({
+                                        ...f,
+                                        learned_date: new Date().toISOString()
+                                    }));
                                 currentProfile.learned_facts = [...existingFacts, ...newFacts];
                             }
 
@@ -789,7 +793,11 @@ MEMORY & LEARNING - MANDATORY:
                                 await base44.asServiceRole.entities.UserProfile.create(currentProfile);
                             }
 
-                            toolResult = { success: true, message: 'Profile updated - knowledge retained permanently' };
+                            toolResult = { 
+                                success: true, 
+                                message: 'Profile updated permanently - system-wide memory, persists across all threads and sessions forever',
+                                updated_fields: Object.keys(args).join(', ')
+                            };
                         } catch (error) {
                             toolResult = { error: `Profile update failed: ${error.message}` };
                         }
