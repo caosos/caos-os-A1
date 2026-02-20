@@ -120,16 +120,16 @@ Deno.serve(async (req) => {
                     hot: lane.hot_messages?.slice(-2).map(m => `${m.role}: ${m.content.substring(0, 100)}`).join(' | ') || ''
                 }));
 
-                const seedResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                const seedResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${GROK_API_KEY}`,
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'grok-4-1-fast-reasoning',
+                        model: 'gpt-4o',
                         messages: [
-                            { role: 'system', content: 'Compress this multi-lane context into ultra-compact seed (2-3k chars max). Format: "CAOS v3 Seed: [Lane summaries]. Hot: [Key recent items]. Personality: Grok casual/witty."' },
+                            { role: 'system', content: 'Compress this multi-lane context into ultra-compact seed (2-3k chars max). Format: "CAOS v3 Seed: [Lane summaries]. Hot: [Key recent items]. Personality: Casual/witty."' },
                             { role: 'user', content: JSON.stringify(laneContexts) }
                         ],
                         temperature: 0.2
