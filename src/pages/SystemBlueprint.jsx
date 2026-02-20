@@ -492,9 +492,62 @@ if (response.choices[0].message.tool_calls) {
             </div>
           </section>
 
+          {/* ERROR HANDLING */}
+          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">7. Error Handling & Recovery</h2>
+            
+            <div className="space-y-6 text-gray-200">
+              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30">
+                <h3 className="text-lg font-semibold text-red-300 mb-3">Failed Message Persistence</h3>
+                <pre className="text-sm overflow-x-auto">{`
+Frontend sends message → Backend timeout/error
+  ↓
+Message stored locally (caos_last_message_backup)
+  ↓
+Error logged to ErrorLog entity:
+{
+  user_email: "user@example.com",
+  conversation_id: "conv_123",
+  error_type: "timeout" | "network_error" | "server_error",
+  error_message: "Request timeout after 120s",
+  lost_message_content: "Original message text",
+  lost_message_files: ["file_url1", "file_url2"],
+  request_payload: { full payload for debugging },
+  retry_count: 0,
+  resolved: false
+}
+  ↓
+Failed message displayed with RED styling + error icon
+User can see what was lost, retry manually
+Backup cleared ONLY on successful send
+                `}</pre>
+              </div>
+
+              <div className="bg-orange-950/50 p-4 rounded-lg border border-orange-500/30">
+                <h3 className="text-lg font-semibold text-orange-300 mb-3">Detailed Console Logging</h3>
+                <pre className="text-sm overflow-x-auto">{`
+Before hybridMessage invoke:
+  console.log('=== SEND MESSAGE DEBUG ===')
+  console.log('Conversation ID:', conversationId)
+  console.log('Message text:', messageText)
+  console.log('File URLs:', fileUrls)
+  console.log('Session ID:', session_id)
+
+Error detection:
+  if (error.name === 'AbortError') → "timeout"
+  else if (error.message.includes('fetch')) → "network_error"
+  else if (response.status >= 500) → "server_error"
+  else → "unknown"
+
+All errors logged to ErrorLog for admin review
+                `}</pre>
+              </div>
+            </div>
+          </section>
+
           {/* TOOL DEFINITIONS */}
           <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">4. Tool Definitions & Execution</h2>
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">8. Tool Definitions & Execution</h2>
             
             <div className="space-y-6">
               <div className="bg-orange-950/50 p-4 rounded-lg border border-orange-500/30">
