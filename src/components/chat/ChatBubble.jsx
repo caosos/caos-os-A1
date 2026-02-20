@@ -879,13 +879,29 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                   </button>
                   {isSpeaking && (
-                    <button
-                      onClick={handleStopReading}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Stop"
-                    >
-                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                    </button>
+                    <>
+                      <button
+                        onClick={skipBackward}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Back 10s"
+                      >
+                        <SkipBack className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                      </button>
+                      <button
+                        onClick={skipForward}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Forward 10s"
+                      >
+                        <SkipForward className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                      </button>
+                      <button
+                        onClick={handleStopReading}
+                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        title="Stop"
+                      >
+                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => setShowVoiceSettings(true)}
@@ -904,6 +920,20 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </div>
               )}
                     </div>
+                    )}
+                    
+                    {/* Audio Progress Bar */}
+                    {isSpeaking && audioDuration > 0 && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-white/50">{formatTime(audioProgress)}</span>
+                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-400 transition-all duration-200"
+                            style={{ width: `${(audioProgress / audioDuration) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-white/50">{formatTime(audioDuration)}</span>
+                      </div>
                     )}
 
 

@@ -12,9 +12,12 @@ export default function VoiceSettings({ isOpen, onClose }) {
     { id: 'echo', name: 'Echo', description: 'Male, clear' },
     { id: 'fable', name: 'Fable', description: 'British, expressive' },
     { id: 'onyx', name: 'Onyx', description: 'Male, deep' },
-    { id: 'nova', name: 'Nova', description: 'Female, warm' },
+    { id: 'nova', name: 'Nova', description: 'Female, warm (Default)' },
     { id: 'shimmer', name: 'Shimmer', description: 'Female, soft' }
   ];
+  
+  // Note: OpenAI doesn't have a "Maple" voice. Available voices are above.
+  // For similar quality to what you're looking for, Nova or Shimmer are closest.
 
   const [selectedVoice, setSelectedVoice] = useState('nova');
   const [rate, setRate] = useState(1.0);
