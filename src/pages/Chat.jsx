@@ -640,11 +640,9 @@ export default function Chat() {
         }));
       }
 
-      const response = reply;
-
       setConversations(prev => {
         const updated = [
-          { ...prev.find(c => c.id === conversationId), last_message_preview: response.substring(0, 100), last_message_time: new Date().toISOString() },
+          { ...prev.find(c => c.id === conversationId), last_message_preview: reply.substring(0, 100), last_message_time: new Date().toISOString() },
           ...prev.filter(c => c.id !== conversationId)
         ];
         if (isGuestMode) localStorage.setItem('caos_guest_conversations', JSON.stringify(updated));
@@ -653,7 +651,7 @@ export default function Chat() {
 
       if (!isGuestMode) {
         await base44.entities.Conversation.update(conversationId, {
-          last_message_preview: response.substring(0, 100),
+          last_message_preview: reply.substring(0, 100),
           last_message_time: new Date().toISOString()
         });
       }
