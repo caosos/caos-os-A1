@@ -891,7 +891,8 @@ MEMORY & LEARNING - MANDATORY:
                     body: JSON.stringify({
                         model: 'gpt-4o',
                         messages: [...messages, ...toolMessages],
-                        temperature: 0.7
+                        temperature: 0.8,
+                        max_tokens: 4000
                     })
                 });
 
