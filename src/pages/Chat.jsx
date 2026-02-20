@@ -657,9 +657,20 @@ export default function Chat() {
           last_message_time: new Date().toISOString()
         });
       }
+
+      // Clear backup on success
+      localStorage.removeItem('caos_last_message_backup');
+      console.log('Message saved successfully');
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Send error:', error);
+      console.error('Full error details:', { 
+        message: error.message, 
+        stack: error.stack,
+        conversationId,
+        contentLength: content?.length,
+        fileCount: fileUrls?.length
+      });
       
       // Log error to database
       try {
@@ -686,10 +697,13 @@ export default function Chat() {
         console.error('Failed to log error:', logError);
       }
       
-      toast.error(error.message || 'Failed to send message', {
+      // Show detailed error to user
+      const errorMessage = error.message || 'Failed to send message';
+      toast.error(`Message failed: ${errorMessage}. Your message was saved.`, {
         action: {
           label: 'Retry',
           onClick: async () => {
+            console.log('Retrying message send...');
             // Update retry count in error log
             if (errorLogId && !isGuestMode) {
               try {
@@ -707,23 +721,18 @@ export default function Chat() {
         duration: 10000
       });
 
-      // Remove temporary message on error
-      if (isGuestMode) {
+      // KEEP the temp message visible so user sees what happened
+      // Mark it as failed instead of removing it
+      if (conversationId) {
         setMessages(prev => ({
           ...prev,
-          [conversationId]: (prev[conversationId] || []).filter(m => !m.id.startsWith('temp_'))
-        }));
-        localStorage.setItem('caos_guest_messages', JSON.stringify(messages));
-      } else {
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: (prev[conversationId] || []).filter(m => !m.id.startsWith('temp_'))
+          [conversationId]: (prev[conversationId] || []).map(m => 
+            m.id === tempId ? { ...m, failed: true, error: errorMessage } : m
+          )
         }));
       }
     } finally {
       setIsLoading(false);
-      // Clear backup on success
-      localStorage.removeItem('caos_last_message_backup');
     }
   };
 
