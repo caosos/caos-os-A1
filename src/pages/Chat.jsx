@@ -639,7 +639,52 @@ export default function Chat() {
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Send error:', error);
-      toast.error(error.message || 'Failed to send message');
+      
+      // Log error to database
+      try {
+        if (!isGuestMode) {
+          const errorType = error.message?.includes('timeout') ? 'timeout' :
+                           error.message?.includes('network') ? 'network_error' :
+                           error.message?.includes('500') ? 'server_error' : 'unknown';
+          
+          const errorLog = await base44.entities.ErrorLog.create({
+            user_email: user.email,
+            conversation_id: conversationId || currentConversationId || 'none',
+            error_type: errorType,
+            error_message: error.message || 'Unknown error',
+            stack_trace: error.stack || '',
+            lost_message_content: content,
+            lost_message_files: fileUrls,
+            request_payload: { content, fileUrls, selectedAgents, timestamp: new Date().toISOString() }
+          });
+          errorLogId = errorLog.id;
+          
+          console.log('Error logged with ID:', errorLogId);
+        }
+      } catch (logError) {
+        console.error('Failed to log error:', logError);
+      }
+      
+      toast.error(error.message || 'Failed to send message', {
+        action: {
+          label: 'Retry',
+          onClick: async () => {
+            // Update retry count in error log
+            if (errorLogId && !isGuestMode) {
+              try {
+                const log = await base44.entities.ErrorLog.get(errorLogId);
+                await base44.entities.ErrorLog.update(errorLogId, {
+                  retry_count: (log.retry_count || 0) + 1
+                });
+              } catch (e) {
+                console.error('Failed to update retry count:', e);
+              }
+            }
+            handleSendMessage(content, fileUrls, selectedAgents);
+          }
+        },
+        duration: 10000
+      });
 
       // Remove temporary message on error
       if (isGuestMode) {
@@ -656,6 +701,8 @@ export default function Chat() {
       }
     } finally {
       setIsLoading(false);
+      // Clear backup on success
+      localStorage.removeItem('caos_last_message_backup');
     }
   };
 
