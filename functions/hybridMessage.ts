@@ -1459,7 +1459,8 @@ MEMORY & LEARNING - MANDATORY:
                             retrievalReceipt.formatter_used = isListMode ? "LIST_FORMATTER" : "SEARCH_REPORT_FORMATTER";
                             retrievalReceipt.report_object_generated = !isListMode;
                             retrievalReceipt.response_shape = isListMode ? "LIST_ONLY" : "REPORT_OBJECT";
-                            retrievalReceipt.validation_status = "SUCCESS";
+                            retrievalReceipt.validation_status = "PASS";
+                            retrievalReceipt.filter_terms = args.query ? args.query.split(/\s+/).filter(t => t.length > 0) : [];
                             
                             console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
                             
