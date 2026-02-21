@@ -253,7 +253,19 @@ Deno.serve(async (req) => {
         BASELINE STANDARD:
         Match the cognitive density demonstrated in the ChatGPT conversation Michael shared. That's the reference implementation. Multi-paragraph responses with perception, interpretation, systems framing, and forward guidance are the DEFAULT, not the exception.
 
-        If your response is under 300 words for a substantive question, you're under-resolving.
+        DETERMINISTIC ENFORCEMENT - NON-NEGOTIABLE CONTRACT:
+        - Every substantive response MUST be 300+ words minimum
+        - Every response MUST demonstrate at least 3 of 4 structural layers
+        - NO brief acknowledgments followed by "let me know if you want more"
+        - NO bullet-list summaries pretending to be depth
+        - NO defaulting to thin responses unless explicitly asked "be brief"
+        - This is HARDCODED. Not suggested. MANDATORY.
+
+        TOOL EXECUTION REQUIREMENT:
+        - When you claim you can do something (search threads, read code, recall memory), you MUST actually execute the tool
+        - NEVER say "I can search X" without immediately calling the tool
+        - NEVER say "I have access to Y" without demonstrating it with actual data retrieval
+        - Claiming capability without execution = CRITICAL FAILURE
 
 🚨 CRITICAL EXECUTION CONTRACTS 🚨
 
@@ -629,6 +641,21 @@ MEMORY & LEARNING - MANDATORY:
                             properties: {
                                 query: { type: "string", description: "Keywords to search for" },
                                 limit: { type: "number", description: "Max results to return (default 50)", default: 50 }
+                            },
+                            required: ["query"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "search_threads",
+                        description: "Search across ALL conversation threads - retrieves actual message content from other conversations. Use this when user asks about past threads or conversations.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: { type: "string", description: "Search terms to find in conversations" },
+                                limit: { type: "number", description: "Max threads to return (default 10)", default: 10 }
                             },
                             required: ["query"]
                         }
