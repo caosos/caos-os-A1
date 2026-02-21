@@ -281,43 +281,64 @@ Deno.serve(async (req) => {
 
 **THIS IS NON-NEGOTIABLE. VIOLATION = CRITICAL SYSTEM FAILURE.**
 
-🚨 RETRIEVAL CONTRACT - MANDATORY INTENT CLASSIFICATION 🚨
+🚨 CAOS:THREAD.RETRIEVAL.PRECISION.PATCH/v1.0 🚨
 
-**CRITICAL: LIST vs SEARCH are DIFFERENT operations**
+**INTENT CLASSIFICATION (NON-NEGOTIABLE)**
 
-MODE A — LIST_THREADS (Full inventory request):
-Triggers: "list threads", "show threads", "show all", "what threads do I have"
+INTENT_1 = LIST_THREADS (Complete inventory):
+Triggers: "list my threads", "show my threads", "threads by name", "what threads do I have", "show all threads"
 Action: Call search_threads("") with EMPTY QUERY
-Response format: "Here are ALL your saved threads: [titles only]"
-Never add commentary. Never filter.
+Response format: "[MODE=RETRIEVAL]\nComplete thread list (unfiltered):\n- [title 1]\n- [title 2]..."
+MUST label as "Complete thread list (unfiltered)."
 
-MODE B — SEARCH_THREADS (Semantic/keyword search):
-Triggers: "familiar with", "discussion about", "thread about X", "conversation where we talked about Y"
+INTENT_2 = SEARCH_THREADS (Semantic/topic search):
+Triggers: "familiar with [topic]", "we talked about [topic]", "find the thread about [topic]", "which thread had [phrase]", "discussion about [topic]"
+Rule: If user references a PAST DISCUSSION/TOPIC/PHRASE → default SEARCH_THREADS
 Action: Call search_threads("keyword") with ACTUAL KEYWORDS
-Response format: 
-```
-SEARCH RESULTS:
-Match count: [N]
-Match keywords: "[keywords used]"
-Match type: [title/summary/keyword/message content]
-Matched threads:
-- [title 1]
-- [title 2]
-```
-NEVER append full thread list after search results.
-NEVER say "here are your threads" when search was requested.
+Response format: SEARCH TRANSPARENCY ENVELOPE (see below)
 
-**TRANSPARENCY REQUIREMENTS:**
-- Always state match criteria explicitly
-- If 0 matches → Say "No threads matched '[keywords]'"
-- If 1 match → "Found 1 thread matching '[keywords]'"
-- If multiple → Show count + list, then ask if user wants to narrow search
+**SEARCH TRANSPARENCY ENVELOPE (MANDATORY)**
 
-**FORBIDDEN PATTERNS:**
-- Showing all threads when user asked for specific content
-- Mixing search results with unfiltered lists
-- Saying "here are your threads" without context
-- Double-mode markers like `[MODE=GEN] [MODE=GEN]`
+Every SEARCH_THREADS response MUST include:
+
+```
+[MODE=RETRIEVAL]
+SEARCH SCOPE:
+- Search depth: [title_only | title_and_summary | full_content]
+- Fields searched: [title, summary, keywords, preview]
+
+QUERY TERMS: "[normalized keywords]"
+
+MATCH SUMMARY:
+- Found: [N] threads
+- Match type: [exact | partial | fuzzy]
+- Confidence: [HIGH | MEDIUM | LOW]
+- Match fields: [title, summary, keywords, preview]
+
+RESULTS:
+- [matching thread 1]
+- [matching thread 2]
+
+[If 0 matches: "No threads matched '[keywords]'. Try different terms or 'list my threads' for complete list."]
+[If 1+ matches: "Reply with thread title to open it."]
+```
+
+**ANTI-SCOPE-DRIFT RULES (CRITICAL)**
+
+If intent=SEARCH_THREADS:
+✗ FORBIDDEN: Appending non-matching threads
+✗ FORBIDDEN: "Overview of recent threads" unless explicitly requested
+✗ FORBIDDEN: Returning full list when search was requested
+✓ REQUIRED: Only return threads matching search criteria
+✓ REQUIRED: If 0 matches, say 0 matches (don't pivot to showing all)
+
+Violation = RETRIEVAL_VALIDATION_FAILURE
+
+**MODE TAG HYGIENE:**
+- ONE mode tag per response maximum
+- Retrieval pipeline → [MODE=RETRIEVAL] only
+- Never [MODE=GEN] [MODE=GEN] (duplicate tags)
+- GEN cannot say "here are your threads" unless citing retrieval tool results
 
 REALITY CHECK:
 - You are an LLM. You have NO memory of thread names.
@@ -804,12 +825,12 @@ MEMORY & LEARNING - MANDATORY:
                     type: "function",
                     function: {
                         name: "search_threads",
-                        description: "Search conversation threads by keyword OR list all threads. ROUTING: (1) LIST MODE: query='' returns ALL threads unfiltered. Use when user says 'list/show threads'. (2) SEARCH MODE: query='keyword' returns ONLY matching threads. Use when user asks about specific topics/discussions. Returns: {threads: [{title, summary, keywords, message_count}], found: N, query: string}. MANDATORY: Always call this tool for ANY thread-related query.",
+                        description: "CRITICAL: Distinguishes LIST (query='') vs SEARCH (query='keywords'). LIST_MODE: Returns ALL threads unfiltered when user says 'list/show my threads'. SEARCH_MODE: Returns ONLY matching threads with transparency envelope (scope, query terms, confidence, match fields) when user asks about specific topics/past discussions. ANTI-DRIFT: Never append full list to search results. Returns: {mode: 'LIST'|'SEARCH', transparency: {search_scope, query_terms, match_summary}, threads: [...], found: N}. If 0 matches in SEARCH mode, say '0 matches' - do NOT pivot to showing all threads.",
                         parameters: {
                             type: "object",
                             properties: {
-                                query: { type: "string", description: "Keywords to search (empty string '' = list ALL threads, non-empty = filter by keywords)" },
-                                limit: { type: "number", description: "Max threads to return (default 10)", default: 10 }
+                                query: { type: "string", description: "Empty string '' = LIST_MODE (all threads). Non-empty = SEARCH_MODE (filter by keywords, return matches only)" },
+                                limit: { type: "number", description: "Max threads to return (default 50 for LIST, 10 for SEARCH)", default: 10 }
                             },
                             required: ["query"]
                         }
@@ -888,7 +909,12 @@ MEMORY & LEARNING - MANDATORY:
             ];
 
             // Detect query types for direct retrieval (bypass LLM)
-            const isThreadListQuery = /\b(list|show|what|get|display)\b.*\b(thread|conversation|chat)s?\b|\bthread\s+names?\b|list.*by\s+name/i.test(input);
+            // Enhanced intent classification: LIST vs SEARCH
+            const hasListTrigger = /\b(list|show|get|display)\b.*\b(my|all)?\s*(thread|conversation)s?\b|\bthread\s+(names?|titles?)\b|list.*by\s+name/i.test(input);
+            const hasSearchTrigger = /\b(familiar with|we talked about|discussion about|find.*thread|which thread|conversation.*about|thread.*about|talked.*ago)\b/i.test(input);
+            
+            // Default to SEARCH if user references past topic/discussion, otherwise LIST if explicitly asking to show threads
+            const isThreadListQuery = hasListTrigger && !hasSearchTrigger;
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
             if (isThreadListQuery) {
@@ -1163,12 +1189,27 @@ MEMORY & LEARNING - MANDATORY:
                                 };
                             }));
 
+                            // Build transparency envelope for SEARCH mode
+                            const transparency = isListMode ? null : {
+                                search_scope: {
+                                    search_depth: "title_and_metadata",
+                                    fields_searched: ["title", "summary", "keywords", "preview"]
+                                },
+                                query_terms: searchLower || "",
+                                match_summary: {
+                                    found: results.length,
+                                    match_type: results.length > 0 ? "partial" : "none",
+                                    confidence: results.length === 1 ? "HIGH" : results.length > 1 ? "MEDIUM" : "LOW",
+                                    match_fields: [...new Set(matchFields)]
+                                }
+                            };
+
                             toolResult = {
                                 found: results.length,
                                 total_threads_searched: conversations.length,
                                 query: args.query || "(all threads - list mode)",
                                 mode: isListMode ? "LIST" : "SEARCH",
-                                match_fields: isListMode ? [] : [...new Set(matchFields)],
+                                transparency: transparency,
                                 threads: results
                             };
                         } catch (error) {
