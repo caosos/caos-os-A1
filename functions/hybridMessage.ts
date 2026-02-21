@@ -1077,6 +1077,9 @@ MEMORY & LEARNING - MANDATORY:
                     retrievalReceipt.report_object_generated = false;
                     retrievalReceipt.response_shape = "LIST_ONLY";
                     retrievalReceipt.validation_status = "SUCCESS";
+                    
+                    // Log retrieval receipt
+                    console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
 
                     // Store user message
                     const now = new Date();
