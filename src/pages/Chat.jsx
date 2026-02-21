@@ -401,7 +401,14 @@ export default function Chat() {
 
   const handleSendMessage = async (content, fileUrls = [], selectedAgents = null) => {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
-    
+
+    console.log('📤 SEND MESSAGE - Starting:', {
+      content: content?.substring(0, 100),
+      fileCount: fileUrls?.length,
+      conversationId: currentConversationId,
+      timestamp: new Date().toISOString()
+    });
+
     setIsLoading(true);
     const startTime = Date.now();
     let conversationId = null;
@@ -549,8 +556,13 @@ export default function Chat() {
       const contextSeed = localStorage.getItem(`caos_seed_${conversationId}`);
       const currentLane = localStorage.getItem(`caos_current_lane`) || 'general';
       
-      console.log('Sending message to backend...', { conversationId, messageLength: fullMessage.length });
-      
+      console.log('📡 BACKEND CALL - Sending to hybridMessage:', { 
+        conversationId, 
+        messageLength: fullMessage.length,
+        contextSeed: !!contextSeed,
+        currentLane
+      });
+
       const response = await base44.functions.invoke('hybridMessage', {
         session_id: conversationId,
         input: fullMessage,
@@ -559,30 +571,50 @@ export default function Chat() {
         current_lane: currentLane
       });
 
-      console.log('Backend response received:', { status: response?.status, hasData: !!response?.data });
+      console.log('📥 BACKEND RESPONSE - Received:', { 
+        status: response?.status, 
+        hasData: !!response?.data,
+        replyLength: response?.data?.reply?.length,
+        replyPreview: response?.data?.reply?.substring(0, 150)
+      });
 
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
 
       // Check for errors in response
       if (!response || response.status !== 200) {
-        console.error('Backend error response:', response);
+        console.error('❌ BACKEND ERROR - Invalid response:', response);
         throw new Error(response?.data?.error || 'Backend returned error status');
       }
 
       const { data } = response;
       if (!data) {
-        console.error('No data in response:', response);
+        console.error('❌ NO DATA - Response missing data field:', response);
         throw new Error('No response data from server');
       }
-      
+
       const reply = data.reply || data.response || data.text || '';
       if (!reply) {
-        console.error('Empty reply from backend:', data);
+        console.error('❌ EMPTY REPLY - Backend returned no content:', data);
         throw new Error('Empty response from server');
       }
 
-      console.log('Message processed successfully, reply length:', reply.length);
+      // Check for duplicate responses
+      const lastAiMessage = currentMessages.filter(m => m.role === 'assistant').slice(-1)[0];
+      if (lastAiMessage && lastAiMessage.content === reply) {
+        console.warn('⚠️ DUPLICATE RESPONSE DETECTED!', {
+          previousMessageId: lastAiMessage.id,
+          previousTimestamp: lastAiMessage.timestamp,
+          currentReply: reply.substring(0, 100),
+          userMessage: content.substring(0, 100)
+        });
+      }
+
+      console.log('✅ MESSAGE SUCCESS - Reply validated:', {
+        replyLength: reply.length,
+        responseTime: Date.now() - startTime,
+        isDuplicate: lastAiMessage?.content === reply
+      });
       
       // Handle auto-rotation if needed
       if (data.rotation_needed && data.context_seed) {
@@ -699,13 +731,14 @@ export default function Chat() {
       console.log('Message saved successfully');
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error('Send error:', error);
-      console.error('Full error details:', { 
-        message: error.message, 
+      console.error('❌ SEND ERROR - Message failed:', {
+        error: error.message,
         stack: error.stack,
         conversationId,
+        userMessage: content?.substring(0, 100),
         contentLength: content?.length,
-        fileCount: fileUrls?.length
+        fileCount: fileUrls?.length,
+        timestamp: new Date().toISOString()
       });
       
       // Log error to database
