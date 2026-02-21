@@ -1029,6 +1029,20 @@ MEMORY & LEARNING - MANDATORY:
             retrievalReceipt.route_selected = route;
             retrievalReceipt.intent_reason = intentReason;
             
+            // VALIDATION: Multi-topic queries cannot route to LIST_THREADS
+            if (isMultiTopicQuery && isThreadListQuery) {
+                console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: ROUTER_COLLAPSE_MULTI_SEARCH");
+                retrievalReceipt.validation_status = "FAIL(ROUTER_COLLAPSE_MULTI_SEARCH)";
+                console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                
+                const footerText = debugMode ? `\n\n${formatReceiptFooter(retrievalReceipt)}` : '';
+                return Response.json({
+                    error: "RETRIEVAL_VALIDATION_FAILURE",
+                    reason: "ROUTER_COLLAPSE_MULTI_SEARCH",
+                    state: "Multi-topic query collapsed to LIST_THREADS - should use MULTI_SEARCH"
+                }, { status: 400 });
+            }
+            
             // Extract filter terms for SEARCH route
             let filterTerms = "";
             if (route === "SEARCH_THREADS" && searchQueries.length === 0) {
