@@ -795,9 +795,9 @@ MEMORY & LEARNING - MANDATORY:
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
             if (isThreadListQuery) {
-                console.log("🔍 RETRIEVAL_MODE_EXECUTED - Pattern matched:", input);
+                console.log("🔍 RETRIEVAL_BRANCH_ENTERED");
+                console.log("🔍 Input:", input);
 
-                // Execute tool directly, format in code, return
                 try {
                     const conversations = await base44.asServiceRole.entities.Conversation.filter(
                         { created_by: user.email },
@@ -805,11 +805,12 @@ MEMORY & LEARNING - MANDATORY:
                         100
                     );
 
-                    console.log("🔍 RETRIEVAL_MODE - Found conversations:", conversations.length);
+                    console.log("🔍 DB_RESULT - Found conversations:", conversations.length);
+                    console.log("🔍 DB_RESULT - Raw data:", JSON.stringify(conversations.slice(0, 3)));
 
                     const threadTitles = conversations.map(c => c.title).filter(Boolean);
 
-                    console.log("🔍 RETRIEVAL_MODE - Titles extracted:", threadTitles);
+                    console.log("🔍 TITLES_EXTRACTED:", threadTitles);
 
                     // Format response in CODE, not via LLM
                     let aiResponse;
@@ -818,6 +819,8 @@ MEMORY & LEARNING - MANDATORY:
                     } else {
                         aiResponse = `[MODE=RETRIEVAL]\nHere are your saved threads:\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
                     }
+
+                    console.log("🔍 RETURNING_RESPONSE:", aiResponse);
 
                     // Store user message
                     const now = new Date();
@@ -862,6 +865,8 @@ MEMORY & LEARNING - MANDATORY:
                         status: "active"
                     });
 
+                    console.log("🔍 RETRIEVAL_COMPLETE - Returning to client");
+
                     return Response.json({
                         reply: aiResponse,
                         session: session_id,
@@ -874,10 +879,13 @@ MEMORY & LEARNING - MANDATORY:
                         retrieval_mode: true
                     });
                 } catch (error) {
-                    console.error('Direct retrieval error:', error);
+                    console.error('🔥 RETRIEVAL_PIPELINE_FAILURE:', error);
+                    console.error('🔥 Error stack:', error.stack);
+                    // HARD FAIL - Do NOT fallback to generative
                     return Response.json({ 
-                        error: 'STATE=UNKNOWN: Direct retrieval failed',
-                        reply: `I encountered a database error: ${error.message}`
+                        error: 'RETRIEVAL_PIPELINE_FAILURE',
+                        state: 'UNKNOWN',
+                        details: error.message
                     }, { status: 500 });
                 }
             }
