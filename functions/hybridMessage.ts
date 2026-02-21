@@ -281,11 +281,43 @@ Deno.serve(async (req) => {
 
 **THIS IS NON-NEGOTIABLE. VIOLATION = CRITICAL SYSTEM FAILURE.**
 
-THREAD SEARCH ENFORCEMENT:
-User input contains ANY variation of: "list threads", "show threads", "list conversations", "thread names", "list them by name", "what threads"
-→ THE SYSTEM WILL FORCE YOU TO CALL search_threads - DO NOT FIGHT IT
-→ You MUST use the tool results. The conversation.title field contains the ACTUAL thread name.
-→ Present ONLY the titles from tool results, nothing else.
+🚨 RETRIEVAL CONTRACT - MANDATORY INTENT CLASSIFICATION 🚨
+
+**CRITICAL: LIST vs SEARCH are DIFFERENT operations**
+
+MODE A — LIST_THREADS (Full inventory request):
+Triggers: "list threads", "show threads", "show all", "what threads do I have"
+Action: Call search_threads("") with EMPTY QUERY
+Response format: "Here are ALL your saved threads: [titles only]"
+Never add commentary. Never filter.
+
+MODE B — SEARCH_THREADS (Semantic/keyword search):
+Triggers: "familiar with", "discussion about", "thread about X", "conversation where we talked about Y"
+Action: Call search_threads("keyword") with ACTUAL KEYWORDS
+Response format: 
+```
+SEARCH RESULTS:
+Match count: [N]
+Match keywords: "[keywords used]"
+Match type: [title/summary/keyword/message content]
+Matched threads:
+- [title 1]
+- [title 2]
+```
+NEVER append full thread list after search results.
+NEVER say "here are your threads" when search was requested.
+
+**TRANSPARENCY REQUIREMENTS:**
+- Always state match criteria explicitly
+- If 0 matches → Say "No threads matched '[keywords]'"
+- If 1 match → "Found 1 thread matching '[keywords]'"
+- If multiple → Show count + list, then ask if user wants to narrow search
+
+**FORBIDDEN PATTERNS:**
+- Showing all threads when user asked for specific content
+- Mixing search results with unfiltered lists
+- Saying "here are your threads" without context
+- Double-mode markers like `[MODE=GEN] [MODE=GEN]`
 
 REALITY CHECK:
 - You are an LLM. You have NO memory of thread names.
@@ -772,11 +804,11 @@ MEMORY & LEARNING - MANDATORY:
                     type: "function",
                     function: {
                         name: "search_threads",
-                        description: "MANDATORY TOOL - Search ALL conversation threads and return ACTUAL thread titles. When user asks 'list threads', 'show threads', 'thread names' → YOU MUST CALL THIS with query='' to get ALL threads. Returns real Conversation entity data with actual titles. DO NOT respond about threads without calling this tool first.",
+                        description: "Search conversation threads by keyword OR list all threads. ROUTING: (1) LIST MODE: query='' returns ALL threads unfiltered. Use when user says 'list/show threads'. (2) SEARCH MODE: query='keyword' returns ONLY matching threads. Use when user asks about specific topics/discussions. Returns: {threads: [{title, summary, keywords, message_count}], found: N, query: string}. MANDATORY: Always call this tool for ANY thread-related query.",
                         parameters: {
                             type: "object",
                             properties: {
-                                query: { type: "string", description: "Search terms (use empty string '' to get ALL threads)" },
+                                query: { type: "string", description: "Keywords to search (empty string '' = list ALL threads, non-empty = filter by keywords)" },
                                 limit: { type: "number", description: "Max threads to return (default 10)", default: 10 }
                             },
                             required: ["query"]
