@@ -1108,9 +1108,14 @@ MEMORY & LEARNING - MANDATORY:
                     };
 
                     // Format for display
-                    const aiResponse = threadTitles.length === 0
+                    let aiResponse = threadTitles.length === 0
                         ? "[MODE=RETRIEVAL]\nNo saved threads found."
                         : `[MODE=RETRIEVAL]\nComplete thread list (${threadTitles.length}):\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
+                    
+                    // Append receipt footer if debug mode
+                    if (debugMode) {
+                        aiResponse += `\n\n${formatReceiptFooter(retrievalReceipt)}`;
+                    }
 
                     console.log("🔍 RETURNING_RESPONSE:", aiResponse);
                     console.log("🔍 RESPONSE_ENVELOPE:", JSON.stringify(responseEnvelope));
