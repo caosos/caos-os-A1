@@ -52,9 +52,9 @@ export function applyCognitiveLayer(formattedResult) {
         };
     }
 
-    // GEN mode: HARD CONSTRAINT - no thread lists
+    // GEN mode: HARD CONSTRAINT - no search simulation, no thread lists
     if (mode === 'GEN') {
-        // CRITICAL VALIDATION: GEN mode cannot fabricate thread lists
+        // CRITICAL VALIDATION 1: GEN mode cannot fabricate thread lists
         // Thread lists may ONLY originate from executeTool → RETRIEVAL pipeline
         if (containsThreadListPattern(payload)) {
             console.error('🚨 [PIPELINE_VIOLATION]: GEN_MODE_THREAD_LIST_FABRICATION');
@@ -64,6 +64,19 @@ export function applyCognitiveLayer(formattedResult) {
                 reason: 'GEN mode attempted to fabricate thread list',
                 details: 'Thread lists must originate from executeTool only. This is a routing bypass.',
                 state: 'ARCHITECTURE_FREEZE_VIOLATION'
+            };
+        }
+
+        // CRITICAL VALIDATION 2: GEN mode cannot simulate search operations
+        // If payload claims to have searched, scanned, or filtered threads, this is fabrication
+        if (SEARCH_SIMULATION_PATTERNS.some(pattern => pattern.test(payload))) {
+            console.error('🚨 [ROUTE_VIOLATION]: GEN_MODE_SEARCH_SIMULATION');
+            throw {
+                error: 'ROUTE_VIOLATION_GEN_SEARCH',
+                mode: 'GEN',
+                reason: 'GEN mode attempted to simulate search operation',
+                details: 'Search operations must route through RETRIEVAL pipeline. GEN cannot claim to have searched threads.',
+                state: 'SEARCH_ROUTE_VIOLATION'
             };
         }
 
