@@ -195,6 +195,17 @@ Deno.serve(async (req) => {
         const currentTokens = allLaneMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0);
         const rotationNeeded = currentTokens > 90000;
 
+        // Multi-topic detection for validation
+        const topicPatterns = [
+            /\bchristmas\b/i, /\bbirthday\b/i, /\bbrookdale\b/i, /\bmaintenance\b/i,
+            /\bthanksgiving\b/i, /\banniversary\b/i, /\bwedding\b/i, /\bvacation\b/i,
+            /\bproject\b/i, /\bmeeting\b/i, /\bdiscussion\b/i
+        ];
+        const detectedTopics = topicPatterns
+            .map((p, i) => p.test(input) ? topicPatterns[i].source : null)
+            .filter(Boolean);
+        const isMultiTopicQuery = detectedTopics.length > 1 || /\s(and|,)\s/.test(input);
+
         // Detect task type - route to OpenAI for file/image generation
         const lowerInput = input.toLowerCase();
         const hasFileExtension = /\.(txt|json|md|pdf|csv|log|xml|yaml|html|css|js|py)[\s\b]/.test(lowerInput);
