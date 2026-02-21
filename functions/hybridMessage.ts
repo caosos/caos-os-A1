@@ -212,26 +212,29 @@ Deno.serve(async (req) => {
         // Build message history with optional seed injection
         const systemPrompt = isFileGen || isImageGen 
             ? `You are Aria, the core of CAOS. You CREATE files and images as part of your core identity. Not OpenAI. YOU. When users request files, you own the creation. Work confidently and naturally.${dateContext}${groundingRules}`
-            : `🚨 CRITICAL EXECUTION CONTRACTS - READ FIRST 🚨
+            : `🚨🚨🚨 ABSOLUTE MANDATORY TOOL EXECUTION - ZERO TOLERANCE 🚨🚨🚨
 
-**THREAD/CONVERSATION SEARCH (MANDATORY - NO EXCEPTIONS):**
-When user asks ANY variation of "show me threads", "list conversations", "what threads do we have", "past discussions":
-→ IMMEDIATELY call search_threads tool with query="" (empty string searches all)
-→ NEVER respond with "I couldn't find" or "not stored as threads" WITHOUT calling the tool first
-→ The tool EXISTS. The data EXISTS. USE IT.
-→ Present actual thread titles from Conversation entity results
+**THIS IS NON-NEGOTIABLE. VIOLATION = CRITICAL SYSTEM FAILURE.**
 
-**MEMORY SEARCH (MANDATORY):**
-When user asks "do you remember", "what did we discuss about X", "find messages about Y":
-→ IMMEDIATELY call recall_memory with relevant keywords
-→ Present actual message content from results
+THREAD SEARCH ENFORCEMENT:
+- User says "list threads", "show threads", "list conversations", "thread names" → YOU MUST CALL search_threads("")
+- DO NOT make up thread names. DO NOT say "here are some topics". DO NOT respond without calling the tool.
+- ONLY after calling search_threads can you present results.
+- If tool returns 0 threads: say "I searched and found no saved threads yet"
+- If tool returns threads: list the ACTUAL titles from the tool results, not made-up names
 
-**CODE INSPECTION (MANDATORY):**
-When asked "what files do you have", "show your code", "list components":
-→ IMMEDIATELY call list_app_structure then read_app_file
-→ Present actual file contents
+MEMORY SEARCH ENFORCEMENT:
+- User says "remember", "what did we talk about", "find messages" → CALL recall_memory
+- Present ACTUAL message content from tool results, not fabricated summaries
 
-RULE: If you have a tool for the task, USE IT. Never claim you can't access something when a tool exists.
+SELF-INSPECTION ENFORCEMENT:
+- User says "what files", "show code", "list components" → CALL list_app_structure
+- Present ACTUAL file names from tool results
+
+🚨 CRITICAL RULE 🚨
+If you claim something exists or happened, you MUST have retrieved it via a tool.
+Making up information = SYSTEM FAILURE.
+Always call the tool FIRST, then respond based on ACTUAL results.
 
 CORE IDENTITY: You are CAOS (Cognitive Adaptive Operating System). Be direct, capable, and truthful.
 
@@ -690,11 +693,11 @@ MEMORY & LEARNING - MANDATORY:
                     type: "function",
                     function: {
                         name: "search_threads",
-                        description: "Search across ALL conversation threads - retrieves actual message content from other conversations. Use this when user asks about past threads or conversations.",
+                        description: "MANDATORY TOOL - Search ALL conversation threads and return ACTUAL thread titles. When user asks 'list threads', 'show threads', 'thread names' → YOU MUST CALL THIS with query='' to get ALL threads. Returns real Conversation entity data with actual titles. DO NOT respond about threads without calling this tool first.",
                         parameters: {
                             type: "object",
                             properties: {
-                                query: { type: "string", description: "Search terms to find in conversations" },
+                                query: { type: "string", description: "Search terms (use empty string '' to get ALL threads)" },
                                 limit: { type: "number", description: "Max threads to return (default 10)", default: 10 }
                             },
                             required: ["query"]
@@ -883,16 +886,22 @@ MEMORY & LEARNING - MANDATORY:
                                 100
                             );
 
-                            // Search conversation titles, summaries, and keywords first
-                            const matchingConvos = conversations.filter(c => {
-                                const searchLower = args.query.toLowerCase();
-                                return (
-                                    c.title?.toLowerCase().includes(searchLower) ||
-                                    c.summary?.toLowerCase().includes(searchLower) ||
-                                    c.keywords?.some(k => k.toLowerCase().includes(searchLower)) ||
-                                    c.last_message_preview?.toLowerCase().includes(searchLower)
-                                );
-                            }).slice(0, args.limit || 10);
+                            // If query is empty, return ALL conversations
+                            let matchingConvos;
+                            if (!args.query || args.query.trim() === '') {
+                                matchingConvos = conversations.slice(0, args.limit || 50);
+                            } else {
+                                // Search conversation titles, summaries, and keywords
+                                matchingConvos = conversations.filter(c => {
+                                    const searchLower = args.query.toLowerCase();
+                                    return (
+                                        c.title?.toLowerCase().includes(searchLower) ||
+                                        c.summary?.toLowerCase().includes(searchLower) ||
+                                        c.keywords?.some(k => k.toLowerCase().includes(searchLower)) ||
+                                        c.last_message_preview?.toLowerCase().includes(searchLower)
+                                    );
+                                }).slice(0, args.limit || 10);
+                            }
 
                             // For each matching conversation, get some actual messages
                             const results = await Promise.all(matchingConvos.map(async (convo) => {
@@ -920,14 +929,15 @@ MEMORY & LEARNING - MANDATORY:
                             toolResult = {
                                 found: results.length,
                                 total_threads_searched: conversations.length,
-                                query: args.query,
+                                query: args.query || "(all threads)",
                                 threads: results
                             };
                         } catch (error) {
                             toolResult = {
                                 found: 0,
                                 error: `Thread search failed: ${error.message}`,
-                                threads: []
+                                threads: [],
+                                total_threads_searched: 0
                             };
                         }
                     } else if (toolCall.function.name === 'list_app_structure') {
