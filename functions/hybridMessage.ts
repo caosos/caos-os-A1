@@ -1113,20 +1113,30 @@ MEMORY & LEARNING - MANDATORY:
                                 100
                             );
 
-                            // If query is empty, return ALL conversations
+                            // Determine operation mode: LIST (empty query) vs SEARCH (keyword query)
+                            const isListMode = !args.query || args.query.trim() === '';
+                            
                             let matchingConvos;
-                            if (!args.query || args.query.trim() === '') {
+                            let matchFields = [];
+                            
+                            if (isListMode) {
+                                // LIST MODE: Return all threads unfiltered
                                 matchingConvos = conversations.slice(0, args.limit || 50);
                             } else {
-                                // Search conversation titles, summaries, and keywords
+                                // SEARCH MODE: Filter by keywords and track match reasons
+                                const searchLower = args.query.toLowerCase();
                                 matchingConvos = conversations.filter(c => {
-                                    const searchLower = args.query.toLowerCase();
-                                    return (
-                                        c.title?.toLowerCase().includes(searchLower) ||
-                                        c.summary?.toLowerCase().includes(searchLower) ||
-                                        c.keywords?.some(k => k.toLowerCase().includes(searchLower)) ||
-                                        c.last_message_preview?.toLowerCase().includes(searchLower)
-                                    );
+                                    const titleMatch = c.title?.toLowerCase().includes(searchLower);
+                                    const summaryMatch = c.summary?.toLowerCase().includes(searchLower);
+                                    const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(searchLower));
+                                    const previewMatch = c.last_message_preview?.toLowerCase().includes(searchLower);
+                                    
+                                    if (titleMatch) matchFields.push('title');
+                                    if (summaryMatch) matchFields.push('summary');
+                                    if (keywordMatch) matchFields.push('keywords');
+                                    if (previewMatch) matchFields.push('preview');
+                                    
+                                    return titleMatch || summaryMatch || keywordMatch || previewMatch;
                                 }).slice(0, args.limit || 10);
                             }
 
@@ -1156,7 +1166,9 @@ MEMORY & LEARNING - MANDATORY:
                             toolResult = {
                                 found: results.length,
                                 total_threads_searched: conversations.length,
-                                query: args.query || "(all threads)",
+                                query: args.query || "(all threads - list mode)",
+                                mode: isListMode ? "LIST" : "SEARCH",
+                                match_fields: isListMode ? [] : [...new Set(matchFields)],
                                 threads: results
                             };
                         } catch (error) {
