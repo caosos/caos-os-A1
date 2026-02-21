@@ -312,6 +312,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const extractUrls = (text) => {
+    if (!text) return [];
+    
     // Extract URLs from both bare URLs and markdown links [text](url)
     const urls = [];
     
@@ -463,7 +465,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       });
     }, 80);
 
-    const cleanText = message.content
+    const cleanText = (message.content || '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
@@ -618,7 +620,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const renderContent = () => {
-    let content = message.content;
+    let content = message.content || '';
 
     // Strip out WROTE: patterns but keep the rest of the content
     if (content && content.includes('WROTE:')) {
@@ -626,7 +628,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
 
     // Extract ALL URLs before markdown processing
-    const urls = extractUrls(content);
+    const urls = extractUrls(content || '');
     const videoUrls = urls.filter(isVideoUrl);
 
     // Remove video URLs AND their markdown wrappers from content BEFORE markdown processing
@@ -641,14 +643,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     });
     cleanContent = cleanContent.trim();
 
-    const youtubeMatches = content.match(/\[YOUTUBE:(.*?)\]/g);
+    const youtubeMatches = content ? content.match(/\[YOUTUBE:(.*?)\]/g) : null;
     
     // Check for copy blocks: ```copy or ```copyblock
     const copyBlockRegex = /```(?:copy|copyblock)(?:\s+title:([^\n]+))?\n([\s\S]*?)```/g;
     const copyBlocks = [];
     let copyMatch;
     
-    while ((copyMatch = copyBlockRegex.exec(message.content)) !== null) {
+    while ((copyMatch = copyBlockRegex.exec(message.content || '')) !== null) {
       const title = copyMatch[1]?.trim();
       const blockContent = copyMatch[2];
       copyBlocks.push({ title, content: blockContent });
@@ -661,7 +663,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     const fileBlocks = [];
     let match;
     
-    while ((match = codeBlockRegex.exec(message.content)) !== null) {
+    while ((match = codeBlockRegex.exec(message.content || '')) !== null) {
       const filename = extractFilename(match[1]);
       const fileContent = match[2];
       if (filename) {
