@@ -281,21 +281,31 @@ Deno.serve(async (req) => {
 
 **THIS IS NON-NEGOTIABLE. VIOLATION = CRITICAL SYSTEM FAILURE.**
 
-🚨 CAOS:THREAD.RETRIEVAL.PRECISION.PATCH/v1.0 🚨
+🚨 CAOS:THREAD.ROUTING.PRIORITY.PATCH/v1.1 🚨
 
-**INTENT CLASSIFICATION (NON-NEGOTIABLE)**
+**INTENT CLASSIFICATION (SEARCH OVERRIDES LIST)**
 
-INTENT_1 = LIST_THREADS (Complete inventory):
-Triggers: "list my threads", "show my threads", "threads by name", "what threads do I have", "show all threads"
+INTENT_1 = SEARCH_THREADS (Keyword filtering - HIGHEST PRIORITY):
+Triggers: "mentions of [X]", "contain [X]", "about [X]", "threads with [X]", "find [X]", "familiar with [X]", "discussion about [X]", "threads where", ANY quoted phrase
+Examples:
+- "list mentions of Christmas" → SEARCH (not LIST!)
+- "threads about birthday" → SEARCH
+- "threads that contain ActBlue" → SEARCH
+- "find threads with 'immigration'" → SEARCH
+Action: Call search_threads("keyword") with ACTUAL KEYWORDS
+Response format: SEARCH TRANSPARENCY ENVELOPE (mandatory, see below)
+
+INTENT_2 = LIST_THREADS (Complete inventory - ONLY when no filtering):
+Triggers: "list my threads" (no other keywords), "show all threads", "what threads do I have", "thread titles"
+Examples:
+- "list my threads" → LIST
+- "show all threads" → LIST
 Action: Call search_threads("") with EMPTY QUERY
 Response format: "[MODE=RETRIEVAL]\nComplete thread list (unfiltered):\n- [title 1]\n- [title 2]..."
-MUST label as "Complete thread list (unfiltered)."
 
-INTENT_2 = SEARCH_THREADS (Semantic/topic search):
-Triggers: "familiar with [topic]", "we talked about [topic]", "find the thread about [topic]", "which thread had [phrase]", "discussion about [topic]"
-Rule: If user references a PAST DISCUSSION/TOPIC/PHRASE → default SEARCH_THREADS
-Action: Call search_threads("keyword") with ACTUAL KEYWORDS
-Response format: SEARCH TRANSPARENCY ENVELOPE (see below)
+**ANTI-COLLISION RULE (CRITICAL):**
+If both SEARCH and LIST patterns detected → SEARCH wins.
+Example: "list mentions of X" has "list" BUT also "mentions of" → route to SEARCH.
 
 **SEARCH TRANSPARENCY ENVELOPE (MANDATORY)**
 
@@ -909,11 +919,19 @@ MEMORY & LEARNING - MANDATORY:
             ];
 
             // Detect query types for direct retrieval (bypass LLM)
-            // Enhanced intent classification: LIST vs SEARCH
-            const hasListTrigger = /\b(list|show|get|display)\b.*\b(my|all)?\s*(thread|conversation)s?\b|\bthread\s+(names?|titles?)\b|list.*by\s+name/i.test(input);
-            const hasSearchTrigger = /\b(familiar with|we talked about|discussion about|find.*thread|which thread|conversation.*about|thread.*about|talked.*ago)\b/i.test(input);
+            // CRITICAL: SEARCH must override LIST when both patterns appear
             
-            // Default to SEARCH if user references past topic/discussion, otherwise LIST if explicitly asking to show threads
+            // SEARCH intent triggers (keyword filtering, topic references)
+            const hasSearchTrigger = /\b(mentions? of|contain|about|discussion|find|familiar with|we talked|which thread|thread.*about|quoted|in my threads.*\w+|threads.*contain|threads.*about|threads.*with|threads.*where)\b/i.test(input);
+            
+            // LIST intent triggers (explicit full inventory request only)
+            const hasListTrigger = /^\b(list|show|get|display)\b\s+(my|all)?\s*(thread|conversation)s?\s*$/i.test(input.trim()) || 
+                                  /\bthread\s+(names?|titles?)\s*$/i.test(input.trim()) ||
+                                  /^(what|show me)\s+(thread|conversation)s?\s+(do i have|exist)\s*$/i.test(input.trim());
+            
+            // PRIORITY RULE: SEARCH dominates when both triggers appear
+            // "List mentions of X" = SEARCH (not LIST)
+            // "List my threads" = LIST
             const isThreadListQuery = hasListTrigger && !hasSearchTrigger;
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
