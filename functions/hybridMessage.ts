@@ -1089,7 +1089,6 @@ MEMORY & LEARNING - MANDATORY:
                             files: structures[args.type] || [],
                             note: 'Static structure map - dynamically maintained'
                         };
-                    }
                     } else if (toolCall.function.name === 'list_my_files') {
                         const files = await base44.asServiceRole.entities.UserFile.filter(
                             { folder_path: '/CAOS-Generated' },
