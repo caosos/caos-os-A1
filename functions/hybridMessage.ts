@@ -793,6 +793,33 @@ MEMORY & LEARNING - MANDATORY:
             const isRecallQuery = /\b(remember|recall|find|search|what did|previous)\b.*\b(message|conversation|discuss|talk)\b/i.test(input);
             const isFactualRetrieval = isThreadListQuery || isRecallQuery;
 
+            // Inject deterministic mode instructions for factual queries
+            if (isFactualRetrieval) {
+                messages.push({
+                    role: 'system',
+                    content: `DETERMINISTIC RETRIEVAL MODE ACTIVE.
+            You MUST output valid JSON only. No prose. No commentary. No explanation. No narrative.
+
+            Required JSON format:
+            {
+            "query_type": "${isThreadListQuery ? 'thread_list' : 'recall'}",
+            "tool_called": true,
+            "result_count": <number>,
+            "results": [<array of exact titles or messages from tool>]
+            }
+
+            FORBIDDEN:
+            - Any text outside JSON structure
+            - Explanatory phrases like "it seems", "looks like", "continuous flow"
+            - Contextual interpretation
+            - Helpful suggestions
+            - Empty result explanations
+
+            IF tool returns 0 results: {"query_type": "...", "tool_called": true, "result_count": 0, "results": []}
+            IF tool returns data: Use EXACT values from tool output, zero modification.`
+                });
+            }
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -805,7 +832,8 @@ MEMORY & LEARNING - MANDATORY:
                     tools,
                     tool_choice: isThreadListQuery ? { type: "function", function: { name: "search_threads" } } : 'auto',
                     temperature: isFactualRetrieval ? 0.0 : 0.8,
-                    max_tokens: 12000
+                    max_tokens: 12000,
+                    response_format: isFactualRetrieval ? { type: "json_object" } : undefined
                 })
             });
 
@@ -1090,58 +1118,94 @@ MEMORY & LEARNING - MANDATORY:
                 });
 
                 const finalResult = await finalResponse.json();
-                aiResponse = finalResult.choices[0].message.content;
+                let rawResponse = finalResult.choices[0].message.content;
                 if (finalResult.usage?.total_tokens) usageTokens = finalResult.usage.total_tokens;
 
-                // P1: Post-Execution Validation Gate
-                if (isThreadListQuery) {
-                    const threadToolCalled = message.tool_calls?.some(tc => tc.function.name === 'search_threads');
-                    if (!threadToolCalled) {
-                        // HARD FAIL - no retry, no hallucination allowed
+                // DETERMINISTIC MODE: Parse and validate JSON for factual queries
+                if (isFactualRetrieval) {
+                    try {
+                        const structuredData = JSON.parse(rawResponse);
+
+                        // Validate required fields
+                        if (!structuredData.query_type || !structuredData.hasOwnProperty('tool_called') || !structuredData.hasOwnProperty('result_count')) {
+                            throw new Error('Invalid JSON structure: missing required fields');
+                        }
+
+                        // For thread queries, validate against actual tool results
+                        if (isThreadListQuery) {
+                            const threadToolCalled = message.tool_calls?.some(tc => tc.function.name === 'search_threads');
+                            if (!threadToolCalled) {
+                                await base44.asServiceRole.entities.ErrorLog.create({
+                                    user_email: user.email,
+                                    conversation_id: session_id,
+                                    error_type: 'tool_execution_audit',
+                                    error_message: 'CRITICAL: Thread list query did not execute search_threads',
+                                    request_payload: { input, expected_tool: 'search_threads', tool_calls: message.tool_calls }
+                                });
+                                return Response.json({ 
+                                    error: 'STATE=UNKNOWN: Expected tool execution did not occur',
+                                    reply: 'I encountered a system error while trying to retrieve thread data. The search tool did not execute as required.'
+                                }, { status: 500 });
+                            }
+
+                            // Get actual tool results
+                            const threadToolResult = toolMessages.find(tm => tm.name === 'search_threads');
+                            if (threadToolResult) {
+                                const toolData = JSON.parse(threadToolResult.content);
+                                const actualTitles = toolData.threads?.map(t => t.title) || [];
+
+                                // STRICT BINDING: Results array must match tool output exactly
+                                const resultsMatch = structuredData.results.length === actualTitles.length &&
+                                                    structuredData.results.every(r => actualTitles.includes(r));
+
+                                if (!resultsMatch) {
+                                    await base44.asServiceRole.entities.ErrorLog.create({
+                                        user_email: user.email,
+                                        conversation_id: session_id,
+                                        error_type: 'tool_execution_audit',
+                                        error_message: 'CRITICAL: JSON results do not match tool output',
+                                        request_payload: { 
+                                            actual_titles: actualTitles,
+                                            returned_results: structuredData.results
+                                        }
+                                    });
+                                    // Force correction: use actual tool data only
+                                    structuredData.results = actualTitles;
+                                    structuredData.result_count = actualTitles.length;
+                                }
+
+                                // Format final output from validated structured data
+                                if (structuredData.result_count === 0) {
+                                    aiResponse = "I searched and found no saved threads yet.";
+                                } else {
+                                    aiResponse = `Here are your saved threads:\n${structuredData.results.map(t => `- ${t}`).join('\n')}`;
+                                }
+                            }
+                        } else {
+                            // For other factual queries, format from structured data
+                            if (structuredData.result_count === 0) {
+                                aiResponse = "I searched and found no matching results.";
+                            } else {
+                                aiResponse = `Found ${structuredData.result_count} results:\n${structuredData.results.map((r, i) => `${i + 1}. ${r}`).join('\n')}`;
+                            }
+                        }
+                    } catch (error) {
+                        // JSON parse failed or validation failed - HARD FAIL
                         await base44.asServiceRole.entities.ErrorLog.create({
                             user_email: user.email,
                             conversation_id: session_id,
                             error_type: 'tool_execution_audit',
-                            error_message: 'CRITICAL: Thread list query did not execute search_threads',
-                            request_payload: { input, expected_tool: 'search_threads', tool_calls: message.tool_calls }
+                            error_message: `CRITICAL: Factual query returned invalid JSON: ${error.message}`,
+                            request_payload: { input, raw_response: rawResponse }
                         });
                         return Response.json({ 
-                            error: 'STATE=UNKNOWN: Expected tool execution did not occur',
-                            reply: 'I encountered a system error while trying to retrieve thread data. The search tool did not execute as required.'
+                            error: 'STATE=UNKNOWN: Response validation failed',
+                            reply: 'I encountered a system error processing the structured response. The data format was invalid.'
                         }, { status: 500 });
                     }
-
-                    // P2: Tool Result Binding - verify response uses actual tool data
-                    const threadToolResult = toolMessages.find(tm => tm.name === 'search_threads');
-                    if (threadToolResult) {
-                        const toolData = JSON.parse(threadToolResult.content);
-                        const actualTitles = toolData.threads?.map(t => t.title) || [];
-
-                        // Detection: response contains thread-like content NOT in tool results
-                        const suspiciousPatterns = ['recall memory', 'technical capabilities', 'architecture discussion', 'memory testing'];
-                        const hasSuspiciousContent = suspiciousPatterns.some(pattern => 
-                            aiResponse.toLowerCase().includes(pattern.toLowerCase()) &&
-                            !actualTitles.some(title => title.toLowerCase().includes(pattern.toLowerCase()))
-                        );
-
-                        if (hasSuspiciousContent && actualTitles.length > 0) {
-                            // Hallucination detected - log and fail
-                            await base44.asServiceRole.entities.ErrorLog.create({
-                                user_email: user.email,
-                                conversation_id: session_id,
-                                error_type: 'tool_execution_audit',
-                                error_message: 'CRITICAL: Response contains hallucinated thread names not in tool results',
-                                request_payload: { 
-                                    actual_titles: actualTitles,
-                                    response_snippet: aiResponse.substring(0, 300),
-                                    suspicious_patterns_found: suspiciousPatterns.filter(p => aiResponse.toLowerCase().includes(p.toLowerCase()))
-                                }
-                            });
-
-                            // Force correct output using actual tool data
-                            aiResponse = `Here are your saved threads:\n${actualTitles.map(t => `- ${t}`).join('\n')}`;
-                        }
-                    }
+                } else {
+                    // Generative mode - allow free text
+                    aiResponse = rawResponse;
                 }
             } else {
                 aiResponse = message.content;
