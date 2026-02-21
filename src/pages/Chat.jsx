@@ -541,7 +541,8 @@ export default function Chat() {
           role: 'user',
           content: messageText,
           file_urls: fileUrls,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          user_initials: user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : user?.email?.substring(0, 2).toUpperCase()
         }]
       }));
 
