@@ -3,6 +3,7 @@ import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Moni
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
+import { toast } from 'sonner';
 
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
   const [message, setMessage] = useState(messageValue);
