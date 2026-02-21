@@ -670,6 +670,8 @@ MEMORY & LEARNING - MANDATORY:
             }
 
         } else {
+            console.log("🤖 GEN_MODE_EXECUTED - Input:", input);
+            
             // Route to OpenAI for everything else (core reasoning)
             const tools = [
                 {
@@ -794,6 +796,8 @@ MEMORY & LEARNING - MANDATORY:
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
             if (isThreadListQuery) {
+                console.log("🔍 RETRIEVAL_MODE_EXECUTED - Pattern matched:", input);
+
                 // Execute tool directly, format in code, return
                 try {
                     const conversations = await base44.asServiceRole.entities.Conversation.filter(
@@ -802,14 +806,18 @@ MEMORY & LEARNING - MANDATORY:
                         100
                     );
 
+                    console.log("🔍 RETRIEVAL_MODE - Found conversations:", conversations.length);
+
                     const threadTitles = conversations.map(c => c.title).filter(Boolean);
+
+                    console.log("🔍 RETRIEVAL_MODE - Titles extracted:", threadTitles);
 
                     // Format response in CODE, not via LLM
                     let aiResponse;
                     if (threadTitles.length === 0) {
-                        aiResponse = "I searched and found no saved threads yet.";
+                        aiResponse = "[MODE=RETRIEVAL]\nI searched and found no saved threads yet.";
                     } else {
-                        aiResponse = `Here are your saved threads:\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
+                        aiResponse = `[MODE=RETRIEVAL]\nHere are your saved threads:\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
                     }
 
                     // Store user message
@@ -1287,10 +1295,10 @@ MEMORY & LEARNING - MANDATORY:
                     }
                 } else {
                     // Generative mode - allow free text
-                    aiResponse = rawResponse;
+                    aiResponse = `[MODE=GEN]\n${rawResponse}`;
                 }
             } else {
-                aiResponse = message.content;
+                aiResponse = `[MODE=GEN]\n${message.content}`;
 
                 // P1: Validation even without tool calls - for forced tool scenarios
                 if (isThreadListQuery && !message.tool_calls) {
