@@ -1086,6 +1086,136 @@ MEMORY & LEARNING - MANDATORY:
                 searchQueries = [filterTerms];
             }
 
+            // MULTI_SEARCH MODE: Execute segmented searches for each topic
+            if (isMultiSearchQuery && route === "MULTI_SEARCH") {
+                console.log("🔍 MULTI_SEARCH_BRANCH_ENTERED");
+                console.log("🔍 Topics:", searchQueries);
+                
+                try {
+                    const allConversations = await base44.asServiceRole.entities.Conversation.filter(
+                        { created_by: user.email },
+                        '-last_message_time',
+                        200
+                    );
+                    
+                    // For each topic, search and collect results
+                    const multiResults = {};
+                    for (const topic of searchQueries) {
+                        const topicLower = topic.toLowerCase();
+                        const matching = allConversations.filter(c => {
+                            const titleMatch = c.title?.toLowerCase().includes(topicLower);
+                            const summaryMatch = c.summary?.toLowerCase().includes(topicLower);
+                            const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(topicLower));
+                            return titleMatch || summaryMatch || keywordMatch;
+                        });
+                        
+                        multiResults[topic] = {
+                            found: matching.length,
+                            threads: matching.map(m => m.title).filter(Boolean)
+                        };
+                    }
+                    
+                    // Build multi-topic report
+                    const reportSections = Object.entries(multiResults)
+                        .map(([topic, result]) => {
+                            const threadList = result.threads.length === 0
+                                ? `(no matches)`
+                                : result.threads.map(t => `  - ${t}`).join('\n');
+                            return `${topic}: ${result.found} thread${result.found !== 1 ? 's' : ''}\n${threadList}`;
+                        })
+                        .join('\n\n');
+                    
+                    const multiReportResponse = `[MODE=RETRIEVAL]\nMULTI_SEARCH Results\n\n${reportSections}`;
+                    
+                    let aiResponse = multiReportResponse;
+                    
+                    // Update receipt
+                    retrievalReceipt.tool_called = false;
+                    retrievalReceipt.result_count = Object.values(multiResults).reduce((sum, r) => sum + r.found, 0);
+                    retrievalReceipt.formatter_used = "MULTI_REPORT_FORMATTER";
+                    retrievalReceipt.report_object_generated = true;
+                    retrievalReceipt.response_shape = "MULTI_REPORT";
+                    retrievalReceipt.validation_status = "PASS";
+                    retrievalReceipt.filter_terms = searchQueries;
+                    
+                    // Append receipt footer if debug mode
+                    if (debugMode) {
+                        aiResponse += `\n\n${formatReceiptFooter(retrievalReceipt)}`;
+                    }
+                    
+                    console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                    
+                    // Store user message
+                    const now = new Date();
+                    const seq = recentRecords.length > 0 ? Math.max(...recentRecords.map(r => r.seq)) + 1 : 1;
+                    
+                    await base44.asServiceRole.entities.Record.create({
+                        record_id: `${session_id}_${seq}_${now.getTime()}`,
+                        session_id,
+                        lane_id: user.email,
+                        tier: 'session',
+                        seq,
+                        ts_snapshot_iso: now.toISOString(),
+                        ts_snapshot_ms: now.getTime(),
+                        role: "user",
+                        message: input,
+                        anchors: [
+                            { class: "session", value: session_id },
+                            { class: "lane", value: user.email }
+                        ],
+                        token_count: Math.ceil(input.length / 4),
+                        status: "active"
+                    });
+                    
+                    // Store AI response
+                    const aiSeq = seq + 1;
+                    await base44.asServiceRole.entities.Record.create({
+                        record_id: `${session_id}_${aiSeq}_${Date.now()}`,
+                        session_id,
+                        lane_id: user.email,
+                        tier: 'session',
+                        seq: aiSeq,
+                        ts_snapshot_iso: new Date().toISOString(),
+                        ts_snapshot_ms: Date.now(),
+                        role: "assistant",
+                        message: aiResponse,
+                        anchors: [
+                            { class: "session", value: session_id },
+                            { class: "lane", value: user.email },
+                            { class: "retrieval_mode", value: "multi_search_direct" }
+                        ],
+                        token_count: Math.ceil(aiResponse.length / 4),
+                        status: "active"
+                    });
+                    
+                    return Response.json({
+                        reply: aiResponse,
+                        session: session_id,
+                        generatedFiles: [],
+                        usage_tokens: 0,
+                        rotation_needed: false,
+                        current_tokens: currentTokens,
+                        active_lane: activeLane,
+                        lane_count: lanes.length,
+                        retrieval_mode: true,
+                        diagnostic: {
+                            request_id,
+                            payload_hash,
+                            multi_search: true,
+                            topic_count: searchQueries.length
+                        }
+                    });
+                } catch (error) {
+                    console.error('🔥 MULTI_SEARCH_PIPELINE_FAILURE:', error);
+                    retrievalReceipt.validation_status = `FAIL(${error.message})`;
+                    console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                    return Response.json({ 
+                        error: 'MULTI_SEARCH_PIPELINE_FAILURE',
+                        details: error.message
+                    }, { status: 500 });
+                }
+            }
+            
             // RETRIEVAL MODE ENVELOPE: Direct database queries with structured responses
             if (isThreadListQuery) {
                 console.log("🔍 RETRIEVAL_BRANCH_ENTERED");
