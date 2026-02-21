@@ -59,6 +59,26 @@ export function resolveIntent(input) {
         };
     }
 
+    // STEP 2B: Detect implicit list patterns (high confidence)
+    const implicitListPatterns = [
+        /^show (my )?threads/i,
+        /^what threads do i have/i,
+        /^where are my threads/i,
+        /^display (all )?threads/i,
+        /^(get|fetch) (all )?threads/i,
+        /^threads/i  // Just "threads" alone
+    ];
+
+    if (implicitListPatterns.some(p => p.test(userMessage))) {
+        return {
+            intent: 'LIST_THREADS',
+            confidence: 0.95,
+            reason: 'implicit_list_pattern',
+            extractedTerms: [],
+            multiQuery: false
+        };
+    }
+
     // STEP 3: Extract topic segment using triggers
     let topicSegment = '';
     let extractionReason = 'none';
