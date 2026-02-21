@@ -998,37 +998,45 @@ MEMORY & LEARNING - MANDATORY:
             // Filter query patterns (SEARCH_THREADS)
             const isFilterQuery = /mentions of|threads about|threads that contain|contain|about|with|regarding|discussion|find|familiar with|which thread|talk about|threads with/.test(lower);
             
-            // PRIORITY INVERSION: Topic > Filter > List
+            // PRIORITY ROUTING: MULTI_SEARCH > SEARCH > LIST
             let isThreadListQuery;
+            let isMultiSearchQuery;
             let route;
             let searchQueries = [];
             let intentReason = "";
             
-            if (hasTopicWords) {
-                // SEARCH has highest priority when topics detected
+            if (isMultiTopicQuery && segmentedTopics.length > 1) {
+                // MULTI_SEARCH: highest priority when multiple distinct topics detected
+                isMultiSearchQuery = true;
+                isThreadListQuery = false;
+                route = "MULTI_SEARCH";
+                searchQueries = segmentedTopics;
+                intentReason = "multi-topic-segmented";
+                console.log("🔀 [ROUTE_SELECTED]: MULTI_SEARCH (multi-topic)");
+                console.log("🔍 [SEGMENTED_TOPICS]:", searchQueries);
+            } else if (hasTopicWords) {
+                // SEARCH: single topic or filter-based
+                isMultiSearchQuery = false;
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
                 intentReason = "topic-driven";
-                // Segment into individual searches if multiple topics
-                if (topicsFromList.length > 1) {
-                    searchQueries = topicsFromList.map(t => t.trim()).filter(t => t.length > 0);
-                } else {
-                    // Extract all topic words mentioned
-                    searchQueries = topicWords.filter(word => lower.includes(word));
-                }
+                searchQueries = topicWords.filter(word => lower.includes(word));
                 console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (topic-driven)");
                 console.log("🔍 [SEARCH_QUERIES]:", searchQueries);
             } else if (isFilterQuery) {
+                isMultiSearchQuery = false;
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
                 intentReason = "filter-query";
                 console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (filter query)");
             } else if (isExplicitListQuery) {
+                isMultiSearchQuery = false;
                 isThreadListQuery = true;
                 route = "LIST_THREADS";
                 intentReason = "explicit-list-request";
                 console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS (explicit request)");
             } else {
+                isMultiSearchQuery = false;
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
                 intentReason = "default-fallback";
@@ -1038,20 +1046,6 @@ MEMORY & LEARNING - MANDATORY:
             // Record route selection in receipt
             retrievalReceipt.route_selected = route;
             retrievalReceipt.intent_reason = intentReason;
-            
-            // VALIDATION: Multi-topic queries cannot route to LIST_THREADS
-            if (isMultiTopicQuery && isThreadListQuery) {
-                console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: ROUTER_COLLAPSE_MULTI_SEARCH");
-                retrievalReceipt.validation_status = "FAIL(ROUTER_COLLAPSE_MULTI_SEARCH)";
-                console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
-                
-                const footerText = debugMode ? `\n\n${formatReceiptFooter(retrievalReceipt)}` : '';
-                return Response.json({
-                    error: "RETRIEVAL_VALIDATION_FAILURE",
-                    reason: "ROUTER_COLLAPSE_MULTI_SEARCH",
-                    state: "Multi-topic query collapsed to LIST_THREADS - should use MULTI_SEARCH"
-                }, { status: 400 });
-            }
             
             // Extract filter terms for SEARCH route
             let filterTerms = "";
