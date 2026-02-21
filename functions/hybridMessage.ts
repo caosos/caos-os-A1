@@ -936,14 +936,59 @@ MEMORY & LEARNING - MANDATORY:
             
             // PRIORITY: SEARCH > LIST
             let isThreadListQuery;
+            let route;
             if (isFilterQuery) {
                 isThreadListQuery = false; // Route to SEARCH (via GEN with tool)
+                route = "SEARCH_THREADS";
             } else if (isExplicitListQuery) {
                 isThreadListQuery = true; // Route to direct LIST retrieval
+                route = "LIST_THREADS";
             } else if (hasTopicPhrase) {
                 isThreadListQuery = false; // Fallback to SEARCH
+                route = "SEARCH_THREADS";
             } else {
                 isThreadListQuery = false; // Default to SEARCH (safer)
+                route = "SEARCH_THREADS";
+            }
+            
+            console.log("🔀 [ROUTE_SELECTED]:", route);
+            
+            // Extract filter terms for SEARCH route
+            let filterTerms = "";
+            if (route === "SEARCH_THREADS") {
+                // Extract keywords after common patterns
+                const patterns = [
+                    /mentions? of\s+([^,.;]+)/i,
+                    /threads? about\s+([^,.;]+)/i,
+                    /contain\s+([^,.;]+)/i,
+                    /regarding\s+([^,.;]+)/i,
+                    /with\s+([^,.;]+)/i,
+                    /discussion.*?about\s+([^,.;]+)/i,
+                    /find.*?([^,.;]+)\s+in.*threads/i,
+                    /"([^"]+)"/,  // quoted phrases
+                    /'([^']+)'/   // single-quoted phrases
+                ];
+                
+                for (const pattern of patterns) {
+                    const match = input.match(pattern);
+                    if (match && match[1]) {
+                        filterTerms = match[1].trim();
+                        break;
+                    }
+                }
+                
+                console.log("🔍 [FILTER_TERMS]:", filterTerms);
+                
+                // VALIDATION: SEARCH route must have filter terms
+                if (!filterTerms || filterTerms.length === 0) {
+                    console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: EMPTY_FILTER_ON_SEARCH_ROUTE");
+                    return Response.json({
+                        error: "RETRIEVAL_VALIDATION_FAILURE",
+                        reason: "EMPTY_FILTER_ON_SEARCH_ROUTE",
+                        state: "SEARCH route detected but no filter keywords extracted",
+                        user_query: input
+                    }, { status: 400 });
+                }
             }
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
@@ -1162,6 +1207,8 @@ MEMORY & LEARNING - MANDATORY:
                     } else if (toolCall.function.name === 'search_threads') {
                         // Search across ALL Conversation entities and their Messages
                         try {
+                            console.log("🔧 [TOOL_ARGS]:", JSON.stringify(args));
+                            
                             // Get all conversations for this user
                             const conversations = await base44.asServiceRole.entities.Conversation.filter(
                                 { created_by: user.email },
@@ -1194,6 +1241,11 @@ MEMORY & LEARNING - MANDATORY:
                                     
                                     return titleMatch || summaryMatch || keywordMatch || previewMatch;
                                 }).slice(0, args.limit || 10);
+                                
+                                // WARNING: Search returning full list
+                                if (matchingConvos.length === conversations.length) {
+                                    console.warn("⚠️ [WARNING]: Search returned full list — filter not applied. Query:", args.query);
+                                }
                             }
 
                             // For each matching conversation, get some actual messages
