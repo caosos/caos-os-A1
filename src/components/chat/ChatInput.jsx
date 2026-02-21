@@ -203,87 +203,97 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const toggleReadAloud = () => {
-    if (!('speechSynthesis' in window)) {
-      alert('Text-to-speech is not supported in your browser');
+  const toggleReadAloud = async () => {
+    if (!lastAssistantMessage) return;
+
+    // If already speaking, toggle pause/resume
+    if (isSpeaking && audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
+        setIsPaused(false);
+      } else {
+        audioRef.current.pause();
+        setIsPaused(true);
+      }
       return;
     }
 
-    if (isSpeaking && !isPaused) {
-      window.speechSynthesis.pause();
-      setIsPaused(true);
-    } else if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-    } else {
-      if (lastAssistantMessage) {
-        window.speechSynthesis.cancel();
+    // Clean the text
+    const cleanText = lastAssistantMessage
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+      .replace(/^[-*+]\s/gm, '')
+      .replace(/^\d+\.\s/gm, '')
+      .replace(/>/g, '')
+      .replace(/\|/g, '')
+      .replace(/---+/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
-        const cleanText = lastAssistantMessage
-          .replace(/#{1,6}\s/g, '')
-          .replace(/\*\*(.+?)\*\*/g, '$1')
-          .replace(/\*(.+?)\*/g, '$1')
-          .replace(/_(.+?)_/g, '$1')
-          .replace(/`(.+?)`/g, '$1')
-          .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-          .replace(/^[-*+]\s/gm, '')
-          .replace(/^\d+\.\s/gm, '')
-          .replace(/>/g, '')
-          .replace(/\|/g, '')
-          .replace(/---+/g, '')
-          .replace(/\n{3,}/g, '\n\n')
-          .trim();
+    try {
+      const savedVoice = localStorage.getItem('caos_voice_preference_input') || 'nova';
+      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-        setTimeout(() => {
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          
-          const voices = window.speechSynthesis.getVoices();
-          const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
-          
-          if (savedVoiceURI) {
-            const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-            if (voice) {
-              utterance.voice = voice;
-            }
-          } else if (selectedVoice) {
-            const voice = voices.find(v => v.voiceURI === selectedVoice.voiceURI);
-            if (voice) {
-              utterance.voice = voice;
-            }
-          }
-          
-          utterance.rate = speechRate;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-          utterance.lang = 'en-GB';
-          
-          utterance.onend = () => {
-            setIsSpeaking(false);
-            setIsPaused(false);
-            utteranceRef.current = null;
-          };
-          
-          utterance.onerror = (e) => {
-            console.error('Speech error:', e);
-            setIsSpeaking(false);
-            setIsPaused(false);
-            utteranceRef.current = null;
-          };
-          
-          utteranceRef.current = utterance;
-          setIsSpeaking(true);
-          setIsPaused(false);
-          window.speechSynthesis.speak(utterance);
-        }, 100);
+      const response = await base44.functions.invoke('textToSpeech', {
+        text: cleanText,
+        voice: savedVoice,
+        speed: savedRate
+      });
+
+      if (!response || response.status !== 200) {
+        throw new Error('TTS failed');
       }
+
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        setSpeechProgress((audio.currentTime / audio.duration) * 100);
+        setAudioDuration(audio.duration);
+      };
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        setSpeechProgress(0);
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        setSpeechProgress(0);
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+        toast.error('Playback failed');
+      };
+
+      setIsSpeaking(true);
+      await audio.play();
+    } catch (error) {
+      console.error('TTS error:', error);
+      setIsSpeaking(false);
+      toast.error('Failed to generate speech');
     }
   };
 
   const stopReadAloud = () => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
     setIsSpeaking(false);
     setIsPaused(false);
-    utteranceRef.current = null;
+    setSpeechProgress(0);
   };
 
   const startRecording = async () => {

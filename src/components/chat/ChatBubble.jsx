@@ -482,22 +482,19 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const savedVoice = localStorage.getItem('caos_voice_preference_message') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          voice: savedVoice,
-          speed: savedRate
-        })
+      const response = await base44.functions.invoke('textToSpeech', {
+        text: cleanText,
+        voice: savedVoice,
+        speed: savedRate
       });
 
-      if (!response.ok) throw new Error('TTS failed');
+      if (!response || response.status !== 200) {
+        console.error('TTS error:', response);
+        throw new Error('TTS failed');
+      }
 
-      const audioBlob = await response.blob();
+      // Response.data is already an ArrayBuffer from the backend function
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
       
       clearInterval(progressInterval);
       setGenerationProgress(95);
