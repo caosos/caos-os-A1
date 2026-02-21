@@ -1270,6 +1270,11 @@ MEMORY & LEARNING - MANDATORY:
                         try {
                             console.log("🔧 [TOOL_ARGS]:", JSON.stringify(args));
                             
+                            // Update receipt: tool execution started
+                            retrievalReceipt.tool_called = true;
+                            retrievalReceipt.tool_name = "search_threads";
+                            retrievalReceipt.tool_args = { query: args.query, limit: args.limit };
+                            
                             // Get all conversations for this user
                             const conversations = await base44.asServiceRole.entities.Conversation.filter(
                                 { created_by: user.email },
