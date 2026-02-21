@@ -1145,8 +1145,23 @@ MEMORY & LEARNING - MANDATORY:
                 }
             } else {
                 aiResponse = message.content;
+
+                // P1: Validation even without tool calls - for forced tool scenarios
+                if (isThreadListQuery && !message.tool_calls) {
+                    await base44.asServiceRole.entities.ErrorLog.create({
+                        user_email: user.email,
+                        conversation_id: session_id,
+                        error_type: 'tool_execution_audit',
+                        error_message: 'CRITICAL: Thread list query generated response without tool calls despite forced tool_choice',
+                        request_payload: { input, message_content: message.content }
+                    });
+                    return Response.json({ 
+                        error: 'STATE=UNKNOWN: System failed to execute required tool',
+                        reply: 'I cannot list threads without querying the database. This is a system error that requires investigation.'
+                    }, { status: 500 });
+                }
             }
-        }
+            }
 
         // Store user message
         const now = new Date();
