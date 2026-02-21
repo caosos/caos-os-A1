@@ -918,21 +918,33 @@ MEMORY & LEARNING - MANDATORY:
                 }
             ];
 
-            // Detect query types for direct retrieval (bypass LLM)
-            // CRITICAL: SEARCH must override LIST when both patterns appear
+            // Pattern-based routing: SEARCH overrides LIST when both detected
+            const lower = input.toLowerCase();
             
-            // SEARCH intent triggers (keyword filtering, topic references)
-            const hasSearchTrigger = /\b(mentions? of|contain|about|discussion|find|familiar with|we talked|which thread|thread.*about|quoted|in my threads.*\w+|threads.*contain|threads.*about|threads.*with|threads.*where)\b/i.test(input);
+            // Filter query patterns (SEARCH_THREADS)
+            const isFilterQuery = /mentions of|threads about|threads that contain|contain|about|with|regarding|discussion|find|familiar with|which thread/.test(lower);
             
-            // LIST intent triggers (explicit full inventory request only)
-            const hasListTrigger = /^\b(list|show|get|display)\b\s+(my|all)?\s*(thread|conversation)s?\s*$/i.test(input.trim()) || 
-                                  /\bthread\s+(names?|titles?)\s*$/i.test(input.trim()) ||
-                                  /^(what|show me)\s+(thread|conversation)s?\s+(do i have|exist)\s*$/i.test(input.trim());
+            // Explicit list-only patterns (LIST_THREADS)
+            const isExplicitListQuery = 
+                /^list (my )?threads$/i.test(input.trim()) ||
+                /^show (my )?threads$/i.test(input.trim()) ||
+                /what threads do i have/i.test(lower) ||
+                /^show all threads$/i.test(input.trim());
             
-            // PRIORITY RULE: SEARCH dominates when both triggers appear
-            // "List mentions of X" = SEARCH (not LIST)
-            // "List my threads" = LIST
-            const isThreadListQuery = hasListTrigger && !hasSearchTrigger;
+            // Topic phrase detection for fallback
+            const hasTopicPhrase = /"[^"]+"|'[^']+'|\b\w+\b.*in.*threads/.test(lower);
+            
+            // PRIORITY: SEARCH > LIST
+            let isThreadListQuery;
+            if (isFilterQuery) {
+                isThreadListQuery = false; // Route to SEARCH (via GEN with tool)
+            } else if (isExplicitListQuery) {
+                isThreadListQuery = true; // Route to direct LIST retrieval
+            } else if (hasTopicPhrase) {
+                isThreadListQuery = false; // Fallback to SEARCH
+            } else {
+                isThreadListQuery = false; // Default to SEARCH (safer)
+            }
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
             if (isThreadListQuery) {
