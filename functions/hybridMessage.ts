@@ -1376,6 +1376,43 @@ MEMORY & LEARNING - MANDATORY:
                                 next_step: matchCount > 0 ? "Reply with a thread title to open it." : `Try different terms, or use 'list my threads' to see your complete thread list.`
                             };
 
+                            // VALIDATION ENFORCEMENT: SEARCH_THREADS must use SEARCH_REPORT_FORMATTER
+                            if (route === "SEARCH_THREADS" && isListMode === false) {
+                                // Validate formatter
+                                if (!retrievalReport || retrievalReport.mode !== "RETRIEVAL") {
+                                    console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: FORMATTER_MISMATCH");
+                                    retrievalReceipt.validation_status = "RETRIEVAL_VALIDATION_FAILURE";
+                                    retrievalReceipt.formatter_used = "NONE";
+                                    console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                                    return Response.json({
+                                        error: "RETRIEVAL_VALIDATION_FAILURE",
+                                        reason: "FORMATTER_MISMATCH",
+                                        state: "SEARCH route executed but SEARCH_REPORT_FORMATTER not applied"
+                                    }, { status: 500 });
+                                }
+                            }
+                            
+                            // VALIDATION ENFORCEMENT: Empty filter detection
+                            if (route === "SEARCH_THREADS" && !isListMode && (!args.query || args.query.trim() === '')) {
+                                console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: EMPTY_FILTER_ON_SEARCH");
+                                retrievalReceipt.validation_status = "RETRIEVAL_VALIDATION_FAILURE";
+                                console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                                return Response.json({
+                                    error: "RETRIEVAL_VALIDATION_FAILURE",
+                                    reason: "EMPTY_FILTER_ON_SEARCH",
+                                    state: "SEARCH route with empty filter terms"
+                                }, { status: 500 });
+                            }
+                            
+                            // Update receipt: results recorded
+                            retrievalReceipt.result_count = results.length;
+                            retrievalReceipt.formatter_used = isListMode ? "LIST_FORMATTER" : "SEARCH_REPORT_FORMATTER";
+                            retrievalReceipt.report_object_generated = !isListMode;
+                            retrievalReceipt.response_shape = isListMode ? "LIST_ONLY" : "REPORT_OBJECT";
+                            retrievalReceipt.validation_status = "SUCCESS";
+                            
+                            console.log('📋 [RETRIEVAL_RECEIPT]', JSON.stringify(retrievalReceipt));
+                            
                             toolResult = {
                                 mode: isListMode ? "LIST" : "SEARCH",
                                 type: isListMode ? "COMPLETE_THREAD_LIST" : "SEARCH_RESULTS",
