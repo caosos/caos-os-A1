@@ -30,9 +30,24 @@ const STOP_WORDS = new Set([
 const EXPLICIT_LIST_PATTERN = /^list (my )?threads$/i;
 const SHOW_ALL_PATTERN = /^show (my )?threads$/i;
 
+// Helper: Extract topics from search query
+function extractTopicsFromSearchQuery(query) {
+    const stopWords = new Set([
+        'search', 'find', 'run', 'that', 'in', 'any', 'of', 'the', 'threads', 'thread',
+        'mention', 'mentions', 'containing', 'about', 'related'
+    ]);
+
+    const tokens = query.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length > 2 && !stopWords.has(t));
+
+    return [...new Set(tokens)];
+}
+
 export function resolveIntent(input) {
     const { userMessage, timestamp } = input;
-    
+
     if (!userMessage || typeof userMessage !== 'string') {
         return {
             intent: 'GENERIC_GEN',
