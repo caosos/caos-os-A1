@@ -67,6 +67,26 @@ Deno.serve(async (req) => {
         const request_id = `${session_id}_${request_timestamp}`;
         const payload_hash = simpleHash(input + (file_urls?.join(',') || ''));
 
+        // CAOS:RECEIPTS.VISIBLE/v1.0 - Check debug mode
+        const debugMode = Deno.env.get('ENV_DEBUG_RECEIPTS') === 'true' || input.includes('[debug receipts]');
+
+        // Helper to format receipt footer
+        const formatReceiptFooter = (receipt) => {
+            return `--- RECEIPT ---
+        request_id: ${receipt.request_id}
+        ts: ${new Date(receipt.timestamp).toISOString()}
+        route_selected: ${receipt.route_selected || 'UNKNOWN'}
+        intent_reason: ${receipt.intent_reason || 'unknown'}
+        filter_terms: [${(receipt.filter_terms || []).map(t => `"${t}"`).join(', ')}]
+        tool_called: ${receipt.tool_called}
+        tool_name: ${receipt.tool_name || 'null'}
+        tool_args_terms: [${(receipt.tool_args?.terms || []).map(t => `"${t}"`).join(', ')}]
+        result_count: ${receipt.result_count}
+        formatter_used: ${receipt.formatter_used || 'UNKNOWN'}
+        validation_status: ${receipt.validation_status}
+        --- END RECEIPT ---`;
+        };
+
         // PRE-EXECUTION DIAGNOSTIC LOG
         console.log('🔍 [PRE-EXECUTION]', JSON.stringify({
             request_id,
