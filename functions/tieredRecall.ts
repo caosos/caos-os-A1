@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
             }
         };
 
-        // Tier 1: Session Records
+        // Tier 1: Session Records (with recency weighting)
         if (tiers_allowed.includes('session')) {
             const sessionRecords = await base44.asServiceRole.entities.Record.filter(
                 { session_id, status: 'active' },
@@ -46,15 +46,24 @@ Deno.serve(async (req) => {
                 limit
             );
             
+            // Apply recency weighting: weight = 1 / (1 + days_old)
+            const now = Date.now();
+            const weightedRecords = sessionRecords.map(record => {
+                const age_ms = now - record.ts_snapshot_ms;
+                const age_days = age_ms / (1000 * 60 * 60 * 24);
+                const recency_weight = 1 / (1 + age_days);
+                return { ...record, recency_weight };
+            });
+            
             results.tier_results.session = {
-                count: sessionRecords.length,
-                records: sessionRecords
+                count: weightedRecords.length,
+                records: weightedRecords
             };
             results.receipt.tiers_searched.push('session');
-            results.records.push(...sessionRecords);
+            results.records.push(...weightedRecords);
         }
 
-        // Tier 2: Lane Records (same user, different sessions)
+        // Tier 2: Lane Records (same user, different sessions, with recency weighting)
         if (tiers_allowed.includes('lane') && results.records.length < limit) {
             const laneRecords = await base44.asServiceRole.entities.Record.filter(
                 { 
@@ -68,15 +77,24 @@ Deno.serve(async (req) => {
             // Filter out already-included session records
             const uniqueLaneRecords = laneRecords.filter(r => r.session_id !== session_id);
             
+            // Apply recency weighting
+            const now = Date.now();
+            const weightedLaneRecords = uniqueLaneRecords.map(record => {
+                const age_ms = now - record.ts_snapshot_ms;
+                const age_days = age_ms / (1000 * 60 * 60 * 24);
+                const recency_weight = 1 / (1 + age_days);
+                return { ...record, recency_weight };
+            });
+            
             results.tier_results.lane = {
-                count: uniqueLaneRecords.length,
-                records: uniqueLaneRecords
+                count: weightedLaneRecords.length,
+                records: weightedLaneRecords
             };
             results.receipt.tiers_searched.push('lane');
-            results.records.push(...uniqueLaneRecords.slice(0, limit - results.records.length));
+            results.records.push(...weightedLaneRecords.slice(0, limit - results.records.length));
         }
 
-        // Tier 3: Profile Records (promoted to profile-global)
+        // Tier 3: Profile Records (promoted to profile-global, with recency weighting)
         if (tiers_allowed.includes('profile') && results.records.length < limit) {
             const profileRecords = await base44.asServiceRole.entities.Record.filter(
                 { 
@@ -87,12 +105,21 @@ Deno.serve(async (req) => {
                 limit
             );
             
+            // Apply recency weighting
+            const now = Date.now();
+            const weightedProfileRecords = profileRecords.map(record => {
+                const age_ms = now - record.ts_snapshot_ms;
+                const age_days = age_ms / (1000 * 60 * 60 * 24);
+                const recency_weight = 1 / (1 + age_days);
+                return { ...record, recency_weight };
+            });
+            
             results.tier_results.profile = {
-                count: profileRecords.length,
-                records: profileRecords
+                count: weightedProfileRecords.length,
+                records: weightedProfileRecords
             };
             results.receipt.tiers_searched.push('profile');
-            results.records.push(...profileRecords.slice(0, limit - results.records.length));
+            results.records.push(...weightedProfileRecords.slice(0, limit - results.records.length));
         }
 
         // Tier 4: Global Bin (Phase 3 - placeholder)

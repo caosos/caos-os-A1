@@ -52,6 +52,41 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input, session_id, file_urls, rotation_seed, current_lane } = body;
 
+        const request_timestamp = Date.now();
+
+        // Load or create SessionContext for temporal tracking
+        let sessionContext;
+        try {
+            const contexts = await base44.asServiceRole.entities.SessionContext.filter(
+                { session_id },
+                '-updated_date',
+                1
+            );
+            sessionContext = contexts[0];
+        } catch (error) {
+            console.warn('SessionContext load failed:', error.message);
+        }
+
+        // Calculate request delta and detect rapid duplicates
+        let request_delta_ms = null;
+        let is_rapid_duplicate = false;
+        if (sessionContext?.last_request_ts) {
+            request_delta_ms = request_timestamp - sessionContext.last_request_ts;
+
+            // Flag rapid duplicates (< 2 seconds with identical input)
+            if (request_delta_ms < 2000) {
+                const recentRecords = await base44.asServiceRole.entities.Record.filter(
+                    { session_id, status: "active" },
+                    '-seq',
+                    1
+                );
+                if (recentRecords.length > 0 && recentRecords[0].message === input) {
+                    is_rapid_duplicate = true;
+                    console.warn(`RAPID_DUPLICATE_DETECTED: ${request_delta_ms}ms delta, identical input`);
+                }
+            }
+        }
+
         if (!OPENAI_API_KEY) {
             throw new Error('OPENAI_API_KEY not configured');
         }
@@ -1222,7 +1257,10 @@ MEMORY & LEARNING - MANDATORY:
             tool_called: 'none',
             validation_passed: true,
             temperature_used: 0.8,
-            tokens_used: usageTokens
+            tokens_used: usageTokens,
+            request_timestamp_ms: request_timestamp,
+            request_delta_ms,
+            rapid_duplicate_flagged: is_rapid_duplicate
         };
 
         // Store AI response with execution metadata
@@ -1298,6 +1336,21 @@ MEMORY & LEARNING - MANDATORY:
             }
         }
 
+        // Update SessionContext with temporal tracking
+        if (sessionContext) {
+            await base44.asServiceRole.entities.SessionContext.update(sessionContext.id, {
+                last_request_ts: request_timestamp,
+                last_activity_ts: request_timestamp
+            });
+        } else {
+            await base44.asServiceRole.entities.SessionContext.create({
+                session_id,
+                lane_id: user.email,
+                last_request_ts: request_timestamp,
+                last_activity_ts: request_timestamp
+            });
+        }
+
         return Response.json({
             reply: aiResponse,
             session: session_id,
@@ -1307,7 +1360,12 @@ MEMORY & LEARNING - MANDATORY:
             context_seed: rotationNeeded ? contextSeed : null,
             current_tokens: currentTokens,
             active_lane: activeLane,
-            lane_count: lanes.length
+            lane_count: lanes.length,
+            temporal_metadata: {
+                request_timestamp_ms: request_timestamp,
+                request_delta_ms,
+                rapid_duplicate: is_rapid_duplicate
+            }
         });
 
     } catch (error) {
