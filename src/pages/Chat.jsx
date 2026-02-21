@@ -107,10 +107,25 @@ export default function Chat() {
           return;
         }
 
-        // For authenticated users - check if logged in
-        const currentUser = await base44.auth.me();
+        // For authenticated users - verify authentication
+        const isAuthenticated = await base44.auth.isAuthenticated();
         if (!mounted) return;
         
+        if (!isAuthenticated) {
+          // Not logged in - become guest
+          const guestUser = {
+            full_name: 'Guest User',
+            email: `guest_${Date.now()}@caos.local`,
+            isGuest: true
+          };
+          localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
+          setUser(guestUser);
+          setDataLoaded(true);
+          return;
+        }
+        
+        const currentUser = await base44.auth.me();
+        if (!mounted) return;
         setUser(currentUser);
 
         // Load conversations for this user
@@ -148,21 +163,31 @@ export default function Chat() {
         }
 
         setDataLoaded(true);
-      } catch (error) {
+        } catch (error) {
         console.error('Error loading user data:', error);
         if (!mounted) return;
-        
-        // Not authenticated - become guest instead of redirecting
-        const guestUser = {
-          full_name: 'Guest User',
-          email: `guest_${Date.now()}@caos.local`,
-          isGuest: true
-        };
-        localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-        localStorage.removeItem('base44_access_token');
-        setUser(guestUser);
-        setDataLoaded(true);
-      }
+
+        // Clear any stale guest data and retry authentication
+        localStorage.removeItem('caos_guest_user');
+
+        // If we have a token but failed to load, it might be expired
+        const hasToken = !!localStorage.getItem('base44_access_token');
+        if (hasToken) {
+          // Token exists but failed - likely expired, redirect to login
+          localStorage.removeItem('base44_access_token');
+          navigate('/');
+        } else {
+          // No token - become guest
+          const guestUser = {
+            full_name: 'Guest User',
+            email: `guest_${Date.now()}@caos.local`,
+            isGuest: true
+          };
+          localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
+          setUser(guestUser);
+          setDataLoaded(true);
+        }
+        }
     };
 
     loadUserData();
@@ -603,7 +628,8 @@ export default function Chat() {
           role: 'user',
           content: messageText,
           file_urls: fileUrls,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          user_initials: user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : user?.email?.substring(0, 2).toUpperCase()
         };
         const aiMsg = {
           id: 'msg_' + Date.now() + '_ai',
@@ -631,7 +657,8 @@ export default function Chat() {
           role: 'user',
           content: messageText,
           file_urls: fileUrls,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          user_initials: user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : user?.email?.substring(0, 2).toUpperCase()
         });
         const aiMsg = await base44.entities.Message.create({
           conversation_id: conversationId,
