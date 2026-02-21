@@ -1618,6 +1618,11 @@ MEMORY & LEARNING - MANDATORY:
             } else {
                 aiResponse = `[MODE=GEN]\n${message.content}`;
             }
+
+            // Append receipt footer if debug mode (GEN path)
+            if (debugMode) {
+                aiResponse += `\n\n${formatReceiptFooter(retrievalReceipt)}`;
+            }
             }
 
         // Store user message
