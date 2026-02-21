@@ -1138,7 +1138,7 @@ MEMORY & LEARNING - MANDATORY:
                     /"([^"]+)"/,  // quoted phrases
                     /'([^']+)'/   // single-quoted phrases
                 ];
-                
+
                 for (const pattern of patterns) {
                     const match = input.match(pattern);
                     if (match && match[1]) {
@@ -1146,9 +1146,9 @@ MEMORY & LEARNING - MANDATORY:
                         break;
                     }
                 }
-                
+
                 console.log("🔍 [FILTER_TERMS]:", filterTerms);
-                
+
                 // VALIDATION: SEARCH route must have filter terms
                 if (!filterTerms || filterTerms.length === 0) {
                     console.error("🚨 [RETRIEVAL_VALIDATION_FAILURE]: EMPTY_FILTER_ON_SEARCH_ROUTE");
@@ -1160,6 +1160,13 @@ MEMORY & LEARNING - MANDATORY:
                     }, { status: 400 });
                 }
                 searchQueries = [filterTerms];
+            }
+
+            // ========== HARD GUARD: SEARCH CAN NEVER DEGRADE TO LIST ==========
+            if (route === "SEARCH_THREADS") {
+                // If somehow we reached here but route still says SEARCH, we MUST execute SEARCH
+                // Not LIST, not fallback, not full dump
+                console.log("🚨 [HARD_GUARD_ENFORCED]: route=SEARCH_THREADS, will execute search-only");
             }
 
             // MULTI_SEARCH MODE: Execute segmented searches for each topic
