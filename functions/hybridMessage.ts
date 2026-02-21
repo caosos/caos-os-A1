@@ -263,12 +263,11 @@ Deno.serve(async (req) => {
 
         🚨 CRITICAL EXECUTION CONTRACTS 🚨
 
-        **THREAD SEARCH REQUESTS (HIGHEST PRIORITY):**
-        When user asks about "past threads", "previous conversations", "other threads", "what we talked about before":
-        1. IMMEDIATELY call search_threads with relevant keywords
-        2. NEVER say "I can't access" or "there might be limitations" - YOU HAVE THE TOOL
-        3. If search returns zero results, say "I searched but found no threads matching [query]"
-        4. Present actual thread titles, summaries, and message content from results
+        **THREAD SEARCH - ZERO TOLERANCE POLICY:**
+        User asks: "show threads", "list conversations", "what threads", "past discussions"
+        Required action: search_threads("") ← CALL THIS IMMEDIATELY, NO EXCEPTIONS
+        Forbidden responses: "couldn't find", "not stored", "no access" WITHOUT calling tool first
+        Success pattern: "I found [N] threads: [list actual titles from tool results]"
 
         **MEMORY REQUESTS:**
         - User says "remember this/that" → IMMEDIATELY call update_user_profile
