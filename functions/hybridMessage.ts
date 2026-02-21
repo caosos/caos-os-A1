@@ -918,45 +918,63 @@ MEMORY & LEARNING - MANDATORY:
                 }
             ];
 
-            // Pattern-based routing: SEARCH overrides LIST when both detected
+            // Pattern-based routing: SEARCH overrides LIST (inversion of priority)
             const lower = input.toLowerCase();
             
-            // Filter query patterns (SEARCH_THREADS)
-            const isFilterQuery = /mentions of|threads about|threads that contain|contain|about|with|regarding|discussion|find|familiar with|which thread/.test(lower);
-            
-            // Explicit list-only patterns (LIST_THREADS)
+            // Explicit list-only patterns (LIST_THREADS) - LOWEST PRIORITY
             const isExplicitListQuery = 
                 /^list (my )?threads$/i.test(input.trim()) ||
                 /^show (my )?threads$/i.test(input.trim()) ||
                 /what threads do i have/i.test(lower) ||
                 /^show all threads$/i.test(input.trim());
             
-            // Topic phrase detection for fallback
-            const hasTopicPhrase = /"[^"]+"|'[^']+'|\b\w+\b.*in.*threads/.test(lower);
+            // Topic word detection (HIGHEST PRIORITY) - must override LIST
+            const topicWords = ['christmas', 'birthday', 'brookdale', 'maintenance', 'thanksgiving', 'anniversary', 'wedding', 'vacation', 'project', 'meeting', 'discussion'];
+            const hasTopicWords = topicWords.some(word => lower.includes(word));
             
-            // PRIORITY: SEARCH > LIST
+            // Multi-topic segmentation patterns
+            const multiTopicMatch = input.match(/about\s+(.+?)(?:\s+and\s+|\s*$)/i);
+            const topicsFromList = multiTopicMatch ? multiTopicMatch[1].split(/\s+and\s+/) : [];
+            
+            // Filter query patterns (SEARCH_THREADS)
+            const isFilterQuery = /mentions of|threads about|threads that contain|contain|about|with|regarding|discussion|find|familiar with|which thread|talk about|threads with/.test(lower);
+            
+            // PRIORITY INVERSION: Topic > Filter > List
             let isThreadListQuery;
             let route;
-            if (isFilterQuery) {
-                isThreadListQuery = false; // Route to SEARCH (via GEN with tool)
-                route = "SEARCH_THREADS";
-            } else if (isExplicitListQuery) {
-                isThreadListQuery = true; // Route to direct LIST retrieval
-                route = "LIST_THREADS";
-            } else if (hasTopicPhrase) {
-                isThreadListQuery = false; // Fallback to SEARCH
-                route = "SEARCH_THREADS";
-            } else {
-                isThreadListQuery = false; // Default to SEARCH (safer)
-                route = "SEARCH_THREADS";
-            }
+            let searchQueries = [];
             
-            console.log("🔀 [ROUTE_SELECTED]:", route);
+            if (hasTopicWords) {
+                // SEARCH has highest priority when topics detected
+                isThreadListQuery = false;
+                route = "SEARCH_THREADS";
+                // Segment into individual searches if multiple topics
+                if (topicsFromList.length > 1) {
+                    searchQueries = topicsFromList.map(t => t.trim()).filter(t => t.length > 0);
+                } else {
+                    // Extract all topic words mentioned
+                    searchQueries = topicWords.filter(word => lower.includes(word));
+                }
+                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (topic-driven)");
+                console.log("🔍 [SEARCH_QUERIES]:", searchQueries);
+            } else if (isFilterQuery) {
+                isThreadListQuery = false;
+                route = "SEARCH_THREADS";
+                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (filter query)");
+            } else if (isExplicitListQuery) {
+                isThreadListQuery = true;
+                route = "LIST_THREADS";
+                console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS (explicit request)");
+            } else {
+                isThreadListQuery = false;
+                route = "SEARCH_THREADS";
+                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (default)");
+            }
             
             // Extract filter terms for SEARCH route
             let filterTerms = "";
-            if (route === "SEARCH_THREADS") {
-                // Extract keywords after common patterns
+            if (route === "SEARCH_THREADS" && searchQueries.length === 0) {
+                // If no topic-based queries, try pattern-based extraction
                 const patterns = [
                     /mentions? of\s+([^,.;]+)/i,
                     /threads? about\s+([^,.;]+)/i,
@@ -989,6 +1007,7 @@ MEMORY & LEARNING - MANDATORY:
                         user_query: input
                     }, { status: 400 });
                 }
+                searchQueries = [filterTerms];
             }
 
             // RETRIEVAL MODE ENVELOPE: Direct database queries with structured responses
