@@ -77,6 +77,24 @@ Deno.serve(async (req) => {
             has_files: !!file_urls?.length,
             current_lane
         }));
+        
+        // RETRIEVAL RECEIPTS LOG (P0 - blocks debugging without transparency)
+        const retrievalReceipt = {
+            request_id,
+            timestamp: request_timestamp,
+            user_query_preview: input.substring(0, 80),
+            route_selected: null,
+            intent_reason: null,
+            filter_terms: [],
+            tool_called: false,
+            tool_name: null,
+            tool_args: null,
+            result_count: 0,
+            formatter_used: null,
+            report_object_generated: false,
+            response_shape: null,
+            validation_status: 'PENDING'
+        };
 
         // Load or create SessionContext for temporal tracking
         let sessionContext;
