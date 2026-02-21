@@ -1275,27 +1275,43 @@ MEMORY & LEARNING - MANDATORY:
                                 };
                             }));
 
-                            // Build deterministic transparency envelope for SEARCH mode
+                            // Build deterministic Retrieval Report Object
                             const titles = results.map(r => r.title).filter(Boolean);
                             const matchCount = results.length;
                             const matchType = matchCount > 0 ? (titles.some(t => t.toLowerCase() === args.query.toLowerCase()) ? "exact" : "partial") : "none";
                             const confidence = matchCount === 0 ? "LOW" : matchCount === 1 ? "HIGH" : "MEDIUM";
                             
-                            const transparency = isListMode ? null : {
+                            // Determine which fields actually had matches
+                            const fieldsWithMatches = [...new Set(matchFields)];
+                            const scopeExplanation = `Searched ${fieldsWithMatches.length > 0 ? fieldsWithMatches.join(', ') : 'all metadata'} across ${conversations.length} total thread${conversations.length !== 1 ? 's' : ''}.`;
+                            
+                            // Build explanation of what didn't match
+                            const unmatchedCount = conversations.length - matchCount;
+                            const noMatchExplanation = unmatchedCount > 0 ? `${unmatchedCount} thread${unmatchedCount !== 1 ? 's' : ''} did not match "${args.query}".` : '';
+                            
+                            // Construct deterministic report (no LLM)
+                            const retrievalReport = {
+                                mode: "RETRIEVAL",
+                                type: "SEARCH_RESULTS",
+                                query_executed: args.query,
                                 search_scope: {
-                                    title_only: false,
-                                    content_indexed: true,
-                                    fields_searched: ["title", "summary", "keywords", "preview"]
+                                    fields_searched: fieldsWithMatches.length > 0 ? fieldsWithMatches : ["title", "summary", "keywords", "preview"],
+                                    total_threads_indexed: conversations.length,
+                                    content_indexed: true
                                 },
-                                query_terms: args.query,
-                                match_summary: {
-                                    match_count: matchCount,
-                                    match_type: matchType,
+                                match_results: {
+                                    count: matchCount,
+                                    type: matchType,
                                     confidence: confidence,
-                                    match_fields: [...new Set(matchFields)]
+                                    matches: titles
                                 },
-                                results: titles,
-                                next_step: matchCount > 0 ? "Reply with thread title to open it." : `No threads matched '${args.query}'. Try different terms or 'list my threads' for complete list.`
+                                explanation: {
+                                    what_searched: scopeExplanation,
+                                    what_matched: matchCount > 0 ? `Found ${matchCount} thread${matchCount !== 1 ? 's' : ''} with "${args.query}" in ${fieldsWithMatches.join(', ')}.` : `No threads matched "${args.query}".`,
+                                    what_didnt_match: noMatchExplanation,
+                                    confidence_level: confidence === "HIGH" ? "Exact or single match found." : confidence === "MEDIUM" ? "Multiple partial matches found." : "No matches found."
+                                },
+                                next_step: matchCount > 0 ? "Reply with a thread title to open it." : `Try different terms, or use 'list my threads' to see your complete thread list.`
                             };
 
                             toolResult = {
@@ -1304,20 +1320,8 @@ MEMORY & LEARNING - MANDATORY:
                                 found: results.length,
                                 total_threads_searched: conversations.length,
                                 query: args.query || "(all threads - list mode)",
-                                transparency: transparency,
-                                threads: results,
-                                // Structured envelope for SEARCH
-                                ...(isListMode ? {} : {
-                                    search_envelope: {
-                                        mode: "RETRIEVAL",
-                                        type: "SEARCH_RESULTS",
-                                        search_scope: transparency.search_scope,
-                                        query_terms: transparency.query_terms,
-                                        match_summary: transparency.match_summary,
-                                        results: titles,
-                                        next_step: transparency.next_step
-                                    }
-                                })
+                                retrieval_report: retrievalReport,
+                                threads: results
                             };
                         } catch (error) {
                             toolResult = {
