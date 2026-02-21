@@ -961,11 +961,13 @@ MEMORY & LEARNING - MANDATORY:
             let isThreadListQuery;
             let route;
             let searchQueries = [];
+            let intentReason = "";
             
             if (hasTopicWords) {
                 // SEARCH has highest priority when topics detected
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
+                intentReason = "topic-driven";
                 // Segment into individual searches if multiple topics
                 if (topicsFromList.length > 1) {
                     searchQueries = topicsFromList.map(t => t.trim()).filter(t => t.length > 0);
@@ -978,16 +980,23 @@ MEMORY & LEARNING - MANDATORY:
             } else if (isFilterQuery) {
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
+                intentReason = "filter-query";
                 console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (filter query)");
             } else if (isExplicitListQuery) {
                 isThreadListQuery = true;
                 route = "LIST_THREADS";
+                intentReason = "explicit-list-request";
                 console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS (explicit request)");
             } else {
                 isThreadListQuery = false;
                 route = "SEARCH_THREADS";
+                intentReason = "default-fallback";
                 console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (default)");
             }
+            
+            // Record route selection in receipt
+            retrievalReceipt.route_selected = route;
+            retrievalReceipt.intent_reason = intentReason;
             
             // Extract filter terms for SEARCH route
             let filterTerms = "";
