@@ -19,13 +19,80 @@ function simpleHash(str) {
 }
 
 Deno.serve(async (req) => {
-    try {
-        const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+          try {
+              const base44 = createClientFromRequest(req);
+              const user = await base44.auth.me();
 
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+              if (!user) {
+                  return Response.json({ error: 'Unauthorized' }, { status: 401 });
+              }
+
+              const timestamp = Date.now();
+              const body = await req.json();
+              const { input } = body;
+
+              // ========== PIPELINE EXECUTION ==========
+
+              // STAGE 1: Resolve Intent
+              const intentResult = resolveIntent({
+                  userMessage: input,
+                  timestamp,
+                  userEmail: user.email
+              });
+
+              console.log('📊 [INTENT_RESULT]', JSON.stringify(intentResult));
+
+              // STAGE 2: Route Tool
+              const routeResult = routeTool(intentResult);
+
+              console.log('🧭 [ROUTE_RESULT]', JSON.stringify(routeResult));
+
+              // STAGE 3: Execute Tool
+              let toolResult = null;
+              try {
+                  if (routeResult.requiresTool) {
+                      toolResult = await executeTool(routeResult, intentResult, base44);
+                  }
+              } catch (execError) {
+                  console.error('🚨 [EXECUTION_FAILED]', execError);
+                  return Response.json(execError, { status: 500 });
+              }
+
+              // STAGE 4: Format Result
+              let formattedResult;
+              try {
+                  formattedResult = formatResult(routeResult, toolResult);
+              } catch (formatError) {
+                  console.error('🚨 [FORMAT_FAILED]', formatError);
+                  return Response.json(formatError, { status: 500 });
+              }
+
+              // STAGE 5: Apply Cognitive Layer
+              const finalResponse = applyCognitiveLayer(formattedResult);
+
+              // Log pipeline receipt
+              console.log('✅ [PIPELINE_RECEIPT]', JSON.stringify({
+                  intent: intentResult.intent,
+                  route: routeResult.route,
+                  formatter: routeResult.formatter,
+                  match_count: toolResult?.count || 0,
+                  timestamp
+              }));
+
+              return Response.json({
+                  reply: finalResponse.content,
+                  mode: finalResponse.mode,
+                  session: body.session_id
+              });
+
+          } catch (error) {
+              console.error('🔥 [PIPELINE_CRITICAL_ERROR]', error);
+              return Response.json({
+                  error: 'PIPELINE_FAILURE',
+                  details: error.message
+              }, { status: 500 });
+          }
+      });
 
         // Load user profile for persistent context
         let userProfile = null;
