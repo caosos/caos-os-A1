@@ -1069,6 +1069,14 @@ MEMORY & LEARNING - MANDATORY:
 
                     console.log("🔍 RETURNING_RESPONSE:", aiResponse);
                     console.log("🔍 RESPONSE_ENVELOPE:", JSON.stringify(responseEnvelope));
+                    
+                    // Update receipt for LIST_THREADS path
+                    retrievalReceipt.tool_called = false;
+                    retrievalReceipt.result_count = threadTitles.length;
+                    retrievalReceipt.formatter_used = "LIST_FORMATTER";
+                    retrievalReceipt.report_object_generated = false;
+                    retrievalReceipt.response_shape = "LIST_ONLY";
+                    retrievalReceipt.validation_status = "SUCCESS";
 
                     // Store user message
                     const now = new Date();
