@@ -482,19 +482,23 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       const savedVoice = localStorage.getItem('caos_voice_preference_message') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
+      console.log('TTS: Starting speech generation...');
       const response = await base44.functions.invoke('textToSpeech', {
         text: cleanText,
         voice: savedVoice,
         speed: savedRate
       });
 
+      console.log('TTS: Response received:', response);
+
       if (!response || response.status !== 200) {
-        console.error('TTS error:', response);
-        throw new Error('TTS failed');
+        console.error('TTS error - Invalid response:', response);
+        throw new Error(`TTS failed: ${response?.data?.error || 'Unknown error'}`);
       }
 
-      // Response.data is already an ArrayBuffer from the backend function
+      console.log('TTS: Creating audio blob from response data...');
       const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      console.log('TTS: Blob created, size:', audioBlob.size);
       
       clearInterval(progressInterval);
       setGenerationProgress(95);
@@ -506,6 +510,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       
       setGenerationProgress(100);
 
+      console.log('TTS: Creating Audio object from URL...');
       const audio = new Audio(audioUrl);
       globalAudioInstance = audio;
       audioRef.current = audio;
@@ -516,6 +521,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       };
 
       const cleanup = () => {
+        console.log('TTS: Cleaning up audio...');
         setIsSpeaking(false);
         setIsPausedBySpeech(false);
         setAudioProgress(0);
@@ -524,7 +530,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       };
 
       audio.onended = cleanup;
-      audio.onerror = () => {
+      audio.onerror = (e) => {
+        console.error('TTS: Audio playback error:', e);
         cleanup();
         toast.error('Playback failed');
       };
@@ -534,13 +541,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsGenerating(false);
       setGenerationProgress(0);
       setIsSpeaking(true);
+      console.log('TTS: Starting audio playback...');
       await audio.play();
+      console.log('TTS: Audio playing successfully');
     } catch (error) {
+      console.error('TTS: Full error:', error);
+      console.error('TTS: Error message:', error.message);
+      console.error('TTS: Error stack:', error.stack);
       clearInterval(progressInterval);
       setIsSpeaking(false);
       setIsGenerating(false);
       setGenerationProgress(0);
-      toast.error('Failed to generate speech');
+      toast.error(`Failed to generate speech: ${error.message}`);
     }
   };
 

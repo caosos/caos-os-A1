@@ -238,17 +238,23 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const savedVoice = localStorage.getItem('caos_voice_preference_input') || 'nova';
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
+      console.log('TTS Input: Starting speech generation...');
       const response = await base44.functions.invoke('textToSpeech', {
         text: cleanText,
         voice: savedVoice,
         speed: savedRate
       });
 
+      console.log('TTS Input: Response received:', response);
+
       if (!response || response.status !== 200) {
-        throw new Error('TTS failed');
+        console.error('TTS Input error:', response);
+        throw new Error(`TTS failed: ${response?.data?.error || 'Unknown error'}`);
       }
 
+      console.log('TTS Input: Creating audio blob...');
       const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      console.log('TTS Input: Blob created, size:', audioBlob.size);
       const audioUrl = URL.createObjectURL(audioBlob);
 
       const audio = new Audio(audioUrl);
@@ -279,9 +285,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setIsSpeaking(true);
       await audio.play();
     } catch (error) {
-      console.error('TTS error:', error);
+      console.error('TTS Input: Full error:', error);
+      console.error('TTS Input: Error message:', error.message);
       setIsSpeaking(false);
-      toast.error('Failed to generate speech');
+      toast.error(`Failed to generate speech: ${error.message}`);
     }
   };
 
