@@ -240,21 +240,31 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
       console.log('TTS Input: Starting speech generation...');
-      const response = await base44.functions.invoke('textToSpeech', {
-        text: cleanText,
-        voice: savedVoice,
-        speed: savedRate
+      
+      // Use fetch directly to get binary audio data
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          voice: savedVoice,
+          speed: savedRate
+        })
       });
 
-      console.log('TTS Input: Response received:', response);
+      console.log('TTS Input: Response received, status:', response.status);
 
-      if (!response || response.status !== 200) {
-        console.error('TTS Input error:', response);
-        throw new Error(`TTS failed: ${response?.data?.error || 'Unknown error'}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('TTS Input error:', errorText);
+        throw new Error(`TTS failed: ${errorText}`);
       }
 
-      console.log('TTS Input: Creating audio blob...');
-      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      console.log('TTS Input: Converting to audio blob...');
+      const audioBlob = await response.blob();
       console.log('TTS Input: Blob created, size:', audioBlob.size);
       const audioUrl = URL.createObjectURL(audioBlob);
 
