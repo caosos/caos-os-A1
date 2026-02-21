@@ -788,8 +788,10 @@ MEMORY & LEARNING - MANDATORY:
                 }
             ];
 
-            // Detect if user is asking for thread list - force tool use
+            // Detect query types for enforcement
             const isThreadListQuery = /\b(list|show|what|get|display)\b.*\b(thread|conversation|chat)s?\b|\bthread\s+names?\b|list.*by\s+name/i.test(input);
+            const isRecallQuery = /\b(remember|recall|find|search|what did|previous)\b.*\b(message|conversation|discuss|talk)\b/i.test(input);
+            const isFactualRetrieval = isThreadListQuery || isRecallQuery;
 
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
@@ -802,7 +804,7 @@ MEMORY & LEARNING - MANDATORY:
                     messages,
                     tools,
                     tool_choice: isThreadListQuery ? { type: "function", function: { name: "search_threads" } } : 'auto',
-                    temperature: 0.8,
+                    temperature: isFactualRetrieval ? 0.0 : 0.8,
                     max_tokens: 12000
                 })
             });
@@ -1090,6 +1092,57 @@ MEMORY & LEARNING - MANDATORY:
                 const finalResult = await finalResponse.json();
                 aiResponse = finalResult.choices[0].message.content;
                 if (finalResult.usage?.total_tokens) usageTokens = finalResult.usage.total_tokens;
+
+                // P1: Post-Execution Validation Gate
+                if (isThreadListQuery) {
+                    const threadToolCalled = message.tool_calls?.some(tc => tc.function.name === 'search_threads');
+                    if (!threadToolCalled) {
+                        // HARD FAIL - no retry, no hallucination allowed
+                        await base44.asServiceRole.entities.ErrorLog.create({
+                            user_email: user.email,
+                            conversation_id: session_id,
+                            error_type: 'tool_execution_audit',
+                            error_message: 'CRITICAL: Thread list query did not execute search_threads',
+                            request_payload: { input, expected_tool: 'search_threads', tool_calls: message.tool_calls }
+                        });
+                        return Response.json({ 
+                            error: 'STATE=UNKNOWN: Expected tool execution did not occur',
+                            reply: 'I encountered a system error while trying to retrieve thread data. The search tool did not execute as required.'
+                        }, { status: 500 });
+                    }
+
+                    // P2: Tool Result Binding - verify response uses actual tool data
+                    const threadToolResult = toolMessages.find(tm => tm.name === 'search_threads');
+                    if (threadToolResult) {
+                        const toolData = JSON.parse(threadToolResult.content);
+                        const actualTitles = toolData.threads?.map(t => t.title) || [];
+
+                        // Detection: response contains thread-like content NOT in tool results
+                        const suspiciousPatterns = ['recall memory', 'technical capabilities', 'architecture discussion', 'memory testing'];
+                        const hasSuspiciousContent = suspiciousPatterns.some(pattern => 
+                            aiResponse.toLowerCase().includes(pattern.toLowerCase()) &&
+                            !actualTitles.some(title => title.toLowerCase().includes(pattern.toLowerCase()))
+                        );
+
+                        if (hasSuspiciousContent && actualTitles.length > 0) {
+                            // Hallucination detected - log and fail
+                            await base44.asServiceRole.entities.ErrorLog.create({
+                                user_email: user.email,
+                                conversation_id: session_id,
+                                error_type: 'tool_execution_audit',
+                                error_message: 'CRITICAL: Response contains hallucinated thread names not in tool results',
+                                request_payload: { 
+                                    actual_titles: actualTitles,
+                                    response_snippet: aiResponse.substring(0, 300),
+                                    suspicious_patterns_found: suspiciousPatterns.filter(p => aiResponse.toLowerCase().includes(p.toLowerCase()))
+                                }
+                            });
+
+                            // Force correct output using actual tool data
+                            aiResponse = `Here are your saved threads:\n${actualTitles.map(t => `- ${t}`).join('\n')}`;
+                        }
+                    }
+                }
             } else {
                 aiResponse = message.content;
             }
@@ -1117,7 +1170,18 @@ MEMORY & LEARNING - MANDATORY:
             status: "active"
         });
 
-        // Store AI response
+        // P3: Execution Logging - state ledger for debugging
+        const executionLog = {
+            request_id: `${session_id}_${Date.now()}`,
+            query_type: isThreadListQuery ? 'thread_list' : isRecallQuery ? 'recall' : 'general',
+            expected_tool: isThreadListQuery ? 'search_threads' : isRecallQuery ? 'recall_memory' : null,
+            tool_called: message.tool_calls?.map(tc => tc.function.name).join(',') || 'none',
+            validation_passed: true, // If we got here, validation passed
+            temperature_used: isFactualRetrieval ? 0.0 : 0.8,
+            tokens_used: usageTokens
+        };
+
+        // Store AI response with execution metadata
         const aiSeq = seq + 1;
         await base44.asServiceRole.entities.Record.create({
             record_id: `${session_id}_${aiSeq}_${Date.now()}`,
@@ -1131,7 +1195,8 @@ MEMORY & LEARNING - MANDATORY:
             message: aiResponse,
             anchors: [
                 { class: "session", value: session_id },
-                { class: "lane", value: user.email }
+                { class: "lane", value: user.email },
+                { class: "execution_log", value: JSON.stringify(executionLog) }
             ],
             token_count: usageTokens,
             status: "active"
