@@ -624,6 +624,7 @@ export default function Chat() {
           return updated;
         });
       } else {
+        const tempConvoId = conversationId; // Capture for closure
         const userMsg = await base44.entities.Message.create({
           conversation_id: conversationId,
           role: 'user',
@@ -644,7 +645,7 @@ export default function Chat() {
 
         setMessages(prev => ({
           ...prev,
-          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
+          [tempConvoId]: [...(prev[tempConvoId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
         }));
       }
 
@@ -729,13 +730,18 @@ export default function Chat() {
 
       // KEEP the temp message visible so user sees what happened
       // Mark it as failed instead of removing it
-      if (conversationId) {
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: (prev[conversationId] || []).map(m => 
-            m.id === tempId ? { ...m, failed: true, error: errorMessage } : m
-          )
-        }));
+      const finalConvoId = conversationId || currentConversationId;
+      if (finalConvoId) {
+        setMessages(prev => {
+          const convoMessages = prev[finalConvoId] || [];
+          const updatedMessages = convoMessages.map(m => 
+            m.id && m.id.startsWith('temp_') ? { ...m, failed: true, error: errorMessage } : m
+          );
+          return {
+            ...prev,
+            [finalConvoId]: updatedMessages
+          };
+        });
       }
     } finally {
       setIsLoading(false);
