@@ -991,7 +991,7 @@ MEMORY & LEARNING - MANDATORY:
                 }
             }
 
-            // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
+            // RETRIEVAL MODE ENVELOPE: Direct database queries with structured responses
             if (isThreadListQuery) {
                 console.log("🔍 RETRIEVAL_BRANCH_ENTERED");
                 console.log("🔍 Input:", input);
@@ -1004,21 +1004,25 @@ MEMORY & LEARNING - MANDATORY:
                     );
 
                     console.log("🔍 DB_RESULT - Found conversations:", conversations.length);
-                    console.log("🔍 DB_RESULT - Raw data:", JSON.stringify(conversations.slice(0, 3)));
 
                     const threadTitles = conversations.map(c => c.title).filter(Boolean);
 
                     console.log("🔍 TITLES_EXTRACTED:", threadTitles);
 
-                    // Format response in CODE, not via LLM
-                    let aiResponse;
-                    if (threadTitles.length === 0) {
-                        aiResponse = "[MODE=RETRIEVAL]\nI searched and found no saved threads yet.";
-                    } else {
-                        aiResponse = `[MODE=RETRIEVAL]\nHere are your saved threads:\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
-                    }
+                    // Build structured LIST response
+                    const responseEnvelope = {
+                        mode: "RETRIEVAL",
+                        type: "COMPLETE_THREAD_LIST",
+                        results: threadTitles
+                    };
+
+                    // Format for display
+                    const aiResponse = threadTitles.length === 0
+                        ? "[MODE=RETRIEVAL]\nNo saved threads found."
+                        : `[MODE=RETRIEVAL]\nComplete thread list (${threadTitles.length}):\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
 
                     console.log("🔍 RETURNING_RESPONSE:", aiResponse);
+                    console.log("🔍 RESPONSE_ENVELOPE:", JSON.stringify(responseEnvelope));
 
                     // Store user message
                     const now = new Date();
