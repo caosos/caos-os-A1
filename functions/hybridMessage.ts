@@ -1042,54 +1042,55 @@ MEMORY & LEARNING - MANDATORY:
             // Filter query patterns (SEARCH_THREADS)
             const isFilterQuery = /mentions of|threads about|threads that contain|contain|about|with|regarding|discussion|find|familiar with|which thread|talk about|threads with/.test(lower);
             
-            // PRIORITY ROUTING: MULTI_SEARCH > SEARCH > LIST
+            // PRIORITY ROUTING: MULTI_SEARCH > SEARCH > LIST (using extracted topics)
             let isThreadListQuery;
             let isMultiSearchQuery;
             let route;
             let searchQueries = [];
             let intentReason = "";
-            
-            if (isMultiTopicQuery && segmentedTopics.length > 1) {
-                // MULTI_SEARCH: highest priority when multiple distinct topics detected
-                isMultiSearchQuery = true;
-                isThreadListQuery = false;
-                route = "MULTI_SEARCH";
-                searchQueries = segmentedTopics;
-                intentReason = "multi-topic-segmented";
-                console.log("🔀 [ROUTE_SELECTED]: MULTI_SEARCH (multi-topic)");
-                console.log("🔍 [SEGMENTED_TOPICS]:", searchQueries);
-            } else if (hasTopicWords) {
-                // SEARCH: single topic or filter-based
-                isMultiSearchQuery = false;
-                isThreadListQuery = false;
-                route = "SEARCH_THREADS";
-                intentReason = "topic-driven";
-                searchQueries = topicWords.filter(word => lower.includes(word));
-                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (topic-driven)");
-                console.log("🔍 [SEARCH_QUERIES]:", searchQueries);
-            } else if (isFilterQuery) {
-                isMultiSearchQuery = false;
-                isThreadListQuery = false;
-                route = "SEARCH_THREADS";
-                intentReason = "filter-query";
-                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (filter query)");
+
+            if (segmentedTopics.length > 1) {
+              // MULTI_SEARCH: multiple distinct topics extracted
+              isMultiSearchQuery = true;
+              isThreadListQuery = false;
+              route = "MULTI_SEARCH";
+              searchQueries = segmentedTopics;
+              intentReason = "multi-topic-extracted";
+              console.log("🔀 [ROUTE_SELECTED]: MULTI_SEARCH");
+              console.log("🔍 [TOPICS]:", searchQueries);
+            } else if (segmentedTopics.length === 1) {
+              // SEARCH: single topic extracted
+              isMultiSearchQuery = false;
+              isThreadListQuery = false;
+              route = "SEARCH_THREADS";
+              searchQueries = segmentedTopics;
+              intentReason = "single-topic-extracted";
+              console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS");
+              console.log("🔍 [TOPIC]:", searchQueries[0]);
             } else if (isExplicitListQuery) {
-                isMultiSearchQuery = false;
-                isThreadListQuery = true;
-                route = "LIST_THREADS";
-                intentReason = "explicit-list-request";
-                console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS (explicit request)");
+              // LIST: explicit "list my threads" pattern
+              isMultiSearchQuery = false;
+              isThreadListQuery = true;
+              route = "LIST_THREADS";
+              intentReason = "explicit-list-request";
+              console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS");
             } else {
-                isMultiSearchQuery = false;
-                isThreadListQuery = false;
-                route = "SEARCH_THREADS";
-                intentReason = "default-fallback";
-                console.log("🔀 [ROUTE_SELECTED]: SEARCH_THREADS (default)");
+              // Default: treat as LIST fallback
+              isMultiSearchQuery = false;
+              isThreadListQuery = true;
+              route = "LIST_THREADS";
+              intentReason = "no-topics-extracted";
+              console.log("🔀 [ROUTE_SELECTED]: LIST_THREADS (default)");
             }
-            
+
             // Record route selection in receipt
             retrievalReceipt.route_selected = route;
             retrievalReceipt.intent_reason = intentReason;
+
+            // Debug: append extractor result to receipt if debug mode
+            if (debugMode) {
+              retrievalReceipt.extractor_debug = extractionDebug;
+            }
             
             // Extract filter terms for SEARCH route
             let filterTerms = "";
