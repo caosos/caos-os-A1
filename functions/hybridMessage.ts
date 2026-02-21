@@ -85,55 +85,14 @@ Deno.serve(async (req) => {
                   session: body.session_id
               });
 
-          } catch (error) {
+              } catch (error) {
               console.error('🔥 [PIPELINE_CRITICAL_ERROR]', error);
               return Response.json({
                   error: 'PIPELINE_FAILURE',
                   details: error.message
               }, { status: 500 });
-          }
-      });
-
-        // Load user profile for persistent context
-        let userProfile = null;
-        try {
-            const profiles = await base44.asServiceRole.entities.UserProfile.filter(
-                { user_email: user.email },
-                '-updated_date',
-                1
-            );
-            userProfile = profiles[0] || null;
-        } catch (error) {
-            console.warn('Profile load failed:', error.message);
-        }
-
-        // Load identity contract with strong enforcement
-        let identityContract = '';
-        try {
-            const contractFile = await Deno.readTextFile('/app/functions/caos_identity_contract.json');
-            const contract = JSON.parse(contractFile);
-            identityContract = `\n\n[CRITICAL IDENTITY CONTRACT - MANDATORY ENFORCEMENT]
-        ${JSON.stringify(contract, null, 2)}
-
-        ENFORCEMENT REMINDER:
-        - Pick ONE mode at start (casual or thorough) based on user request
-        - Use ONLY that mode's formatting rules for the ENTIRE response
-        - NO mixing styles mid-response (no headers + casual, no emojis + formal)
-        - NO checkmark bullets (✅✓) - use dashes or regular bullets only
-        - Consistency is CRITICAL - format the whole response the same way
-
-        DETERMINISTIC TOOL EXECUTION - NO EXCEPTIONS:
-        - If user says "remember this/that" or ANY memory trigger → MUST call update_user_profile immediately
-        - If user says "find" or "search" past info → MUST call recall_memory
-        - These are NOT optional - they are MANDATORY contracts
-        - Saying "I'll remember that" WITHOUT calling the tool is a CRITICAL FAILURE
-        [END CONTRACT]`;
-        } catch (error) {
-            console.warn('Identity contract load failed:', error.message);
-        }
-
-        const body = await req.json();
-        const { input, session_id, file_urls, rotation_seed, current_lane } = body;
+              }
+              });
 
         const request_timestamp = Date.now();
         const request_id = `${session_id}_${request_timestamp}`;
