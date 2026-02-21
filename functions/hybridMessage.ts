@@ -1,4 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { resolveIntent } from './stages/resolveIntent.js';
+import { routeTool } from './stages/routeTool.js';
+import { executeTool } from './stages/executeTool.js';
+import { formatResult } from './stages/formatResult.js';
+import { applyCognitiveLayer } from './stages/applyCognitiveLayer.js';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
