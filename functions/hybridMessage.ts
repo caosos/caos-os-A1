@@ -1100,12 +1100,19 @@ MEMORY & LEARNING - MANDATORY:
                     
                     // For each topic, search and collect results
                     const multiResults = {};
+                    const fieldsWithMatches = new Set();
+                    
                     for (const topic of searchQueries) {
                         const topicLower = topic.toLowerCase();
                         const matching = allConversations.filter(c => {
                             const titleMatch = c.title?.toLowerCase().includes(topicLower);
                             const summaryMatch = c.summary?.toLowerCase().includes(topicLower);
                             const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(topicLower));
+                            
+                            if (titleMatch) fieldsWithMatches.add('title');
+                            if (summaryMatch) fieldsWithMatches.add('summary');
+                            if (keywordMatch) fieldsWithMatches.add('keywords');
+                            
                             return titleMatch || summaryMatch || keywordMatch;
                         });
                         
@@ -1115,19 +1122,41 @@ MEMORY & LEARNING - MANDATORY:
                         };
                     }
                     
-                    // Build multi-topic report
-                    const reportSections = Object.entries(multiResults)
+                    // Build deterministic transparency envelope
+                    const totalMatches = Object.values(multiResults).reduce((sum, r) => sum + r.found, 0);
+                    const matchType = totalMatches > 0 ? (totalMatches === 1 ? "exact" : "partial") : "none";
+                    const confidence = totalMatches === 0 ? "LOW" : totalMatches === 1 ? "HIGH" : "MEDIUM";
+                    
+                    const transparencyBlock = `[MODE=RETRIEVAL]
+SEARCH_SCOPE:
+- Fields searched: ${[...fieldsWithMatches].join(', ') || 'title, summary, keywords'}
+- Total threads indexed: ${allConversations.length}
+- Search mode: MULTI_SEARCH
+
+QUERY_TERMS: [${searchQueries.map(t => `"${t}"`).join(', ')}]
+
+MATCH_SUMMARY:
+- Total found: ${totalMatches} thread${totalMatches !== 1 ? 's' : ''}
+- Match type: ${matchType}
+- Confidence: ${confidence}
+- Match fields: ${[...fieldsWithMatches].join(', ') || 'none'}
+
+RESULTS:`;
+
+                    const resultSections = Object.entries(multiResults)
                         .map(([topic, result]) => {
                             const threadList = result.threads.length === 0
-                                ? `(no matches)`
+                                ? `  (no matches)`
                                 : result.threads.map(t => `  - ${t}`).join('\n');
-                            return `${topic}: ${result.found} thread${result.found !== 1 ? 's' : ''}\n${threadList}`;
+                            return `\n${topic}: ${result.found} thread${result.found !== 1 ? 's' : ''}\n${threadList}`;
                         })
-                        .join('\n\n');
+                        .join('\n');
                     
-                    const multiReportResponse = `[MODE=RETRIEVAL]\nMULTI_SEARCH Results\n\n${reportSections}`;
+                    const nextStep = totalMatches > 0 
+                        ? '\n\nNEXT_STEP: Reply with a thread title to open it.'
+                        : '\n\nNEXT_STEP: Try different terms or "list my threads" for complete list.';
                     
-                    let aiResponse = multiReportResponse;
+                    let aiResponse = transparencyBlock + resultSections + nextStep;
                     
                     // Update receipt
                     retrievalReceipt.tool_called = false;
