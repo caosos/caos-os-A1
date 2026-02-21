@@ -2,6 +2,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
+// Simple hash function for payload/response fingerprinting
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(16);
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -53,6 +64,19 @@ Deno.serve(async (req) => {
         const { input, session_id, file_urls, rotation_seed, current_lane } = body;
 
         const request_timestamp = Date.now();
+        const request_id = `${session_id}_${request_timestamp}`;
+        const payload_hash = simpleHash(input + (file_urls?.join(',') || ''));
+
+        // PRE-EXECUTION DIAGNOSTIC LOG
+        console.log('🔍 [PRE-EXECUTION]', JSON.stringify({
+            request_id,
+            payload_hash,
+            request_timestamp,
+            session_id,
+            input_length: input.length,
+            has_files: !!file_urls?.length,
+            current_lane
+        }));
 
         // Load or create SessionContext for temporal tracking
         let sessionContext;
@@ -82,7 +106,13 @@ Deno.serve(async (req) => {
                 );
                 if (recentRecords.length > 0 && recentRecords[0].message === input) {
                     is_rapid_duplicate = true;
-                    console.warn(`RAPID_DUPLICATE_DETECTED: ${request_delta_ms}ms delta, identical input`);
+                    console.warn('🚨 [DUPLICATE_DETECTED]', JSON.stringify({
+                        request_id,
+                        payload_hash,
+                        request_delta_ms,
+                        duplicate_flag: true,
+                        previous_message: recentRecords[0].message.substring(0, 50)
+                    }));
                 }
             }
         }
@@ -900,6 +930,17 @@ MEMORY & LEARNING - MANDATORY:
                         status: "active"
                     });
 
+                    const retrieval_response_hash = simpleHash(aiResponse);
+
+                    console.log('✅ [POST-EXECUTION-RETRIEVAL]', JSON.stringify({
+                        request_id,
+                        payload_hash,
+                        response_hash: retrieval_response_hash,
+                        execution_time_ms: Date.now() - request_timestamp,
+                        mode: 'RETRIEVAL',
+                        threads_found: threadTitles.length
+                    }));
+
                     console.log("🔍 RETRIEVAL_COMPLETE - Returning to client");
 
                     return Response.json({
@@ -911,7 +952,12 @@ MEMORY & LEARNING - MANDATORY:
                         current_tokens: currentTokens,
                         active_lane: activeLane,
                         lane_count: lanes.length,
-                        retrieval_mode: true
+                        retrieval_mode: true,
+                        diagnostic: {
+                            request_id,
+                            payload_hash,
+                            response_hash: retrieval_response_hash
+                        }
                     });
                 } catch (error) {
                     console.error('🔥 RETRIEVAL_PIPELINE_FAILURE:', error);
@@ -1252,16 +1298,33 @@ MEMORY & LEARNING - MANDATORY:
 
         // P3: Execution Logging - state ledger for debugging
         const executionLog = {
-            request_id: `${session_id}_${Date.now()}`,
-            query_type: 'general',
+            request_id,
+            query_type: isFileGen || isImageGen ? 'generation' : 'general',
             tool_called: 'none',
             validation_passed: true,
             temperature_used: 0.8,
             tokens_used: usageTokens,
             request_timestamp_ms: request_timestamp,
             request_delta_ms,
-            rapid_duplicate_flagged: is_rapid_duplicate
+            rapid_duplicate_flagged: is_rapid_duplicate,
+            payload_hash
         };
+
+        const response_hash = simpleHash(aiResponse);
+
+        // POST-EXECUTION DIAGNOSTIC LOG
+        console.log('✅ [POST-EXECUTION]', JSON.stringify({
+            request_id,
+            payload_hash,
+            response_hash,
+            execution_time_ms: Date.now() - request_timestamp,
+            duplicate_flag: is_rapid_duplicate,
+            request_delta_ms: request_delta_ms || 'N/A',
+            mode: isFileGen ? 'FILE_GEN' : isImageGen ? 'IMAGE_GEN' : 'STANDARD',
+            tokens_used: usageTokens,
+            generated_files: generatedFiles.length,
+            response_length: aiResponse.length
+        }));
 
         // Store AI response with execution metadata
         const aiSeq = seq + 1;
@@ -1365,6 +1428,13 @@ MEMORY & LEARNING - MANDATORY:
                 request_timestamp_ms: request_timestamp,
                 request_delta_ms,
                 rapid_duplicate: is_rapid_duplicate
+            },
+            diagnostic: {
+                request_id,
+                payload_hash,
+                response_hash,
+                duplicate_flag: is_rapid_duplicate,
+                execution_time_ms: Date.now() - request_timestamp
             }
         });
 
