@@ -59,7 +59,25 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2B: Detect implicit list patterns (high confidence)
+    // STEP 2B: Detect SEARCH intent first (highest priority)
+    const searchKeywords = ['search', 'find', 'mention', 'mentions', 'contain', 'contains', 'about', 'run that search', 'in any of'];
+    const hasSearchIntent = searchKeywords.some(kw => userMessage.toLowerCase().includes(kw));
+
+    if (hasSearchIntent) {
+        // FORCE SEARCH_THREADS for any search-related query
+        // This prevents GEN mode from simulating search
+        const terms = extractTopicsFromSearchQuery(userMessage);
+        return {
+            intent: 'SEARCH_THREADS',
+            confidence: 1.0,
+            reason: 'search_keyword_detected',
+            extractedTerms: terms,
+            multiQuery: false,
+            forceRetrievalMode: true
+        };
+    }
+
+    // STEP 2C: Detect implicit list patterns (high confidence)
     const implicitListPatterns = [
         /^show (my )?threads/i,
         /^what threads do i have/i,
