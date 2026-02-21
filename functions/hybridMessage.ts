@@ -1275,28 +1275,49 @@ MEMORY & LEARNING - MANDATORY:
                                 };
                             }));
 
-                            // Build transparency envelope for SEARCH mode
+                            // Build deterministic transparency envelope for SEARCH mode
+                            const titles = results.map(r => r.title).filter(Boolean);
+                            const matchCount = results.length;
+                            const matchType = matchCount > 0 ? (titles.some(t => t.toLowerCase() === args.query.toLowerCase()) ? "exact" : "partial") : "none";
+                            const confidence = matchCount === 0 ? "LOW" : matchCount === 1 ? "HIGH" : "MEDIUM";
+                            
                             const transparency = isListMode ? null : {
                                 search_scope: {
-                                    search_depth: "title_and_metadata",
+                                    title_only: false,
+                                    content_indexed: true,
                                     fields_searched: ["title", "summary", "keywords", "preview"]
                                 },
-                                query_terms: searchLower || "",
+                                query_terms: args.query,
                                 match_summary: {
-                                    found: results.length,
-                                    match_type: results.length > 0 ? "partial" : "none",
-                                    confidence: results.length === 1 ? "HIGH" : results.length > 1 ? "MEDIUM" : "LOW",
+                                    match_count: matchCount,
+                                    match_type: matchType,
+                                    confidence: confidence,
                                     match_fields: [...new Set(matchFields)]
-                                }
+                                },
+                                results: titles,
+                                next_step: matchCount > 0 ? "Reply with thread title to open it." : `No threads matched '${args.query}'. Try different terms or 'list my threads' for complete list.`
                             };
 
                             toolResult = {
+                                mode: isListMode ? "LIST" : "SEARCH",
+                                type: isListMode ? "COMPLETE_THREAD_LIST" : "SEARCH_RESULTS",
                                 found: results.length,
                                 total_threads_searched: conversations.length,
                                 query: args.query || "(all threads - list mode)",
-                                mode: isListMode ? "LIST" : "SEARCH",
                                 transparency: transparency,
-                                threads: results
+                                threads: results,
+                                // Structured envelope for SEARCH
+                                ...(isListMode ? {} : {
+                                    search_envelope: {
+                                        mode: "RETRIEVAL",
+                                        type: "SEARCH_RESULTS",
+                                        search_scope: transparency.search_scope,
+                                        query_terms: transparency.query_terms,
+                                        match_summary: transparency.match_summary,
+                                        results: titles,
+                                        next_step: transparency.next_step
+                                    }
+                                })
                             };
                         } catch (error) {
                             toolResult = {
