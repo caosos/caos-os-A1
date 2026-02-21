@@ -852,6 +852,63 @@ MEMORY & LEARNING - MANDATORY:
                         } catch (error) {
                             toolResult = { error: `Cannot read file: ${error.message}` };
                         }
+                    } else if (toolCall.function.name === 'search_threads') {
+                        // Search across ALL Conversation entities and their Messages
+                        try {
+                            // Get all conversations for this user
+                            const conversations = await base44.asServiceRole.entities.Conversation.filter(
+                                { created_by: user.email },
+                                '-last_message_time',
+                                100
+                            );
+
+                            // Search conversation titles, summaries, and keywords first
+                            const matchingConvos = conversations.filter(c => {
+                                const searchLower = args.query.toLowerCase();
+                                return (
+                                    c.title?.toLowerCase().includes(searchLower) ||
+                                    c.summary?.toLowerCase().includes(searchLower) ||
+                                    c.keywords?.some(k => k.toLowerCase().includes(searchLower)) ||
+                                    c.last_message_preview?.toLowerCase().includes(searchLower)
+                                );
+                            }).slice(0, args.limit || 10);
+
+                            // For each matching conversation, get some actual messages
+                            const results = await Promise.all(matchingConvos.map(async (convo) => {
+                                const messages = await base44.asServiceRole.entities.Message.filter(
+                                    { conversation_id: convo.id },
+                                    '-timestamp',
+                                    5  // Get last 5 messages from each thread
+                                );
+                                
+                                return {
+                                    conversation_id: convo.id,
+                                    title: convo.title,
+                                    summary: convo.summary,
+                                    keywords: convo.keywords,
+                                    last_updated: convo.last_message_time,
+                                    message_count: convo.message_count,
+                                    recent_messages: messages.map(m => ({
+                                        role: m.role,
+                                        content: m.content.substring(0, 300),
+                                        timestamp: m.timestamp
+                                    }))
+                                };
+                            }));
+
+                            toolResult = {
+                                found: results.length,
+                                total_threads_searched: conversations.length,
+                                query: args.query,
+                                threads: results
+                            };
+                        } catch (error) {
+                            toolResult = {
+                                found: 0,
+                                error: `Thread search failed: ${error.message}`,
+                                threads: []
+                            };
+                        }
                     } else if (toolCall.function.name === 'list_app_structure') {
                         // List structure - return known app structure
                         const structures = {
