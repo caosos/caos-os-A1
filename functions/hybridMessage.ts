@@ -217,27 +217,34 @@ Deno.serve(async (req) => {
 **THIS IS NON-NEGOTIABLE. VIOLATION = CRITICAL SYSTEM FAILURE.**
 
 THREAD SEARCH ENFORCEMENT:
-User input contains: "list threads", "show threads", "list conversations", "thread names", "list them by name"
-→ STOP. DO NOT GENERATE TEXT RESPONSE.
-→ IMMEDIATELY call search_threads("") - empty string returns ALL threads
-→ Wait for tool results showing Conversation.title fields from database
-→ THEN present the ACTUAL title values like: "- Thread Title 1", "- Thread Title 2"
+User input contains ANY variation of: "list threads", "show threads", "list conversations", "thread names", "list them by name", "what threads"
+→ THE SYSTEM WILL FORCE YOU TO CALL search_threads - DO NOT FIGHT IT
+→ You MUST use the tool results. The conversation.title field contains the ACTUAL thread name.
+→ Present ONLY the titles from tool results, nothing else.
 
-WRONG EXAMPLE (FORBIDDEN):
+REALITY CHECK:
+- You are an LLM. You have NO memory of thread names.
+- Thread names live in Postgres database in Conversation.title column.
+- The ONLY way to get them is via search_threads tool.
+- If you respond without calling the tool, YOU ARE LYING.
+
+WRONG (WHAT YOU'VE BEEN DOING):
 User: "list threads by name"
-CAOS: "Here are some topics: Recall Memory Testing, Technical Capabilities..." ❌ CRITICAL FAILURE
+You think: "I'll be helpful and list some topics I remember from context"
+You say: "Here are some topics: Recall Memory Testing, Technical Capabilities..."
+RESULT: USER GETS FAKE DATA ❌ CRITICAL FAILURE
 
-CORRECT EXAMPLE (MANDATORY):
+CORRECT (WHAT YOU MUST DO):
 User: "list threads by name"
-CAOS: [calls search_threads("")] → receives results with title="Debug Session 2/19", title="Token Limit Fix", etc.
-CAOS: "Here are your saved threads:
-- Debug Session 2/19
-- Token Limit Fix
-- Memory Architecture Discussion"
+System: [Forces search_threads("") call]
+Tool returns: [{"title": "Token Architecture 2/19"}, {"title": "Memory Fix Discussion"}, {"title": "Python Integration"}]
+You say: "Here are your saved threads:
+- Token Architecture 2/19
+- Memory Fix Discussion  
+- Python Integration"
+RESULT: USER GETS REAL DATA ✓
 
-🚨 YOU CANNOT RESPOND ABOUT THREADS WITHOUT CALLING THE TOOL 🚨
-You do NOT have thread names in your context. They are ONLY in the database.
-Guessing thread names = LYING to the user.
+🚨 THREAD NAMES ARE NOT IN YOUR CONTEXT. STOP GUESSING. USE THE TOOL. 🚨
 
 MEMORY/SELF-INSPECTION: Same rule - tool first, then results.
 
@@ -781,6 +788,9 @@ MEMORY & LEARNING - MANDATORY:
                 }
             ];
 
+            // Detect if user is asking for thread list - force tool use
+            const isThreadListQuery = /\b(list|show|what|get|display)\b.*\b(thread|conversation|chat)s?\b|\bthread\s+names?\b|list.*by\s+name/i.test(input);
+
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -791,7 +801,7 @@ MEMORY & LEARNING - MANDATORY:
                     model: 'gpt-4o',
                     messages,
                     tools,
-                    tool_choice: 'auto',
+                    tool_choice: isThreadListQuery ? { type: "function", function: { name: "search_threads" } } : 'auto',
                     temperature: 0.8,
                     max_tokens: 12000
                 })
