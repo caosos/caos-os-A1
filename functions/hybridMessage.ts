@@ -788,10 +788,92 @@ MEMORY & LEARNING - MANDATORY:
                 }
             ];
 
-            // Detect query types for enforcement
+            // Detect query types for direct retrieval (bypass LLM)
             const isThreadListQuery = /\b(list|show|what|get|display)\b.*\b(thread|conversation|chat)s?\b|\bthread\s+names?\b|list.*by\s+name/i.test(input);
             const isRecallQuery = /\b(remember|recall|find|search|what did|previous)\b.*\b(message|conversation|discuss|talk)\b/i.test(input);
-            const isFactualRetrieval = isThreadListQuery || isRecallQuery;
+
+            // RETRIEVAL MODE ENVELOPE: Direct database queries, bypass LLM for output
+            if (isThreadListQuery) {
+                // Execute tool directly, format in code, return
+                try {
+                    const conversations = await base44.asServiceRole.entities.Conversation.filter(
+                        { created_by: user.email },
+                        '-last_message_time',
+                        100
+                    );
+
+                    const threadTitles = conversations.map(c => c.title).filter(Boolean);
+
+                    // Format response in CODE, not via LLM
+                    let aiResponse;
+                    if (threadTitles.length === 0) {
+                        aiResponse = "I searched and found no saved threads yet.";
+                    } else {
+                        aiResponse = `Here are your saved threads:\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
+                    }
+
+                    // Store user message
+                    const now = new Date();
+                    const seq = recentRecords.length > 0 ? Math.max(...recentRecords.map(r => r.seq)) + 1 : 1;
+
+                    await base44.asServiceRole.entities.Record.create({
+                        record_id: `${session_id}_${seq}_${now.getTime()}`,
+                        session_id,
+                        lane_id: user.email,
+                        tier: 'session',
+                        seq,
+                        ts_snapshot_iso: now.toISOString(),
+                        ts_snapshot_ms: now.getTime(),
+                        role: "user",
+                        message: input,
+                        anchors: [
+                            { class: "session", value: session_id },
+                            { class: "lane", value: user.email }
+                        ],
+                        token_count: Math.ceil(input.length / 4),
+                        status: "active"
+                    });
+
+                    // Store AI response
+                    const aiSeq = seq + 1;
+                    await base44.asServiceRole.entities.Record.create({
+                        record_id: `${session_id}_${aiSeq}_${Date.now()}`,
+                        session_id,
+                        lane_id: user.email,
+                        tier: 'session',
+                        seq: aiSeq,
+                        ts_snapshot_iso: new Date().toISOString(),
+                        ts_snapshot_ms: Date.now(),
+                        role: "assistant",
+                        message: aiResponse,
+                        anchors: [
+                            { class: "session", value: session_id },
+                            { class: "lane", value: user.email },
+                            { class: "retrieval_mode", value: "direct_query_bypass_llm" }
+                        ],
+                        token_count: Math.ceil(aiResponse.length / 4),
+                        status: "active"
+                    });
+
+                    return Response.json({
+                        reply: aiResponse,
+                        session: session_id,
+                        generatedFiles: [],
+                        usage_tokens: 0,
+                        rotation_needed: false,
+                        current_tokens: currentTokens,
+                        active_lane: activeLane,
+                        lane_count: lanes.length,
+                        retrieval_mode: true
+                    });
+                } catch (error) {
+                    console.error('Direct retrieval error:', error);
+                    return Response.json({ 
+                        error: 'STATE=UNKNOWN: Direct retrieval failed',
+                        reply: `I encountered a database error: ${error.message}`
+                    }, { status: 500 });
+                }
+            }
 
             // Inject deterministic mode instructions for factual queries
             if (isFactualRetrieval) {
