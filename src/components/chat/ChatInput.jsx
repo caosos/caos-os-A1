@@ -305,7 +305,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
         setIsTranscribing(true);
         try {
-          const { data } = await base44.functions.invoke('transcribeAudio', { audio: audioBlob });
+          // Convert blob to File for proper handling
+          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+          const { data } = await base44.functions.invoke('transcribeAudio', { audio: audioFile });
           if (data.success && data.text) {
             const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
