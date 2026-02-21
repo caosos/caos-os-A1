@@ -195,25 +195,69 @@ Deno.serve(async (req) => {
         const currentTokens = allLaneMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0);
         const rotationNeeded = currentTokens > 90000;
 
-        // Multi-topic detection + segmentation
-        const topicKeywords = ['christmas', 'birthday', 'brookdale', 'maintenance', 'thanksgiving', 'anniversary', 'wedding', 'vacation', 'project', 'meeting', 'discussion'];
-        const detectedTopics = topicKeywords.filter(topic => new RegExp(`\\b${topic}\\b`, 'i').test(input));
-        const isMultiTopicQuery = detectedTopics.length > 1 || /\s(and|,)\s/.test(input);
+        // CAOS:TOPIC.EXTRACTOR/v1.0 — Deterministic extraction (no LLM)
 
-        // Extract individual topics for segmentation
-        let segmentedTopics = [];
-        if (isMultiTopicQuery) {
-            // Try to parse explicit list patterns like "A and B" or "A, B, C"
-            const listMatch = input.match(/about\s+(.+?)(?:\s+in|\s*$|\.)/i);
-            if (listMatch) {
-                segmentedTopics = listMatch[1]
-                    .split(/\s+and\s+|,\s*/)
-                    .map(t => t.trim())
-                    .filter(t => t.length > 0);
-            } else {
-                // Fallback: use detected keyword topics
-                segmentedTopics = detectedTopics;
+        // STEP 1: Normalize input
+        const normalized = input.toLowerCase()
+            .replace(/[^a-z0-9,\s]/g, '')  // Remove punctuation except commas
+            .trim();
+
+        // STEP 2: Define retrieval triggers
+        const triggers = [
+            'talk about', 'mentions', 'mention', 'contain', 'contains', 'containing',
+            'related to', 'about', 'regarding', 'with', 'that talk about', 'that mention'
+        ];
+
+        // STEP 3: Extract topic segment
+        let topicSegment = '';
+        let extractionReason = 'none';
+
+        // Try comma-separated first
+        if (normalized.includes(',')) {
+            const commaPart = normalized.split('show me the thread')[1] || normalized;
+            topicSegment = commaPart;
+            extractionReason = 'comma_split';
+        } else if (normalized.includes(' and ')) {
+            // Try " and " split
+            const triggerMatch = triggers.find(t => normalized.includes(t));
+            if (triggerMatch) {
+                const idx = normalized.indexOf(triggerMatch);
+                topicSegment = normalized.substring(idx + triggerMatch.length);
+                extractionReason = 'and_split';
             }
+        } else {
+            // Try single trigger phrase extraction
+            const triggerMatch = triggers.find(t => normalized.includes(t));
+            if (triggerMatch) {
+                const idx = normalized.indexOf(triggerMatch);
+                topicSegment = normalized.substring(idx + triggerMatch.length);
+                extractionReason = 'trigger_phrase';
+            }
+        }
+
+        // STEP 4: Clean segments
+        const stopWords = new Set([
+            'threads', 'thread', 'show', 'me', 'the', 'names', 'of', 'that', 
+            'which', 'are', 'do', 'you', 'have', 'for', 'in', 'is', 'a', 'an'
+        ]);
+
+        let segmentedTopics = topicSegment
+            .split(/,|and/)
+            .map(t => t.trim())
+            .filter(t => t.length > 0)
+            .filter(t => !stopWords.has(t))
+            .filter((t, idx, arr) => arr.indexOf(t) === idx);  // Remove duplicates
+
+        // STEP 5: Final validation
+        const extractionDebug = {
+            normalized_query: normalized,
+            extracted_topics: segmentedTopics,
+            extraction_reason: extractionReason,
+            trigger_found: extractionReason !== 'none'
+        };
+
+        if (debugMode) {
+            console.log('🔍 [TOPIC_EXTRACTOR_DEBUG]', JSON.stringify(extractionDebug));
         }
 
         // Detect task type - route to OpenAI for file/image generation
