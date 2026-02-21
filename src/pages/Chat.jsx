@@ -381,6 +381,7 @@ export default function Chat() {
     const startTime = Date.now();
     let conversationId = null;
     let errorLogId = null;
+    let tempId = null;
     
     // Store message in localStorage as backup before sending
     const backupMessage = {
@@ -506,7 +507,7 @@ export default function Chat() {
       const messageText = content || '📎 File(s)';
       const fullMessage = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
       
-      const tempId = 'temp_' + Date.now();
+      tempId = 'temp_' + Date.now();
       setMessages(prev => ({
         ...prev,
         [conversationId]: [...(prev[conversationId] || []), {
