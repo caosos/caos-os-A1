@@ -21,6 +21,19 @@ const THREAD_LIST_PATTERNS = [
     /\- [a-zA-Z0-9][^\n]{5,}$/m  // Markdown bullet with thread title shape
 ];
 
+// Pattern detection for search simulation
+const SEARCH_SIMULATION_PATTERNS = [
+    /after an extensive search/i,
+    /search through/i,
+    /searched the content/i,
+    /found in your threads/i,
+    /based on my search/i,
+    /scanning your threads/i,
+    /looked through all/i,
+    /searching through all/i,
+    /searching for/i
+];
+
 function containsThreadListPattern(payload) {
     if (!payload || typeof payload !== 'string') return false;
     return THREAD_LIST_PATTERNS.some(pattern => pattern.test(payload));
