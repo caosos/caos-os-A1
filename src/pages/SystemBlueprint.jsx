@@ -21,80 +21,125 @@ export default function SystemBlueprint() {
         <div className="max-w-5xl mx-auto space-y-8 pb-8">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold mb-4">CAOS System Blueprint</h1>
-            <p className="text-xl text-blue-300">Complete Technical Specification - OpenAI w/ Multi-Lane Architecture</p>
-            <p className="text-sm text-gray-400 mt-2">Last Updated: Feb 20, 2026</p>
+            <p className="text-xl text-blue-300">Complete Technical Specification - Unified Governance Architecture</p>
+            <p className="text-sm text-gray-400 mt-2">Last Updated: Feb 22, 2026</p>
+            <p className="text-sm text-red-400 mt-1 font-bold">STABILIZATION PHASE: Deterministic execution, contract enforcement, fail-loudly discipline</p>
           </div>
 
           {/* ARCHITECTURE OVERVIEW */}
           <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">1. Architecture Overview</h2>
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">1. Architecture Overview - UNIFIED GOVERNANCE GATE</h2>
             
             <div className="space-y-4 text-gray-200">
-              <h3 className="text-xl font-semibold text-white">System Layers:</h3>
+              <h3 className="text-xl font-semibold text-white">10-Stage Deterministic Pipeline:</h3>
               
               <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
                 <pre className="text-sm overflow-x-auto">{`
-┌─────────────────────────────────────────────┐
-│           FRONTEND (React)                  │
-│  • Chat UI (multi-conversation)             │
-│  • Message Display + Error Handling         │
-│  • File Upload (images, docs, voice)        │
-│  • Token Meter (90K rotation trigger)       │
-└─────────────┬───────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│           FRONTEND (React + Base44)                             │
+│  • Mode Banner (RETRIEVAL | GEN | LIVE_WEB | FILE_SEARCH)      │
+│  • Receipt Drawer (claim verification, drift status)           │
+│  • Memory Dashboard (BeliefNodes, reaffirmation)               │
+│  • Drift Alert Modal (conflict resolution)                     │
+└─────────────┬───────────────────────────────────────────────────┘
               │
               ▼
-┌─────────────────────────────────────────────┐
-│      BACKEND FUNCTIONS (Deno)              │
-│                                             │
-│  ┌─────────────────────────────────────┐   │
-│  │   hybridMessage (MAIN)              │   │
-│  │   • Session + lane detection        │   │
-│  │   • Profile loading (persistent)    │   │
-│  │   • Multi-lane hot context          │   │
-│  │   • Seed generation at 90K tokens   │   │
-│  │   • OpenAI API coordination         │   │
-│  └─────────────┬───────────────────────┘   │
-│                │                            │
-│                ▼                            │
-│  ┌─────────────────────────────────────┐   │
-│  │   OpenAI API (gpt-4o)               │   │
-│  │   • Native tool calling             │   │
-│  │   • Vision support (images)         │   │
-│  │   • Web search via InvokeLLM        │   │
-│  │   • 128K context window per call    │   │
-│  └─────────────┬───────────────────────┘   │
-│                │                            │
-│                ▼                            │
-│  ┌─────────────────────────────────────┐   │
-│  │   TOOLS (OpenAI-executed)           │   │
-│  │   • search_internet                 │   │
-│  │   • recall_memory (full vault)      │   │
-│  │   • read_app_file                   │   │
-│  │   • update_user_profile             │   │
-│  │   • list_app_structure              │   │
-│  └─────────────────────────────────────┘   │
-│                                             │
-└─────────────┬───────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│      UNIFIED GOVERNANCE GATE (hybridMessage v2026-02-22)       │
+│                                                                 │
+│  STAGE 0: PRE-INFERENCE NORMALIZATION                          │
+│    └─ Apply lexical rules (chaos → CAOS)                       │
+│    └─ Clean STT artifacts                                      │
+│                                                                 │
+│  STAGE 1: INTENT RESOLUTION                                    │
+│    └─ Classify: LIST_THREADS | SEARCH_THREADS | GEN           │
+│    └─ Extract terms deterministically                          │
+│    └─ Drift guard: forceRetrievalMode enforcement             │
+│                                                                 │
+│  STAGE 2: MODE ASSIGNMENT                                      │
+│    └─ Map intent → mode (RETRIEVAL | GEN | LIVE_WEB...)       │
+│    └─ Verify capability in SessionManifest                     │
+│                                                                 │
+│  STAGE 3: TOOL ROUTING                                         │
+│    └─ Select route + formatter                                 │
+│    └─ Verify route ↔ mode consistency                         │
+│                                                                 │
+│  STAGE 4: MEMORY ACTIVATION (if enabled)                       │
+│    └─ Query BeliefNode records                                 │
+│    └─ Compute activation: recency × relevance                  │
+│    └─ Top-K selection (threshold: 0.35, top_k: 25)            │
+│                                                                 │
+│  STAGE 5: DRIFT CHECK (if memory active)                       │
+│    └─ Detect conflicts (contradiction, incompatible facts)     │
+│    └─ Status: PASS | ALERT | BLOCKED                           │
+│    └─ Log DriftEvent if severity ≥ HIGH                        │
+│                                                                 │
+│  STAGE 6: TOOL EXECUTION                                        │
+│    └─ Execute deterministic database queries                   │
+│    └─ Return executor contract: {ok, latency_ms, fingerprints}│
+│                                                                 │
+│  STAGE 7: RESULT FORMATTING                                    │
+│    └─ Apply formatter (LIST | SEARCH_REPORT | GEN)            │
+│    └─ Structure output with metadata                           │
+│                                                                 │
+│  STAGE 8: CLAIM VERIFICATION                                   │
+│    └─ Classify claims: OBSERVED | RETRIEVED | MEMORY | etc.   │
+│    └─ Enforce: GEN cannot produce RETRIEVED claims            │
+│                                                                 │
+│  STAGE 9: RECEIPT GENERATION                                   │
+│    └─ Aggregate execution metadata                             │
+│    └─ Build audit trail with request_id                        │
+│                                                                 │
+│  STAGE 10: COGNITIVE LAYER                                     │
+│    └─ If GEN: optional LLM expansion                           │
+│    └─ If RETRIEVAL: pass through (no modification)            │
+│    └─ Enforce: no citations in GEN, no search simulation      │
+│                                                                 │
+└─────────────┬───────────────────────────────────────────────────┘
               │
               ▼
-┌─────────────────────────────────────────────┐
-│        DATABASE (Base44 Entities)           │
-│  • Record (all messages w/ token_count)     │
-│  • Lane (hot context per topic)             │
-│  • UserProfile (persistent memory)          │
-│  • Conversation (thread metadata)           │
-│  • Message (UI layer)                       │
-│  • UserFile (attachments organized)         │
-│  • ErrorLog (failure tracking)              │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│        DATABASE (Base44 Entities)                               │
+│  CORE:                                                          │
+│  • Record (all messages w/ token_count)                         │
+│  • Lane (hot context per topic)                                 │
+│  • Conversation (thread metadata + title index)                 │
+│  • Message (UI layer)                                           │
+│                                                                 │
+│  GOVERNANCE:                                                    │
+│  • LexicalRule (normalization: chaos → CAOS)                   │
+│  • SessionManifest (capability contracts)                       │
+│  • Anchor (hash-chained first-class anchors)                   │
+│  • ThreadSnapshot (rotation integrity)                          │
+│  • DriftEvent (contract violations)                             │
+│  • RetrievalReceipt (LIST/SEARCH audit trail)                  │
+│  • ThreadToken + ThreadTokenMeta (title search index)          │
+│  • ConfigChangeLog (immutable config audit)                     │
+│                                                                 │
+│  MEMORY CONTINUITY (spec ready, not yet implemented):          │
+│  • BeliefNode (core/peripheral knowledge graph)                │
+│  • AmendmentChain (belief revision history)                    │
+│  • ReaffirmationLog (decay prevention)                         │
+└─────────────────────────────────────────────────────────────────┘
                 `}</pre>
+              </div>
+              
+              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30 mt-4">
+                <h3 className="text-lg font-semibold text-red-300 mb-3">🔴 CRITICAL: Contract Enforcement</h3>
+                <ul className="space-y-2 text-sm">
+                  <li><strong>GEN No Search:</strong> GEN mode cannot produce citations or simulate retrieval</li>
+                  <li><strong>Mode Discipline:</strong> Every response has exactly one mode (mutually exclusive)</li>
+                  <li><strong>Fail Loudly:</strong> No silent errors, no smoothing, explicit error propagation</li>
+                  <li><strong>Executor Contract:</strong> All tools return {'{ok, latency_ms, fingerprints}'}</li>
+                  <li><strong>Receipt Mandatory:</strong> Every request produces audit trail with request_id</li>
+                </ul>
               </div>
             </div>
           </section>
 
           {/* MESSAGE FLOW */}
           <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">2. Message Flow (Current Implementation)</h2>
+            <h2 className="text-3xl font-bold mb-6 text-blue-300">2. Message Flow - Unified Governance Gate Pipeline</h2>
             
             <div className="space-y-6">
               <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
@@ -119,26 +164,24 @@ const response = await fetch('http://YOUR_API/api/functions/hybridMessage', {
               </div>
 
               <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
-                <h3 className="text-lg font-semibold text-purple-300 mb-3">Step 2: Backend processes (hybridMessage)</h3>
+                <h3 className="text-lg font-semibold text-purple-300 mb-3">Step 2: Unified Governance Gate (10 stages)</h3>
                 <pre className="text-sm overflow-x-auto text-gray-200">{`
 1. Authenticate user (base44.auth.me())
-2. Load UserProfile (persistent memory across all threads)
-3. Load identity contract (response style enforcement)
-4. Detect active lane: ui, immigration, tokens, backend, news, general
-5. Load lane-specific context:
-   - Hot messages: Last 5 per lane
-   - Lane summary: Compressed warm context
-   - Recent cross-lane: 3 most recent messages
-6. Calculate token usage across all lanes
-7. IF > 90K tokens:
-   - Generate compressed seed (2-3K chars)
-   - Inject into new request as system message
-8. Build working context: profile + lane hot + recent
-9. Call OpenAI gpt-4o with native tools
-10. Store messages in Record entity with token counts
-11. Update Lane hot_messages (rolling window)
-12. Archive lane summary every 10 messages
-13. Return response to frontend
+2. Generate request_id (UUID) + start execution_state tracker
+3. STAGE 0: Normalize input (lexical rules, STT cleanup)
+4. STAGE 1: Resolve intent (LIST | SEARCH | GEN)
+5. STAGE 2: Assign mode (verify capability in manifest)
+6. STAGE 3: Route tool (select pipeline + formatter)
+7. STAGE 4: Activate memory (query BeliefNodes, compute scores)
+8. STAGE 5: Drift check (detect conflicts, block if critical)
+9. STAGE 6: Execute tool (deterministic DB query, contract-compliant)
+10. STAGE 7: Format result (structured output with metadata)
+11. STAGE 8: Verify claims (classify: OBSERVED | MEMORY | INFERRED)
+12. STAGE 9: Generate receipt (audit trail with fingerprints)
+13. STAGE 10: Cognitive layer (GEN expansion or pass-through)
+14. Store messages in Record entity with token counts
+15. Log DriftEvent if violations detected
+16. Return response with execution_state + receipt
                 `}</pre>
               </div>
 
