@@ -5,10 +5,22 @@ import { executeTool } from './stages/executeTool.js';
 import { formatResult } from './stages/formatResult.js';
 import { applyCognitiveLayer } from './stages/applyCognitiveLayer.js';
 import { normalizeInput } from './core/normalize.js';
+import { logDriftEvent } from './core/executorContract.js';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 Deno.serve(async (req) => {
+    const request_id = crypto.randomUUID();
+    const execution_state = {
+        request_id,
+        mode: null,
+        intent_detected: null,
+        route_selected: null,
+        executor_used: null,
+        status: 'STARTED',
+        started_at: Date.now()
+    };
+    
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
@@ -21,11 +33,11 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input: rawInput, session_id } = body;
 
-        console.log('🚀 [PIPELINE_START]', { input: rawInput.substring(0, 80), timestamp });
+        console.log('🚀 [PIPELINE_START]', { request_id, input: rawInput.substring(0, 80), timestamp });
 
         // STAGE 0: PRE-INFERENCE NORMALIZATION
         const input = await normalizeInput(rawInput, base44, user.email);
-        console.log('🧹 [NORMALIZED]', { original: rawInput.substring(0, 40), normalized: input.substring(0, 40) });
+        console.log('🧹 [NORMALIZED]', { request_id, original: rawInput.substring(0, 40), normalized: input.substring(0, 40) });
 
         // ========== STAGE 1: RESOLVE INTENT ==========
         const intentResult = resolveIntent({
@@ -34,28 +46,47 @@ Deno.serve(async (req) => {
             userEmail: user.email
         });
 
-        console.log('📊 [INTENT_RESULT]', JSON.stringify(intentResult));
+        execution_state.intent_detected = intentResult.intent;
+        console.log('📊 [INTENT_RESULT]', { request_id, intent: intentResult.intent, confidence: intentResult.confidence });
 
-        // HARD GUARD: If forceRetrievalMode = true, NO GEN fallback allowed
+        // DRIFT DETECTION: GEN with SEARCH intent
         if (intentResult.forceRetrievalMode && intentResult.intent !== 'SEARCH_THREADS') {
-            console.error('🚨 [ROUTE_VIOLATION]: forceRetrievalMode set but intent not SEARCH_THREADS');
+            await logDriftEvent(base44, {
+                session_id,
+                drift_type: 'manifest_violation',
+                severity: 'HIGH',
+                layer: 'resolveIntent',
+                details: { forceRetrievalMode: true, intent: intentResult.intent },
+                corrective_action: 'HARD_FAIL'
+            });
             throw new Error('ROUTE_VIOLATION: forceRetrievalMode requires SEARCH_THREADS intent');
         }
 
         // ========== STAGE 2: ROUTE TOOL ==========
         const routeResult = routeTool(intentResult);
 
-        console.log('🧭 [ROUTE_RESULT]', JSON.stringify({ route: routeResult.route, formatter: routeResult.formatter }));
+        execution_state.route_selected = routeResult.route;
+        console.log('🧭 [ROUTE_RESULT]', { request_id, route: routeResult.route, formatter: routeResult.formatter });
 
         // ========== STAGE 3: EXECUTE TOOL ==========
         let toolResult = null;
         try {
             if (routeResult.requiresTool) {
                 toolResult = await executeTool(routeResult, intentResult, base44, user);
+                execution_state.executor_used = toolResult?.executor || 'UNKNOWN';
             }
         } catch (execError) {
-            console.error('🚨 [EXECUTION_FAILED]', execError.message);
-            return Response.json({ error: execError.message || 'Execution failed' }, { status: 500 });
+            execution_state.status = 'EXECUTION_FAILED';
+            console.error('🚨 [EXECUTION_FAILED]', { request_id, error: execError.message });
+            await logDriftEvent(base44, {
+                session_id,
+                drift_type: 'tool_behavior_mismatch',
+                severity: 'HIGH',
+                layer: 'executeTool',
+                details: { error: execError.message, route: routeResult.route },
+                corrective_action: 'HARD_FAIL'
+            });
+            return Response.json({ error: execError.message || 'Execution failed', request_id }, { status: 500 });
         }
 
         // ========== STAGE 4: FORMAT RESULT ==========
@@ -63,8 +94,23 @@ Deno.serve(async (req) => {
         try {
             formattedResult = formatResult(routeResult, toolResult);
         } catch (formatError) {
-            console.error('🚨 [FORMAT_FAILED]', formatError.message);
-            return Response.json({ error: formatError.message || 'Format failed' }, { status: 500 });
+            execution_state.status = 'FORMAT_FAILED';
+            console.error('🚨 [FORMAT_FAILED]', { request_id, error: formatError.message });
+            return Response.json({ error: formatError.message || 'Format failed', request_id }, { status: 500 });
+        }
+
+        execution_state.mode = formattedResult.mode;
+
+        // DRIFT DETECTION: Mode mismatch
+        if (intentResult.intent === 'SEARCH_THREADS' && formattedResult.mode === 'GEN') {
+            await logDriftEvent(base44, {
+                session_id,
+                drift_type: 'tool_behavior_mismatch',
+                severity: 'CRITICAL',
+                layer: 'formatResult',
+                details: { intent: intentResult.intent, mode: formattedResult.mode },
+                corrective_action: 'MODE_CORRECTION_REQUIRED'
+            });
         }
 
         // ========== STAGE 5: APPLY COGNITIVE LAYER ==========
@@ -72,27 +118,51 @@ Deno.serve(async (req) => {
         try {
             finalResponse = applyCognitiveLayer(formattedResult);
         } catch (cogError) {
-            console.error('🚨 [COGNITIVE_LAYER_FAILED]', cogError.error || cogError.message);
-            return Response.json({ error: cogError.error || cogError.message }, { status: 500 });
+            execution_state.status = 'COGNITIVE_FAILED';
+            console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
+            
+            // DRIFT DETECTION: GEN/SEARCH boundary violation
+            if (cogError.error === 'ROUTE_VIOLATION_GEN_SEARCH' || cogError.error === 'PIPELINE_VIOLATION_GEN_LIST') {
+                await logDriftEvent(base44, {
+                    session_id,
+                    drift_type: 'unauthorized_memory_write',
+                    severity: 'CRITICAL',
+                    layer: 'applyCognitiveLayer',
+                    details: cogError,
+                    corrective_action: 'HARD_FAIL'
+                });
+            }
+            
+            return Response.json({ error: cogError.error || cogError.message, request_id }, { status: 500 });
         }
 
+        execution_state.status = 'SUCCESS';
+        execution_state.ended_at = Date.now();
+        execution_state.latency_ms = execution_state.ended_at - execution_state.started_at;
+
         console.log('✅ [PIPELINE_SUCCESS]', { 
+            request_id,
             intent: intentResult.intent, 
             route: routeResult.route, 
-            mode: finalResponse.mode 
+            mode: finalResponse.mode,
+            latency_ms: execution_state.latency_ms
         });
 
         return Response.json({
             reply: finalResponse.content,
             mode: finalResponse.mode,
-            session: session_id
+            session: session_id,
+            execution_state
         });
 
     } catch (error) {
-        console.error('🔥 [PIPELINE_CRITICAL_ERROR]', error.message);
+        execution_state.status = 'CRITICAL_FAILURE';
+        execution_state.ended_at = Date.now();
+        console.error('🔥 [PIPELINE_CRITICAL_ERROR]', { request_id: execution_state.request_id, error: error.message });
         return Response.json({
             error: 'PIPELINE_FAILURE',
-            details: error.message
+            details: error.message,
+            execution_state
         }, { status: 500 });
     }
 });
