@@ -4,6 +4,7 @@ import { routeTool } from './stages/routeTool.js';
 import { executeTool } from './stages/executeTool.js';
 import { formatResult } from './stages/formatResult.js';
 import { applyCognitiveLayer } from './stages/applyCognitiveLayer.js';
+import { normalizeInput } from './core/normalize.js';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
@@ -18,9 +19,13 @@ Deno.serve(async (req) => {
 
         const timestamp = Date.now();
         const body = await req.json();
-        const { input, session_id } = body;
+        const { input: rawInput, session_id } = body;
 
-        console.log('🚀 [PIPELINE_START]', { input: input.substring(0, 80), timestamp });
+        console.log('🚀 [PIPELINE_START]', { input: rawInput.substring(0, 80), timestamp });
+
+        // STAGE 0: PRE-INFERENCE NORMALIZATION
+        const input = await normalizeInput(rawInput, base44, user.email);
+        console.log('🧹 [NORMALIZED]', { original: rawInput.substring(0, 40), normalized: input.substring(0, 40) });
 
         // ========== STAGE 1: RESOLVE INTENT ==========
         const intentResult = resolveIntent({
