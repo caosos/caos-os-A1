@@ -75,14 +75,16 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
       <div className="flex items-center justify-between gap-2">
         {/* Left side - User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 focus:outline-none group">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
-              {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <span className="hidden sm:inline text-white font-medium text-sm truncate max-w-[80px]">
-              {user?.full_name?.split(' ')[0] || 'User'}
-            </span>
-            <ChevronDown className="w-3 h-3 text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 focus:outline-none group py-2 px-1 -ml-1 touch-manipulation">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
+                {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <span className="hidden sm:inline text-white font-medium text-sm truncate max-w-[80px]">
+                {user?.full_name?.split(' ')[0] || 'User'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
+            </button>
           </DropdownMenuTrigger>
         <DropdownMenuContent 
           className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
