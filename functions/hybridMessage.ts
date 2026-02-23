@@ -21,6 +21,21 @@ Deno.serve(async (req) => {
         started_at: Date.now()
     };
     
+    // STEP 2: Initialize execution receipt at entry - always present
+    const execution_receipt = {
+        request_id,
+        timestamp_entry: Date.now(),
+        entrypoint: 'hybridMessage',
+        pipeline_events: [],
+        intent: null,
+        route: null,
+        tool_execution: null,
+        guardrails: {},
+        mode: null,
+        execution_time_ms: null,
+        fallback_triggered: false
+    };
+    
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
@@ -55,6 +70,13 @@ Deno.serve(async (req) => {
             body_execution_mode: body.execution_mode,
             body_execution: body.execution
         }, null, 2));
+        
+        execution_receipt.pipeline_events.push({
+            stage: 'ENTRY',
+            timestamp: Date.now(),
+            user_authenticated: true,
+            session_id
+        });
 
         console.log('🚀 [PIPELINE_START]', { 
             request_id, 
@@ -124,6 +146,21 @@ Deno.serve(async (req) => {
             multi_query: intentResult.multiQuery,
             force_retrieval: intentResult.forceRetrievalMode
         });
+        
+        // Update receipt with intent
+        execution_receipt.intent = {
+            detected: intentResult.intent,
+            confidence: intentResult.confidence,
+            reason: intentResult.reason,
+            extracted_terms: intentResult.extractedTerms || [],
+            multi_query: intentResult.multiQuery || false
+        };
+        execution_receipt.pipeline_events.push({
+            stage: 'INTENT_RESOLUTION',
+            timestamp: Date.now(),
+            intent: intentResult.intent,
+            bypass: bypassIntentResolver || false
+        });
 
         // DRIFT DETECTION: GEN with SEARCH intent
         if (intentResult.forceRetrievalMode && intentResult.intent !== 'SEARCH_THREADS') {
@@ -186,6 +223,18 @@ Deno.serve(async (req) => {
             requires_tool: routeResult.requiresTool,
             forced_route: forcedRoute || null
         });
+        
+        // Update receipt with route
+        execution_receipt.route = {
+            selected: routeResult.route,
+            formatter: routeResult.formatter,
+            requires_tool: routeResult.requiresTool
+        };
+        execution_receipt.pipeline_events.push({
+            stage: 'ROUTING',
+            timestamp: Date.now(),
+            route: routeResult.route
+        });
 
         // ========== STAGE 3: EXECUTE TOOL ==========
         let toolResult = null;
@@ -207,6 +256,21 @@ Deno.serve(async (req) => {
                     result_count: toolResult?.count || 0,
                     match_type: toolResult?.match_type,
                     search_scope: toolResult?.search_scope
+                });
+
+                // Update receipt with tool execution
+                execution_receipt.tool_execution = {
+                    invoked: toolResult?.type || toolResult?.executor || 'database_filter',
+                    match_type: toolResult?.match_type || null,
+                    match_fields: toolResult?.match_fields || [],
+                    result_count: toolResult?.count || 0,
+                    search_scope: toolResult?.search_scope || null
+                };
+                execution_receipt.pipeline_events.push({
+                    stage: 'TOOL_EXECUTION',
+                    timestamp: Date.now(),
+                    tool: toolResult?.type,
+                    count: toolResult?.count
                 });
             }
         } catch (execError) {
@@ -234,6 +298,12 @@ Deno.serve(async (req) => {
         }
 
         execution_state.mode = formattedResult.mode;
+
+        execution_receipt.pipeline_events.push({
+            stage: 'FORMATTING',
+            timestamp: Date.now(),
+            mode: formattedResult.mode
+        });
 
         // DRIFT DETECTION: Mode mismatch
         if (intentResult.intent === 'SEARCH_THREADS' && formattedResult.mode === 'GEN') {
@@ -285,38 +355,25 @@ Deno.serve(async (req) => {
             latency_ms: execution_state.latency_ms
         });
 
-        // ========== EXECUTION RECEIPT GENERATION ==========
-        const execution_receipt = {
-            request_id,
-            intent: {
-                detected: intentResult.intent,
-                confidence: intentResult.confidence,
-                reason: intentResult.reason,
-                extracted_terms: intentResult.extractedTerms || [],
-                multi_query: intentResult.multiQuery || false
-            },
-            route: {
-                selected: routeResult.route,
-                formatter: routeResult.formatter,
-                requires_tool: routeResult.requiresTool
-            },
-            tool_execution: toolResult ? {
-                invoked: toolResult.type || toolResult.executor || 'database_filter',
-                match_type: toolResult.match_type || null,
-                match_fields: toolResult.match_fields || [],
-                result_count: toolResult.count || 0,
-                search_scope: toolResult.search_scope || null
-            } : null,
-            guardrails: {
-                refinement_lock_engaged: bypassIntentResolver || false,
-                empty_search_blocked: false,
-                echo_suppression_triggered: false,
-                forced_route: forcedRoute || null
-            },
-            mode: finalResponse.mode,
-            execution_time_ms: execution_state.latency_ms,
-            fallback_triggered: false
+        // ========== FINALIZE EXECUTION RECEIPT ==========
+        execution_receipt.guardrails = {
+            refinement_lock_engaged: bypassIntentResolver || false,
+            empty_search_blocked: false,
+            echo_suppression_triggered: false,
+            forced_route: forcedRoute || null
         };
+        execution_receipt.mode = finalResponse.mode;
+        execution_receipt.execution_time_ms = execution_state.latency_ms;
+        execution_receipt.fallback_triggered = false;
+        execution_receipt.pipeline_events.push({
+            stage: 'COGNITIVE_LAYER',
+            timestamp: Date.now(),
+            final_mode: finalResponse.mode
+        });
+        execution_receipt.pipeline_events.push({
+            stage: 'COMPLETION',
+            timestamp: Date.now()
+        });
 
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
 
@@ -356,10 +413,21 @@ Deno.serve(async (req) => {
         execution_state.status = 'CRITICAL_FAILURE';
         execution_state.ended_at = Date.now();
         console.error('🔥 [PIPELINE_CRITICAL_ERROR]', { request_id: execution_state.request_id, error: error.message });
+        
+        // STEP 3: Even on error, return receipt if available
+        execution_receipt.pipeline_events.push({
+            stage: 'ERROR',
+            timestamp: Date.now(),
+            error: error.message
+        });
+        execution_receipt.execution_time_ms = Date.now() - execution_receipt.timestamp_entry;
+        execution_receipt.mode = 'ERROR';
+        
         return Response.json({
             error: 'PIPELINE_FAILURE',
             details: error.message,
-            execution_state
+            execution_state,
+            execution_receipt  // Include receipt even on error
         }, { status: 500 });
     }
 });

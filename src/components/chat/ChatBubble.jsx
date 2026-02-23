@@ -1153,9 +1153,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </div>
               )}
 
-              {/* Execution Receipt */}
-              {!isUser && showExecution && message.execution_receipt && (
+              {/* Execution Receipt - ALWAYS show when execution_receipt exists AND toggle is ON */}
+              {!isUser && message.execution_receipt && showExecution && (
                 <ExecutionReceipt receipt={message.execution_receipt} />
+              )}
+              
+              {/* DEBUG: Log if receipt exists but not shown */}
+              {!isUser && message.execution_receipt && !showExecution && (
+                <div className="hidden">
+                  {console.log('🔍 [RECEIPT_SUPPRESSED]', {
+                    message_id: message.id,
+                    has_receipt: !!message.execution_receipt,
+                    showExecution,
+                    receipt_keys: Object.keys(message.execution_receipt)
+                  })}
+                </div>
               )}
               </div>
               </div>
