@@ -63,7 +63,35 @@ Deno.serve(async (req) => {
         }
 
         // ========== STAGE 2: ROUTE TOOL ==========
-        const routeResult = routeTool(intentResult);
+        let routeResult;
+        try {
+            routeResult = routeTool(intentResult);
+        } catch (routeError) {
+            // Handle structured errors from routeTool
+            if (routeError.mode === 'ERROR' && routeError.code === 'SEARCH_TERMS_MISSING') {
+                console.error('🚨 [ROUTE_VALIDATION_FAILED]', { request_id, error: routeError.code });
+                
+                // Check execution toggle to determine what to show
+                const showExecution = true; // Could check localStorage or user preference
+                
+                const errorResponse = showExecution 
+                    ? {
+                        error: routeError.message,
+                        debug: routeError.debug,
+                        mode: 'ERROR',
+                        code: routeError.code
+                      }
+                    : {
+                        error: routeError.message,
+                        mode: 'ERROR'
+                      };
+                
+                return Response.json(errorResponse, { status: 400 });
+            }
+            
+            // Re-throw unknown errors
+            throw routeError;
+        }
 
         execution_state.route_selected = routeResult.route;
         console.log('🧭 [ROUTE_RESULT]', { request_id, route: routeResult.route, formatter: routeResult.formatter });

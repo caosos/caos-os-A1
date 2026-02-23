@@ -22,6 +22,22 @@ export function routeTool(intentResult) {
         };
     }
 
+    // FAIL LOUD: SEARCH_THREADS with no extracted terms
+    if (intent === 'SEARCH_THREADS' && extractedTerms.length === 0) {
+        console.error('🚨 [ROUTE_HARD_FAIL]: SEARCH_TERMS_MISSING');
+        throw {
+            mode: 'ERROR',
+            code: 'SEARCH_TERMS_MISSING',
+            message: "Search requires at least one target term. Example: 'list mentions of Brookdale'.",
+            debug: {
+                intent,
+                normalizedInput: intentResult.userMessage || '',
+                extractedTerms: [],
+                requestId: intentResult.requestId || 'unknown'
+            }
+        };
+    }
+
     if (intent === 'SEARCH_THREADS' && extractedTerms.length > 0) {
         // Determine if multi-search or single search
         const searchRoute = multiQuery ? 'THREAD_MULTI_SEARCH_PIPELINE' : 'THREAD_SEARCH_PIPELINE';
@@ -34,7 +50,7 @@ export function routeTool(intentResult) {
         };
     }
 
-    // GENERIC_GEN route
+    // GENERIC_GEN route - only for non-search intents
     return {
         route: 'GENERATION_PIPELINE',
         requiresTool: false,
