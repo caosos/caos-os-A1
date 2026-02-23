@@ -33,6 +33,29 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input: rawInput, session_id } = body;
 
+        // AUDIT LOG 1: Full request body at entry
+        console.log('🔍 [AUDIT_1_REQUEST_BODY]', JSON.stringify({
+            request_id,
+            body: body,
+            keys: Object.keys(body),
+            rawInput_preview: rawInput?.substring(0, 200),
+            session_id,
+            timestamp
+        }, null, 2));
+
+        // AUDIT LOG 2: Execution flag presence
+        const executionFlagPresent = body.hasOwnProperty('show_execution') || 
+                                     body.hasOwnProperty('execution_mode') ||
+                                     body.hasOwnProperty('execution');
+        console.log('🔍 [AUDIT_2_EXECUTION_FLAG]', JSON.stringify({
+            request_id,
+            execution_flag_present: executionFlagPresent,
+            body_keys: Object.keys(body),
+            body_show_execution: body.show_execution,
+            body_execution_mode: body.execution_mode,
+            body_execution: body.execution
+        }, null, 2));
+
         console.log('🚀 [PIPELINE_START]', { 
             request_id, 
             raw_input: rawInput.substring(0, 150),
@@ -297,13 +320,37 @@ Deno.serve(async (req) => {
 
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
 
-        return Response.json({
+        // AUDIT LOG 3: Receipt object before return
+        console.log('🔍 [AUDIT_3_RECEIPT_OBJECT]', JSON.stringify({
+            request_id,
+            receipt_exists: !!execution_receipt,
+            receipt_keys: execution_receipt ? Object.keys(execution_receipt) : [],
+            receipt_full: execution_receipt
+        }, null, 2));
+
+        const returnPayload = {
             reply: finalResponse.content,
             mode: finalResponse.mode,
             session: session_id,
             execution_state,
             execution_receipt
-        });
+        };
+
+        // AUDIT LOG 4: Final return payload
+        console.log('🔍 [AUDIT_4_RETURN_PAYLOAD]', JSON.stringify({
+            request_id,
+            payload_keys: Object.keys(returnPayload),
+            has_reply: !!returnPayload.reply,
+            has_mode: !!returnPayload.mode,
+            has_session: !!returnPayload.session,
+            has_execution_state: !!returnPayload.execution_state,
+            has_execution_receipt: !!returnPayload.execution_receipt,
+            execution_receipt_present: returnPayload.hasOwnProperty('execution_receipt'),
+            execution_receipt_value: returnPayload.execution_receipt !== undefined ? 'PRESENT' : 'UNDEFINED',
+            full_payload: returnPayload
+        }, null, 2));
+
+        return Response.json(returnPayload);
 
     } catch (error) {
         execution_state.status = 'CRITICAL_FAILURE';
