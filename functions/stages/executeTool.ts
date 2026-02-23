@@ -27,7 +27,19 @@ export async function executeTool(routeResult, intentResult, base44) {
         throw {
             error: 'EXECUTION_VALIDATION_FAILURE',
             reason: 'EMPTY_FILTER_ON_SEARCH_ROUTE',
-            details: 'SEARCH route with no extracted terms'
+            details: 'SEARCH route with no extracted terms',
+            user_visible: 'Execution failed: No search terms extracted from query'
+        };
+    }
+
+    // HARD FAIL: YOUTUBE_SEARCH without executor
+    if (intent === 'YOUTUBE_SEARCH') {
+        console.error('🚨 [EXECUTION_HARD_FAIL]: YOUTUBE_EXECUTOR_UNAVAILABLE');
+        throw {
+            error: 'TOOL_UNAVAILABLE',
+            reason: 'YOUTUBE_SEARCH_NOT_IMPLEMENTED',
+            details: 'YouTube search intent detected but executor not wired',
+            user_visible: 'Execution failed: YouTube search tool not available'
         };
     }
 

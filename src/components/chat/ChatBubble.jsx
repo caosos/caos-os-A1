@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
 import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';

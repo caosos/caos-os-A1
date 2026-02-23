@@ -672,7 +672,8 @@ export default function Chat() {
           generated_files: data.generatedFiles || [],
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          execution_receipt: data.execution_receipt || null
         };
 
         setMessages(prev => {
@@ -701,7 +702,8 @@ export default function Chat() {
           generated_files: data.generatedFiles || [],
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          execution_receipt: data.execution_receipt || null
         });
 
         setMessages(prev => ({

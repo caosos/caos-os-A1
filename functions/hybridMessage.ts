@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         // ========== STAGE 5: APPLY COGNITIVE LAYER ==========
         let finalResponse;
         try {
-            finalResponse = applyCognitiveLayer(formattedResult);
+            finalResponse = applyCognitiveLayer(formattedResult, input);
         } catch (cogError) {
             execution_state.status = 'COGNITIVE_FAILED';
             console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
@@ -148,11 +148,29 @@ Deno.serve(async (req) => {
             latency_ms: execution_state.latency_ms
         });
 
+        // ========== EXECUTION RECEIPT GENERATION ==========
+        const execution_receipt = {
+            request_id,
+            mode: finalResponse.mode,
+            route: routeResult.route,
+            tool_invoked: toolResult?.executor || null,
+            extracted_terms: intentResult.extractedTerms || [],
+            query_used: toolResult?.query_terms ? toolResult.query_terms.join(', ') : null,
+            result_count: toolResult?.count || 0,
+            execution_time_ms: execution_state.latency_ms,
+            fallback_triggered: false,
+            intent: intentResult.intent,
+            confidence: intentResult.confidence
+        };
+
+        console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
+
         return Response.json({
             reply: finalResponse.content,
             mode: finalResponse.mode,
             session: session_id,
-            execution_state
+            execution_state,
+            execution_receipt
         });
 
     } catch (error) {

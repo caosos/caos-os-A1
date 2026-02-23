@@ -55,10 +55,32 @@ function containsThreadListPattern(payload) {
     return THREAD_LIST_PATTERNS.some(pattern => pattern.test(payload));
 }
 
-export function applyCognitiveLayer(formattedResult) {
+export function applyCognitiveLayer(formattedResult, userInput = null) {
     const { mode, payload, metadata } = formattedResult;
 
     console.log('🧠 [COGNITIVE_LAYER] Mode:', mode);
+
+    // ========== ECHO SUPPRESSION GUARD ==========
+    if (userInput && payload) {
+        // Normalize both for comparison (remove whitespace, case)
+        const normalizedInput = userInput.toLowerCase().replace(/\s+/g, ' ').trim();
+        const normalizedPayload = payload.toLowerCase().replace(/\s+/g, ' ').trim();
+        
+        // Check if output is substantially identical to input
+        const similarity = normalizedPayload.includes(normalizedInput.substring(0, 100)) || 
+                          normalizedInput.includes(normalizedPayload.substring(0, 100));
+        
+        if (similarity && normalizedInput.length > 50) {
+            console.error('🚨 [ECHO_DETECTED]: Output mirrors input');
+            throw {
+                error: 'ECHO_SUPPRESSION_VIOLATION',
+                mode,
+                reason: 'Generated output is identical to user input',
+                details: 'System must analyze or transform, not echo verbatim',
+                state: 'ECHO_DETECTED'
+            };
+        }
+    }
 
     // RETRIEVAL mode: return as-is
     if (mode === 'RETRIEVAL') {
