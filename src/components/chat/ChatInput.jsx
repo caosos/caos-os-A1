@@ -204,16 +204,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const toggleReadAloud = async () => {
+  const toggleReadAloud = () => {
     if (!lastAssistantMessage) return;
 
     // If already speaking, toggle pause/resume
-    if (isSpeaking && audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play();
+    if (isSpeaking) {
+      if (window.speechSynthesis.paused || isPaused) {
+        window.speechSynthesis.resume();
         setIsPaused(false);
       } else {
-        audioRef.current.pause();
+        window.speechSynthesis.pause();
         setIsPaused(true);
       }
       return;
@@ -235,83 +235,56 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    try {
-      const savedVoice = localStorage.getItem('caos_voice_preference_input') || 'nova';
-      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-
-      console.log('TTS Input: Starting speech generation...');
-      
-      // Use fetch directly to get binary audio data
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/functions/textToSpeech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          voice: savedVoice,
-          speed: savedRate
-        })
-      });
-
-      console.log('TTS Input: Response received, status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('TTS Input error:', errorText);
-        throw new Error(`TTS failed: ${errorText}`);
-      }
-
-      console.log('TTS Input: Converting to audio blob...');
-      const audioBlob = await response.blob();
-      console.log('TTS Input: Blob created, size:', audioBlob.size);
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-
-      audio.ontimeupdate = () => {
-        setSpeechProgress((audio.currentTime / audio.duration) * 100);
-        setAudioDuration(audio.duration);
-      };
-
-      audio.onended = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        audioRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        audioRef.current = null;
-        URL.revokeObjectURL(audioUrl);
-        toast.error('Playback failed');
-      };
-
-      setIsSpeaking(true);
-      await audio.play();
-    } catch (error) {
-      console.error('TTS Input: Full error:', error);
-      console.error('TTS Input: Error message:', error.message);
-      setIsSpeaking(false);
-      toast.error(`Failed to generate speech: ${error.message}`);
+    // Use browser's Google voices for instant playback
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = speechRate;
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setSpeechProgress(0);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setSpeechProgress(0);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+      toast.error('Speech failed');
+    };
+
+    utteranceRef.current = utterance;
+    setIsSpeaking(true);
+    setSpeechProgress(0);
+
+    // Simulate progress
+    progressInterval.current = setInterval(() => {
+      setSpeechProgress(prev => Math.min(prev + 1, 95));
+    }, 100);
+
+    window.speechSynthesis.speak(utterance);
   };
 
   const stopReadAloud = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
+    window.speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeechProgress(0);
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+      progressInterval.current = null;
+    }
   };
 
   const startRecording = async () => {
