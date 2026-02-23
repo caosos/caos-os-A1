@@ -156,6 +156,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [audioDuration, setAudioDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
   const [showExecution, setShowExecution] = useState(() => {
     return localStorage.getItem('caos_show_execution') === 'true';
   });
@@ -422,13 +423,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = async () => {
-    // If this message is already playing - toggle pause/resume
-    if (isSpeaking && audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play();
+    // If already speaking, toggle pause/resume
+    if (isSpeaking) {
+      if (window.speechSynthesis.paused || isPausedBySpeech) {
+        window.speechSynthesis.resume();
         setIsPausedBySpeech(false);
       } else {
-        audioRef.current.pause();
+        window.speechSynthesis.pause();
         setIsPausedBySpeech(true);
       }
       return;
@@ -436,51 +437,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
     // Stop any other audio playing globally
     stopAllAudio();
-    setAudioProgress(0);
+    setHighlightedWordIndex(-1);
 
-    // Check cache first
-    const cached = audioCache.get(cacheKey);
-    if (cached) {
-      // Play cached audio immediately
-      const audio = new Audio(cached.url);
-      globalAudioInstance = audio;
-      audioRef.current = audio;
-
-      audio.ontimeupdate = () => {
-        setAudioProgress(audio.currentTime);
-        setAudioDuration(audio.duration);
-      };
-
-      const cleanup = () => {
-        setIsSpeaking(false);
-        setIsPausedBySpeech(false);
-        setAudioProgress(0);
-        if (globalAudioInstance === audio) globalAudioInstance = null;
-        if (audioRef.current === audio) audioRef.current = null;
-      };
-
-      audio.onended = cleanup;
-      audio.onerror = cleanup;
-      globalAudioCleanup = cleanup;
-
-      setIsSpeaking(true);
-      audio.play();
-      return;
-    }
-
-    // Generate new audio
-    setIsGenerating(true);
-    setGenerationProgress(0);
-
-    // Faster optimistic progress animation
-    const progressInterval = setInterval(() => {
-      setGenerationProgress(prev => {
-        if (prev < 60) return prev + 8;
-        if (prev < 80) return prev + 4;
-        return Math.min(prev + 1, 92);
-      });
-    }, 50);
-
+    // Clean the text
     const cleanText = (message.content || '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -496,104 +455,54 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    try {
-      const savedVoice = localStorage.getItem('caos_voice_preference_message') || 'nova';
-      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+    // Split into words for highlighting
+    const words = cleanText.split(/\s+/);
 
-      console.log('TTS: Starting speech generation...');
-      
-      // Start playback immediately to show we're working
-      toast.info('Generating speech...', { duration: 1000 });
-      
-      // Use fetch with streaming for faster response
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/functions/textToSpeech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          voice: savedVoice,
-          speed: savedRate
-        })
-      });
+    // Use browser's Web Speech API for instant playback
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+    utterance.rate = savedRate;
 
-      console.log('TTS: Response received, status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('TTS error:', errorText);
-        throw new Error(`TTS failed: ${errorText}`);
-      }
-
-      console.log('TTS: Converting to audio blob...');
-      const audioBlob = await response.blob();
-      console.log('TTS: Blob created, size:', audioBlob.size);
-      
-      clearInterval(progressInterval);
-      setGenerationProgress(95);
-      
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Cache the audio
-      audioCache.set(cacheKey, { url: audioUrl, blob: audioBlob });
-      
-      setGenerationProgress(100);
-
-      console.log('TTS: Creating Audio object from URL...');
-      const audio = new Audio(audioUrl);
-      globalAudioInstance = audio;
-      audioRef.current = audio;
-
-      audio.ontimeupdate = () => {
-        setAudioProgress(audio.currentTime);
-        setAudioDuration(audio.duration);
-      };
-
-      const cleanup = () => {
-        console.log('TTS: Cleaning up audio...');
-        setIsSpeaking(false);
-        setIsPausedBySpeech(false);
-        setAudioProgress(0);
-        if (globalAudioInstance === audio) globalAudioInstance = null;
-        if (audioRef.current === audio) audioRef.current = null;
-      };
-
-      audio.onended = cleanup;
-      audio.onerror = (e) => {
-        console.error('TTS: Audio playback error:', e);
-        cleanup();
-        toast.error('Playback failed');
-      };
-
-      globalAudioCleanup = cleanup;
-
-      setIsGenerating(false);
-      setGenerationProgress(0);
-      setIsSpeaking(true);
-      console.log('TTS: Starting audio playback...');
-      await audio.play();
-      console.log('TTS: Audio playing successfully');
-    } catch (error) {
-      console.error('TTS: Full error:', error);
-      console.error('TTS: Error message:', error.message);
-      console.error('TTS: Error stack:', error.stack);
-      clearInterval(progressInterval);
-      setIsSpeaking(false);
-      setIsGenerating(false);
-      setGenerationProgress(0);
-      toast.error(`Failed to generate speech: ${error.message}`);
+    // Load saved voice preference for messages
+    const savedVoiceURI = localStorage.getItem('caos_voice_preference_message');
+    if (savedVoiceURI) {
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
+      if (voice) utterance.voice = voice;
     }
+
+    // Word boundary tracking for highlighting
+    let currentWordIndex = 0;
+    utterance.onboundary = (event) => {
+      if (event.name === 'word') {
+        setHighlightedWordIndex(currentWordIndex);
+        currentWordIndex++;
+      }
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPausedBySpeech(false);
+      setHighlightedWordIndex(-1);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPausedBySpeech(false);
+      setHighlightedWordIndex(-1);
+      toast.error('Speech failed');
+    };
+
+    utteranceRef.current = utterance;
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleStopReading = () => {
-    stopAllAudio();
+    window.speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
-    setAudioProgress(0);
-    setIsGenerating(false);
-    setGenerationProgress(0);
+    setHighlightedWordIndex(-1);
   };
 
   // Cleanup on unmount
@@ -819,7 +728,33 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           <ReactMarkdown 
             className="text-sm max-w-none"
             components={{
-              p: ({ children }) => <p className="mb-3 leading-relaxed text-white/90">{children}</p>,
+              p: ({ children }) => {
+                // Apply word highlighting during speech
+                if (isSpeaking && highlightedWordIndex >= 0 && typeof children === 'string') {
+                  const words = children.split(/(\s+)/);
+                  let wordIndex = 0;
+                  return (
+                    <p className="mb-3 leading-relaxed text-white/90">
+                      {words.map((word, i) => {
+                        if (word.trim()) {
+                          const isHighlighted = wordIndex === highlightedWordIndex;
+                          wordIndex++;
+                          return (
+                            <span 
+                              key={i} 
+                              className={isHighlighted ? 'bg-blue-400/40 transition-colors duration-100' : ''}
+                            >
+                              {word}
+                            </span>
+                          );
+                        }
+                        return word;
+                      })}
+                    </p>
+                  );
+                }
+                return <p className="mb-3 leading-relaxed text-white/90">{children}</p>;
+              },
               code: ({ inline, className, children, ...props }) => {
                 const match = /language-(\w+)/.exec(className || '');
                 return !inline && match ? (
@@ -1113,36 +1048,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     </div>
                     )}
                     
-                    {/* Generation Progress */}
-                    {isGenerating && (
-                      <div className="mt-2">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                          <span className="text-xs text-blue-400 font-medium">Generating speech...</span>
-                          <span className="text-xs text-white/50">{generationProgress}%</span>
-                        </div>
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-200"
-                            style={{ width: `${generationProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Audio Progress Bar */}
-                    {isSpeaking && audioDuration > 0 && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs text-white/50">{formatTime(audioProgress)}</span>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-400 transition-all duration-200"
-                            style={{ width: `${(audioProgress / audioDuration) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-white/50">{formatTime(audioDuration)}</span>
-                      </div>
-                    )}
 
 
 
