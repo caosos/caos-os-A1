@@ -33,11 +33,21 @@ Deno.serve(async (req) => {
         const body = await req.json();
         const { input: rawInput, session_id } = body;
 
-        console.log('🚀 [PIPELINE_START]', { request_id, input: rawInput.substring(0, 80), timestamp });
+        console.log('🚀 [PIPELINE_START]', { 
+            request_id, 
+            raw_input: rawInput.substring(0, 150),
+            session_id,
+            timestamp 
+        });
 
         // STAGE 0: PRE-INFERENCE NORMALIZATION
         const input = await normalizeInput(rawInput, base44, user.email);
-        console.log('🧹 [NORMALIZED]', { request_id, original: rawInput.substring(0, 40), normalized: input.substring(0, 40) });
+        console.log('🧹 [NORMALIZED]', { 
+            request_id, 
+            original: rawInput.substring(0, 100), 
+            normalized: input.substring(0, 100),
+            length_change: input.length - rawInput.length
+        });
 
         // ========== CONVERSATIONAL LOCK: Check if refinement request ==========
         const recentRecords = await base44.asServiceRole.entities.Record.filter(
@@ -82,7 +92,15 @@ Deno.serve(async (req) => {
         });
 
         execution_state.intent_detected = intentResult.intent;
-        console.log('📊 [INTENT_RESULT]', { request_id, intent: intentResult.intent, confidence: intentResult.confidence });
+        console.log('📊 [INTENT_RESULT]', { 
+            request_id, 
+            intent: intentResult.intent, 
+            confidence: intentResult.confidence,
+            reason: intentResult.reason,
+            extracted_terms: intentResult.extractedTerms,
+            multi_query: intentResult.multiQuery,
+            force_retrieval: intentResult.forceRetrievalMode
+        });
 
         // DRIFT DETECTION: GEN with SEARCH intent
         if (intentResult.forceRetrievalMode && intentResult.intent !== 'SEARCH_THREADS') {
@@ -138,14 +156,35 @@ Deno.serve(async (req) => {
         }
 
         execution_state.route_selected = routeResult.route;
-        console.log('🧭 [ROUTE_RESULT]', { request_id, route: routeResult.route, formatter: routeResult.formatter });
+        console.log('🧭 [ROUTE_RESULT]', { 
+            request_id, 
+            route: routeResult.route, 
+            formatter: routeResult.formatter,
+            requires_tool: routeResult.requiresTool,
+            forced_route: forcedRoute || null
+        });
 
         // ========== STAGE 3: EXECUTE TOOL ==========
         let toolResult = null;
         try {
             if (routeResult.requiresTool) {
+                console.log('🔧 [EXECUTE_TOOL_ENTRY]', { 
+                    request_id,
+                    route: routeResult.route,
+                    extracted_terms: intentResult.extractedTerms,
+                    intent: intentResult.intent
+                });
+
                 toolResult = await executeTool(routeResult, intentResult, base44, user);
                 execution_state.executor_used = toolResult?.executor || 'UNKNOWN';
+
+                console.log('🔧 [EXECUTE_TOOL_RESULT]', { 
+                    request_id,
+                    executor: toolResult?.executor || toolResult?.type,
+                    result_count: toolResult?.count || 0,
+                    match_type: toolResult?.match_type,
+                    search_scope: toolResult?.search_scope
+                });
             }
         } catch (execError) {
             execution_state.status = 'EXECUTION_FAILED';
@@ -217,6 +256,9 @@ Deno.serve(async (req) => {
             intent: intentResult.intent, 
             route: routeResult.route, 
             mode: finalResponse.mode,
+            tool_invoked: toolResult?.executor || toolResult?.type || null,
+            result_count: toolResult?.count || 0,
+            fallback_triggered: false,
             latency_ms: execution_state.latency_ms
         });
 
