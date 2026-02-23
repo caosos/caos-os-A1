@@ -87,8 +87,9 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </button>
           </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white"
+          className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white z-[100]"
           align="start"
+          sideOffset={8}
         >
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 data-[state=open]:bg-white/10 text-sm">

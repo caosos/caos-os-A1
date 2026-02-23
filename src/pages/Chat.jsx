@@ -871,10 +871,12 @@ export default function Chat() {
                 sessionFilesCount={generatedFiles.length}
               />
               {currentConversationId && currentMessages.length > 0 && (
-                <ConversationSearch
-                  messages={currentMessages}
-                  onJumpToMessage={handleJumpToMessage}
-                />
+                <div className="z-10">
+                  <ConversationSearch
+                    messages={currentMessages}
+                    onJumpToMessage={handleJumpToMessage}
+                  />
+                </div>
               )}
             </div>
             {currentConversationId && currentMessages.length > 0 && (
