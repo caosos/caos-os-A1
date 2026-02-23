@@ -1122,6 +1122,37 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </div>
               )}
 
+              {/* Generation Progress */}
+              {isGenerating && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                    <span className="text-xs text-blue-400 font-medium">Generating speech...</span>
+                    <span className="text-xs text-white/50">{generationProgress}%</span>
+                  </div>
+                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-200"
+                      style={{ width: `${generationProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Audio Progress Bar */}
+              {isSpeaking && audioDuration > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-white/50">{formatTime(audioProgress)}</span>
+                  <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-400 transition-all duration-200"
+                      style={{ width: `${(audioProgress / audioDuration) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-white/50">{formatTime(audioDuration)}</span>
+                </div>
+              )}
+
               {/* Execution Receipt */}
               {!isUser && showExecution && message.execution_receipt && (
                 <ExecutionReceipt receipt={message.execution_receipt} />
