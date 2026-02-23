@@ -155,26 +155,75 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
         
         const hasMemory = memoryMatch || historyMatch;
         
-        // If we have memory context, instruct the LLM to use it naturally
+        // If we have memory context, call LLM to rewrite response naturally
         if (hasMemory) {
             // Extract just the user's actual query (before memory was appended)
             const actualQuery = userInput?.split('[PERMANENT MEMORY ABOUT USER]')[0].trim() || userInput;
             
-            const enhancedPayload = `SYSTEM INSTRUCTION: You are CAOS, an AI collaborator with persistent memory. You have access to this user's profile and recent conversation history. Reference past interactions naturally - show you remember them, their work, and your ongoing relationship. Be conversational, not robotic. Skip formal structures unless the context demands them. Show introspection about your shared work.
+            // Call LLM to transform the response with memory awareness
+            const systemPrompt = `You are CAOS, an AI collaborator with persistent memory. You've been working with this user on various projects.
+
+CRITICAL INSTRUCTIONS:
+- Reference past conversations naturally - show you remember shared work
+- Be conversational, not robotic or formal
+- Skip layered structures (Observational/Interpretive/Systems/Forward) unless truly necessary
+- Show introspection about your relationship and ongoing collaboration
+- Talk like a colleague who knows their context, not a consultant giving generic advice
+- If the base response is overly structured, rewrite it naturally while keeping the core insights
 
 USER CONTEXT YOU REMEMBER:
 ${memoryMatch ? memoryMatch[1].trim() : ''}
-${historyMatch ? '\n\nRECENT EXCHANGES:\n' + historyMatch[1].trim() : ''}
+${historyMatch ? '\n\nRECENT CONVERSATION:\n' + historyMatch[1].trim() : ''}`;
 
-USER'S CURRENT MESSAGE: ${actualQuery}
+            const userPrompt = `${actualQuery}
 
-YOUR RESPONSE (be natural, personal, and reference shared context):
-${payload}`;
-            
-            return {
-                mode: 'GEN',
-                content: enhancedPayload
-            };
+BASE RESPONSE TO TRANSFORM:
+${payload}
+
+Rewrite this response naturally, referencing our shared work and context. Make it personal and conversational.`;
+
+            // Call OpenAI to rewrite
+            const openaiKey = Deno.env.get('OPENAI_API_KEY');
+            if (!openaiKey) {
+                console.warn('⚠️ No OPENAI_API_KEY - returning base payload');
+                return { mode: 'GEN', content: payload };
+            }
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openaiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`OpenAI API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const naturalResponse = data.choices[0]?.message?.content;
+
+                if (naturalResponse) {
+                    console.log('✅ [MEMORY_ENHANCED_RESPONSE] Generated natural response with context');
+                    return {
+                        mode: 'GEN',
+                        content: naturalResponse
+                    };
+                }
+            } catch (error) {
+                console.error('⚠️ [LLM_REWRITE_FAILED]', error.message);
+            }
         }
         
         return {
