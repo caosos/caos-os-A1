@@ -161,8 +161,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     return localStorage.getItem('caos_show_execution') === 'true';
   });
   const justSelectedRef = React.useRef(false);
-  const audioRef = React.useRef(null);
-  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -404,22 +402,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const stopAllAudio = () => {
-    // Stop global audio if it exists
-    if (globalAudioInstance) {
-      globalAudioInstance.pause();
-      globalAudioInstance.currentTime = 0;
-      globalAudioInstance = null;
-    }
-    if (globalAudioCleanup) {
-      globalAudioCleanup();
-      globalAudioCleanup = null;
-    }
-    // Clean up local reference
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
+    window.speechSynthesis.cancel();
   };
 
   const handleReadAloud = async () => {
@@ -493,7 +476,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       toast.error('Speech failed');
     };
 
-    utteranceRef.current = utterance;
     setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
@@ -508,30 +490,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
-      if (audioRef.current === globalAudioInstance) {
-        stopAllAudio();
-      }
+      window.speechSynthesis.cancel();
     };
   }, []);
-
-  const skipForward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 10, audioRef.current.duration);
-    }
-  };
-
-  const skipBackward = () => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 10, 0);
-    }
-  };
-
-  const formatTime = (seconds) => {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const handleContentClick = () => {
     if (isSpeaking) {
@@ -988,43 +949,19 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </button>
                 <button
                   onClick={handleReadAloud}
-                  disabled={isGenerating}
-                  className={`p-1 hover:bg-white/10 rounded transition-colors ${(isSpeaking || isGenerating) ? 'bg-blue-500/20' : ''} disabled:opacity-50`}
-                  title={isGenerating ? "Generating speech..." : isSpeaking ? "Pause/Resume" : "Read aloud"}
+                  className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
+                  title={isSpeaking ? "Pause/Resume" : "Read aloud"}
                 >
-                  {isGenerating ? (
-                    <div className="relative w-3.5 h-3.5">
-                      <div className="absolute inset-0 border-2 border-white/20 rounded-full" />
-                      <div className="absolute inset-0 border-2 border-blue-400 rounded-full border-t-transparent animate-spin" />
-                    </div>
-                  ) : (
-                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
-                  )}
+                  <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                 </button>
-                {(isSpeaking || isGenerating) && (
-                  <>
-                    <button
-                      onClick={skipBackward}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Back 10s"
-                    >
-                      <SkipBack className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                    </button>
-                    <button
-                      onClick={skipForward}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Forward 10s"
-                    >
-                      <SkipForward className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                    </button>
-                    <button
-                      onClick={handleStopReading}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Stop"
-                    >
-                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                    </button>
-                  </>
+                {isSpeaking && (
+                  <button
+                    onClick={handleStopReading}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Stop"
+                  >
+                    <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                  </button>
                 )}
                 {!isUser && (
                   <>
