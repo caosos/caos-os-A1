@@ -63,6 +63,38 @@ export function resolveIntent(input) {
         .replace(/[^a-z0-9,\s]/g, '')
         .trim();
 
+    // STEP 1.5: Detect "list [search-verb] of X" as SEARCH (pre-LIST)
+    const listSearchPattern = /^list\s+(mention|mentions|containing|contains|about|regarding|with|that\s+mention|that\s+contain)(\s+of)?\s+/i;
+    if (listSearchPattern.test(userMessage)) {
+        const terms = extractTopicsFromSearchQuery(userMessage);
+        
+        // FAIL LOUDLY: SEARCH intent cannot have empty terms
+        if (terms.length === 0) {
+            return {
+                intent: 'SEARCH_THREADS',
+                confidence: 0.0,
+                reason: 'SEARCH_TERM_MISSING',
+                error_code: 'EXTRACTION_EMPTY_ON_SEARCH_INTENT',
+                extractedTerms: [],
+                multiQuery: false,
+                extraction_trace: {
+                    normalized_input: normalized,
+                    pattern_matched: 'list_search_phrase',
+                    extraction_result: 'EMPTY'
+                }
+            };
+        }
+        
+        return {
+            intent: 'SEARCH_THREADS',
+            confidence: 1.0,
+            reason: 'list_search_phrase_detected',
+            extractedTerms: terms,
+            multiQuery: false,
+            forceRetrievalMode: true
+        };
+    }
+
     // STEP 2: Check explicit list patterns
     if (EXPLICIT_LIST_PATTERN.test(userMessage) || SHOW_ALL_PATTERN.test(userMessage)) {
         return {
@@ -156,6 +188,24 @@ export function resolveIntent(input) {
             reason: 'no_terms_extracted',
             extractedTerms: [],
             multiQuery: false
+        };
+    }
+
+    // FAIL LOUDLY: If we reached here via search intent path with empty terms
+    // (Should not happen due to earlier guards, but defensive)
+    if (intent === 'SEARCH_THREADS' && extractedTerms.length === 0) {
+        return {
+            intent: 'SEARCH_THREADS',
+            confidence: 0.0,
+            reason: 'SEARCH_TERM_MISSING',
+            error_code: 'EXTRACTION_EMPTY_FALLTHROUGH',
+            extractedTerms: [],
+            multiQuery: false,
+            extraction_trace: {
+                normalized_input: normalized,
+                extraction_reason: extractionReason,
+                topic_segment: topicSegment
+            }
         };
     }
 
