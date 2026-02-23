@@ -628,7 +628,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        <div className="relative hidden sm:block" ref={voiceMenuRef}>
+        <div className="relative" ref={voiceMenuRef}>
           {isSpeaking ? (
             <>
               <button

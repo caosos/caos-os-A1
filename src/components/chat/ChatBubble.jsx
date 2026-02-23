@@ -775,9 +775,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         
         {cleanContent && cleanContent.trim() && (
           <ReactMarkdown 
-            className="text-sm max-w-none"
+            className="text-xs sm:text-sm max-w-full overflow-hidden"
             components={{
-              p: ({ children }) => <p className="mb-3 leading-relaxed text-white/90">{children}</p>,
+              p: ({ children }) => <p className="mb-2 sm:mb-3 leading-relaxed text-white/90 break-words">{children}</p>,
               code: ({ inline, className, children, ...props }) => {
                 const match = /language-(\w+)/.exec(className || '');
                 return !inline && match ? (
@@ -946,21 +946,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full max-w-4xl mx-auto px-4`}
+        className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full max-w-4xl mx-auto px-2 sm:px-4`}
       >
-        <div className={`flex items-start gap-2 w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-start gap-1 sm:gap-2 w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isUser && (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
-            <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-400 animate-pulse" />
           </div>
         )}
 
-        <div className="flex-1 max-w-3xl">
+        <div className="flex-1 max-w-3xl min-w-0">
         <div
             data-message-bubble
             className={`
               relative group
-              px-4 py-3 rounded-2xl select-text break-words overflow-wrap-anywhere
+              px-2 py-2 sm:px-4 sm:py-3 rounded-2xl select-text break-words overflow-wrap-anywhere text-sm sm:text-base
               ${message.failed 
                 ? 'bg-red-600/80 backdrop-blur-sm text-white rounded-br-md border-2 border-red-400' 
                 : isUser 
@@ -968,7 +968,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-bl-md'
               }
             `}
-            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: '100%' }}
             onContextMenu={handleTextSelection}
           >
 
