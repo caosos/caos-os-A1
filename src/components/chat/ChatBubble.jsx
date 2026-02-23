@@ -156,11 +156,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [audioDuration, setAudioDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-  const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
   const [showExecution, setShowExecution] = useState(() => {
     return localStorage.getItem('caos_show_execution') === 'true';
   });
   const justSelectedRef = React.useRef(false);
+  const audioRef = React.useRef(null);
+  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -402,27 +403,76 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const stopAllAudio = () => {
-    window.speechSynthesis.cancel();
+    if (globalAudioInstance) {
+      globalAudioInstance.pause();
+      globalAudioInstance.currentTime = 0;
+      globalAudioInstance = null;
+    }
+    if (globalAudioCleanup) {
+      globalAudioCleanup();
+      globalAudioCleanup = null;
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
   };
 
   const handleReadAloud = async () => {
-    // If already speaking, toggle pause/resume
-    if (isSpeaking) {
-      if (window.speechSynthesis.paused || isPausedBySpeech) {
-        window.speechSynthesis.resume();
+    if (isSpeaking && audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
         setIsPausedBySpeech(false);
       } else {
-        window.speechSynthesis.pause();
+        audioRef.current.pause();
         setIsPausedBySpeech(true);
       }
       return;
     }
 
-    // Stop any other audio playing globally
     stopAllAudio();
-    setHighlightedWordIndex(-1);
+    setAudioProgress(0);
 
-    // Clean the text
+    const cached = audioCache.get(cacheKey);
+    if (cached) {
+      const audio = new Audio(cached.url);
+      globalAudioInstance = audio;
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        setAudioProgress(audio.currentTime);
+        setAudioDuration(audio.duration);
+      };
+
+      const cleanup = () => {
+        setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setAudioProgress(0);
+        if (globalAudioInstance === audio) globalAudioInstance = null;
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
+      audio.onended = cleanup;
+      audio.onerror = cleanup;
+      globalAudioCleanup = cleanup;
+
+      setIsSpeaking(true);
+      audio.play();
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setGenerationProgress(prev => {
+        if (prev < 60) return prev + 8;
+        if (prev < 80) return prev + 4;
+        return Math.min(prev + 1, 92);
+      });
+    }, 50);
+
     const cleanText = (message.content || '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -438,73 +488,111 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    // Split into words for highlighting
-    const words = cleanText.split(/\s+/);
+    try {
+      const savedVoice = localStorage.getItem('caos_voice_preference_message') || 'nova';
+      const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-    // Use browser's Web Speech API for instant playback
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-    utterance.rate = savedRate;
+      const response = await fetch('https://caos-chat-9c5683d8.base44.app/functions/textToSpeech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          voice: savedVoice,
+          speed: savedRate
+        })
+      });
 
-    // Load saved voice preference for messages
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference_message');
-    if (savedVoiceURI) {
-      const voices = window.speechSynthesis.getVoices();
-      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-      if (voice) utterance.voice = voice;
-    }
-
-    // Word boundary tracking for highlighting
-    let currentWordIndex = 0;
-    utterance.onboundary = (event) => {
-      if (event.name === 'word') {
-        setHighlightedWordIndex(currentWordIndex);
-        currentWordIndex++;
+      if (!response.ok) {
+        throw new Error(`TTS failed: ${await response.text()}`);
       }
-    };
 
-    utterance.onend = () => {
+      const audioBlob = await response.blob();
+      clearInterval(progressInterval);
+      setGenerationProgress(95);
+      
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioCache.set(cacheKey, { url: audioUrl, blob: audioBlob });
+      setGenerationProgress(100);
+
+      const audio = new Audio(audioUrl);
+      globalAudioInstance = audio;
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        setAudioProgress(audio.currentTime);
+        setAudioDuration(audio.duration);
+      };
+
+      const cleanup = () => {
+        setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setAudioProgress(0);
+        if (globalAudioInstance === audio) globalAudioInstance = null;
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
+      audio.onended = cleanup;
+      audio.onerror = (e) => {
+        cleanup();
+        toast.error('Playback failed');
+      };
+
+      globalAudioCleanup = cleanup;
+
+      setIsGenerating(false);
+      setGenerationProgress(0);
+      setIsSpeaking(true);
+      await audio.play();
+    } catch (error) {
+      clearInterval(progressInterval);
       setIsSpeaking(false);
-      setIsPausedBySpeech(false);
-      setHighlightedWordIndex(-1);
-    };
-
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      setIsPausedBySpeech(false);
-      setHighlightedWordIndex(-1);
-      toast.error('Speech failed');
-    };
-
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+      setIsGenerating(false);
+      setGenerationProgress(0);
+      toast.error(`Failed to generate speech: ${error.message}`);
+    }
   };
 
   const handleStopReading = () => {
-    window.speechSynthesis.cancel();
+    stopAllAudio();
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
-    setHighlightedWordIndex(-1);
+    setAudioProgress(0);
+    setIsGenerating(false);
+    setGenerationProgress(0);
   };
 
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      if (audioRef.current === globalAudioInstance) {
+        stopAllAudio();
+      }
     };
   }, []);
 
-  const handleContentClick = () => {
-    if (isSpeaking) {
-      if (window.speechSynthesis.paused || isPausedBySpeech) {
-        window.speechSynthesis.resume();
-        setIsPausedBySpeech(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPausedBySpeech(true);
-      }
+  const skipForward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 10, audioRef.current.duration);
     }
   };
+
+  const skipBackward = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 10, 0);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+
 
   const handleRegenerate = () => {
     // Trigger regeneration through parent component
@@ -689,33 +777,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           <ReactMarkdown 
             className="text-sm max-w-none"
             components={{
-              p: ({ children }) => {
-                // Apply word highlighting during speech
-                if (isSpeaking && highlightedWordIndex >= 0 && typeof children === 'string') {
-                  const words = children.split(/(\s+)/);
-                  let wordIndex = 0;
-                  return (
-                    <p className="mb-3 leading-relaxed text-white/90">
-                      {words.map((word, i) => {
-                        if (word.trim()) {
-                          const isHighlighted = wordIndex === highlightedWordIndex;
-                          wordIndex++;
-                          return (
-                            <span 
-                              key={i} 
-                              className={isHighlighted ? 'bg-blue-400/40 transition-colors duration-100' : ''}
-                            >
-                              {word}
-                            </span>
-                          );
-                        }
-                        return word;
-                      })}
-                    </p>
-                  );
-                }
-                return <p className="mb-3 leading-relaxed text-white/90">{children}</p>;
-              },
+              p: ({ children }) => <p className="mb-3 leading-relaxed text-white/90">{children}</p>,
               code: ({ inline, className, children, ...props }) => {
                 const match = /language-(\w+)/.exec(className || '');
                 return !inline && match ? (
@@ -949,19 +1011,43 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </button>
                 <button
                   onClick={handleReadAloud}
-                  className={`p-1 hover:bg-white/10 rounded transition-colors ${isSpeaking ? 'bg-blue-500/20' : ''}`}
-                  title={isSpeaking ? "Pause/Resume" : "Read aloud"}
+                  disabled={isGenerating}
+                  className={`p-1 hover:bg-white/10 rounded transition-colors ${(isSpeaking || isGenerating) ? 'bg-blue-500/20' : ''} disabled:opacity-50`}
+                  title={isGenerating ? "Generating speech..." : isSpeaking ? "Pause/Resume" : "Read aloud"}
                 >
-                  <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                  {isGenerating ? (
+                    <div className="relative w-3.5 h-3.5">
+                      <div className="absolute inset-0 border-2 border-white/20 rounded-full" />
+                      <div className="absolute inset-0 border-2 border-blue-400 rounded-full border-t-transparent animate-spin" />
+                    </div>
+                  ) : (
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
+                  )}
                 </button>
-                {isSpeaking && (
-                  <button
-                    onClick={handleStopReading}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Stop"
-                  >
-                    <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                  </button>
+                {(isSpeaking || isGenerating) && (
+                  <>
+                    <button
+                      onClick={skipBackward}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Back 10s"
+                    >
+                      <SkipBack className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                    <button
+                      onClick={skipForward}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Forward 10s"
+                    >
+                      <SkipForward className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                    <button
+                      onClick={handleStopReading}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Stop"
+                    >
+                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                    </button>
+                  </>
                 )}
                 {!isUser && (
                   <>
