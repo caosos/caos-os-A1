@@ -20,9 +20,14 @@ export function formatResult(routeResult, toolResult) {
             .map(t => t.title)
             .filter(Boolean);
 
-        const payload = `[MODE=RETRIEVAL]
-Complete thread list (${threadTitles.length}):
-${threadTitles.length === 0 ? '(no threads found)' : threadTitles.map(t => `- ${t}`).join('\n')}`;
+        let payload;
+        if (threadTitles.length === 0) {
+            payload = "You don't have any saved threads yet.";
+        } else if (threadTitles.length === 1) {
+            payload = `You have 1 saved thread:\n\n- ${threadTitles[0]}`;
+        } else {
+            payload = `You have ${threadTitles.length} saved threads:\n\n${threadTitles.map(t => `- ${t}`).join('\n')}`;
+        }
 
         return {
             mode: 'RETRIEVAL',
@@ -40,31 +45,16 @@ ${threadTitles.length === 0 ? '(no threads found)' : threadTitles.map(t => `- ${
         const { query_terms, matches, match_fields, match_type, count, search_scope } = toolResult;
 
         const confidence = count === 0 ? 'LOW' : count === 1 ? 'HIGH' : 'MEDIUM';
+        const term = query_terms[0];
 
-        const transparencyBlock = `[MODE=RETRIEVAL]
-SEARCH_SCOPE:
-- Fields searched: ${match_fields.length > 0 ? match_fields.join(', ') : 'title, summary, keywords'}
-- Total threads indexed: ${search_scope.total_indexed}
-
-QUERY_TERMS: [${query_terms.map(t => `"${t}"`).join(', ')}]
-
-MATCH_SUMMARY:
-- Found: ${count} thread${count !== 1 ? 's' : ''}
-- Match type: ${match_type}
-- Confidence: ${confidence}
-- Match fields: ${match_fields.length > 0 ? match_fields.join(', ') : 'none'}
-
-RESULTS:`;
-
-        const resultLines = matches.length === 0
-            ? '(no matches)'
-            : matches.map(m => `- ${m.title}`).join('\n');
-
-        const nextStep = count > 0
-            ? '\n\nNEXT_STEP: Reply with a thread title to open it.'
-            : '\n\nNEXT_STEP: Try different terms or "list my threads" for complete list.';
-
-        const payload = transparencyBlock + '\n' + resultLines + nextStep;
+        let payload;
+        if (count === 0) {
+            payload = `I searched ${search_scope.total_indexed} threads for "${term}" but didn't find any matches.\n\nWant to try a different search term or see all your threads?`;
+        } else {
+            const matchWord = count === 1 ? 'thread mentions' : 'threads mention';
+            const resultLines = matches.map(m => `- ${m.title}`).join('\n');
+            payload = `Found ${count} ${matchWord} "${term}":\n\n${resultLines}`;
+        }
 
         return {
             mode: 'RETRIEVAL',
@@ -83,36 +73,25 @@ RESULTS:`;
 
         const confidence = count === 0 ? 'LOW' : count === 1 ? 'HIGH' : 'MEDIUM';
 
-        const transparencyBlock = `[MODE=RETRIEVAL]
-SEARCH_SCOPE:
-- Fields searched: ${match_fields.length > 0 ? match_fields.join(', ') : 'title, summary, keywords'}
-- Total threads indexed: ${search_scope.total_indexed}
-- Search mode: MULTI_SEARCH
+        let payload;
+        if (count === 0) {
+            const terms = query_terms.join('", "');
+            payload = `I searched for "${terms}" but didn't find any matching threads.\n\nWant to try different terms?`;
+        } else {
+            const resultSections = Object.entries(multiResults)
+                .map(([topic, result]) => {
+                    if (result.count === 0) {
+                        return `**${topic}**: none found`;
+                    }
+                    const threadList = result.threads.map(t => `  - ${t}`).join('\n');
+                    const threadWord = result.count === 1 ? 'thread' : 'threads';
+                    return `**${topic}** (${result.count} ${threadWord}):\n${threadList}`;
+                })
+                .join('\n\n');
 
-QUERY_TERMS: [${query_terms.map(t => `"${t}"`).join(', ')}]
-
-MATCH_SUMMARY:
-- Total found: ${count} thread${count !== 1 ? 's' : ''}
-- Match type: ${match_type}
-- Confidence: ${confidence}
-- Match fields: ${match_fields.length > 0 ? match_fields.join(', ') : 'none'}
-
-RESULTS:`;
-
-        const resultSections = Object.entries(multiResults)
-            .map(([topic, result]) => {
-                const threadList = result.threads.length === 0
-                    ? '  (no matches)'
-                    : result.threads.map(t => `  - ${t}`).join('\n');
-                return `\n${topic}: ${result.count} thread${result.count !== 1 ? 's' : ''}\n${threadList}`;
-            })
-            .join('\n');
-
-        const nextStep = count > 0
-            ? '\n\nNEXT_STEP: Reply with a thread title to open it.'
-            : '\n\nNEXT_STEP: Try different terms or "list my threads" for complete list.';
-
-        const payload = transparencyBlock + resultSections + nextStep;
+            const topicWord = query_terms.length === 1 ? 'topic' : 'topics';
+            payload = `Found ${count} matches across ${query_terms.length} ${topicWord}:\n\n${resultSections}`;
+        }
 
         return {
             mode: 'RETRIEVAL',
@@ -130,7 +109,7 @@ RESULTS:`;
     if (formatter === 'GEN_FORMATTER') {
         return {
             mode: 'GEN',
-            payload: '[MODE=GEN]\n(awaiting LLM response)',
+            payload: '(awaiting response)',
             summary: 'Generation mode',
             metadata: {
                 confidence: 'PENDING'
