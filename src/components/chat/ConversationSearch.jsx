@@ -65,10 +65,10 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
+        className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-colors"
         title="Search in conversation"
       >
-        <Search className="w-4 h-4 text-white/70" />
+        <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/70" />
       </button>
     );
   }
@@ -79,20 +79,20 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="flex items-center gap-2 bg-[#0f1f3d]/95 backdrop-blur-xl border border-white/20 rounded-lg px-3 py-1.5"
+        className="flex items-center gap-1.5 sm:gap-2 bg-[#0f1f3d]/95 backdrop-blur-xl border border-white/20 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5"
       >
-        <Search className="w-4 h-4 text-white/50 flex-shrink-0" />
+        <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/50 flex-shrink-0" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => matches.length > 0 && setShowDropdown(true)}
-          placeholder="Search messages..."
-          className="bg-transparent text-white text-sm outline-none w-32"
+          placeholder="Search..."
+          className="bg-transparent text-white text-xs sm:text-sm outline-none w-20 sm:w-32"
           autoFocus
         />
         {matches.length > 0 && (
-          <span className="text-xs text-white/60 flex-shrink-0">
+          <span className="text-[10px] sm:text-xs text-white/60 flex-shrink-0">
             {matches.length}
           </span>
         )}
@@ -103,9 +103,9 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
             setMatches([]);
             setShowDropdown(false);
           }}
-          className="p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
+          className="p-0.5 sm:p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
         >
-          <X className="w-3.5 h-3.5 text-white/70" />
+          <X className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/70" />
         </button>
       </motion.div>
 
@@ -115,7 +115,7 @@ export default function ConversationSearch({ messages, onJumpToMessage }) {
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="absolute right-0 top-full mt-2 w-80 bg-[#0f1f3d]/98 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl z-50"
+            className="absolute right-0 top-full mt-2 w-[90vw] max-w-80 bg-[#0f1f3d]/98 backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl z-[100]"
           >
             <div className="max-h-96 overflow-y-auto p-2">
               {matches.map(({ msg, idx }, matchIdx) => (
