@@ -93,6 +93,12 @@ Deno.serve(async (req) => {
             normalized: input.substring(0, 100),
             length_change: input.length - rawInput.length
         });
+        
+        execution_receipt.pipeline_events.push({
+            stage: 'NORMALIZATION',
+            timestamp: Date.now(),
+            input_length: input.length
+        });
 
         // ========== CONVERSATIONAL LOCK: Check if refinement request ==========
         const recentRecords = await base44.asServiceRole.entities.Record.filter(

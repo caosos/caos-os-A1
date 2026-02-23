@@ -592,6 +592,17 @@ export default function Chat() {
         throw new Error('No response data from server');
       }
 
+      // AUDIT LOG 5: Frontend receives response
+      console.log('🔍 [AUDIT_5_FRONTEND_RECEIVES]', JSON.stringify({
+        response_keys: Object.keys(data),
+        has_reply: !!data.reply,
+        has_mode: !!data.mode,
+        has_execution_receipt: !!data.execution_receipt,
+        execution_receipt_keys: data.execution_receipt ? Object.keys(data.execution_receipt) : [],
+        execution_receipt_full: data.execution_receipt,
+        reply_preview: data.reply?.substring(0, 100)
+      }, null, 2));
+
       const reply = data.reply || data.response || data.text || '';
       if (!reply) {
         console.error('❌ EMPTY REPLY - Backend returned no content:', data);
@@ -675,6 +686,14 @@ export default function Chat() {
           execution_receipt: data.execution_receipt || null
         };
 
+        // AUDIT LOG 6: Confirm receipt attached to message
+        console.log('🔍 [AUDIT_6_MESSAGE_RECEIPT]', {
+          message_id: aiMsg.id,
+          has_execution_receipt: !!aiMsg.execution_receipt,
+          receipt_from_backend: !!data.execution_receipt,
+          receipt_keys: aiMsg.execution_receipt ? Object.keys(aiMsg.execution_receipt) : []
+        });
+
         setMessages(prev => {
           const updated = {
             ...prev,
@@ -703,6 +722,14 @@ export default function Chat() {
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null
+        });
+
+        // AUDIT LOG 6: Confirm receipt attached to message
+        console.log('🔍 [AUDIT_6_MESSAGE_RECEIPT]', {
+          message_id: aiMsg.id,
+          has_execution_receipt: !!aiMsg.execution_receipt,
+          receipt_from_backend: !!data.execution_receipt,
+          receipt_keys: aiMsg.execution_receipt ? Object.keys(aiMsg.execution_receipt) : []
         });
 
         setMessages(prev => ({
