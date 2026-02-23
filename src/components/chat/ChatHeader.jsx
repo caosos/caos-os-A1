@@ -70,16 +70,16 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
   };
 
   return (
-    <div className="px-4 py-3 w-full">
-      {/* Mobile: Stack vertically, Desktop: Horizontal layout */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* Left side - User menu (stays left on desktop) */}
+    <div className="px-2 sm:px-4 py-1.5 sm:py-3 w-full">
+      {/* Mobile: Compact single row, Desktop: Horizontal layout */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Left side - User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1 focus:outline-none group">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xs">
               {user?.full_name?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <span className="text-white font-medium text-sm truncate max-w-[80px]">
+            <span className="hidden sm:inline text-white font-medium text-sm truncate max-w-[80px]">
               {user?.full_name?.split(' ')[0] || 'User'}
             </span>
             <ChevronDown className="w-3 h-3 text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
@@ -166,31 +166,31 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Center - CAOS branding */}
-        <div className="text-center sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2 order-first sm:order-none pointer-events-none">
-          <h1 className="text-white font-bold text-xl">CAOS</h1>
-          <p className="text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+        {/* Center - CAOS branding - Mobile: compact, Desktop: full */}
+        <div className="text-center absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+          <h1 className="text-white font-bold text-base sm:text-xl">CAOS</h1>
+          <p className="hidden sm:block text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
         </div>
 
         {/* Right - Thread Title and Files */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
           {sessionFilesCount > 0 && (
             <button
               onClick={() => onShowFiles('files')}
-              className="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded text-xs text-blue-300 transition-colors flex items-center gap-1.5"
+              className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded text-[10px] sm:text-xs text-blue-300 transition-colors flex items-center gap-1"
             >
               📁 {sessionFilesCount}
             </button>
           )}
           {currentConversation && (
-            <div className="text-right max-w-[120px] sm:max-w-[200px] pointer-events-none">
-              <p className="text-white/90 text-xs font-medium truncate">
-                {currentConversation.title.split(' ').slice(0, 3).join(' ') + (currentConversation.title.split(' ').length > 3 ? '...' : '')}
+            <div className="text-right max-w-[80px] sm:max-w-[200px] pointer-events-none">
+              <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate">
+                {currentConversation.title.split(' ').slice(0, 2).join(' ') + (currentConversation.title.split(' ').length > 2 ? '...' : '')}
               </p>
             </div>
           )}
         </div>
-        </div>
+      </div>
 
         <AlertDialog open={showGuestLogoutDialog} onOpenChange={setShowGuestLogoutDialog}>
           <AlertDialogContent className="bg-[#0f1f3d]/95 backdrop-blur-xl border-white/10 text-white">
