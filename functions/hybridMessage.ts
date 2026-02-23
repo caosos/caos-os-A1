@@ -223,16 +223,34 @@ Deno.serve(async (req) => {
         // ========== EXECUTION RECEIPT GENERATION ==========
         const execution_receipt = {
             request_id,
+            intent: {
+                detected: intentResult.intent,
+                confidence: intentResult.confidence,
+                reason: intentResult.reason,
+                extracted_terms: intentResult.extractedTerms || [],
+                multi_query: intentResult.multiQuery || false
+            },
+            route: {
+                selected: routeResult.route,
+                formatter: routeResult.formatter,
+                requires_tool: routeResult.requiresTool
+            },
+            tool_execution: toolResult ? {
+                invoked: toolResult.type || toolResult.executor || 'database_filter',
+                match_type: toolResult.match_type || null,
+                match_fields: toolResult.match_fields || [],
+                result_count: toolResult.count || 0,
+                search_scope: toolResult.search_scope || null
+            } : null,
+            guardrails: {
+                refinement_lock_engaged: bypassIntentResolver || false,
+                empty_search_blocked: false,
+                echo_suppression_triggered: false,
+                forced_route: forcedRoute || null
+            },
             mode: finalResponse.mode,
-            route: routeResult.route,
-            tool_invoked: toolResult?.executor || null,
-            extracted_terms: intentResult.extractedTerms || [],
-            query_used: toolResult?.query_terms ? toolResult.query_terms.join(', ') : null,
-            result_count: toolResult?.count || 0,
             execution_time_ms: execution_state.latency_ms,
-            fallback_triggered: false,
-            intent: intentResult.intent,
-            confidence: intentResult.confidence
+            fallback_triggered: false
         };
 
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
