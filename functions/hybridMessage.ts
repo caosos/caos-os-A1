@@ -39,8 +39,43 @@ Deno.serve(async (req) => {
         const input = await normalizeInput(rawInput, base44, user.email);
         console.log('🧹 [NORMALIZED]', { request_id, original: rawInput.substring(0, 40), normalized: input.substring(0, 40) });
 
+        // ========== CONVERSATIONAL LOCK: Check if refinement request ==========
+        const recentRecords = await base44.asServiceRole.entities.Record.filter(
+            { session_id, status: "active" },
+            '-seq',
+            2
+        );
+        const lastAssistantMessage = recentRecords.find(r => r.role === 'assistant');
+        const previousMode = lastAssistantMessage?.message?.includes('[MODE=GEN]') ? 'GEN' : null;
+
+        const isRefinement = (text) => {
+            const refinementTriggers = [
+                'try again', 'rewrite', 'in first person', 'sound like',
+                'more natural', 'less robotic', 'like you', 'more personal',
+                'less formal', 'warmer', 'more casual', 'be yourself'
+            ];
+            const lowerText = text.toLowerCase();
+            return refinementTriggers.some(trigger => lowerText.includes(trigger));
+        };
+
+        let bypassIntentResolver = false;
+        let forcedRoute = null;
+
+        if (previousMode === 'GEN' && isRefinement(input)) {
+            console.log('🔒 [CONVERSATIONAL_LOCK]', { request_id, reason: 'refinement_detected', previousMode: 'GEN' });
+            bypassIntentResolver = true;
+            forcedRoute = 'GENERATION_PIPELINE';
+        }
+
         // ========== STAGE 1: RESOLVE INTENT ==========
-        const intentResult = resolveIntent({
+        const intentResult = bypassIntentResolver ? {
+            intent: 'GENERATE',
+            confidence: 1.0,
+            reason: 'CONVERSATIONAL_LOCK',
+            extractedTerms: [],
+            multiQuery: false,
+            userEmail: user.email
+        } : resolveIntent({
             userMessage: input,
             timestamp,
             userEmail: user.email
@@ -65,7 +100,16 @@ Deno.serve(async (req) => {
         // ========== STAGE 2: ROUTE TOOL ==========
         let routeResult;
         try {
-            routeResult = routeTool(intentResult);
+            if (forcedRoute) {
+                routeResult = {
+                    route: forcedRoute,
+                    requiresTool: false,
+                    formatter: 'GEN_FORMATTER'
+                };
+                console.log('🔒 [FORCED_ROUTE]', { request_id, route: forcedRoute });
+            } else {
+                routeResult = routeTool(intentResult);
+            }
         } catch (routeError) {
             // Handle structured errors from routeTool
             if (routeError.mode === 'ERROR' && routeError.code === 'SEARCH_TERMS_MISSING') {
