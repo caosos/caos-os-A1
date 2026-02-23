@@ -1043,71 +1043,73 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   </span>
                 )}
               </div>
-              {!isUser && (
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={handleCopy}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Copy"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                  </button>
-                  <button
-                    onClick={handleReadAloud}
-                    disabled={isGenerating}
-                    className={`p-1 hover:bg-white/10 rounded transition-colors ${(isSpeaking || isGenerating) ? 'bg-blue-500/20' : ''} disabled:opacity-50`}
-                    title={isGenerating ? "Generating speech..." : isSpeaking ? "Pause/Resume" : "Read aloud"}
-                  >
-                    {isGenerating ? (
-                      <div className="relative w-3.5 h-3.5">
-                        <div className="absolute inset-0 border-2 border-white/20 rounded-full" />
-                        <div className="absolute inset-0 border-2 border-blue-400 rounded-full border-t-transparent animate-spin" />
-                      </div>
-                    ) : (
-                      <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
-                    )}
-                  </button>
-                  {(isSpeaking || isGenerating) && (
-                    <>
-                      <button
-                        onClick={skipBackward}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Back 10s"
-                      >
-                        <SkipBack className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                      </button>
-                      <button
-                        onClick={skipForward}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Forward 10s"
-                      >
-                        <SkipForward className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                      </button>
-                      <button
-                        onClick={handleStopReading}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                        title="Stop"
-                      >
-                        <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                      </button>
-                    </>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={handleCopy}
+                  className="p-1 hover:bg-white/10 rounded transition-colors"
+                  title="Copy"
+                >
+                  <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                </button>
+                <button
+                  onClick={handleReadAloud}
+                  disabled={isGenerating}
+                  className={`p-1 hover:bg-white/10 rounded transition-colors ${(isSpeaking || isGenerating) ? 'bg-blue-500/20' : ''} disabled:opacity-50`}
+                  title={isGenerating ? "Generating speech..." : isSpeaking ? "Pause/Resume" : "Read aloud"}
+                >
+                  {isGenerating ? (
+                    <div className="relative w-3.5 h-3.5">
+                      <div className="absolute inset-0 border-2 border-white/20 rounded-full" />
+                      <div className="absolute inset-0 border-2 border-blue-400 rounded-full border-t-transparent animate-spin" />
+                    </div>
+                  ) : (
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                   )}
-                  <button
-                    onClick={() => setShowVoiceSettings(true)}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Voice settings"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                  </button>
-                  <button
-                    onClick={handleEmailContent}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Email this"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                  </button>
-                </div>
-              )}
+                </button>
+                {(isSpeaking || isGenerating) && (
+                  <>
+                    <button
+                      onClick={skipBackward}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Back 10s"
+                    >
+                      <SkipBack className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                    <button
+                      onClick={skipForward}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Forward 10s"
+                    >
+                      <SkipForward className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                    <button
+                      onClick={handleStopReading}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Stop"
+                    >
+                      <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+                    </button>
+                  </>
+                )}
+                {!isUser && (
+                  <>
+                    <button
+                      onClick={() => setShowVoiceSettings(true)}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Voice settings"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                    <button
+                      onClick={handleEmailContent}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      title="Email this"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
+                    </button>
+                  </>
+                )}
+              </div>
                     </div>
                     )}
                     
