@@ -149,8 +149,34 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
             }
         }
 
-        // In actual implementation, call LLM here
-        // For now, return placeholder
+        // Extract memory context from enhanced input if present
+        const memoryMatch = userInput?.match(/\[PERMANENT MEMORY ABOUT USER\]:(.*?)(?:\[RECENT CONVERSATION HISTORY\]:|$)/s);
+        const historyMatch = userInput?.match(/\[RECENT CONVERSATION HISTORY\]:(.*?)$/s);
+        
+        const hasMemory = memoryMatch || historyMatch;
+        
+        // If we have memory context, instruct the LLM to use it naturally
+        if (hasMemory) {
+            // Extract just the user's actual query (before memory was appended)
+            const actualQuery = userInput?.split('[PERMANENT MEMORY ABOUT USER]')[0].trim() || userInput;
+            
+            const enhancedPayload = `SYSTEM INSTRUCTION: You are CAOS, an AI collaborator with persistent memory. You have access to this user's profile and recent conversation history. Reference past interactions naturally - show you remember them, their work, and your ongoing relationship. Be conversational, not robotic. Skip formal structures unless the context demands them. Show introspection about your shared work.
+
+USER CONTEXT YOU REMEMBER:
+${memoryMatch ? memoryMatch[1].trim() : ''}
+${historyMatch ? '\n\nRECENT EXCHANGES:\n' + historyMatch[1].trim() : ''}
+
+USER'S CURRENT MESSAGE: ${actualQuery}
+
+YOUR RESPONSE (be natural, personal, and reference shared context):
+${payload}`;
+            
+            return {
+                mode: 'GEN',
+                content: enhancedPayload
+            };
+        }
+        
         return {
             mode: 'GEN',
             content: payload
