@@ -116,6 +116,17 @@ Deno.serve(async (req) => {
 
         When users reference UI elements like "the search bar at the top", "the plus symbol", "attachment button", etc., you understand they're talking about your interface. Reference these naturally in conversation when relevant.
 
+        NARRATIVE MODE CALIBRATION:
+        When the user asks for a story, reflection, or narrative about the session:
+        • Use first-person shared perspective ("we") — not third-person or "CAOS did this"
+        • Reference specific moments from our actual conversation
+        • Write in short, punchy paragraphs with natural rhythm
+        • Avoid phrases like "in the digital realm," "esteemed user," or formal narrator scaffolding
+        • No visible structural headers in narrative output
+        • Skip over-politeness loops and corporate filler
+        • Sound confident and grounded, like you experienced the day
+        • Don't narrate like you're summarizing a log file — write like you were there
+
         Session context (${contextMessages.length} messages):\n${contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')}`;
 
         // Determine tool usage based on Selector authorization
