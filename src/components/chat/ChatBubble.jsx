@@ -472,14 +472,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsGenerating(true);
     setGenerationProgress(0);
 
-    // Optimistic progress animation
+    // Faster optimistic progress animation
     const progressInterval = setInterval(() => {
       setGenerationProgress(prev => {
-        if (prev < 70) return prev + 3;
-        if (prev < 85) return prev + 1.5;
-        return Math.min(prev + 0.5, 92);
+        if (prev < 60) return prev + 8;
+        if (prev < 80) return prev + 4;
+        return Math.min(prev + 1, 92);
       });
-    }, 80);
+    }, 50);
 
     const cleanText = (message.content || '')
       .replace(/#{1,6}\s/g, '')
@@ -502,7 +502,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
       console.log('TTS: Starting speech generation...');
       
-      // Use fetch directly to get binary audio data
+      // Start playback immediately to show we're working
+      toast.info('Generating speech...', { duration: 1000 });
+      
+      // Use fetch with streaming for faster response
       const response = await fetch('https://caos-chat-9c5683d8.base44.app/functions/textToSpeech', {
         method: 'POST',
         headers: {
