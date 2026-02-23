@@ -383,7 +383,7 @@ export default function Chat() {
         file_urls: msg.file_urls || []
       }));
 
-      const { data } = await base44.functions.invoke('caosMessage', {
+      const { data } = await base44.functions.invoke('hybridMessage', {
         input: "__SESSION_RESUME__",
         session_id: sessionId,
         limit: 20
