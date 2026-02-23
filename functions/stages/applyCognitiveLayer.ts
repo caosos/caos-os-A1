@@ -34,6 +34,22 @@ const SEARCH_SIMULATION_PATTERNS = [
     /searching for/i
 ];
 
+// Pattern detection for shallow acknowledgment (YouTube contract)
+const SHALLOW_YOUTUBE_PATTERNS = [
+    /here is a video/i,
+    /this link should take you/i,
+    /try opening/i,
+    /make sure your browser/i,
+    /check if the link works/i,
+    /video might be/i
+];
+
+// Validate YouTube URL structure
+function validateYouTubeURL(content) {
+    const youtubeUrlPattern = /https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}/;
+    return youtubeUrlPattern.test(content);
+}
+
 function containsThreadListPattern(payload) {
     if (!payload || typeof payload !== 'string') return false;
     return THREAD_LIST_PATTERNS.some(pattern => pattern.test(payload));
@@ -78,6 +94,37 @@ export function applyCognitiveLayer(formattedResult) {
                 details: 'Search operations must route through RETRIEVAL pipeline. GEN cannot claim to have searched threads.',
                 state: 'SEARCH_ROUTE_VIOLATION'
             };
+        }
+
+        // CRITICAL VALIDATION 3: YouTube retrieval contract enforcement
+        // If payload mentions YouTube but uses shallow acknowledgment, fail
+        if (payload.toLowerCase().includes('youtube') || payload.toLowerCase().includes('video')) {
+            // Check for shallow patterns
+            if (SHALLOW_YOUTUBE_PATTERNS.some(pattern => pattern.test(payload))) {
+                console.error('🚨 [YOUTUBE_CONTRACT_VIOLATION]: SHALLOW_ACKNOWLEDGMENT');
+                throw {
+                    error: 'YOUTUBE_SHALLOW_RESPONSE',
+                    mode: 'GEN',
+                    reason: 'YouTube response used forbidden shallow acknowledgment',
+                    details: 'Must provide context summary + valid URL, not troubleshooting advice',
+                    state: 'YOUTUBE_CONTRACT_VIOLATION'
+                };
+            }
+
+            // Check for valid YouTube URL if YouTube is mentioned
+            const hasYouTubeUrl = validateYouTubeURL(payload);
+            const hasForbiddenPlaceholder = payload.includes('VIDEO_ID') || payload.includes('[video') || payload.includes('placeholder');
+
+            if (!hasYouTubeUrl || hasForbiddenPlaceholder) {
+                console.error('🚨 [YOUTUBE_CONTRACT_VIOLATION]: INVALID_URL');
+                throw {
+                    error: 'YOUTUBE_INVALID_URL',
+                    mode: 'GEN',
+                    reason: 'YouTube response missing valid URL or contains placeholder',
+                    details: 'Must include full https://www.youtube.com/watch?v=VIDEO_ID URL',
+                    state: 'YOUTUBE_CONTRACT_VIOLATION'
+                };
+            }
         }
 
         // In actual implementation, call LLM here

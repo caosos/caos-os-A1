@@ -88,11 +88,48 @@ export function cleanSTTArtifacts(text) {
 }
 
 // ─────────────────────────────────────────────
+// URL ECHO DETECTION
+// ─────────────────────────────────────────────
+
+function detectURLEcho(text) {
+    if (!text || typeof text !== 'string') return null;
+    
+    // Detect pasted URLs (YouTube, articles, etc.)
+    const urlPattern = /(https?:\/\/[^\s]+)/gi;
+    const matches = text.match(urlPattern);
+    
+    if (matches && matches.length > 0) {
+        // Check if the text is ONLY a URL (or URL with minimal context)
+        const textWithoutUrls = text.replace(urlPattern, '').trim();
+        const remainingWords = textWithoutUrls.split(/\s+/).filter(w => w.length > 0);
+        
+        // If fewer than 3 words remain, this is likely just a pasted link
+        if (remainingWords.length < 3) {
+            return {
+                type: 'URL_ONLY',
+                urls: matches,
+                instruction: 'ANALYZE_DONT_ECHO'
+            };
+        }
+    }
+    
+    return null;
+}
+
+// ─────────────────────────────────────────────
 // FULL NORMALIZATION PIPELINE
 // ─────────────────────────────────────────────
 
 export async function normalizeInput(text, base44, userEmail = null) {
     if (!text || typeof text !== 'string') return text;
+
+    // Stage 0: Detect URL echo attempts
+    const urlEcho = detectURLEcho(text);
+    if (urlEcho) {
+        console.log('🚨 [URL_ECHO_DETECTED]', urlEcho);
+        // Append analysis instruction to prevent echo
+        return `${text}\n\n[SYSTEM: Analyze this content, do not repeat the URL verbatim. Provide context or findings.]`;
+    }
 
     // Stage 1: Clean STT artifacts
     let normalized = cleanSTTArtifacts(text);

@@ -106,7 +106,23 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2B: Detect SEARCH intent first (highest priority)
+    // STEP 2B: Detect YOUTUBE/VIDEO intent (force tool execution)
+    const youtubeKeywords = ['youtube', 'video', 'find video', 'show video', 'news today'];
+    const hasYouTubeIntent = youtubeKeywords.some(kw => userMessage.toLowerCase().includes(kw));
+    
+    if (hasYouTubeIntent) {
+        const terms = extractTopicsFromSearchQuery(userMessage);
+        return {
+            intent: 'YOUTUBE_SEARCH',
+            confidence: 1.0,
+            reason: 'youtube_keyword_detected',
+            extractedTerms: terms,
+            multiQuery: false,
+            forceToolExecution: true
+        };
+    }
+
+    // STEP 2C: Detect SEARCH intent first (highest priority)
     const searchKeywords = ['search', 'find', 'mention', 'mentions', 'contain', 'contains', 'about', 'run that search', 'in any of'];
     const hasSearchIntent = searchKeywords.some(kw => userMessage.toLowerCase().includes(kw));
 
@@ -124,7 +140,7 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2C: Detect implicit list patterns (high confidence)
+    // STEP 2D: Detect implicit list patterns (high confidence)
     const implicitListPatterns = [
         /^show (my )?threads/i,
         /^what threads do i have/i,
