@@ -316,10 +316,70 @@ Deno.serve(async (req) => {
             });
         }
 
+        // ========== MEMORY RECALL: Fetch conversation history and user profile ==========
+        let memoryContext = '';
+        
+        try {
+            // Fetch user profile for persistent memory
+            const userProfiles = await base44.asServiceRole.entities.UserProfile.filter(
+                { user_email: user.email },
+                '-updated_date',
+                1
+            );
+            const userProfile = userProfiles[0];
+            
+            // Fetch recent conversation history (last 10 messages)
+            const recentMessages = await base44.asServiceRole.entities.Record.filter(
+                { session_id, status: 'active' },
+                '-seq',
+                10
+            );
+            
+            // Build memory context
+            if (userProfile) {
+                memoryContext += `\n\n[PERMANENT MEMORY ABOUT USER]:\n`;
+                if (userProfile.presentation_preferences) {
+                    memoryContext += `Communication style: ${JSON.stringify(userProfile.presentation_preferences)}\n`;
+                }
+                if (userProfile.learned_facts && userProfile.learned_facts.length > 0) {
+                    memoryContext += `Known facts: ${userProfile.learned_facts.map(f => f.fact).join('; ')}\n`;
+                }
+                if (userProfile.interests && userProfile.interests.length > 0) {
+                    memoryContext += `Interests: ${userProfile.interests.join(', ')}\n`;
+                }
+                if (userProfile.goals && userProfile.goals.length > 0) {
+                    memoryContext += `Goals: ${userProfile.goals.join('; ')}\n`;
+                }
+            }
+            
+            if (recentMessages.length > 0) {
+                memoryContext += `\n[RECENT CONVERSATION HISTORY]:\n`;
+                recentMessages.reverse().forEach(msg => {
+                    memoryContext += `${msg.role}: ${msg.message.substring(0, 500)}\n`;
+                });
+            }
+            
+            execution_receipt.memory_access = {
+                used: true,
+                source: userProfile ? 'user_profile + conversation_history' : 'conversation_history_only'
+            };
+        } catch (memError) {
+            console.error('⚠️ [MEMORY_FETCH_FAILED]', { request_id, error: memError.message });
+            execution_receipt.memory_access = {
+                used: false,
+                source: null
+            };
+        }
+
         // ========== STAGE 5: APPLY COGNITIVE LAYER ==========
         let finalResponse;
         try {
-            finalResponse = applyCognitiveLayer(formattedResult, input);
+            // Enhance input with memory context for GEN mode
+            const enhancedInput = formattedResult.mode === 'GEN' 
+                ? `${input}${memoryContext}` 
+                : input;
+            
+            finalResponse = applyCognitiveLayer(formattedResult, enhancedInput);
         } catch (cogError) {
             execution_state.status = 'COGNITIVE_FAILED';
             console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
