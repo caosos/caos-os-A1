@@ -10,6 +10,7 @@ import TextSelectionMenu from './TextSelectionMenu';
 import CopyBlock from './CopyBlock';
 import LinkPreview from './LinkPreview';
 import VoiceSettings from './VoiceSettings';
+import ExecutionReceipt from './ExecutionReceipt';
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);
@@ -155,9 +156,24 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [audioDuration, setAudioDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [showExecution, setShowExecution] = useState(() => {
+    return localStorage.getItem('caos_show_execution') === 'true';
+  });
   const justSelectedRef = React.useRef(false);
   const audioRef = React.useRef(null);
   const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setShowExecution(localStorage.getItem('caos_show_execution') === 'true');
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('caos-execution-toggle', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('caos-execution-toggle', handleStorageChange);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (closeMenuTrigger > 0) {
@@ -1170,6 +1186,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* Execution Receipt */}
+              {!isUser && showExecution && message.execution_receipt && (
+                <ExecutionReceipt receipt={message.execution_receipt} />
               )}
               </div>
               </div>

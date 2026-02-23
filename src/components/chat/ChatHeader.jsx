@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
+import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,16 @@ import {
 export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation, sessionFilesCount }) {
   const navigate = useNavigate();
   const [showGuestLogoutDialog, setShowGuestLogoutDialog] = useState(false);
+  const [showExecution, setShowExecution] = useState(() => {
+    return localStorage.getItem('caos_show_execution') === 'true';
+  });
+
+  const toggleExecution = () => {
+    const newValue = !showExecution;
+    setShowExecution(newValue);
+    localStorage.setItem('caos_show_execution', String(newValue));
+    window.dispatchEvent(new Event('caos-execution-toggle'));
+  };
   
   const handleLogout = async () => {
     const isGuest = !!localStorage.getItem('caos_guest_user');
@@ -131,6 +142,18 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             <Key className="w-3.5 h-3.5 text-blue-400" />
             <span>Session Token</span>
           </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/10" />
+          <div className="px-2.5 py-1.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Code className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-sm">Execution</span>
+            </div>
+            <Switch
+              checked={showExecution}
+              onCheckedChange={toggleExecution}
+              className="data-[state=checked]:bg-blue-500"
+            />
+          </div>
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={handleLogout}
