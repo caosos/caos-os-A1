@@ -855,7 +855,7 @@ export default function Chat() {
         <StarfieldBackground />
       </div>
 
-      <div className="relative z-30 bg-[#0a1628] flex-shrink-0">
+      <div className="relative z-30 bg-[#0a1628] flex-shrink-0" style={{ isolation: 'auto' }}>
           <div className="flex items-center justify-between gap-2 px-2 sm:px-4 py-1 sm:py-2">
             <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
               <ChatHeader 

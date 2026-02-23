@@ -70,7 +70,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
   };
 
   return (
-    <div className="px-2 sm:px-4 py-1.5 sm:py-3 w-full">
+    <div className="px-2 sm:px-4 py-1.5 sm:py-3 w-full relative">
       {/* Mobile: Compact single row, Desktop: Horizontal layout */}
       <div className="flex items-center justify-between gap-2">
         {/* Left side - User menu */}
@@ -87,9 +87,10 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </button>
           </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-48 bg-[#1a2744]/95 backdrop-blur-xl border-white/10 text-white z-[100]"
+          className="w-48 bg-[#1a2744] backdrop-blur-xl border-white/10 text-white"
           align="start"
           sideOffset={8}
+          style={{ zIndex: 9999 }}
         >
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 data-[state=open]:bg-white/10 text-sm">
