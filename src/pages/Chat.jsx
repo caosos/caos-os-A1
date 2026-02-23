@@ -563,7 +563,7 @@ export default function Chat() {
         currentLane
       });
 
-      const response = await base44.functions.invoke('caosMessage', {
+      const response = await base44.functions.invoke('hybridMessage', {
         input: fullMessage,
         session_id: conversationId,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
