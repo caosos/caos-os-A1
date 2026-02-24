@@ -518,44 +518,29 @@ export async function runHybridPipeline(rawInput, options) {
                     response_length: finalResponse.content?.length || 0,
                     renderer_used: cognitiveResult.structured || false
                 });
-            }
-        } catch (cogError) {
-            execution_state.status = 'COGNITIVE_FAILED';
-            console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
+                }
+                } catch (renderError) {
+                execution_state.status = 'RENDER_FAILED';
+                console.error('🚨 [RENDERER_FAILED]', { request_id, error: renderError.error || renderError.message });
 
-            execution_receipt.execution_mode = 'ERROR';
-            if (cogError.receipt_fallback) {
-                execution_receipt.fallback = cogError.receipt_fallback;
-            } else {
+                execution_receipt.execution_mode = 'ERROR';
                 execution_receipt.fallback = {
-                    triggered: true,
-                    fallback_type: 'COGNITIVE_LAYER_ERROR',
-                    reason: cogError.error || cogError.message
+                triggered: true,
+                fallback_type: renderError.code === 'FORBIDDEN_DISCLAIMER' ? 'IDENTITY_DRIFT' : 'RENDERER_ERROR',
+                reason: renderError.error || renderError.message
                 };
-            }
-            execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
+                execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
 
-            console.log('📋 [EXECUTION_RECEIPT_COGNITIVE_ERROR]', execution_receipt);
+                console.log('📋 [EXECUTION_RECEIPT_RENDER_ERROR]', execution_receipt);
 
-            if (cogError.error === 'ROUTE_VIOLATION_GEN_SEARCH' || cogError.error === 'PIPELINE_VIOLATION_GEN_LIST') {
-                await logDriftEvent(base44, {
-                    session_id,
-                    drift_type: 'unauthorized_memory_write',
-                    severity: 'CRITICAL',
-                    layer: 'applyCognitiveLayer',
-                    details: cogError,
-                    corrective_action: 'HARD_FAIL'
-                });
-            }
-
-            return { 
-                error: cogError.error || cogError.message, 
+                return { 
+                error: renderError.error || renderError.message, 
                 request_id,
                 execution_receipt
-            };
-        }
+                };
+                }
 
-        execution_state.status = 'SUCCESS';
+                execution_state.status = 'SUCCESS';
         execution_state.ended_at = Date.now();
         execution_state.latency_ms = execution_state.ended_at - execution_state.started_at;
 
