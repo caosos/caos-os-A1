@@ -259,6 +259,16 @@ Deno.serve(async (req) => {
             forced_route: forcedRoute || null
         });
         
+        if (traceMode) {
+            stageSnapshots.push({
+                stage: "STAGE_2_ROUTE_TOOL",
+                route: routeResult.route,
+                formatter: routeResult.formatter,
+                requires_tool: routeResult.requiresTool,
+                forced_route: forcedRoute || null
+            });
+        }
+        
         // Update receipt with routing (schema v1.0)
         execution_receipt.routing = {
             pipeline: routeResult.route,
