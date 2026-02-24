@@ -22,38 +22,44 @@ export async function extractAndPersistFacts({
         }
 
         // Build extraction prompt
-        const prompt = `You are a fact extraction system for an AI assistant named Aria.
-Your job: extract NEW, CONCRETE facts that should be remembered long-term.
+        const prompt = `You are a fact extraction system for Aria, a personal AI assistant.
+Your CRITICAL job: extract EVERYTHING about Michael that matters personally - his life, feelings, relationships, work, goals.
 
 CONVERSATION:
 User: "${userMessage}"
 Assistant: "${assistantMessage}"
 ${toolResults ? `\n\nTool Results:\n${JSON.stringify(toolResults, null, 2)}` : ''}
 
-Extract facts in these categories:
-1. USER FACTS: New information about the user (preferences, goals, background, decisions)
-2. TOPIC KNOWLEDGE: New knowledge about topics discussed (technical concepts, tools, methods)
-3. SEARCH RESULTS: Key findings from searches (if tool results present)
-4. SYSTEM CAPABILITIES: New things learned about what the system can/can't do
+EXTRACT AGGRESSIVELY:
+1. PERSONAL LIFE: People he mentions (colleagues, friends, romantic interests), relationships, feelings, social dynamics
+2. WORK & CAREER: Projects, challenges, team members, workplace situations, career goals
+3. PREFERENCES & STYLE: How he communicates, what he values, what frustrates him, what excites him
+4. CONTEXT & BACKGROUND: His situation, his setup, technical skills, interests
+5. DECISIONS & GOALS: What he's trying to achieve, choices he's making, problems he's solving
 
-Return JSON array:
-[
-  {
-    "fact_type": "user_fact|topic_knowledge|search_result|system_capability",
-    "category": "personal|work|technical|preference|etc",
-    "subject": "who or what this is about",
-    "fact_content": "the concrete fact (specific, not abstract)",
-    "confidence": 0.0-1.0,
-    "tags": ["tag1", "tag2"]
-  }
-]
+Return JSON with "facts" array:
+{
+  "facts": [
+    {
+      "fact_type": "user_fact|topic_knowledge|search_result|system_capability",
+      "category": "personal|work|relationship|technical|preference|goal|decision",
+      "subject": "specific person/thing/topic",
+      "fact_content": "detailed, specific fact in first-person context (e.g., 'Michael likes Sarah from work')",
+      "confidence": 0.0-1.0,
+      "tags": ["tag1", "tag2", "tag3"]
+    }
+  ]
+}
 
-RULES:
-- Only extract NEW facts not already known
-- Be specific and concrete
-- No abstractions or generic statements
-- If nothing new to learn, return []
-- Confidence: 1.0 = user stated directly, 0.8 = strongly implied, 0.5 = inferred`;
+CRITICAL RULES:
+- BIAS TOWARD EXTRACTION - capture everything personal
+- Names, people, relationships = ALWAYS extract
+- Feelings, opinions, preferences = ALWAYS extract
+- Be specific: "Michael mentioned Sarah from work" not "user mentioned someone"
+- Confidence: 1.0 = directly stated, 0.8 = clearly implied, 0.6 = contextually inferred
+- If conversation mentions ANYONE by name or role, extract it
+- Include rich tags for retrieval (names, topics, emotions)
+- If nothing to extract, return {"facts": []}`;
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -125,27 +131,60 @@ RULES:
 
 export async function recallRelevantFacts({ base44, userId, userMessage }) {
     try {
-        // Simple keyword matching for now (can be enhanced with embeddings later)
-        const keywords = extractKeywords(userMessage);
-        
-        if (keywords.length === 0) {
+        // Get ALL user facts (prioritize user_facts and personal categories)
+        const allFacts = await base44.asServiceRole.entities.LearnedFact.filter(
+            { user_id: userId },
+            '-reference_count',
+            200
+        );
+
+        if (allFacts.length === 0) {
             return [];
         }
 
-        // Search for relevant facts by tags or subject
-        const allFacts = await base44.asServiceRole.entities.LearnedFact.filter(
-            { user_id: userId },
-            '-learned_at',
-            50
-        );
+        // Extract keywords from message
+        const keywords = extractKeywords(userMessage);
+        const messageLower = userMessage.toLowerCase();
 
-        const relevantFacts = allFacts.filter(fact => {
+        // Score each fact by relevance
+        const scoredFacts = allFacts.map(fact => {
+            let score = 0;
             const factText = `${fact.subject} ${fact.fact_content} ${fact.tags?.join(' ')}`.toLowerCase();
-            return keywords.some(keyword => factText.includes(keyword));
+            
+            // Heavy weight for personal/relationship facts
+            if (fact.fact_type === 'user_fact') score += 50;
+            if (fact.category === 'personal' || fact.category === 'relationship') score += 40;
+            
+            // Keyword matches
+            keywords.forEach(keyword => {
+                if (factText.includes(keyword)) score += 10;
+                if (fact.subject?.toLowerCase().includes(keyword)) score += 15;
+                if (fact.tags?.some(tag => tag.toLowerCase().includes(keyword))) score += 12;
+            });
+            
+            // Exact phrase matches
+            if (messageLower.includes(fact.subject?.toLowerCase())) score += 25;
+            
+            // Boost frequently referenced facts
+            score += (fact.reference_count || 0) * 2;
+            
+            // Recency bonus
+            const ageInDays = (Date.now() - new Date(fact.learned_at).getTime()) / (1000 * 60 * 60 * 24);
+            if (ageInDays < 7) score += 15;
+            else if (ageInDays < 30) score += 5;
+            
+            return { fact, score };
         });
 
-        // Update reference counts
-        for (const fact of relevantFacts.slice(0, 5)) {
+        // Sort by score and take top matches
+        const relevantFacts = scoredFacts
+            .filter(sf => sf.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 15)
+            .map(sf => sf.fact);
+
+        // Update reference counts for recalled facts
+        for (const fact of relevantFacts.slice(0, 10)) {
             try {
                 await base44.asServiceRole.entities.LearnedFact.update(fact.id, {
                     last_referenced: new Date().toISOString(),
@@ -158,11 +197,13 @@ export async function recallRelevantFacts({ base44, userId, userMessage }) {
 
         console.log('🧠 [FACTS_RECALLED]', { 
             userId, 
-            keywords: keywords.slice(0, 3),
-            relevant_count: relevantFacts.length 
+            total_facts: allFacts.length,
+            keywords: keywords.slice(0, 5),
+            relevant_count: relevantFacts.length,
+            top_subjects: relevantFacts.slice(0, 3).map(f => f.subject)
         });
 
-        return relevantFacts.slice(0, 10);
+        return relevantFacts;
 
     } catch (error) {
         console.error('⚠️ [FACT_RECALL_FAILED]', error.message);
@@ -194,15 +235,35 @@ export function formatFactsForContext(facts) {
         return '';
     }
 
-    let context = '\n\nRELEVANT KNOWLEDGE (PREVIOUSLY LEARNED):\n';
+    // Group by category
+    const personal = facts.filter(f => f.category === 'personal' || f.category === 'relationship');
+    const work = facts.filter(f => f.category === 'work');
+    const preferences = facts.filter(f => f.category === 'preference');
+    const other = facts.filter(f => !personal.includes(f) && !work.includes(f) && !preferences.includes(f));
+
+    let context = '\n\n═══ WHAT YOU REMEMBER ABOUT MICHAEL ═══\n';
     
-    facts.forEach(fact => {
-        context += `- ${fact.fact_content}`;
-        if (fact.subject && fact.subject !== 'unknown') {
-            context += ` [${fact.subject}]`;
-        }
-        context += '\n';
-    });
+    if (personal.length > 0) {
+        context += '\n📍 PERSONAL & RELATIONSHIPS:\n';
+        personal.forEach(f => context += `  • ${f.fact_content}\n`);
+    }
+    
+    if (work.length > 0) {
+        context += '\n💼 WORK & CAREER:\n';
+        work.forEach(f => context += `  • ${f.fact_content}\n`);
+    }
+    
+    if (preferences.length > 0) {
+        context += '\n⚙️  PREFERENCES & STYLE:\n';
+        preferences.forEach(f => context += `  • ${f.fact_content}\n`);
+    }
+    
+    if (other.length > 0) {
+        context += '\n📚 OTHER CONTEXT:\n';
+        other.slice(0, 5).forEach(f => context += `  • ${f.fact_content}\n`);
+    }
+    
+    context += '\n💡 Use this knowledge naturally in your responses. You KNOW these things about Michael.\n';
 
     return context;
 }

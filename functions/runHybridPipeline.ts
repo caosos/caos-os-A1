@@ -359,24 +359,11 @@ export async function runHybridPipeline(rawInput, options) {
             });
         }
 
-        // MEMORY RECALL: Fetch conversation history, user profile, and learned facts
+        // MEMORY RECALL: LEARNED FACTS FIRST (most important)
         let memoryContext = '';
         
         try {
-            const userProfiles = await base44.asServiceRole.entities.UserProfile.filter(
-                { user_email: user.email },
-                '-updated_date',
-                1
-            );
-            const userProfile = userProfiles[0];
-            
-            const recentMessages = await base44.asServiceRole.entities.Record.filter(
-                { session_id, status: 'active' },
-                '-seq',
-                10
-            );
-            
-            // CONTINUOUS LEARNING: Recall relevant facts
+            // PRIORITY 1: CONTINUOUS LEARNING - Recall relevant facts FIRST
             let relevantFacts = [];
             try {
                 const { recallRelevantFacts, formatFactsForContext } = await import('./core/continuousLearning.js');
@@ -392,6 +379,20 @@ export async function runHybridPipeline(rawInput, options) {
             } catch (factError) {
                 console.warn('⚠️ [FACT_RECALL_FAILED]', factError.message);
             }
+            
+            // PRIORITY 2: User profile and recent messages
+            const userProfiles = await base44.asServiceRole.entities.UserProfile.filter(
+                { user_email: user.email },
+                '-updated_date',
+                1
+            );
+            const userProfile = userProfiles[0];
+            
+            const recentMessages = await base44.asServiceRole.entities.Record.filter(
+                { session_id, status: 'active' },
+                '-seq',
+                10
+            );
             
             if (userProfile) {
                 memoryContext += `\n\n[PERMANENT MEMORY ABOUT USER]:\n`;
