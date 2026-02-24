@@ -45,14 +45,17 @@ export async function postTurnMemoryUpdate({
             version: 0
         };
 
-        // 2) Build summarization prompt (INTERNAL ONLY)
+        // 2) Build enhanced summarization prompt
         const prompt = `You are updating memory for an AI assistant named "Aria" who lives within the CAOS platform.
-Goal: produce tight, concrete, evolving summaries. No fluff.
+Goal: produce tight, concrete, evolving summaries with rich contextual awareness. No fluff.
 
 INPUTS:
 - Previous thread summary_short: ${threadMem.summary_short || 'None'}
 - Previous thread summary_context: ${threadMem.summary_context || 'None'}
 - Previous thread open_loops: ${threadMem.open_loops || 'None'}
+- Previous topic_tags: ${JSON.stringify(threadMem.topic_tags || [])}
+- Previous key_decisions: ${JSON.stringify(threadMem.key_decisions || [])}
+- Previous artifacts_created: ${JSON.stringify(threadMem.artifacts_created || [])}
 
 - Previous user profile_summary: ${userMem.profile_summary || 'None'}
 - Previous user recent_state: ${userMem.recent_state || 'None'}
@@ -69,7 +72,15 @@ Return JSON with:
     "summary_short": "...",
     "summary_context": "- ...\\n- ...",
     "open_loops": "- ...",
-    "preferences_inferred": { ... }
+    "preferences_inferred": { ... },
+    "topic_tags": ["tag1", "tag2"],
+    "key_decisions": [{"decision": "...", "timestamp": "..."}],
+    "artifacts_created": ["entity:X", "function:Y"],
+    "emotional_context": {
+      "user_mood": "focused|frustrated|exploratory|urgent",
+      "urgency_level": "low|medium|high",
+      "collaboration_style": "directive|exploratory|debugging"
+    }
   },
   "user": {
     "profile_summary": "...",
@@ -83,6 +94,10 @@ Return JSON with:
 RULES:
 - Specificity beats abstraction.
 - Keep continuity; evolve, don't reset.
+- Extract topic_tags (2-5 keywords max) from conversation themes.
+- Capture key_decisions when user makes choices or defines direction.
+- Track artifacts_created when entities, functions, or features are built.
+- Infer emotional_context from tone, urgency, and collaboration style.
 - Do NOT invent facts.
 - If unsure, omit rather than guess.
 - summary_short must be <= 240 chars.
@@ -168,6 +183,19 @@ RULES:
             user_version: newUserVersion,
             traceId 
         });
+
+        // 6) Update environment state with new thread context
+        try {
+            const { updateEnvironmentState } = await import('./environmentLoader.js');
+            await updateEnvironmentState({
+                base44,
+                userId,
+                threadId,
+                threadMemory: memJson.thread
+            });
+        } catch (envError) {
+            console.warn('⚠️ [ENV_UPDATE_ASYNC_FAILED]', envError.message);
+        }
 
         return { ok: true, traceId };
 

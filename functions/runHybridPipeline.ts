@@ -473,8 +473,8 @@ export async function runHybridPipeline(rawInput, options) {
             const userProfile = await loadUserProfile(base44, user.email);
             const identitySystemPrompt = buildIdentitySystemPrompt(userProfile);
             
-            // Build context blocks for memory injection
-            const { identityBlock, threadBlock, userBlock } = await buildGenContext({
+            // Build context blocks for memory injection (with environment awareness)
+            const { identityBlock, threadBlock, userBlock, environmentBlock } = await buildGenContext({
                 base44,
                 userId: user.email,
                 threadId: session_id
@@ -488,7 +488,8 @@ export async function runHybridPipeline(rawInput, options) {
                     identitySystemPrompt,
                     identityBlock,
                     threadBlock,
-                    userBlock
+                    userBlock,
+                    environmentBlock
                 });
                 
                 finalResponse = {

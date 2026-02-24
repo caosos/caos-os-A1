@@ -15,7 +15,9 @@ export async function buildGenContext({ base44, userId, threadId }) {
         const threadMem = threadMems[0] || {
             summary_short: 'New conversation',
             summary_context: '',
-            open_loops: ''
+            open_loops: '',
+            topic_tags: [],
+            emotional_context: {}
         };
 
         // Load user memory
@@ -29,6 +31,10 @@ export async function buildGenContext({ base44, userId, threadId }) {
             recent_state: '',
             hard_rules: {}
         };
+        
+        // CRITICAL: Load environment state for awareness
+        const { loadEnvironmentState, buildEnvironmentContextBlock } = await import('./environmentLoader.js');
+        const envState = await loadEnvironmentState({ base44, userId });
 
         const identityBlock = `
 IDENTITY (HARD):
@@ -44,10 +50,13 @@ IDENTITY (HARD):
         const threadBlock = threadMem.summary_short ? `
 THREAD CONTEXT (EVOLVING SUMMARY):
 - summary_short: ${threadMem.summary_short}
+- topic_tags: ${threadMem.topic_tags?.join(', ') || 'none'}
 - summary_context:
 ${threadMem.summary_context || 'None yet'}
 - open_loops:
 ${threadMem.open_loops || 'None yet'}
+${threadMem.emotional_context?.user_mood ? `- current_mood: ${threadMem.emotional_context.user_mood}` : ''}
+${threadMem.emotional_context?.urgency_level ? `- urgency: ${threadMem.emotional_context.urgency_level}` : ''}
 ` : '';
 
         const userBlock = userMem.profile_summary ? `
@@ -61,7 +70,10 @@ HARD RULES:
 ${JSON.stringify(userMem.hard_rules, null, 2)}
 ` : '';
 
-        return { identityBlock, threadBlock, userBlock };
+        // Build environment awareness block
+        const environmentBlock = buildEnvironmentContextBlock(envState);
+
+        return { identityBlock, threadBlock, userBlock, environmentBlock };
 
     } catch (error) {
         console.error('⚠️ [CONTEXT_BUILD_FAILED]', error.message);
