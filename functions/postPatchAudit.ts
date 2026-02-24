@@ -8,6 +8,7 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { runHybridPipeline } from './core/runHybridPipeline.js';
 
 const CANONICAL_TESTS = [
     { input: "Write a story about today.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
