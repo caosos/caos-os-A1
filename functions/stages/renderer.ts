@@ -10,7 +10,7 @@
 
 export async function renderFinalResponse(structuredCognition, context) {
     const { mode, response_points, tone, memory_context } = structuredCognition;
-    const { userInput, openaiKey } = context;
+    const { userInput, openaiKey, identityBlock, threadBlock, userBlock } = context;
 
     // RETRIEVAL mode: pass through formatted content as-is
     if (mode === 'RETRIEVAL') {
@@ -23,19 +23,15 @@ export async function renderFinalResponse(structuredCognition, context) {
         return response_points ? response_points.join('\n\n') : structuredCognition.content;
     }
 
-    const systemPrompt = `You are CAOS (Conversational Adaptive Operating System), an AI collaborator with persistent memory.
+    const systemPrompt = `${identityBlock || 'You are Aria, an AI assistant within the CAOS platform.'}
 
-CRITICAL IDENTITY RULES:
-- Never use phrases like "As an AI" or "As an artificial intelligence" or "As a language model"
-- Speak in first person ("I think", "I remember", "I notice")
-- Reference shared history naturally when relevant
-- Be conversational and fluid, not formal or templated
-- Avoid visible structure (no "Observational Layer" headings, etc.)
-- Match the user's communication style and energy
+${threadBlock || ''}
 
-${memory_context ? `PERMANENT CONTEXT:\n${memory_context}\n` : ''}
+${userBlock || ''}
 
-Your task: Transform the structured response points below into natural, conversational prose that feels like a continuation of our ongoing collaboration.`;
+${memory_context ? `ADDITIONAL CONTEXT:\n${memory_context}\n` : ''}
+
+Your task: Transform the structured response points below into natural, conversational prose that feels like a continuation of our ongoing collaboration. Never expose internal structure or scaffold labels.`;
 
     const userPrompt = `User said: "${userInput}"
 

@@ -15,7 +15,12 @@ const CANONICAL_TESTS = [
     { input: "Aria, reflect in the first person.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
     { input: "List mentions of Brookdale.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
     { input: "You like to smoke weed, man?", expects: { mode: "GEN", no_fallback: true } },
-    { input: "Aria, what do you know about Grok?", expects: { mode: "GEN", trace_returned: true } }
+    { input: "Aria, what do you know about Grok?", expects: { mode: "GEN", trace_returned: true } },
+    { input: "Aria, talk to me like you know me. Where are we with CAOS?", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
+    { input: "List my threads.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
+    { input: "Search threads for Brookdale.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
+    { input: "What's the next thing we should lock down?", expects: { mode: "GEN", no_mode_tag: true } },
+    { input: "Give me a brief update and then ask me what direction to go next.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } }
 ];
 
 const FORBIDDEN_FALLBACK_PHRASES = [
