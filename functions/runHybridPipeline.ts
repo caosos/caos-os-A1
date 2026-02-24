@@ -8,13 +8,13 @@
  * Tests (postPatchAudit) call this directly.
  */
 
-import { resolveIntent } from '../stages/resolveIntent.js';
-import { routeTool } from '../stages/routeTool.js';
-import { executeTool } from '../stages/executeTool.js';
-import { formatResult } from '../stages/formatResult.js';
-import { applyCognitiveLayer } from '../stages/applyCognitiveLayer.js';
-import { normalizeInput } from './normalize.js';
-import { logDriftEvent } from './executorContract.js';
+import { resolveIntent } from './stages/resolveIntent.js';
+import { routeTool } from './stages/routeTool.js';
+import { executeTool } from './stages/executeTool.js';
+import { formatResult } from './stages/formatResult.js';
+import { applyCognitiveLayer } from './stages/applyCognitiveLayer.js';
+import { normalizeInput } from './core/normalize.js';
+import { logDriftEvent } from './core/executorContract.js';
 
 export async function runHybridPipeline(rawInput, options) {
     const {
