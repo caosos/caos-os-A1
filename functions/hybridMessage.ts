@@ -562,23 +562,51 @@ Deno.serve(async (req) => {
             receipt_full: execution_receipt
         }, null, 2));
 
-        // FIX 1: Strip internal mode tags from user-facing response
-        let cleanReply = finalResponse.content;
-        if (cleanReply && typeof cleanReply === 'string') {
-            cleanReply = cleanReply.replace(/^\[MODE=[A-Z_]+\]\s*/i, '').trim();
+        // ========== FINAL SANITIZATION LAYER (MUST BE LAST) ==========
+        let finalClean = finalResponse.content;
+        
+        // STEP 1: Strip internal mode tags
+        if (finalClean && typeof finalClean === 'string') {
+            finalClean = finalClean.replace(/^\[MODE=[A-Z_]+\]\s*/i, '').trim();
         }
         
+        // STEP 2: Validate no sterile fallback (FIX 4)
+        if (finalClean && typeof finalClean === 'string') {
+            const forbiddenPatterns = [
+                /as an artificial intelligence/i,
+                /as an ai language model/i,
+                /i am an ai assistant/i,
+                /i'm just an ai/i
+            ];
+            
+            for (const pattern of forbiddenPatterns) {
+                if (pattern.test(finalClean)) {
+                    console.error('🚨 [PERSONALITY_FALLBACK_BLOCKED]', {
+                        request_id,
+                        pattern: pattern.source
+                    });
+                    
+                    // Log but continue - hard regeneration would be expensive
+                    // Mark in receipt instead
+                    execution_receipt.guardrails.policy_triggered = true;
+                    execution_receipt.fallback = {
+                        triggered: true,
+                        fallback_type: 'STERILE_PERSONA_DETECTED',
+                        reason: `Pattern matched: ${pattern.source}`
+                    };
+                    break;
+                }
+            }
+        }
+        
+        // ========== PAYLOAD ASSEMBLY (FIX 5: Always include trace) ==========
         const returnPayload = {
-            reply: cleanReply,
+            reply: finalClean,
             mode: finalResponse.mode,
             session: session_id,
             execution_state,
-            execution_receipt
-        };
-        
-        // TRACE MODE: Add detailed stage snapshots when trace=true
-        if (traceMode) {
-            returnPayload.trace = {
+            execution_receipt,
+            trace: traceMode ? {
                 enabled: true,
                 request_id,
                 input: rawInput,
@@ -586,8 +614,8 @@ Deno.serve(async (req) => {
                 stages: stageSnapshots,
                 total_latency_ms: execution_state.latency_ms,
                 timestamp: new Date().toISOString()
-            };
-        }
+            } : null
+        };
 
         // AUDIT LOG 4: Final return payload
         console.log('🔍 [AUDIT_4_RETURN_PAYLOAD]', JSON.stringify({

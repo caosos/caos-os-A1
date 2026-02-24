@@ -21,6 +21,17 @@ export async function executeTool(routeResult, intentResult, base44) {
         return null; // No tool execution for GEN pipeline
     }
 
+    // FIX 2: Validate extractedTerms exists and has content
+    if (!extractedTerms || !Array.isArray(extractedTerms)) {
+        console.error('🚨 [EXECUTION_VALIDATION]: extractedTerms missing or invalid');
+        throw {
+            error: 'EXECUTION_VALIDATION_FAILURE',
+            reason: 'EXTRACTED_TERMS_INVALID',
+            details: 'extractedTerms must be an array',
+            user_visible: 'Execution failed: Invalid search parameters'
+        };
+    }
+    
     // HARD FAIL: SEARCH with zero terms
     if (route === 'THREAD_SEARCH_PIPELINE' && extractedTerms.length === 0) {
         console.error('🚨 [EXECUTION_HARD_FAIL]: EMPTY_FILTER_ON_SEARCH');

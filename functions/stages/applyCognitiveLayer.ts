@@ -244,6 +244,7 @@ Rewrite this response naturally, referencing our shared work and context. Make i
             }
         }
         
+        // Return WITHOUT mode prefix - sanitization happens upstream
         return {
             mode: 'GEN',
             content: payload
