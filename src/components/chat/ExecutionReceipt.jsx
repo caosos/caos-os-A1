@@ -5,29 +5,37 @@ import { Clock, Code, Search, List, Zap, ChevronRight, Shield, Lock, AlertTriang
 export default function ExecutionReceipt({ receipt }) {
   const [expanded, setExpanded] = useState(false);
   
+  // INSTRUMENTATION: Receipt required, always present
   if (!receipt) return null;
+
+  // Schema v1.0 unified format
+  const mode = receipt.execution_mode || receipt.mode || 'UNKNOWN';
+  const intent = receipt.intent?.classification || 'UNKNOWN';
+  const confidence = receipt.intent?.confidence || 0.0;
+  const reason = receipt.intent?.reason;
+  const forceRetrieval = receipt.intent?.force_retrieval || false;
+  const route = receipt.routing?.pipeline || 'UNKNOWN';
+  const formatter = receipt.routing?.formatter;
+  const requiresTool = receipt.routing?.requires_tool || false;
+  const toolInvoked = receipt.tools?.invoked || false;
+  const toolName = receipt.tools?.tool_name;
+  const toolStatus = receipt.tools?.execution_status;
+  const fallback = receipt.fallback || {};
+  const memoryUsed = receipt.memory_access?.used || false;
+  const memorySource = receipt.memory_access?.source;
+  const downgradeBlocked = receipt.guardrails?.downgrade_blocked || false;
+  const policyTriggered = receipt.guardrails?.policy_triggered || false;
+  const latencyMs = receipt.latency_ms || 0;
 
   const modeIcons = {
     SEARCH: Search,
     LIST: List,
     RETRIEVAL: Search,
-    GEN: Zap
+    GEN: Zap,
+    ERROR: AlertTriangle
   };
 
-  const ModeIcon = modeIcons[receipt.mode] || Code;
-
-  // Handle both old and new receipt formats
-  const intent = receipt.intent?.detected || receipt.intent;
-  const confidence = receipt.intent?.confidence || receipt.confidence;
-  const reason = receipt.intent?.reason;
-  const extractedTerms = receipt.intent?.extracted_terms || receipt.extracted_terms || [];
-  const route = receipt.route?.selected || receipt.route;
-  const formatter = receipt.route?.formatter;
-  const toolInvoked = receipt.tool_execution?.invoked || receipt.tool_invoked;
-  const resultCount = receipt.tool_execution?.result_count || receipt.result_count || 0;
-  const matchType = receipt.tool_execution?.match_type;
-  const matchFields = receipt.tool_execution?.match_fields || [];
-  const guardrails = receipt.guardrails || {};
+  const ModeIcon = modeIcons[mode] || Code;
 
   return (
     <div className="mt-3 border border-white/10 rounded-lg bg-white/5 backdrop-blur-sm overflow-hidden">
@@ -45,38 +53,36 @@ export default function ExecutionReceipt({ receipt }) {
       
       {expanded && (
         <div className="px-3 pb-3 space-y-3 text-xs font-mono border-t border-white/10 pt-3">
-          {/* Intent Section */}
+          {/* Intent Section (Schema v1.0) */}
           <div className="space-y-1">
             <div className="text-white/50 font-semibold mb-1">Intent Resolution</div>
             <div className="flex justify-between">
               <span className="text-white/40">Intent:</span>
               <Badge variant="outline" className="text-xs">{intent}</Badge>
             </div>
-            {confidence && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Confidence:</span>
-                <span className="text-white/60">{typeof confidence === 'number' ? confidence.toFixed(2) : confidence}</span>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-white/40">Confidence:</span>
+              <span className="text-white/60">{confidence.toFixed(2)}</span>
+            </div>
             {reason && (
               <div className="flex justify-between">
                 <span className="text-white/40">Reason:</span>
                 <span className="text-white/60">{reason}</span>
               </div>
             )}
-            {extractedTerms.length > 0 && (
+            {forceRetrieval && (
               <div className="flex justify-between">
-                <span className="text-white/40">Extracted Terms:</span>
-                <span className="text-yellow-400">[{extractedTerms.map(t => `"${t}"`).join(', ')}]</span>
+                <span className="text-white/40">Force Retrieval:</span>
+                <span className="text-yellow-400">true</span>
               </div>
             )}
           </div>
 
-          {/* Route Section */}
+          {/* Route Section (Schema v1.0) */}
           <div className="space-y-1 pt-2 border-t border-white/10">
             <div className="text-white/50 font-semibold mb-1">Route Selection</div>
             <div className="flex justify-between">
-              <span className="text-white/40">Route:</span>
+              <span className="text-white/40">Pipeline:</span>
               <span className="text-white/60">{route}</span>
             </div>
             {formatter && (
@@ -85,100 +91,111 @@ export default function ExecutionReceipt({ receipt }) {
                 <span className="text-white/60">{formatter}</span>
               </div>
             )}
+            <div className="flex justify-between">
+              <span className="text-white/40">Requires Tool:</span>
+              <span className="text-white/60">{requiresTool ? 'true' : 'false'}</span>
+            </div>
           </div>
 
-          {/* Tool Execution Section */}
-          {toolInvoked && (
+          {/* Tool Execution Section (Schema v1.0) */}
+          <div className="space-y-1 pt-2 border-t border-white/10">
+            <div className="text-white/50 font-semibold mb-1">Tool Execution</div>
+            <div className="flex justify-between">
+              <span className="text-white/40">Invoked:</span>
+              <span className={toolInvoked ? 'text-green-400' : 'text-white/60'}>{toolInvoked ? 'true' : 'false'}</span>
+            </div>
+            {toolName && (
+              <div className="flex justify-between">
+                <span className="text-white/40">Tool Name:</span>
+                <span className="text-white/60">{toolName}</span>
+              </div>
+            )}
+            {toolStatus && (
+              <div className="flex justify-between">
+                <span className="text-white/40">Status:</span>
+                <span className={toolStatus === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}>{toolStatus}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Fallback Section (Schema v1.0) */}
+          {fallback.triggered && (
             <div className="space-y-1 pt-2 border-t border-white/10">
-              <div className="text-white/50 font-semibold mb-1">Tool Execution</div>
-              <div className="flex justify-between">
-                <span className="text-white/40">Tool Invoked:</span>
-                <span className="text-green-400">{toolInvoked}</span>
+              <div className="text-white/50 font-semibold mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                Fallback
               </div>
-              {receipt.fallback_triggered !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Fallback Triggered:</span>
-                  <span className={receipt.fallback_triggered ? 'text-yellow-400' : 'text-white/60'}>
-                    {receipt.fallback_triggered ? 'true' : 'false'}
-                  </span>
-                </div>
-              )}
-              {matchType && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Match Type:</span>
-                  <span className="text-white/60">{matchType}</span>
-                </div>
-              )}
-              {matchFields.length > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Match Fields:</span>
-                  <span className="text-white/60">{matchFields.join(', ')}</span>
-                </div>
-              )}
               <div className="flex justify-between">
-                <span className="text-white/40">Results:</span>
-                <span className="text-white/60">{resultCount}</span>
+                <span className="text-white/40">Triggered:</span>
+                <span className="text-yellow-400">true</span>
               </div>
+              {fallback.fallback_type && (
+                <div className="flex justify-between">
+                  <span className="text-white/40">Type:</span>
+                  <span className="text-white/60">{fallback.fallback_type}</span>
+                </div>
+              )}
+              {fallback.reason && (
+                <div className="flex justify-between">
+                  <span className="text-white/40">Reason:</span>
+                  <span className="text-white/60 text-right max-w-[60%]">{fallback.reason}</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Guardrails Section */}
-          {Object.keys(guardrails).length > 0 && (
+          {/* Memory Section (Schema v1.0) */}
+          {memoryUsed && (
+            <div className="space-y-1 pt-2 border-t border-white/10">
+              <div className="text-white/50 font-semibold mb-1">Memory Access</div>
+              <div className="flex justify-between">
+                <span className="text-white/40">Used:</span>
+                <span className="text-green-400">true</span>
+              </div>
+              {memorySource && (
+                <div className="flex justify-between">
+                  <span className="text-white/40">Source:</span>
+                  <span className="text-white/60">{memorySource}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Guardrails Section (Schema v1.0) */}
+          {(downgradeBlocked || policyTriggered) && (
             <div className="space-y-1 pt-2 border-t border-white/10">
               <div className="text-white/50 font-semibold mb-1 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 Guardrails
               </div>
-              {guardrails.refinement_lock_engaged !== undefined && (
-                <div className="flex justify-between items-center">
-                  <span className="text-white/40">Refinement Lock:</span>
-                  <span className={guardrails.refinement_lock_engaged ? 'text-yellow-400 flex items-center gap-1' : 'text-white/60'}>
-                    {guardrails.refinement_lock_engaged && <Lock className="w-3 h-3" />}
-                    {guardrails.refinement_lock_engaged ? 'engaged' : 'false'}
-                  </span>
-                </div>
-              )}
-              {guardrails.echo_suppression_triggered !== undefined && (
+              {downgradeBlocked && (
                 <div className="flex justify-between">
-                  <span className="text-white/40">Echo Suppression:</span>
-                  <span className="text-white/60">
-                    {guardrails.echo_suppression_triggered ? 'triggered' : 'not triggered'}
-                  </span>
+                  <span className="text-white/40">Downgrade Blocked:</span>
+                  <span className="text-yellow-400">true</span>
                 </div>
               )}
-              {guardrails.empty_search_blocked !== undefined && (
+              {policyTriggered && (
                 <div className="flex justify-between">
-                  <span className="text-white/40">Empty Search Block:</span>
-                  <span className={guardrails.empty_search_blocked ? 'text-red-400' : 'text-white/60'}>
-                    {guardrails.empty_search_blocked ? 'blocked' : 'passed'}
-                  </span>
-                </div>
-              )}
-              {guardrails.forced_route && (
-                <div className="flex justify-between items-center">
-                  <span className="text-white/40">Forced Route:</span>
-                  <span className="text-yellow-400 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    {guardrails.forced_route}
-                  </span>
+                  <span className="text-white/40">Policy Triggered:</span>
+                  <span className="text-yellow-400">true</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Performance Section */}
+          {/* Performance Section (Schema v1.0) */}
           <div className="space-y-1 pt-2 border-t border-white/10">
             <div className="text-white/50 font-semibold mb-1">Performance</div>
             <div className="flex justify-between items-center">
-              <span className="text-white/40">Execution Time:</span>
+              <span className="text-white/40">Latency:</span>
               <span className="flex items-center gap-1 text-white/60">
                 <Clock className="w-3 h-3" />
-                {receipt.execution_time_ms}ms
+                {latencyMs}ms
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/40">Mode:</span>
-              <Badge variant="outline" className="text-xs">{receipt.mode}</Badge>
+              <span className="text-white/40">Execution Mode:</span>
+              <Badge variant="outline" className="text-xs">{mode}</Badge>
             </div>
           </div>
         </div>
