@@ -367,6 +367,15 @@ Deno.serve(async (req) => {
         }
 
         execution_state.mode = formattedResult.mode;
+        
+        if (traceMode) {
+            stageSnapshots.push({
+                stage: "STAGE_4_FORMAT_RESULT",
+                mode: formattedResult.mode,
+                content_length: formattedResult.content?.length || 0,
+                has_content: !!formattedResult.content
+            });
+        }
 
 
 
