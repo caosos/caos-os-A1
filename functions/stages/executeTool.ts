@@ -11,13 +11,25 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-export async function executeTool(routeResult, intentResult, base44) {
+export async function executeTool(routeResult, intentResult, base44, user, request_id) {
     const { route, requiresTool } = routeResult;
-    const { extractedTerms, multiQuery, intent } = intentResult;
+    const { extractedTerms, multiQuery, intent, forceToolExecution, userMessage } = intentResult;
 
-    console.log('🔧 [EXECUTE_TOOL] Route:', route);
+    console.log('🔧 [EXECUTE_TOOL] Route:', route, 'forceToolExecution:', forceToolExecution);
 
-    if (!requiresTool) {
+    // Check for analyze threads intent (when forceToolExecution=true and wildcard/no terms)
+    if (forceToolExecution && (extractedTerms?.includes('*') || extractedTerms?.length === 0)) {
+        console.log('🔍 [ANALYZE_THREADS_TRIGGERED]', { request_id });
+        const { executeAnalyzeThreads } = await import('../executors/analyzeThreads.js');
+        return await executeAnalyzeThreads({
+            base44,
+            user,
+            query: userMessage || 'analyze threads',
+            request_id
+        });
+    }
+
+    if (!requiresTool && !forceToolExecution) {
         return null; // No tool execution for GEN pipeline
     }
 

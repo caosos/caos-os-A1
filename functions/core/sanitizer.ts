@@ -11,9 +11,12 @@ export function sanitizeUserFacingText(text, options = {}) {
 
     const original = text;
 
-    // 1) Strip [MODE=...] tags (any variant)
+    // 1) Strip [MODE=...] tags (any variant) - aggressive removal
+    text = text.replace(/\[MODE\s*=\s*[A-Z_]+\]/gi, "");
     text = text.replace(/\[MODE=[A-Z_]+\]/gi, "");
     text = text.replace(/^\s*\[MODE=.*?\]\s*$/gmi, "");
+    text = text.replace(/MODE\s*=\s*GEN/gi, "");
+    text = text.replace(/MODE\s*=\s*RETRIEVAL/gi, "");
 
     // 2) Strip all internal scaffold headings and variations
     const bannedScaffold = [
