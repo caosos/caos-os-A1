@@ -182,85 +182,15 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 3: Extract topic segment using triggers
-    let topicSegment = '';
-    let extractionReason = 'none';
-
-    // Try comma-separated first
-    if (normalized.includes(',')) {
-        const commaPart = normalized.split('show me the thread')[1] || normalized;
-        topicSegment = commaPart;
-        extractionReason = 'comma_split';
-    } else if (normalized.includes(' and ')) {
-        // Try " and " split
-        const triggerMatch = RETRIEVAL_TRIGGERS.find(t => normalized.includes(t));
-        if (triggerMatch) {
-            const idx = normalized.indexOf(triggerMatch);
-            topicSegment = normalized.substring(idx + triggerMatch.length);
-            extractionReason = 'and_split';
-        }
-    } else {
-        // Try single trigger phrase extraction
-        const triggerMatch = RETRIEVAL_TRIGGERS.find(t => normalized.includes(t));
-        if (triggerMatch) {
-            const idx = normalized.indexOf(triggerMatch);
-            topicSegment = normalized.substring(idx + triggerMatch.length);
-            extractionReason = 'trigger_phrase';
-        }
-    }
-
-    // STEP 4: Clean segments
-    let extractedTerms = topicSegment
-        .split(/,|and/)
-        .map(t => t.trim())
-        .filter(t => t.length > 0)
-        .filter(t => !STOP_WORDS.has(t))
-        .filter((t, idx, arr) => arr.indexOf(t) === idx); // Remove duplicates
-
-    // STEP 5: Final validation
-    if (extractedTerms.length === 0) {
-        // No terms extracted - generic generation
-        return {
-            intent: 'GENERIC_GEN',
-            confidence: 0.65,
-            reason: 'no_terms_extracted',
-            extractedTerms: [],
-            multiQuery: false
-        };
-    }
-
-    // FAIL LOUDLY: If we reached here via search intent path with empty terms
-    // (Should not happen due to earlier guards, but defensive)
-    if (intent === 'SEARCH_THREADS' && extractedTerms.length === 0) {
-        return {
-            intent: 'SEARCH_THREADS',
-            confidence: 0.0,
-            reason: 'SEARCH_TERM_MISSING',
-            error_code: 'EXTRACTION_EMPTY_FALLTHROUGH',
-            extractedTerms: [],
-            multiQuery: false,
-            extraction_trace: {
-                normalized_input: normalized,
-                extraction_reason: extractionReason,
-                topic_segment: topicSegment
-            }
-        };
-    }
-
-    // Determine if multi-query
-    const multiQuery = extractedTerms.length > 1;
-    const intent = multiQuery ? 'SEARCH_THREADS' : 'SEARCH_THREADS';
-
+    // PHASE ONE LOCK: Default to conversational generation
+    // Only extract terms if explicit retrieval verb was already detected
+    // This prevents retrieval bleed on narrative/reflective prompts
+    
     return {
-        intent,
-        confidence: 0.95,
-        reason: extractionReason,
-        extractedTerms,
-        multiQuery,
-        extractorDebug: {
-            normalized_query: normalized,
-            extraction_reason: extractionReason,
-            topic_segment: topicSegment
-        }
+        intent: 'GENERIC_GEN',
+        confidence: 0.85,
+        reason: 'default_conversational_path',
+        extractedTerms: [],
+        multiQuery: false
     };
 }

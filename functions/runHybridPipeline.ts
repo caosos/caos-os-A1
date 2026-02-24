@@ -13,6 +13,7 @@ import { routeTool } from './stages/routeTool.js';
 import { executeTool } from './stages/executeTool.js';
 import { formatResult } from './stages/formatResult.js';
 import { applyCognitiveLayer } from './stages/applyCognitiveLayer.js';
+import { renderFinalResponse } from './stages/renderer.js';
 import { normalizeInput } from './core/normalize.js';
 import { logDriftEvent } from './core/executorContract.js';
 
@@ -410,16 +411,81 @@ export async function runHybridPipeline(rawInput, options) {
             };
         }
 
-        // STAGE 5: APPLY COGNITIVE LAYER
-        let finalResponse;
+        // STAGE 5: APPLY COGNITIVE LAYER (outputs structured cognition)
+        let cognitiveResult;
         try {
             const enhancedInput = formattedResult.mode === 'GEN' 
                 ? `${input}${memoryContext}` 
                 : input;
             
-            finalResponse = applyCognitiveLayer(formattedResult, enhancedInput);
+            cognitiveResult = applyCognitiveLayer(formattedResult, enhancedInput);
             
-            // Block forbidden fallback patterns
+            if (traceMode) {
+                stageSnapshots.push({
+                    stage: "STAGE_5_APPLY_COGNITIVE_LAYER",
+                    mode: cognitiveResult.mode,
+                    structured: cognitiveResult.structured || false,
+                    memory_enhanced: formattedResult.mode === 'GEN' && memoryContext.length > 0
+                });
+            }
+        } catch (cogError) {
+            execution_state.status = 'COGNITIVE_FAILED';
+            console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
+
+            execution_receipt.execution_mode = 'ERROR';
+            if (cogError.receipt_fallback) {
+                execution_receipt.fallback = cogError.receipt_fallback;
+            } else {
+                execution_receipt.fallback = {
+                    triggered: true,
+                    fallback_type: 'COGNITIVE_LAYER_ERROR',
+                    reason: cogError.error || cogError.message
+                };
+            }
+            execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
+
+            console.log('📋 [EXECUTION_RECEIPT_COGNITIVE_ERROR]', execution_receipt);
+
+            if (cogError.error === 'ROUTE_VIOLATION_GEN_SEARCH' || cogError.error === 'PIPELINE_VIOLATION_GEN_LIST') {
+                await logDriftEvent(base44, {
+                    session_id,
+                    drift_type: 'unauthorized_memory_write',
+                    severity: 'CRITICAL',
+                    layer: 'applyCognitiveLayer',
+                    details: cogError,
+                    corrective_action: 'HARD_FAIL'
+                });
+            }
+
+            return { 
+                error: cogError.error || cogError.message, 
+                request_id,
+                execution_receipt
+            };
+        }
+
+        // STAGE 6: RENDER FINAL RESPONSE (prose generation)
+        let finalResponse;
+        try {
+            const openaiKey = Deno.env.get('OPENAI_API_KEY');
+            
+            // If structured cognition, render it
+            if (cognitiveResult.structured) {
+                const rendered = await renderFinalResponse(cognitiveResult, {
+                    userInput: input,
+                    openaiKey
+                });
+                
+                finalResponse = {
+                    mode: cognitiveResult.mode,
+                    content: rendered
+                };
+            } else {
+                // RETRIEVAL mode or legacy fallback
+                finalResponse = cognitiveResult;
+            }
+            
+            // IDENTITY HARD LOCK - Block forbidden patterns
             if (finalResponse.content && typeof finalResponse.content === 'string') {
                 const forbiddenPatterns = [
                     /as an artificial intelligence/i,
@@ -430,17 +496,16 @@ export async function runHybridPipeline(rawInput, options) {
                 
                 for (const pattern of forbiddenPatterns) {
                     if (pattern.test(finalResponse.content)) {
-                        console.error('🚨 [PERSONALITY_FALLBACK_BLOCKED]', {
+                        console.error('🚨 [IDENTITY_HARD_LOCK_TRIGGERED]', {
                             request_id,
-                            pattern: pattern.source,
-                            response_preview: finalResponse.content.substring(0, 200)
+                            pattern: pattern.source
                         });
                         
                         throw {
-                            error: 'PERSONALITY_FALLBACK_DETECTED',
-                            code: 'IDENTITY_BYPASS',
+                            error: 'IDENTITY_DRIFT_DETECTED',
+                            code: 'FORBIDDEN_DISCLAIMER',
                             pattern: pattern.source,
-                            requires_regeneration: true
+                            message: 'Response contained forbidden AI disclaimer language'
                         };
                     }
                 }
@@ -448,10 +513,10 @@ export async function runHybridPipeline(rawInput, options) {
             
             if (traceMode) {
                 stageSnapshots.push({
-                    stage: "STAGE_5_APPLY_COGNITIVE_LAYER",
+                    stage: "STAGE_6_RENDER_FINAL_RESPONSE",
                     mode: finalResponse.mode,
                     response_length: finalResponse.content?.length || 0,
-                    memory_enhanced: formattedResult.mode === 'GEN' && memoryContext.length > 0
+                    renderer_used: cognitiveResult.structured || false
                 });
             }
         } catch (cogError) {
