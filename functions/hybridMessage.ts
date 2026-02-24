@@ -71,7 +71,11 @@ Deno.serve(async (req) => {
 
         const timestamp = Date.now();
         const body = await req.json();
-        const { input: rawInput, session_id } = body;
+        const { input: rawInput, session_id, trace } = body;
+        
+        // TRACE MODE: Capture detailed stage snapshots when trace=true
+        const traceMode = trace === true;
+        const stageSnapshots = traceMode ? [] : null;
 
         // AUDIT LOG 1: Full request body at entry
         console.log('🔍 [AUDIT_1_REQUEST_BODY]', JSON.stringify({
