@@ -119,6 +119,29 @@ export async function youtubeSearchExecutor(query, options = {}) {
             });
         }
         
+        // CONTINUOUS LEARNING: Persist search results as knowledge
+        try {
+            const topVideos = videos.slice(0, 3);
+            for (const video of topVideos) {
+                await base44.asServiceRole.entities.LearnedFact.create({
+                    user_id: user.email,
+                    fact_type: 'search_result',
+                    category: 'youtube_search',
+                    subject: query,
+                    fact_content: `Found video: "${video.title}" by ${video.channel_title} (${video.url})`,
+                    confidence: 0.9,
+                    source_thread: 'youtube_search_executor',
+                    learned_at: new Date().toISOString(),
+                    last_referenced: new Date().toISOString(),
+                    reference_count: 0,
+                    tags: ['youtube', 'video', ...query.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 3)]
+                });
+            }
+            console.log('🧠 [SEARCH_KNOWLEDGE_STORED]', { query, videos_stored: topVideos.length });
+        } catch (learnError) {
+            console.warn('⚠️ [SEARCH_LEARNING_FAILED]', learnError.message);
+        }
+        
         return buildExecutorResponse({
             ok: true,
             tool,
