@@ -305,6 +305,24 @@ Deno.serve(async (req) => {
                     arguments_valid: true,
                     execution_status: "SUCCESS"
                 };
+                
+                if (traceMode) {
+                    stageSnapshots.push({
+                        stage: "STAGE_3_EXECUTE_TOOL",
+                        tool_invoked: true,
+                        executor: toolResult?.executor || toolResult?.type,
+                        result_count: toolResult?.count || 0,
+                        match_type: toolResult?.match_type,
+                        search_scope: toolResult?.search_scope,
+                        tool_result_keys: toolResult ? Object.keys(toolResult) : []
+                    });
+                }
+            } else if (traceMode) {
+                stageSnapshots.push({
+                    stage: "STAGE_3_EXECUTE_TOOL",
+                    tool_invoked: false,
+                    reason: "requiresTool=false"
+                });
             }
         } catch (execError) {
             execution_state.status = 'EXECUTION_FAILED';
@@ -350,6 +368,15 @@ Deno.serve(async (req) => {
         }
 
         execution_state.mode = formattedResult.mode;
+        
+        if (traceMode) {
+            stageSnapshots.push({
+                stage: "STAGE_4_FORMAT_RESULT",
+                mode: formattedResult.mode,
+                content_preview: formattedResult.content?.substring(0, 200) || null,
+                content_length: formattedResult.content?.length || 0
+            });
+        }
 
 
 
@@ -429,6 +456,17 @@ Deno.serve(async (req) => {
                 : input;
             
             finalResponse = applyCognitiveLayer(formattedResult, enhancedInput);
+            
+            if (traceMode) {
+                stageSnapshots.push({
+                    stage: "STAGE_5_APPLY_COGNITIVE_LAYER",
+                    mode: finalResponse.mode,
+                    memory_enhanced: formattedResult.mode === 'GEN' && memoryContext.length > 0,
+                    memory_context_length: memoryContext.length,
+                    final_content_preview: finalResponse.content?.substring(0, 200) || null,
+                    final_content_length: finalResponse.content?.length || 0
+                });
+            }
         } catch (cogError) {
             execution_state.status = 'COGNITIVE_FAILED';
             console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
@@ -507,6 +545,19 @@ Deno.serve(async (req) => {
             execution_state,
             execution_receipt
         };
+        
+        // TRACE MODE: Include full stage snapshots when trace=true
+        if (traceMode) {
+            returnPayload.trace = {
+                request_id,
+                input_original: rawInput.substring(0, 500),
+                input_normalized: input.substring(0, 500),
+                stage_snapshots: stageSnapshots,
+                execution_receipt,
+                total_latency_ms: execution_state.latency_ms
+            };
+            console.log('🔬 [TRACE_MODE_ACTIVE]', { request_id, stages_captured: stageSnapshots.length });
+        }
 
         // AUDIT LOG 4: Final return payload
         console.log('🔍 [AUDIT_4_RETURN_PAYLOAD]', JSON.stringify({
@@ -517,6 +568,7 @@ Deno.serve(async (req) => {
             has_session: !!returnPayload.session,
             has_execution_state: !!returnPayload.execution_state,
             has_execution_receipt: !!returnPayload.execution_receipt,
+            has_trace: !!returnPayload.trace,
             execution_receipt_present: returnPayload.hasOwnProperty('execution_receipt'),
             execution_receipt_value: returnPayload.execution_receipt !== undefined ? 'PRESENT' : 'UNDEFINED',
             full_payload: returnPayload
