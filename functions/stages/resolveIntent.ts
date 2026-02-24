@@ -188,13 +188,37 @@ export function resolveIntent(input) {
         };
     }
 
-    // FIX 3: PRIORITY - Detect SEARCH intent with high confidence (highest priority)
-    const searchKeywords = ['search', 'find', 'mention', 'mentions', 'list mentions', 'contain', 'contains', 'about', 'run that search', 'in any of'];
+    // FIX 3: PRIORITY - Detect SEARCH/ANALYZE intent (NOT list intent)
+    // These patterns mean "search through" or "analyze", not "list threads"
+    const analyzeThreadsPatterns = [
+        /look (through|in|at)\s+(my\s+)?(threads|conversations)/i,
+        /search\s+(through\s+)?(my\s+)?(threads|conversations)/i,
+        /find (in|from)\s+(my\s+)?(threads|conversations)/i,
+        /learn (from|about)\s+(my\s+)?(threads|conversations)/i,
+        /tell me (about|what).*\s+(threads|conversations)/i,
+        /read (through|my)\s+(threads|conversations)/i,
+        /go through (my\s+)?(threads|conversations)/i,
+        /analyze (my\s+)?(threads|conversations)/i
+    ];
+    
+    if (analyzeThreadsPatterns.some(pattern => pattern.test(userMessage))) {
+        const terms = extractTopicsFromSearchQuery(userMessage);
+        return {
+            intent: 'SEARCH_THREADS',
+            confidence: 0.95,
+            reason: 'analyze_threads_pattern',
+            extractedTerms: terms.length > 0 ? terms : ['*'],
+            multiQuery: false,
+            forceRetrievalMode: false, // Allow GEN to synthesize/analyze
+            forceToolExecution: true
+        };
+    }
+    
+    // Standard search keywords (but not when it's about analyzing/looking through)
+    const searchKeywords = ['search for', 'find thread', 'mention', 'mentions', 'list mentions', 'contain', 'contains', 'run that search', 'in any of'];
     const hasSearchIntent = searchKeywords.some(kw => userMessage.toLowerCase().includes(kw));
 
     if (hasSearchIntent) {
-        // FORCE SEARCH_THREADS for any search-related query
-        // This prevents GEN mode from simulating search
         const terms = extractTopicsFromSearchQuery(userMessage);
         return {
             intent: 'SEARCH_THREADS',
@@ -206,14 +230,15 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2D: Detect implicit list patterns (high confidence)
+    // STEP 2D: Detect implicit list patterns (STRICT - must clearly want a list)
     const implicitListPatterns = [
-        /^show (my )?threads/i,
-        /^what threads do i have/i,
-        /^where are my threads/i,
-        /^display (all )?threads/i,
-        /^(get|fetch) (all )?threads/i,
-        /^threads/i  // Just "threads" alone
+        /^show (me )?(my )?threads$/i,
+        /^what threads do i have$/i,
+        /^where are my threads$/i,
+        /^display (all )?(my )?threads$/i,
+        /^(get|fetch) (all )?(my )?threads$/i,
+        /^list (my )?threads$/i,
+        /^threads$/i  // Just "threads" alone
     ];
 
     if (implicitListPatterns.some(p => p.test(userMessage))) {
