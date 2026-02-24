@@ -55,7 +55,7 @@ function containsThreadListPattern(payload) {
     return THREAD_LIST_PATTERNS.some(pattern => pattern.test(payload));
 }
 
-export function applyCognitiveLayer(formattedResult, userInput = null) {
+export async function applyCognitiveLayer(formattedResult, userInput = null, base44 = null, user = null) {
     const { mode, payload, metadata } = formattedResult;
 
     console.log('🧠 [COGNITIVE_LAYER] Mode:', mode);
@@ -136,10 +136,80 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
         const memoryMatch = userInput?.match(/\[PERMANENT MEMORY ABOUT USER\]:(.*?)(?:\[RECENT CONVERSATION HISTORY\]:|$)/s);
         const historyMatch = userInput?.match(/\[RECENT CONVERSATION HISTORY\]:(.*?)$/s);
 
-        const memoryContext = [
+        let memoryContext = [
             memoryMatch ? memoryMatch[1].trim() : null,
             historyMatch ? historyMatch[1].trim() : null
         ].filter(Boolean).join('\n\n');
+
+        // AUTO-SEARCH: If personal query and minimal memory context, search threads
+        if (base44 && user && userInput) {
+            const personalPatterns = [
+                /tell me (about|what|when|where|why)/i,
+                /who (is|was|were)/i,
+                /what (did|do|was|is).*\bI\b/i,
+                /when (did|do).*\bI\b/i,
+                /where (did|do|is).*\bI\b/i,
+                /remind me/i,
+                /\bI mentioned\b/i,
+                /\bI told you\b/i,
+                /you know.*about/i,
+                /remember.*\bI\b/i,
+                /\bwho.*woman\b/i,
+                /\bwho.*person\b/i
+            ];
+
+            const isPersonalQuery = personalPatterns.some(p => p.test(userInput));
+            const hasMinimalMemory = !memoryContext || memoryContext.length < 100;
+
+            if (isPersonalQuery && hasMinimalMemory) {
+                console.log('🔍 [AUTO_SEARCH_TRIGGERED] Personal query with minimal memory');
+
+                // Extract keywords for search
+                const keywords = userInput
+                    .toLowerCase()
+                    .replace(/[^\w\s]/g, ' ')
+                    .split(/\s+/)
+                    .filter(w => w.length > 3)
+                    .filter(w => !['tell', 'about', 'when', 'where', 'what', 'remind', 'mentioned', 'told', 'know', 'remember', 'that', 'this', 'with', 'from', 'have', 'your'].includes(w))
+                    .slice(0, 3);
+
+                if (keywords.length > 0) {
+                    try {
+                        const conversations = await base44.asServiceRole.entities.Conversation.filter(
+                            { created_by: user.email },
+                            '-last_message_time',
+                            50
+                        );
+
+                        const matches = conversations.filter(c => {
+                            return keywords.some(kw => {
+                                return c.title?.toLowerCase().includes(kw) ||
+                                       c.summary?.toLowerCase().includes(kw) ||
+                                       c.keywords?.some(k => k.toLowerCase().includes(kw));
+                            });
+                        });
+
+                        if (matches.length > 0) {
+                            console.log('✅ [AUTO_SEARCH_FOUND]', { matches: matches.length, keywords });
+                            const searchContext = matches.slice(0, 5).map(m => 
+                                `Thread "${m.title}": ${m.summary || 'No summary available'}`
+                            ).join('\n');
+
+                            memoryContext = memoryContext 
+                                ? `${memoryContext}\n\nRELEVANT THREAD CONTEXT (auto-searched for: ${keywords.join(', ')}):\n${searchContext}`
+                                : `RELEVANT THREAD CONTEXT (auto-searched for: ${keywords.join(', ')}):\n${searchContext}`;
+                        } else {
+                            console.log('⚠️ [AUTO_SEARCH_NO_RESULTS]', { keywords });
+                            memoryContext = memoryContext 
+                                ? `${memoryContext}\n\nNOTE: Auto-searched threads for "${keywords.join(', ')}" but found no matches. Ask user to share more context.`
+                                : `NOTE: Auto-searched threads for "${keywords.join(', ')}" but found no matches. Ask user to share more context.`;
+                        }
+                    } catch (error) {
+                        console.error('⚠️ [AUTO_SEARCH_FAILED]', error.message);
+                    }
+                }
+            }
+        }
 
         // PHASE ONE: Return structured cognition (renderer will create prose)
         return {
