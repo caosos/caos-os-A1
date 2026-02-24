@@ -175,6 +175,20 @@ Deno.serve(async (req) => {
             force_retrieval: intentResult.forceRetrievalMode
         });
         
+        if (traceMode) {
+            stageSnapshots.push({
+                stage: "STAGE_1_RESOLVE_INTENT",
+                intent: intentResult.intent,
+                confidence: intentResult.confidence,
+                reason: intentResult.reason,
+                extracted_terms: intentResult.extractedTerms,
+                multi_query: intentResult.multiQuery,
+                force_retrieval: intentResult.forceRetrievalMode || false,
+                bypass_intent_resolver: bypassIntentResolver,
+                conversational_lock: previousMode === 'GEN' && isRefinement(input)
+            });
+        }
+        
         // Update receipt with intent (schema v1.0)
         execution_receipt.intent = {
             classification: intentResult.intent,
