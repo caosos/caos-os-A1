@@ -456,6 +456,33 @@ Deno.serve(async (req) => {
             
             finalResponse = applyCognitiveLayer(formattedResult, enhancedInput);
             
+            // FIX 4: Block forbidden fallback patterns
+            if (finalResponse.content && typeof finalResponse.content === 'string') {
+                const forbiddenPatterns = [
+                    /as an artificial intelligence/i,
+                    /as an ai language model/i,
+                    /i am an ai assistant/i,
+                    /i'm just an ai/i
+                ];
+                
+                for (const pattern of forbiddenPatterns) {
+                    if (pattern.test(finalResponse.content)) {
+                        console.error('🚨 [PERSONALITY_FALLBACK_BLOCKED]', {
+                            request_id,
+                            pattern: pattern.source,
+                            response_preview: finalResponse.content.substring(0, 200)
+                        });
+                        
+                        throw {
+                            error: 'PERSONALITY_FALLBACK_DETECTED',
+                            code: 'IDENTITY_BYPASS',
+                            pattern: pattern.source,
+                            requires_regeneration: true
+                        };
+                    }
+                }
+            }
+            
             if (traceMode) {
                 stageSnapshots.push({
                     stage: "STAGE_5_APPLY_COGNITIVE_LAYER",
@@ -535,8 +562,14 @@ Deno.serve(async (req) => {
             receipt_full: execution_receipt
         }, null, 2));
 
+        // FIX 1: Strip internal mode tags from user-facing response
+        let cleanReply = finalResponse.content;
+        if (cleanReply && typeof cleanReply === 'string') {
+            cleanReply = cleanReply.replace(/^\[MODE=[A-Z_]+\]\s*/i, '').trim();
+        }
+        
         const returnPayload = {
-            reply: finalResponse.content,
+            reply: cleanReply,
             mode: finalResponse.mode,
             session: session_id,
             execution_state,
