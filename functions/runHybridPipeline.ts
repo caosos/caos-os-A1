@@ -469,11 +469,21 @@ export async function runHybridPipeline(rawInput, options) {
         try {
             const openaiKey = Deno.env.get('OPENAI_API_KEY');
             
+            // Build context blocks for identity + memory injection
+            const { identityBlock, threadBlock, userBlock } = await buildGenContext({
+                base44,
+                userId: user.email,
+                threadId: session_id
+            });
+            
             // If structured cognition, render it
             if (cognitiveResult.structured) {
                 const rendered = await renderFinalResponse(cognitiveResult, {
                     userInput: input,
-                    openaiKey
+                    openaiKey,
+                    identityBlock,
+                    threadBlock,
+                    userBlock
                 });
                 
                 finalResponse = {
@@ -565,12 +575,8 @@ export async function runHybridPipeline(rawInput, options) {
 
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
 
-        // FINAL SANITIZATION LAYER
-        let finalClean = finalResponse.content;
-        
-        if (finalClean && typeof finalClean === 'string') {
-            finalClean = finalClean.replace(/^\[MODE=[A-Z_]+\]\s*/i, '').trim();
-        }
+        // FINAL SANITIZATION LAYER - Remove scaffold leakage and mode tags
+        let finalClean = sanitizeUserFacingText(finalResponse.content);
         
         if (finalClean && typeof finalClean === 'string') {
             const forbiddenPatterns = [
