@@ -26,23 +26,21 @@ const FORBIDDEN_FALLBACK_PHRASES = [
 
 async function runSingleTest(input, base44, user, sessionId) {
     try {
-        // Include internal test header to bypass auth in nested calls if needed
-        const response = await base44.functions.invoke('hybridMessage', {
-            input,
+        // Call pipeline directly - no HTTP layer, no auth blocking
+        const result = await runHybridPipeline(input, {
+            base44,
+            user,
             session_id: sessionId,
-            trace: true,
-            _internal_test: true
+            trace: true
         });
 
-        const { data } = response;
-        
         return {
             success: true,
-            mode: data?.mode || null,
-            reply: data?.reply || null,
-            execution_receipt: data?.execution_receipt || null,
-            trace: data?.trace || null,
-            execution_state: data?.execution_state || null
+            mode: result.mode || null,
+            reply: result.reply || null,
+            execution_receipt: result.execution_receipt || null,
+            trace: result.trace || null,
+            execution_state: result.execution_state || null
         };
     } catch (error) {
         return {
