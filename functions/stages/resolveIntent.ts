@@ -73,6 +73,9 @@ const RETRIEVAL_STRONG_PATTERNS = [
 
 export function resolveIntent(input) {
     const { userMessage, timestamp } = input;
+    
+    // Store userMessage in result for executor access
+    const baseResult = { userMessage };
 
     if (!userMessage || typeof userMessage !== 'string') {
         return {
@@ -204,6 +207,7 @@ export function resolveIntent(input) {
     if (analyzeThreadsPatterns.some(pattern => pattern.test(userMessage))) {
         const terms = extractTopicsFromSearchQuery(userMessage);
         return {
+            ...baseResult,
             intent: 'SEARCH_THREADS',
             confidence: 0.95,
             reason: 'analyze_threads_pattern',
