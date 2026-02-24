@@ -10,7 +10,7 @@
 
 export async function renderFinalResponse(structuredCognition, context) {
     const { mode, response_points, tone, memory_context } = structuredCognition;
-    const { userInput, openaiKey, identityBlock, threadBlock, userBlock } = context;
+    const { userInput, openaiKey, identitySystemPrompt, identityBlock, threadBlock, userBlock } = context;
 
     // RETRIEVAL mode: pass through formatted content as-is
     if (mode === 'RETRIEVAL') {
@@ -23,7 +23,7 @@ export async function renderFinalResponse(structuredCognition, context) {
         return response_points ? response_points.join('\n\n') : structuredCognition.content;
     }
 
-    const systemPrompt = `${identityBlock || 'You are Aria, an AI assistant within the CAOS platform.'}
+    const systemPrompt = `${identitySystemPrompt || identityBlock || 'You are Aria, an AI assistant within the CAOS platform.'}
 
 ${threadBlock || ''}
 

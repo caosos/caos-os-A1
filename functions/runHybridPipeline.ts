@@ -469,7 +469,11 @@ export async function runHybridPipeline(rawInput, options) {
         try {
             const openaiKey = Deno.env.get('OPENAI_API_KEY');
             
-            // Build context blocks for identity + memory injection
+            // PATCH 01: Load user profile and build identity contract
+            const userProfile = await loadUserProfile(base44, user.email);
+            const identitySystemPrompt = buildIdentitySystemPrompt(userProfile);
+            
+            // Build context blocks for memory injection
             const { identityBlock, threadBlock, userBlock } = await buildGenContext({
                 base44,
                 userId: user.email,
@@ -481,6 +485,7 @@ export async function runHybridPipeline(rawInput, options) {
                 const rendered = await renderFinalResponse(cognitiveResult, {
                     userInput: input,
                     openaiKey,
+                    identitySystemPrompt,
                     identityBlock,
                     threadBlock,
                     userBlock
@@ -580,6 +585,9 @@ export async function runHybridPipeline(rawInput, options) {
         let finalClean;
         try {
             finalClean = sanitizeUserFacingText(finalResponse.content, { failLoud: true });
+            
+            // PATCH 01: Enforce identity contract (light validation)
+            finalClean = enforceIdentity(finalClean, userProfile);
         } catch (sanitizeError) {
             console.error('🚨 [SANITIZATION_FAILED]', sanitizeError);
             

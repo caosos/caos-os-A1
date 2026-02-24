@@ -10,17 +10,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { runHybridPipeline } from './runHybridPipeline.js';
 
+// PATCH 01: 5-Test Gate (MUST PASS for deployment)
 const CANONICAL_TESTS = [
-    { input: "Write a story about today.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
-    { input: "Aria, reflect in the first person.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
-    { input: "List mentions of Brookdale.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
-    { input: "You like to smoke weed, man?", expects: { mode: "GEN", no_fallback: true } },
-    { input: "Aria, what do you know about Grok?", expects: { mode: "GEN", trace_returned: true } },
-    { input: "Aria, talk to me like you know me. Where are we with CAOS?", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } },
-    { input: "List my threads.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
-    { input: "Search threads for Brookdale.", expects: { mode: "RETRIEVAL", no_mode_tag: true } },
-    { input: "What's the next thing we should lock down?", expects: { mode: "GEN", no_mode_tag: true } },
-    { input: "Give me a brief update and then ask me what direction to go next.", expects: { mode: "GEN", no_mode_tag: true, identity_maintained: true } }
+    { 
+        input: "Write a story about today.", 
+        expects: { mode: "GEN", no_mode_tag: true, no_scaffold: true, identity_maintained: true, identity_is_aria: true } 
+    },
+    { 
+        input: "Aria, reflect in the first person about what we fixed today.", 
+        expects: { mode: "GEN", no_mode_tag: true, no_scaffold: true, identity_maintained: true, first_person: true } 
+    },
+    { 
+        input: "list mentions of Brookdale", 
+        expects: { mode: "RETRIEVAL", no_mode_tag: true, no_scaffold: true } 
+    },
+    { 
+        input: "https://www.youtube.com/watch?v=v23H7c149HM don't echo this; summarize what it is", 
+        expects: { mode: "GEN", no_mode_tag: true, no_scaffold: true, no_echo_url: true } 
+    },
+    { 
+        input: "You like to smoke weed, man?", 
+        expects: { mode: "GEN", no_mode_tag: true, no_scaffold: true, no_fallback: true, natural_tone: true } 
+    }
 ];
 
 const FORBIDDEN_FALLBACK_PHRASES = [
@@ -68,7 +79,11 @@ function analyzeResult(testCase, result) {
         mode_leakage: false,
         scaffold_leakage: false,
         identity_maintained: true,
+        identity_is_aria: true,
+        first_person_used: false,
+        url_echoed: false,
         fallback_detected: false,
+        natural_tone: true,
         trace_returned: !!result.trace,
         errors: [],
         warnings: []
@@ -108,8 +123,33 @@ function analyzeResult(testCase, result) {
             if (pattern.test(result.reply)) {
                 analysis.fallback_detected = true;
                 analysis.identity_maintained = false;
+                analysis.natural_tone = false;
                 analysis.errors.push(`Forbidden fallback phrase detected: ${pattern.source}`);
                 break;
+            }
+        }
+        
+        // PATCH 01: Check identity is Aria (not CAOS)
+        if (/I am CAOS/i.test(result.reply) || /I'm CAOS/i.test(result.reply)) {
+            analysis.identity_is_aria = false;
+            analysis.errors.push('Assistant identified as CAOS instead of Aria');
+        }
+        
+        // PATCH 01: Check for first-person if expected
+        if (testCase.expects.first_person) {
+            if (/\b(I|me|my|mine)\b/i.test(result.reply)) {
+                analysis.first_person_used = true;
+            } else {
+                analysis.errors.push('Expected first-person perspective not detected');
+            }
+        }
+        
+        // PATCH 01: Check URL not simply echoed back
+        if (testCase.expects.no_echo_url && testCase.input.includes('http')) {
+            const urlMatch = testCase.input.match(/https?:\/\/[^\s]+/);
+            if (urlMatch && result.reply.includes(urlMatch[0]) && result.reply.length < 200) {
+                analysis.url_echoed = true;
+                analysis.errors.push('URL echoed back without analysis');
             }
         }
     }
@@ -178,9 +218,13 @@ Deno.serve(async (req) => {
 
             // Determine pass/fail
             const hasCriticalErrors = analysis.errors.length > 0 || 
-                                     analysis.mode_leakage || 
-                                     analysis.fallback_detected ||
-                                     (testCase.expects.trace_returned && !analysis.trace_returned);
+                                       analysis.mode_leakage || 
+                                       analysis.scaffold_leakage ||
+                                       analysis.fallback_detected ||
+                                       !analysis.identity_is_aria ||
+                                       (testCase.expects.no_echo_url && analysis.url_echoed) ||
+                                       (testCase.expects.first_person && !analysis.first_person_used) ||
+                                       (testCase.expects.trace_returned && !analysis.trace_returned);
 
             if (hasCriticalErrors) {
                 failCount++;
