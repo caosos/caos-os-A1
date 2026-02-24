@@ -45,6 +45,32 @@ function extractTopicsFromSearchQuery(query) {
     return [...new Set(tokens)];
 }
 
+// INTENT GUARDRAILS: Strong patterns for GEN vs RETRIEVAL
+const GEN_STRONG_PATTERNS = [
+    /talk about/i,
+    /where are we/i,
+    /how are we doing/i,
+    /how's it going/i,
+    /reflect/i,
+    /in the first person/i,
+    /write (me )?a story/i,
+    /tell me about (yourself|you|us)/i,
+    /tell me what you know about me/i,
+    /what do you know about me/i,
+    /talk like/i,
+    /sound like/i,
+    /speak as/i
+];
+
+const RETRIEVAL_STRONG_PATTERNS = [
+    /^list (my )?threads/i,
+    /^show (my )?threads/i,
+    /search threads/i,
+    /find thread/i,
+    /mentions of .* in threads/i,
+    /list mentions of/i
+];
+
 export function resolveIntent(input) {
     const { userMessage, timestamp } = input;
 
@@ -56,6 +82,24 @@ export function resolveIntent(input) {
             extractedTerms: [],
             multiQuery: false
         };
+    }
+
+    const msg = userMessage.trim();
+
+    // STEP 0: Check strong GEN patterns first (highest priority)
+    if (GEN_STRONG_PATTERNS.some(r => r.test(msg))) {
+        return {
+            intent: 'GENERIC_GEN',
+            confidence: 1.0,
+            reason: 'gen_strong_pattern',
+            extractedTerms: [],
+            multiQuery: false
+        };
+    }
+
+    // STEP 0.5: Check strong RETRIEVAL patterns
+    if (RETRIEVAL_STRONG_PATTERNS.some(r => r.test(msg))) {
+        // Continue to extraction logic below
     }
 
     // STEP 1: Normalize input
