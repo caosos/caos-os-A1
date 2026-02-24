@@ -144,8 +144,8 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2C: Detect SEARCH intent first (highest priority)
-    const searchKeywords = ['search', 'find', 'mention', 'mentions', 'contain', 'contains', 'about', 'run that search', 'in any of'];
+    // FIX 3: PRIORITY - Detect SEARCH intent with high confidence (highest priority)
+    const searchKeywords = ['search', 'find', 'mention', 'mentions', 'list mentions', 'contain', 'contains', 'about', 'run that search', 'in any of'];
     const hasSearchIntent = searchKeywords.some(kw => userMessage.toLowerCase().includes(kw));
 
     if (hasSearchIntent) {
@@ -154,7 +154,7 @@ export function resolveIntent(input) {
         const terms = extractTopicsFromSearchQuery(userMessage);
         return {
             intent: 'SEARCH_THREADS',
-            confidence: 1.0,
+            confidence: 0.95,
             reason: 'search_keyword_detected',
             extractedTerms: terms,
             multiQuery: false,
