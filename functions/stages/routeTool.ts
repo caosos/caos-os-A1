@@ -34,6 +34,7 @@ export function routeTool(intentResult) {
     // FAIL LOUD: SEARCH_THREADS with no extracted terms
     if (intent === 'SEARCH_THREADS' && extractedTerms.length === 0) {
         console.error('🚨 [ROUTE_HARD_FAIL]: SEARCH_TERMS_MISSING');
+        // INSTRUMENTATION: Mark as validation failure for receipt
         throw {
             mode: 'ERROR',
             code: 'SEARCH_TERMS_MISSING',
@@ -43,6 +44,11 @@ export function routeTool(intentResult) {
                 normalizedInput: intentResult.userMessage || '',
                 extractedTerms: [],
                 requestId: intentResult.requestId || 'unknown'
+            },
+            receipt_fallback: {
+                triggered: true,
+                fallback_type: 'VALIDATION_ERROR',
+                reason: 'Empty search terms on SEARCH_THREADS intent'
             }
         };
     }

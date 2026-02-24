@@ -72,12 +72,18 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
         
         if (similarity && normalizedInput.length > 50) {
             console.error('🚨 [ECHO_DETECTED]: Output mirrors input');
+            // INSTRUMENTATION: Mark echo violation for receipt
             throw {
                 error: 'ECHO_SUPPRESSION_VIOLATION',
                 mode,
                 reason: 'Generated output is identical to user input',
                 details: 'System must analyze or transform, not echo verbatim',
-                state: 'ECHO_DETECTED'
+                state: 'ECHO_DETECTED',
+                receipt_fallback: {
+                    triggered: true,
+                    fallback_type: 'ECHO_SUPPRESSION',
+                    reason: 'Output identical to input'
+                }
             };
         }
     }
@@ -96,12 +102,18 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
         // Thread lists may ONLY originate from executeTool → RETRIEVAL pipeline
         if (containsThreadListPattern(payload)) {
             console.error('🚨 [PIPELINE_VIOLATION]: GEN_MODE_THREAD_LIST_FABRICATION');
+            // INSTRUMENTATION: Mark architecture violation for receipt
             throw {
                 error: 'PIPELINE_VIOLATION_GEN_LIST',
                 mode: 'GEN',
                 reason: 'GEN mode attempted to fabricate thread list',
                 details: 'Thread lists must originate from executeTool only. This is a routing bypass.',
-                state: 'ARCHITECTURE_FREEZE_VIOLATION'
+                state: 'ARCHITECTURE_FREEZE_VIOLATION',
+                receipt_fallback: {
+                    triggered: true,
+                    fallback_type: 'ARCHITECTURE_VIOLATION',
+                    reason: 'GEN mode fabricated thread list'
+                }
             };
         }
 
@@ -109,12 +121,18 @@ export function applyCognitiveLayer(formattedResult, userInput = null) {
         // If payload claims to have searched, scanned, or filtered threads, this is fabrication
         if (SEARCH_SIMULATION_PATTERNS.some(pattern => pattern.test(payload))) {
             console.error('🚨 [ROUTE_VIOLATION]: GEN_MODE_SEARCH_SIMULATION');
+            // INSTRUMENTATION: Mark route violation for receipt
             throw {
                 error: 'ROUTE_VIOLATION_GEN_SEARCH',
                 mode: 'GEN',
                 reason: 'GEN mode attempted to simulate search operation',
                 details: 'Search operations must route through RETRIEVAL pipeline. GEN cannot claim to have searched threads.',
-                state: 'SEARCH_ROUTE_VIOLATION'
+                state: 'SEARCH_ROUTE_VIOLATION',
+                receipt_fallback: {
+                    triggered: true,
+                    fallback_type: 'ROUTE_VIOLATION',
+                    reason: 'GEN simulated search operation'
+                }
             };
         }
 

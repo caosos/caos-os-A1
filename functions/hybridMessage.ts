@@ -209,25 +209,25 @@ Deno.serve(async (req) => {
             // Handle structured errors from routeTool
             if (routeError.mode === 'ERROR' && routeError.code === 'SEARCH_TERMS_MISSING') {
                 console.error('🚨 [ROUTE_VALIDATION_FAILED]', { request_id, error: routeError.code });
-                
-                // Check execution toggle to determine what to show
-                const showExecution = true; // Could check localStorage or user preference
-                
-                const errorResponse = showExecution 
-                    ? {
-                        error: routeError.message,
-                        debug: routeError.debug,
-                        mode: 'ERROR',
-                        code: routeError.code
-                      }
-                    : {
-                        error: routeError.message,
-                        mode: 'ERROR'
-                      };
-                
-                return Response.json(errorResponse, { status: 400 });
+
+                // INSTRUMENTATION: Populate receipt for validation failure
+                execution_receipt.execution_mode = 'ERROR';
+                execution_receipt.routing.pipeline = 'VALIDATION_FAILED';
+                if (routeError.receipt_fallback) {
+                    execution_receipt.fallback = routeError.receipt_fallback;
+                }
+                execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
+
+                console.log('📋 [EXECUTION_RECEIPT_VALIDATION_ERROR]', execution_receipt);
+
+                return Response.json({
+                    error: routeError.message,
+                    mode: 'ERROR',
+                    code: routeError.code,
+                    execution_receipt  // REQUIRED: Receipt emitted for validation errors
+                }, { status: 400 });
             }
-            
+
             // Re-throw unknown errors
             throw routeError;
         }
@@ -281,6 +281,20 @@ Deno.serve(async (req) => {
         } catch (execError) {
             execution_state.status = 'EXECUTION_FAILED';
             console.error('🚨 [EXECUTION_FAILED]', { request_id, error: execError.message });
+
+            // INSTRUMENTATION: Populate receipt for execution failure
+            execution_receipt.execution_mode = 'ERROR';
+            execution_receipt.tools.invoked = true;
+            execution_receipt.tools.execution_status = 'FAILED';
+            execution_receipt.fallback = {
+                triggered: true,
+                fallback_type: 'TOOL_EXECUTION_ERROR',
+                reason: execError.error || execError.message
+            };
+            execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
+
+            console.log('📋 [EXECUTION_RECEIPT_TOOL_ERROR]', execution_receipt);
+
             await logDriftEvent(base44, {
                 session_id,
                 drift_type: 'tool_behavior_mismatch',
@@ -289,7 +303,12 @@ Deno.serve(async (req) => {
                 details: { error: execError.message, route: routeResult.route },
                 corrective_action: 'HARD_FAIL'
             });
-            return Response.json({ error: execError.message || 'Execution failed', request_id }, { status: 500 });
+
+            return Response.json({ 
+                error: execError.message || 'Execution failed', 
+                request_id,
+                execution_receipt  // REQUIRED: Receipt emitted for execution errors
+            }, { status: 500 });
         }
 
         // ========== STAGE 4: FORMAT RESULT ==========
@@ -385,7 +404,22 @@ Deno.serve(async (req) => {
         } catch (cogError) {
             execution_state.status = 'COGNITIVE_FAILED';
             console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
-            
+
+            // INSTRUMENTATION: Populate receipt for cognitive layer failure
+            execution_receipt.execution_mode = 'ERROR';
+            if (cogError.receipt_fallback) {
+                execution_receipt.fallback = cogError.receipt_fallback;
+            } else {
+                execution_receipt.fallback = {
+                    triggered: true,
+                    fallback_type: 'COGNITIVE_LAYER_ERROR',
+                    reason: cogError.error || cogError.message
+                };
+            }
+            execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
+
+            console.log('📋 [EXECUTION_RECEIPT_COGNITIVE_ERROR]', execution_receipt);
+
             // DRIFT DETECTION: GEN/SEARCH boundary violation
             if (cogError.error === 'ROUTE_VIOLATION_GEN_SEARCH' || cogError.error === 'PIPELINE_VIOLATION_GEN_LIST') {
                 await logDriftEvent(base44, {
@@ -397,8 +431,12 @@ Deno.serve(async (req) => {
                     corrective_action: 'HARD_FAIL'
                 });
             }
-            
-            return Response.json({ error: cogError.error || cogError.message, request_id }, { status: 500 });
+
+            return Response.json({ 
+                error: cogError.error || cogError.message, 
+                request_id,
+                execution_receipt  // REQUIRED: Receipt emitted for cognitive errors
+            }, { status: 500 });
         }
 
         execution_state.status = 'SUCCESS';
@@ -462,8 +500,8 @@ Deno.serve(async (req) => {
         execution_state.status = 'CRITICAL_FAILURE';
         execution_state.ended_at = Date.now();
         console.error('🔥 [PIPELINE_CRITICAL_ERROR]', { request_id: execution_state.request_id, error: error.message });
-        
-        // STEP 3: Even on error, return receipt if available (schema v1.0)
+
+        // INSTRUMENTATION: Always emit receipt, even on catastrophic failure
         execution_receipt.execution_mode = 'ERROR';
         execution_receipt.latency_ms = Date.now() - new Date(execution_receipt.timestamp_utc).getTime();
         execution_receipt.fallback = {
@@ -471,12 +509,14 @@ Deno.serve(async (req) => {
             fallback_type: 'CRITICAL_ERROR',
             reason: error.message
         };
-        
+
+        console.log('📋 [EXECUTION_RECEIPT_ERROR]', execution_receipt);
+
         return Response.json({
             error: 'PIPELINE_FAILURE',
             details: error.message,
             execution_state,
-            execution_receipt  // Include receipt even on error
+            execution_receipt  // REQUIRED: Receipt emitted for all responses
         }, { status: 500 });
     }
 });
