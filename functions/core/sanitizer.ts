@@ -1,35 +1,91 @@
 /**
- * CAOS PRESENTATION SANITIZER
+ * CAOS PRESENTATION SANITIZER — FINAL STAGE
  * 
- * Removes leaked scaffolding and mode tags from user-facing output.
+ * Removes ALL internal scaffolding and mode tags from user-facing output.
  * MUST run last before returning to user.
+ * FAILS LOUD if scaffold leakage detected after sanitization.
  */
 
-export function sanitizeUserFacingText(text) {
+export function sanitizeUserFacingText(text, options = {}) {
     if (!text || typeof text !== 'string') return text;
 
-    // Strip [MODE=GEN] / [MODE=RETRIEVAL] lines
-    text = text.replace(/^\s*\[MODE=.*?\]\s*\n?/gmi, "");
+    const original = text;
 
-    // Strip scaffold headings if they leaked
+    // 1) Strip [MODE=...] tags (any variant)
+    text = text.replace(/\[MODE=[A-Z_]+\]/gi, "");
+    text = text.replace(/^\s*\[MODE=.*?\]\s*$/gmi, "");
+
+    // 2) Strip all internal scaffold headings and variations
     const bannedScaffold = [
         "OBSERVATIONAL LAYER",
-        "INTERPRETIVE LAYER",
+        "INTERPRETIVE LAYER", 
         "SYSTEMS FRAMING LAYER",
         "FORWARD VECTOR LAYER",
         "OBSERVATIONAL:",
         "INTERPRETIVE:",
+        "SYSTEMS FRAMING:",
         "SYSTEMS:",
-        "FORWARD:"
+        "FORWARD VECTOR:",
+        "FORWARD:",
+        // Add common variations
+        "OBSERVATION LAYER",
+        "INTERPRETATION LAYER",
+        "SYSTEM LAYER",
+        "SYSTEM FRAMING"
     ];
 
     for (const banned of bannedScaffold) {
-        const regex = new RegExp(`^\\s*${banned}\\s*:?\\s*\\n?`, "gmi");
+        // Match with optional colons and surrounding whitespace
+        const regex = new RegExp(`^\\s*${banned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:?\\s*`, "gmi");
         text = text.replace(regex, "");
+        
+        // Also match inline (not just start of line)
+        const inlineRegex = new RegExp(`\\b${banned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:?\\s*`, "gi");
+        text = text.replace(inlineRegex, "");
     }
 
-    // Strip multiple consecutive blank lines (cleanup artifact)
+    // 3) Strip multiple consecutive blank lines
     text = text.replace(/\n{3,}/g, "\n\n");
 
-    return text.trim();
+    // 4) Clean up any orphaned whitespace
+    text = text.trim();
+
+    // 5) FAIL-LOUD ASSERTION: Check if forbidden patterns remain
+    if (options.failLoud !== false) {
+        const remainingScaffold = bannedScaffold.find(banned => {
+            const checkRegex = new RegExp(banned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i");
+            return checkRegex.test(text);
+        });
+
+        if (remainingScaffold) {
+            console.error('🚨 [SCAFFOLD_LEAK_DETECTED]', {
+                pattern: remainingScaffold,
+                original_length: original.length,
+                sanitized_length: text.length
+            });
+            
+            throw {
+                error: 'INTERNAL_SCAFFOLD_LEAK_DETECTED',
+                code: 'SANITIZATION_FAILED',
+                pattern: remainingScaffold,
+                message: `Internal scaffold "${remainingScaffold}" leaked to user-facing output`
+            };
+        }
+
+        // Check for mode tags
+        if (/\[MODE=/i.test(text)) {
+            console.error('🚨 [MODE_TAG_LEAK_DETECTED]', {
+                original_length: original.length,
+                sanitized_length: text.length
+            });
+            
+            throw {
+                error: 'MODE_TAG_LEAK_DETECTED',
+                code: 'SANITIZATION_FAILED',
+                message: 'MODE tag leaked to user-facing output'
+            };
+        }
+    }
+
+    return text;
 }

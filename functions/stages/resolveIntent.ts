@@ -45,7 +45,12 @@ function extractTopicsFromSearchQuery(query) {
     return [...new Set(tokens)];
 }
 
-// INTENT GUARDRAILS: Strong patterns for GEN vs RETRIEVAL
+// PATCH 1 — GEN STABILIZATION LOCK
+// TEMPORARILY: Force ALL inputs to GEN (no routing complexity)
+// This will be re-enabled after GEN path is stable
+const GEN_LOCK_ENABLED = true;
+
+// INTENT GUARDRAILS: Strong patterns for GEN vs RETRIEVAL (DISABLED DURING LOCK)
 const GEN_STRONG_PATTERNS = [
     /talk about/i,
     /where are we/i,
@@ -85,6 +90,19 @@ export function resolveIntent(input) {
     }
 
     const msg = userMessage.trim();
+
+    // PATCH 1 — GEN LOCK: Force everything to GEN during stabilization
+    if (GEN_LOCK_ENABLED) {
+        console.log('🔒 [GEN_LOCK_ACTIVE] Forcing GEN path for stabilization');
+        return {
+            intent: 'GENERIC_GEN',
+            confidence: 1.0,
+            reason: 'gen_lock_active',
+            extractedTerms: [],
+            multiQuery: false,
+            locked: true
+        };
+    }
 
     // STEP 0: Check strong GEN patterns first (highest priority)
     if (GEN_STRONG_PATTERNS.some(r => r.test(msg))) {

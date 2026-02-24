@@ -66,6 +66,7 @@ function analyzeResult(testCase, result) {
         route_used: result.execution_receipt?.routing?.pipeline || 'UNKNOWN',
         mode_returned: result.mode,
         mode_leakage: false,
+        scaffold_leakage: false,
         identity_maintained: true,
         fallback_detected: false,
         trace_returned: !!result.trace,
@@ -77,6 +78,28 @@ function analyzeResult(testCase, result) {
     if (result.reply && /\[MODE=[A-Z_]+\]/i.test(result.reply)) {
         analysis.mode_leakage = true;
         analysis.errors.push('MODE tag found in user-facing response');
+    }
+
+    // Check for scaffold leakage (PATCH 1 CRITICAL)
+    const scaffoldPatterns = [
+        /OBSERVATIONAL LAYER/i,
+        /INTERPRETIVE LAYER/i,
+        /SYSTEMS FRAMING LAYER/i,
+        /FORWARD VECTOR LAYER/i,
+        /OBSERVATIONAL:/i,
+        /INTERPRETIVE:/i,
+        /SYSTEMS:/i,
+        /FORWARD:/i
+    ];
+
+    if (result.reply) {
+        for (const pattern of scaffoldPatterns) {
+            if (pattern.test(result.reply)) {
+                analysis.scaffold_leakage = true;
+                analysis.errors.push(`Scaffold leaked: ${pattern.source}`);
+                break;
+            }
+        }
     }
 
     // Check for forbidden fallback phrases
@@ -104,6 +127,12 @@ function analyzeResult(testCase, result) {
     // Check for execution errors
     if (!result.success) {
         analysis.errors.push(result.error || 'Execution failed');
+    }
+
+    // Check for scaffold leak error
+    if (result.error === 'SCAFFOLD_LEAK_DETECTED') {
+        analysis.scaffold_leakage = true;
+        analysis.errors.push(`Sanitization caught leak: ${result.details}`);
     }
 
     // Check execution receipt for failures

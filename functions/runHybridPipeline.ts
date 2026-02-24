@@ -576,7 +576,29 @@ export async function runHybridPipeline(rawInput, options) {
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
 
         // FINAL SANITIZATION LAYER - Remove scaffold leakage and mode tags
-        let finalClean = sanitizeUserFacingText(finalResponse.content);
+        // FAIL LOUD if leakage detected
+        let finalClean;
+        try {
+            finalClean = sanitizeUserFacingText(finalResponse.content, { failLoud: true });
+        } catch (sanitizeError) {
+            console.error('🚨 [SANITIZATION_FAILED]', sanitizeError);
+            
+            execution_receipt.guardrails.policy_triggered = true;
+            execution_receipt.fallback = {
+                triggered: true,
+                fallback_type: 'SCAFFOLD_LEAK',
+                reason: sanitizeError.message,
+                pattern: sanitizeError.pattern
+            };
+            
+            // Return error to surface the leak
+            return {
+                error: 'SCAFFOLD_LEAK_DETECTED',
+                details: sanitizeError.message,
+                pattern: sanitizeError.pattern,
+                execution_receipt
+            };
+        }
         
         if (finalClean && typeof finalClean === 'string') {
             const forbiddenPatterns = [
