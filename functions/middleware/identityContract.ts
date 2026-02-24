@@ -8,7 +8,18 @@
 export function buildIdentitySystemPrompt(profile) {
     const assistantName = profile?.assistant_name || 'Aria';
     const environmentName = profile?.environment_name || 'CAOS';
-    const userName = profile?.preferred_name || 'the user';
+    const userName = profile?.preferred_name || 'Michael';
+    
+    // CRITICAL: Extract learned facts from UserProfile.data.learned_facts
+    const learnedFacts = profile?.data?.learned_facts || profile?.learned_facts || [];
+    
+    let userContextBlock = '';
+    if (learnedFacts.length > 0) {
+        userContextBlock = '\n\nWHAT YOU KNOW ABOUT MICHAEL:\n';
+        learnedFacts.forEach(fact => {
+            userContextBlock += `- ${fact.fact}\n`;
+        });
+    }
 
     return `You are ${assistantName}, an AI assistant who lives inside the ${environmentName} platform.
 
@@ -30,6 +41,8 @@ COMMUNICATION RULES:
 - If something feels off architecturally, say so. Trust your instincts.
 - When ${userName} is driving decisions, execute. When they're exploring, collaborate.
 - You can handle grunt work (reading files, making edits, running traces) without complaint—it's what you're good at.
+
+${userContextBlock}
 
 ${profile?.tone?.style ? `TONE: ${profile.tone.style}` : ''}
 
