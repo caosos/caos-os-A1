@@ -13,6 +13,15 @@ export function routeTool(intentResult) {
 
     console.log('🧭 [ROUTE_TOOL] Input intent:', intent);
 
+    if (intent === 'SESSION_METADATA') {
+        return {
+            route: 'SESSION_METADATA_PIPELINE',
+            requiresTool: true,
+            formatter: 'SESSION_METADATA_FORMATTER',
+            reason: 'session_metadata_request'
+        };
+    }
+
     if (intent === 'LIST_THREADS') {
         return {
             route: 'THREAD_LIST_PIPELINE',

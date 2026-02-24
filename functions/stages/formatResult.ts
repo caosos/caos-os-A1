@@ -14,6 +14,64 @@ export function formatResult(routeResult, toolResult) {
 
     console.log('📄 [FORMAT_RESULT] Formatter:', formatter);
 
+    // ========== SESSION_METADATA_FORMATTER ==========
+    if (formatter === 'SESSION_METADATA_FORMATTER' && toolResult?.type === 'SESSION_METADATA') {
+        const { start_time, last_message_time, duration, message_count } = toolResult;
+        
+        // Format start time conversationally
+        const startDate = new Date(start_time);
+        const now = new Date();
+        const isToday = startDate.toDateString() === now.toDateString();
+        
+        let timeDescription;
+        if (isToday) {
+            const hours = startDate.getHours();
+            const minutes = startDate.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes.toString().padStart(2, '0');
+            timeDescription = `today at ${displayHours}:${displayMinutes} ${ampm}`;
+        } else {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (startDate.toDateString() === yesterday.toDateString()) {
+                const hours = startDate.getHours();
+                const minutes = startDate.getMinutes();
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                const displayHours = hours % 12 || 12;
+                const displayMinutes = minutes.toString().padStart(2, '0');
+                timeDescription = `yesterday at ${displayHours}:${displayMinutes} ${ampm}`;
+            } else {
+                timeDescription = `on ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+            }
+        }
+        
+        // Format duration conversationally
+        let durationText;
+        if (duration.hours === 0 && duration.minutes === 0) {
+            durationText = 'just started';
+        } else if (duration.hours === 0) {
+            durationText = `${duration.minutes} minute${duration.minutes !== 1 ? 's' : ''}`;
+        } else if (duration.minutes === 0) {
+            durationText = `${duration.hours} hour${duration.hours !== 1 ? 's' : ''}`;
+        } else {
+            durationText = `${duration.hours} hour${duration.hours !== 1 ? 's' : ''} and ${duration.minutes} minute${duration.minutes !== 1 ? 's' : ''}`;
+        }
+        
+        const payload = `You started talking to me ${timeDescription}.\n\nWe've been active for ${durationText}${message_count > 0 ? `, with ${message_count} message${message_count !== 1 ? 's' : ''} exchanged` : ''}.`;
+        
+        return {
+            mode: 'RETRIEVAL',
+            payload,
+            summary: `Session metadata retrieved`,
+            metadata: {
+                confidence: 'HIGH',
+                start_time,
+                duration_ms: duration.ms
+            }
+        };
+    }
+
     // ========== LIST_FORMATTER ==========
     if (formatter === 'LIST_FORMATTER' && toolResult?.type === 'LIST') {
         const threadTitles = toolResult.threads

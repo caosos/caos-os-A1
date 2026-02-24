@@ -43,6 +43,70 @@ export async function executeTool(routeResult, intentResult, base44) {
         };
     }
 
+    // ========== SESSION_METADATA PIPELINE ==========
+    if (route === 'SESSION_METADATA_PIPELINE') {
+        try {
+            // Get current session/conversation
+            const sessionId = intentResult.sessionId;
+            if (!sessionId) {
+                throw {
+                    error: 'SESSION_METADATA_UNAVAILABLE',
+                    reason: 'NO_SESSION_ID',
+                    details: 'Cannot retrieve metadata without active session'
+                };
+            }
+
+            // Fetch conversation record
+            const conversation = await base44.asServiceRole.entities.Conversation.get(sessionId);
+            
+            if (!conversation) {
+                throw {
+                    error: 'SESSION_METADATA_UNAVAILABLE',
+                    reason: 'SESSION_NOT_FOUND',
+                    details: 'Session record not found in database'
+                };
+            }
+
+            // Fetch messages for this session to calculate accurate metadata
+            const messages = await base44.asServiceRole.entities.Message.filter(
+                { conversation_id: sessionId },
+                'timestamp',
+                1000
+            );
+
+            const startTime = conversation.created_date;
+            const lastMessageTime = conversation.last_message_time || startTime;
+            const messageCount = messages.length;
+            
+            // Calculate duration
+            const startMs = new Date(startTime).getTime();
+            const lastMs = new Date(lastMessageTime).getTime();
+            const durationMs = lastMs - startMs;
+            
+            const hours = Math.floor(durationMs / (1000 * 60 * 60));
+            const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            return {
+                type: 'SESSION_METADATA',
+                executor: 'get_session_metadata',
+                start_time: startTime,
+                last_message_time: lastMessageTime,
+                duration: { hours, minutes, ms: durationMs },
+                message_count: messageCount,
+                executionId: `exec_${Date.now()}`
+            };
+        } catch (error) {
+            // Fail loud - never downgrade to thread list or GEN
+            console.error('🚨 [SESSION_METADATA_ERROR]:', error);
+            throw {
+                error: error.error || 'SESSION_METADATA_UNAVAILABLE',
+                reason: error.reason || 'EXECUTION_FAILED',
+                details: error.details || error.message,
+                user_visible: 'Cannot retrieve session metadata at this time'
+            };
+        }
+    }
+
     // ========== LIST_THREADS PIPELINE ==========
     if (route === 'THREAD_LIST_PIPELINE') {
         try {

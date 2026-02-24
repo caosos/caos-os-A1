@@ -151,11 +151,13 @@ Deno.serve(async (req) => {
             reason: 'CONVERSATIONAL_LOCK',
             extractedTerms: [],
             multiQuery: false,
-            userEmail: user.email
+            userEmail: user.email,
+            sessionId: session_id
         } : resolveIntent({
             userMessage: input,
             timestamp,
-            userEmail: user.email
+            userEmail: user.email,
+            sessionId: session_id
         });
 
         execution_state.intent_detected = intentResult.intent;

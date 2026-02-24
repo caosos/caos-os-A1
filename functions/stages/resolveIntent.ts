@@ -95,6 +95,28 @@ export function resolveIntent(input) {
         };
     }
 
+    // STEP 1.6: Detect SESSION_METADATA intent (highest priority - pre-search)
+    const sessionMetadataPatterns = [
+        /when did (we|I) start/i,
+        /what time did (we|I) begin/i,
+        /how long (have|did) (we|I) (been|talk|speak|chat)/i,
+        /session start time/i,
+        /conversation duration/i,
+        /started (this )?session/i,
+        /start of (this |our )?(conversation|session|chat)/i,
+        /how long is (this |our )?(conversation|session)/i
+    ];
+    
+    if (sessionMetadataPatterns.some(p => p.test(userMessage))) {
+        return {
+            intent: 'SESSION_METADATA',
+            confidence: 1.0,
+            reason: 'session_metadata_pattern_detected',
+            extractedTerms: [],
+            multiQuery: false
+        };
+    }
+
     // STEP 2: Check explicit list patterns
     if (EXPLICIT_LIST_PATTERN.test(userMessage) || SHOW_ALL_PATTERN.test(userMessage)) {
         return {
