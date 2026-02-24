@@ -359,7 +359,7 @@ export async function runHybridPipeline(rawInput, options) {
             });
         }
 
-        // MEMORY RECALL: Fetch conversation history and user profile
+        // MEMORY RECALL: Fetch conversation history, user profile, and learned facts
         let memoryContext = '';
         
         try {
@@ -375,6 +375,23 @@ export async function runHybridPipeline(rawInput, options) {
                 '-seq',
                 10
             );
+            
+            // CONTINUOUS LEARNING: Recall relevant facts
+            let relevantFacts = [];
+            try {
+                const { recallRelevantFacts, formatFactsForContext } = await import('./core/continuousLearning.js');
+                relevantFacts = await recallRelevantFacts({
+                    base44,
+                    userId: user.email,
+                    userMessage: input
+                });
+                
+                if (relevantFacts.length > 0) {
+                    memoryContext += formatFactsForContext(relevantFacts);
+                }
+            } catch (factError) {
+                console.warn('⚠️ [FACT_RECALL_FAILED]', factError.message);
+            }
             
             if (userProfile) {
                 memoryContext += `\n\n[PERMANENT MEMORY ABOUT USER]:\n`;
@@ -401,7 +418,9 @@ export async function runHybridPipeline(rawInput, options) {
             
             execution_receipt.memory_access = {
                 used: true,
-                source: userProfile ? 'user_profile + conversation_history' : 'conversation_history_only'
+                source: relevantFacts.length > 0 
+                    ? 'learned_facts + user_profile + conversation_history' 
+                    : (userProfile ? 'user_profile + conversation_history' : 'conversation_history_only')
             };
         } catch (memError) {
             console.error('⚠️ [MEMORY_FETCH_FAILED]', { request_id, error: memError.message });

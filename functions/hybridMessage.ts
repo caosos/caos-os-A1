@@ -35,6 +35,20 @@ Deno.serve(async (req) => {
                 console.error('⚠️ [MEMORY_UPDATE_ASYNC_FAILED]', err.message);
                 // Don't block response on memory update failure
             });
+            
+            // CONTINUOUS LEARNING: Extract and persist new facts
+            import('./core/continuousLearning.js').then(({ extractAndPersistFacts }) => {
+                extractAndPersistFacts({
+                    base44,
+                    userId: user.email,
+                    threadId: session_id,
+                    userMessage: rawInput,
+                    assistantMessage: result.reply,
+                    toolResults: result.execution_state?.executor_used ? result : null
+                }).catch(err => {
+                    console.error('⚠️ [FACT_EXTRACTION_ASYNC_FAILED]', err.message);
+                });
+            });
         }
 
         return Response.json(result);
