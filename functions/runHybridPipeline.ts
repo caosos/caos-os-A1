@@ -438,7 +438,7 @@ export async function runHybridPipeline(rawInput, options) {
                 ? `${input}${memoryContext}` 
                 : input;
             
-            cognitiveResult = applyCognitiveLayer(formattedResult, enhancedInput);
+            cognitiveResult = await applyCognitiveLayer(formattedResult, enhancedInput, base44, user);
             
             if (traceMode) {
                 stageSnapshots.push({
