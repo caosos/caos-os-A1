@@ -156,11 +156,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [audioDuration, setAudioDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [speechProgress, setSpeechProgress] = useState(0);
   const [showExecution, setShowExecution] = useState(() => {
     return localStorage.getItem('caos_show_execution') === 'true';
   });
   const justSelectedRef = React.useRef(false);
   const audioRef = React.useRef(null);
+  const utteranceRef = React.useRef(null);
+  const progressInterval = React.useRef(null);
   const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
 
   useEffect(() => {
