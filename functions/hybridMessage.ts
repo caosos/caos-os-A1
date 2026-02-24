@@ -542,6 +542,19 @@ Deno.serve(async (req) => {
             execution_state,
             execution_receipt
         };
+        
+        // TRACE MODE: Add detailed stage snapshots when trace=true
+        if (traceMode) {
+            returnPayload.trace = {
+                enabled: true,
+                request_id,
+                input: rawInput,
+                normalized_input: input,
+                stages: stageSnapshots,
+                total_latency_ms: execution_state.latency_ms,
+                timestamp: new Date().toISOString()
+            };
+        }
 
         // AUDIT LOG 4: Final return payload
         console.log('🔍 [AUDIT_4_RETURN_PAYLOAD]', JSON.stringify({
@@ -552,6 +565,7 @@ Deno.serve(async (req) => {
             has_session: !!returnPayload.session,
             has_execution_state: !!returnPayload.execution_state,
             has_execution_receipt: !!returnPayload.execution_receipt,
+            has_trace: !!returnPayload.trace,
             execution_receipt_present: returnPayload.hasOwnProperty('execution_receipt'),
             execution_receipt_value: returnPayload.execution_receipt !== undefined ? 'PRESENT' : 'UNDEFINED',
             full_payload: returnPayload
