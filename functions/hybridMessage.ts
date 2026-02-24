@@ -455,6 +455,15 @@ Deno.serve(async (req) => {
                 : input;
             
             finalResponse = applyCognitiveLayer(formattedResult, enhancedInput);
+            
+            if (traceMode) {
+                stageSnapshots.push({
+                    stage: "STAGE_5_APPLY_COGNITIVE_LAYER",
+                    mode: finalResponse.mode,
+                    response_length: finalResponse.content?.length || 0,
+                    memory_enhanced: formattedResult.mode === 'GEN' && memoryContext.length > 0
+                });
+            }
         } catch (cogError) {
             execution_state.status = 'COGNITIVE_FAILED';
             console.error('🚨 [COGNITIVE_LAYER_FAILED]', { request_id, error: cogError.error || cogError.message });
