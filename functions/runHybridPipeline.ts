@@ -20,6 +20,7 @@
 
 import { loadContextJournal, validateContextJournal } from './core/contextLoader.js';
 import { invokeSelector, verifySelectorInvoked } from './core/selectorEngine.js';
+import { executeTool } from './core/toolExecutor.js';
 import { normalizeInput } from './core/normalize.js';
 import { logDriftEvent } from './core/executorContract.js';
 import { sanitizeUserFacingText } from './core/sanitizer.js';
@@ -268,8 +269,30 @@ export async function runHybridPipeline(rawInput, options) {
         // ============================================================
         // STAGE 8: TOOL EXECUTION (IF AUTHORIZED)
         // ============================================================
-        // Tool execution handled within inference if needed
-        // IMAGE tool, WEB_SEARCH, FILE_SEARCH only execute if in tools_allowed
+        let toolResult = null;
+        
+        if (selectorDecision.tools_allowed && selectorDecision.tools_allowed.length > 0) {
+            console.log('🔧 [STAGE_8_TOOL_EXECUTION_AUTHORIZED]', {
+                tools: selectorDecision.tools_allowed
+            });
+            
+            try {
+                toolResult = await executeTool({
+                    user_input: input,
+                    selector_decision: selectorDecision
+                }, base44);
+                
+                console.log('✅ [TOOL_EXECUTION_COMPLETE]', {
+                    executor: toolResult?.executor,
+                    success: toolResult?.success
+                });
+            } catch (toolError) {
+                console.error('⚠️ [TOOL_EXECUTION_FAILED]', toolError.message);
+                // Non-fatal - continue without tool result
+            }
+        } else {
+            console.log('⏭️ [TOOLS_NOT_AUTHORIZED]', 'Selector did not authorize any tools');
+        }
         
         // ============================================================
         // STAGE 9: RESPONSE BUILD

@@ -82,19 +82,22 @@ export async function invokeSelector(params, base44) {
     const tools_allowed = [];
     const input_lower = user_input.toLowerCase();
     
-    // IMAGE tool patterns
-    if (/\b(draw|create an? image|generate an? image|illustrate|render|make a picture)\b/i.test(user_input)) {
+    // IMAGE tool patterns (EXPLICIT - must clearly want image generation)
+    if (/\b(draw|create an? image|generate an? image|illustrate|render|make a picture|paint)\b/i.test(user_input)) {
         tools_allowed.push('IMAGE');
+        console.log('🎨 [IMAGE_TOOL_AUTHORIZED]');
     }
     
     // WEB_SEARCH tool patterns
-    if (/\b(search|look up|find|what's|current|latest|news)\b/i.test(user_input)) {
+    if (/\b(search|look up|find|what's|current|latest|news|today|weather)\b/i.test(user_input)) {
         tools_allowed.push('WEB_SEARCH');
+        console.log('🔍 [WEB_SEARCH_AUTHORIZED]');
     }
     
     // FILE_SEARCH tool patterns
     if (/\b(read|show|display|file|code)\b/i.test(user_input)) {
         tools_allowed.push('FILE_SEARCH');
+        console.log('📁 [FILE_SEARCH_AUTHORIZED]');
     }
 
     // Determine response mode
