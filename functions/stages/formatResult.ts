@@ -110,7 +110,43 @@ export function formatResult(routeResult, toolResult) {
             payload = `I searched ${search_scope.total_indexed} threads for "${term}" but didn't find any matches.\n\nWant to try a different search term or see all your threads?`;
         } else {
             const matchWord = count === 1 ? 'thread mentions' : 'threads mention';
-            const resultLines = matches.map(m => `- ${m.title}`).join('\n');
+            
+            // Format results with message excerpts if available
+            const resultLines = matches.map(m => {
+                const conv = m.conversation || m;
+                let result = `- **${conv.title || 'Untitled'}**`;
+                
+                // If we have message excerpts, include them
+                if (m.messageExcerpts && m.messageExcerpts.length > 0) {
+                    result += '\n';
+                    m.messageExcerpts.slice(0, 3).forEach(msg => {
+                        // Extract a snippet around the search term (150 chars context)
+                        const searchTerm = term.toLowerCase();
+                        const content = msg.content || '';
+                        const index = content.toLowerCase().indexOf(searchTerm);
+                        
+                        let snippet = content;
+                        if (index !== -1 && content.length > 200) {
+                            const start = Math.max(0, index - 75);
+                            const end = Math.min(content.length, index + 125);
+                            snippet = (start > 0 ? '...' : '') + 
+                                     content.substring(start, end) + 
+                                     (end < content.length ? '...' : '');
+                        } else if (content.length > 200) {
+                            snippet = content.substring(0, 200) + '...';
+                        }
+                        
+                        result += `  ${msg.role === 'user' ? '👤' : '🤖'} ${snippet}\n`;
+                    });
+                    
+                    if (m.messageExcerpts.length > 3) {
+                        result += `  _(${m.messageExcerpts.length - 3} more mentions)_\n`;
+                    }
+                }
+                
+                return result;
+            }).join('\n');
+            
             payload = `Found ${count} ${matchWord} "${term}":\n\n${resultLines}`;
         }
 
