@@ -336,8 +336,7 @@ export async function runHybridPipeline(rawInput, options) {
         const userProfile = await loadUserProfile(base44, user.email);
         let finalResponse = inferenceResult.content;
         
-        // STAGE 8: Render (sanitize, enforce identity, validate presentation)
-        latency.start('render');
+        // Sanitize, enforce identity, validate presentation
         finalResponse = sanitizeUserFacingText(finalResponse, { failLoud: false });
         finalResponse = enforceIdentity(finalResponse, userProfile);
         
@@ -350,7 +349,6 @@ export async function runHybridPipeline(rawInput, options) {
         } catch (silenceError) {
             console.error('🚨 [PRESENTATION_SILENCE_VIOLATED]', silenceError.message);
         }
-        latency.end('render');
         
         console.log('✅ [RESPONSE_BUILT]', { length: finalResponse.length });
 
