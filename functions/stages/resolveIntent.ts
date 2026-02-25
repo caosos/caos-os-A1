@@ -151,7 +151,10 @@ export function resolveIntent(input) {
         /conversation duration/i,
         /started (this )?session/i,
         /start of (this |our )?(conversation|session|chat)/i,
-        /how long is (this |our )?(conversation|session)/i
+        /how long is (this |our )?(conversation|session)/i,
+        /(?:what|what's|what is) (?:the )?(?:very )?first (?:thing|message).*(?:in )?(?:this |the |our )?(?:thread|conversation|session)/i,
+        /first message (?:in |of )?(?:this |the |our )?(?:thread|conversation|session)/i,
+        /what did I (?:say|ask|tell you) (?:first|initially|at the start)/i
     ];
     
     if (sessionMetadataPatterns.some(p => p.test(userMessage))) {
