@@ -109,6 +109,16 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             const hours = Math.floor(durationMs / (1000 * 60 * 60));
             const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
+            // Check if user wants first message
+            let firstMessage = null;
+            const userMessage = intentResult.userMessage || '';
+            if (/first (?:thing|message)/i.test(userMessage)) {
+                const userMessages = messages.filter(m => m.role === 'user');
+                if (userMessages.length > 0) {
+                    firstMessage = userMessages[0].content;
+                }
+            }
+
             return {
                 type: 'SESSION_METADATA',
                 executor: 'get_session_metadata',
@@ -116,6 +126,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 last_message_time: lastMessageTime,
                 duration: { hours, minutes, ms: durationMs },
                 message_count: messageCount,
+                first_message: firstMessage,
                 executionId: `exec_${Date.now()}`
             };
         } catch (error) {
