@@ -55,10 +55,46 @@ function containsThreadListPattern(payload) {
     return THREAD_LIST_PATTERNS.some(pattern => pattern.test(payload));
 }
 
+// Detect alias binding commands
+async function detectAndApplyAlias(userInput, base44, userEmail) {
+    if (!userInput || !base44 || !userEmail) return null;
+    
+    const aliasPatterns = [
+        /(?:call you|your name is|I will call you|you are|you're)\s+([A-Z][a-z]+)(?:\s|$|\.|\,)/i,
+        /(?:from now on|going forward),?\s+(?:call you|your name is)\s+([A-Z][a-z]+)/i,
+        /(?:I want to call you|let me call you|I'll call you)\s+([A-Z][a-z]+)/i
+    ];
+    
+    for (const pattern of aliasPatterns) {
+        const match = userInput.match(pattern);
+        if (match && match[1]) {
+            const newName = match[1];
+            console.log('🏷️ [ALIAS_DETECTED]', { newName, userEmail });
+            
+            // Update UserProfile immediately
+            const { updateUserProfile } = await import('../middleware/identityContract.js');
+            await updateUserProfile(base44, userEmail, { assistant_name: newName });
+            
+            return newName;
+        }
+    }
+    
+    return null;
+}
+
 export async function applyCognitiveLayer(formattedResult, userInput = null, base44 = null, user = null) {
     const { mode, payload, metadata } = formattedResult;
 
     console.log('🧠 [COGNITIVE_LAYER] Mode:', mode);
+    
+    // PHASE 0: Check for alias binding command
+    let aliasChanged = null;
+    if (mode === 'GEN' && userInput && base44 && user) {
+        aliasChanged = await detectAndApplyAlias(userInput, base44, user.email);
+        if (aliasChanged) {
+            console.log('✅ [ALIAS_BOUND]', { newName: aliasChanged });
+        }
+    }
 
     // ========== ECHO SUPPRESSION GUARD ==========
     if (userInput && payload) {
@@ -217,7 +253,8 @@ export async function applyCognitiveLayer(formattedResult, userInput = null, bas
             structured: true,  // Flag for renderer
             response_points: [payload],  // Base response as starting point
             tone: 'conversational',
-            memory_context: memoryContext || null
+            memory_context: memoryContext || null,
+            alias_changed: aliasChanged  // Signal to renderer to reload profile
         };
     }
 

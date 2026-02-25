@@ -225,8 +225,14 @@ export function resolveIntent(input) {
         };
     }
     
-    // Standard search keywords (but not when it's about analyzing/looking through)
-    const searchKeywords = ['search for', 'find thread', 'mention', 'mentions', 'list mentions', 'contain', 'contains', 'run that search', 'in any of'];
+    // Expanded search keywords (catch more search intents)
+    const searchKeywords = [
+        'search for', 'find thread', 'mention', 'mentions', 'list mentions', 
+        'contain', 'contains', 'run that search', 'in any of',
+        'search the system', 'search through', 'show me where', 'find every',
+        'find all', 'search all', 'mentions of', 'anywhere', 'search everywhere',
+        'in which thread', 'what thread', 'find conversations about'
+    ];
     const hasSearchIntent = searchKeywords.some(kw => userMessage.toLowerCase().includes(kw));
 
     if (hasSearchIntent) {

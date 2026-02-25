@@ -509,7 +509,9 @@ export async function runHybridPipeline(rawInput, options) {
                     identityBlock,
                     threadBlock,
                     userBlock,
-                    environmentBlock
+                    environmentBlock,
+                    base44,
+                    userEmail: user.email
                 });
                 
                 finalResponse = {
@@ -521,28 +523,91 @@ export async function runHybridPipeline(rawInput, options) {
                 finalResponse = cognitiveResult;
             }
             
-            // IDENTITY HARD LOCK - Block forbidden patterns
+            // IDENTITY HARD LOCK - Block forbidden patterns and regenerate
             if (finalResponse.content && typeof finalResponse.content === 'string') {
                 const forbiddenPatterns = [
                     /as an artificial intelligence/i,
                     /as an ai language model/i,
                     /i am an ai assistant/i,
-                    /i'm just an ai/i
+                    /i'm just an ai/i,
+                    /i (?:do not|don't) have (?:access to |the ability to )?(?:remember|recall|access) previous conversations/i,
+                    /i (?:cannot|can't) remember/i,
+                    /i am caos(?! platform)/i  // "I am CAOS" unless followed by "platform"
                 ];
+                
+                let driftDetected = false;
+                let matchedPattern = null;
                 
                 for (const pattern of forbiddenPatterns) {
                     if (pattern.test(finalResponse.content)) {
-                        console.error('🚨 [IDENTITY_HARD_LOCK_TRIGGERED]', {
-                            request_id,
-                            pattern: pattern.source
+                        driftDetected = true;
+                        matchedPattern = pattern.source;
+                        break;
+                    }
+                }
+                
+                if (driftDetected) {
+                    console.error('🚨 [IDENTITY_DRIFT_DETECTED]', {
+                        request_id,
+                        pattern: matchedPattern,
+                        attempt: 'regenerating_once'
+                    });
+                    
+                    // REGENERATE ONCE with stricter prompt
+                    const stricterPrompt = `${identitySystemPrompt}
+
+CRITICAL IDENTITY RULES (HARD ENFORCEMENT):
+- NEVER say "as an AI" or "as an artificial intelligence"
+- NEVER say "I am an AI assistant" 
+- NEVER say "I don't have access to previous conversations" - YOU DO
+- NEVER say "I cannot remember" - YOU CAN
+- You are ${userProfile?.assistant_name || 'Aria'}, NOT "CAOS"
+- Use "I" and "me" naturally - you're a person in this relationship
+- Speak directly and personally, as someone who knows ${userProfile?.preferred_name || 'Michael'}`;
+
+                    try {
+                        const retryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${openaiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: 'gpt-4o',
+                                messages: [
+                                    { role: 'system', content: stricterPrompt },
+                                    { role: 'user', content: `${identityBlock}\n${threadBlock}\n${userBlock}\n${environmentBlock}\n\nUser: ${input}\n\nRespond naturally and directly as ${userProfile?.assistant_name || 'Aria'}.` }
+                                ],
+                                temperature: 0.7,
+                                max_tokens: 2000
+                            })
                         });
                         
-                        throw {
-                            error: 'IDENTITY_DRIFT_DETECTED',
-                            code: 'FORBIDDEN_DISCLAIMER',
-                            pattern: pattern.source,
-                            message: 'Response contained forbidden AI disclaimer language'
-                        };
+                        if (retryResponse.ok) {
+                            const retryData = await retryResponse.json();
+                            const retryContent = retryData.choices[0]?.message?.content;
+                            
+                            // Check retry result
+                            let retryStillDrifts = false;
+                            for (const pattern of forbiddenPatterns) {
+                                if (pattern.test(retryContent)) {
+                                    retryStillDrifts = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!retryStillDrifts) {
+                                console.log('✅ [IDENTITY_DRIFT_FIXED_ON_RETRY]', { request_id });
+                                finalResponse.content = retryContent;
+                            } else {
+                                // Fail closed: rewrite to minimal safe response
+                                console.error('🚨 [IDENTITY_DRIFT_PERSISTS_AFTER_RETRY]', { request_id });
+                                finalResponse.content = `I understand what you're asking. Let me think about that and respond properly in our next exchange.`;
+                            }
+                        }
+                    } catch (retryError) {
+                        console.error('⚠️ [RETRY_FAILED]', retryError.message);
+                        // Keep original response rather than crashing
                     }
                 }
             }
