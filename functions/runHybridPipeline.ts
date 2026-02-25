@@ -26,6 +26,7 @@ import { logDriftEvent } from './core/executorContract.js';
 import { sanitizeUserFacingText } from './core/sanitizer.js';
 import { loadUserProfile, buildIdentitySystemPrompt, enforceIdentity } from './middleware/identityContract.js';
 import { isDiagnosticMode, emitDiagnosticReceipt, formatDiagnosticSummary } from './core/diagnosticMode.js';
+import { validateResponseForUI } from './core/presentationSilence.js';
 
 export async function runHybridPipeline(rawInput, options) {
     const {
@@ -335,6 +336,16 @@ export async function runHybridPipeline(rawInput, options) {
         // Sanitize and enforce identity
         finalResponse = sanitizeUserFacingText(finalResponse, { failLoud: false });
         finalResponse = enforceIdentity(finalResponse, userProfile);
+        
+        // PRESENTATION SILENCE: Validate no backend artifacts
+        try {
+            finalResponse = validateResponseForUI(finalResponse, {
+                strict: false, // Warning only in production
+                strip_artifacts: true // Auto-clean if violations found
+            });
+        } catch (silenceError) {
+            console.error('🚨 [PRESENTATION_SILENCE_VIOLATED]', silenceError.message);
+        }
         
         console.log('✅ [RESPONSE_BUILT]', { length: finalResponse.length });
 

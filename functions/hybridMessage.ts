@@ -1,14 +1,36 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { runHybridPipeline } from './runHybridPipeline.js';
 import { postTurnMemoryUpdate } from './core/memoryUpdate.js';
+import { validateRouteInvocation, generateRouteReceipt } from './core/routeRegistry.js';
 
 Deno.serve(async (req) => {
+    const startTime = Date.now();
+    const request_id = crypto.randomUUID();
+
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        // Validate route authorization
+        const route_validation = validateRouteInvocation('prod.message.hybrid', {
+            authenticated: !!user,
+            user
+        });
+
+        if (!route_validation.allowed) {
+            return Response.json({
+                error: 'ROUTE_DENIED',
+                deny_reason: route_validation.deny_reason,
+                details: route_validation.details,
+                route_receipt: generateRouteReceipt({
+                    route_id: 'prod.message.hybrid',
+                    request_id,
+                    allowed: false,
+                    deny_reason: route_validation.deny_reason,
+                    details: route_validation.details,
+                    elapsed_ms: Date.now() - startTime
+                })
+            }, { status: 403 });
         }
 
         const body = await req.json();
