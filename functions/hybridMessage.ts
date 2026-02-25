@@ -8,8 +8,13 @@ Deno.serve(async (req) => {
     const request_id = crypto.randomUUID();
 
     try {
+        console.log('🚀 [HYBRID_MESSAGE_START]', { request_id });
+        
         const base44 = createClientFromRequest(req);
+        console.log('✅ [CLIENT_CREATED]');
+        
         const user = await base44.auth.me();
+        console.log('✅ [USER_AUTHENTICATED]', { email: user?.email });
 
         // Validate route authorization
         const route_validation = validateRouteInvocation('prod.message.hybrid', {
@@ -18,6 +23,7 @@ Deno.serve(async (req) => {
         });
 
         if (!route_validation.allowed) {
+            console.log('❌ [ROUTE_DENIED]', { reason: route_validation.deny_reason });
             return Response.json({
                 error: 'ROUTE_DENIED',
                 deny_reason: route_validation.deny_reason,
@@ -32,16 +38,31 @@ Deno.serve(async (req) => {
                 })
             }, { status: 403 });
         }
+        
+        console.log('✅ [ROUTE_VALIDATED]');
 
         const body = await req.json();
         const { input: rawInput, session_id, trace } = body;
         
+        console.log('📥 [REQUEST_BODY]', { 
+            hasInput: !!rawInput, 
+            inputLength: rawInput?.length,
+            session_id,
+            trace
+        });
+        
         // Call extracted pipeline
+        console.log('🔄 [CALLING_PIPELINE]', { session_id });
         const result = await runHybridPipeline(rawInput, {
             base44,
             user,
             session_id,
             trace
+        });
+        console.log('✅ [PIPELINE_COMPLETE]', { 
+            hasReply: !!result?.reply,
+            hasError: !!result?.error,
+            mode: result?.mode
         });
 
         // POST-TURN MEMORY UPDATE: Update thread & user memories after successful response
@@ -85,13 +106,28 @@ Deno.serve(async (req) => {
             });
         }
 
+        console.log('📤 [RETURNING_RESPONSE]', { request_id });
         return Response.json(result);
 
     } catch (error) {
-        console.error('🔥 [HTTP_HANDLER_ERROR]', { error: error.message });
+        console.error('🔥 [HTTP_HANDLER_ERROR]', { 
+            request_id,
+            error: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        
+        // Return graceful error to frontend
         return Response.json({
+            reply: "I encountered an error. The system has logged this issue for review.",
             error: 'HTTP_HANDLER_FAILURE',
-            details: error.message
-        }, { status: 500 });
+            error_details: error.message,
+            request_id,
+            mode: 'ERROR',
+            degradation: {
+                type: 'handler_error',
+                details: error.message
+            }
+        }, { status: 200 }); // Return 200 with error payload instead of 500
     }
 });
