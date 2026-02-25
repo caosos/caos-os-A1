@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Shield, Activity, Database, Route } from 'lucide-react';
+import { Shield, Activity, Database, Route, Zap } from 'lucide-react';
 import RoutesViewer from '@/components/admin/RoutesViewer';
 import StatsViewer from '@/components/admin/StatsViewer';
 import WCWMonitor from '@/components/admin/WCWMonitor';
