@@ -439,13 +439,25 @@ export async function runHybridPipeline(rawInput, options) {
     } catch (error) {
         execution_state.status = 'CRITICAL_FAILURE';
         execution_state.ended_at = Date.now();
-        console.error('🔥 [PIPELINE_CRITICAL_ERROR]', { request_id, error: error.message, stack: error.stack });
-
-        return {
-            error: 'PIPELINE_FAILURE',
-            details: error.message,
-            request_id,
+        console.error('🔥 [PIPELINE_CRITICAL_ERROR]', { 
+            request_id, 
+            error: error.message, 
+            stack: error.stack,
             execution_state
+        });
+
+        // Return a user-friendly error
+        return {
+            reply: "I encountered an error processing your request. The system has logged this issue.",
+            mode: 'ERROR',
+            error: 'PIPELINE_FAILURE',
+            error_details: error.message,
+            request_id,
+            execution_state,
+            degradation: {
+                type: 'pipeline_error',
+                details: error.message
+            }
         };
     }
 }
@@ -601,6 +613,7 @@ async function executeInference(params) {
     const { assembledContext, userInput, openaiKey } = params;
 
     if (!openaiKey) {
+        console.error('🚨 [OPENAI_KEY_MISSING]');
         throw new Error('OPENAI_API_KEY not configured');
     }
 
@@ -611,6 +624,8 @@ async function executeInference(params) {
     const userPrompt = buildUserPrompt(assembledContext, userInput);
 
     // Call OpenAI
+    console.log('🤖 [OPENAI_CALL_START]', { model: 'gpt-4o' });
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -630,10 +645,21 @@ async function executeInference(params) {
     });
 
     if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        const errorBody = await response.text();
+        console.error('🚨 [OPENAI_API_ERROR]', { 
+            status: response.status, 
+            statusText: response.statusText,
+            body: errorBody
+        });
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('✅ [OPENAI_CALL_SUCCESS]', { 
+        usage: data.usage,
+        response_length: data.choices[0].message.content.length
+    });
+    
     return {
         content: data.choices[0].message.content,
         model: data.model,
