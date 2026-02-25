@@ -25,6 +25,7 @@ import { normalizeInput } from './core/normalize.js';
 import { logDriftEvent } from './core/executorContract.js';
 import { sanitizeUserFacingText } from './core/sanitizer.js';
 import { loadUserProfile, buildIdentitySystemPrompt, enforceIdentity } from './middleware/identityContract.js';
+import { isDiagnosticMode, emitDiagnosticReceipt, formatDiagnosticSummary } from './core/diagnosticMode.js';
 
 export async function runHybridPipeline(rawInput, options) {
     const {
@@ -46,6 +47,17 @@ export async function runHybridPipeline(rawInput, options) {
         started_at: timestamp
     };
 
+    // Latency tracking
+    const latency_breakdown = {
+        boot_validation_ms: 0,
+        context_load_ms: 0,
+        selector_ms: 0,
+        recall_ms: 0,
+        inference_ms: 0,
+        tool_execution_ms: 0,
+        total_ms: 0
+    };
+
     try {
         console.log('🚀 [CAOS_A1_PIPELINE_START]', { request_id, session_id, user: user.email });
 
@@ -54,10 +66,12 @@ export async function runHybridPipeline(rawInput, options) {
         // ============================================================
         console.log('🥾 [STAGE_1_BOOT_VALIDATION]');
         
+        const bootStart = Date.now();
         let bootReceipt;
         try {
             bootReceipt = await validateBoot(session_id, user.email, base44);
             execution_state.boot_valid = bootReceipt.valid;
+            latency_breakdown.boot_validation_ms = Date.now() - bootStart;
             
             if (!bootReceipt.valid) {
                 throw new Error(`BOOT_VALIDATION_FAILED: ${bootReceipt.failure_reason}`);
@@ -80,9 +94,12 @@ export async function runHybridPipeline(rawInput, options) {
         console.log('🌍 [STAGE_2_ENVIRONMENT_LOAD]');
         
         const environmentDeclaration = loadEnvironmentDeclaration();
+        const diagnostic_mode = isDiagnosticMode(session_id, environmentDeclaration);
+        
         console.log('✅ [ENVIRONMENT_LOADED]', { 
             mode: environmentDeclaration.mode,
-            policy: environmentDeclaration.policy_gating
+            policy: environmentDeclaration.policy_gating,
+            diagnostic: diagnostic_mode
         });
 
         // ============================================================
@@ -90,11 +107,13 @@ export async function runHybridPipeline(rawInput, options) {
         // ============================================================
         console.log('📚 [STAGE_3_CONTEXT_JOURNAL_LOAD]');
         
+        const contextStart = Date.now();
         let contextJournal;
         try {
             contextJournal = await loadContextJournal(session_id, user.email, base44);
             validateContextJournal(contextJournal);
             execution_state.context_loaded = true;
+            latency_breakdown.context_load_ms = Date.now() - contextStart;
             
             console.log('✅ [CONTEXT_JOURNAL_VALID]', { 
                 paths: Object.keys(contextJournal),
@@ -124,6 +143,7 @@ export async function runHybridPipeline(rawInput, options) {
         // ============================================================
         console.log('🎯 [STAGE_4_SELECTOR_INVOCATION]');
         
+        const selectorStart = Date.now();
         let selectorDecision;
         try {
             selectorDecision = await invokeSelector({
@@ -138,6 +158,7 @@ export async function runHybridPipeline(rawInput, options) {
             
             execution_state.selector_invoked = true;
             execution_state.selector_decision = selectorDecision;
+            latency_breakdown.selector_ms = Date.now() - selectorStart;
             
             console.log('✅ [SELECTOR_DECISION]', {
                 response_mode: selectorDecision.response_mode,
@@ -189,6 +210,7 @@ export async function runHybridPipeline(rawInput, options) {
                 limit: selectorDecision.recall_limit
             });
             
+            const recallStart = Date.now();
             try {
                 recallResult = await executeRecall({
                     session_id,
@@ -197,6 +219,8 @@ export async function runHybridPipeline(rawInput, options) {
                     tiers_allowed: selectorDecision.recall_tiers_allowed,
                     limit: selectorDecision.recall_limit
                 }, base44);
+                
+                latency_breakdown.recall_ms = Date.now() - recallStart;
                 
                 console.log('✅ [RECALL_COMPLETE]', {
                     facts_found: recallResult.facts?.length || 0,
@@ -236,12 +260,15 @@ export async function runHybridPipeline(rawInput, options) {
         if (selectorDecision.inference_allowed) {
             console.log('🧠 [STAGE_7_INFERENCE_AUTHORIZED]');
             
+            const inferenceStart = Date.now();
             try {
                 inferenceResult = await executeInference({
                     assembledContext,
                     userInput: input,
                     openaiKey: Deno.env.get('OPENAI_API_KEY')
                 });
+                
+                latency_breakdown.inference_ms = Date.now() - inferenceStart;
                 
                 console.log('✅ [INFERENCE_COMPLETE]', {
                     response_length: inferenceResult.content?.length || 0
@@ -276,11 +303,14 @@ export async function runHybridPipeline(rawInput, options) {
                 tools: selectorDecision.tools_allowed
             });
             
+            const toolStart = Date.now();
             try {
                 toolResult = await executeTool({
                     user_input: input,
                     selector_decision: selectorDecision
                 }, base44);
+                
+                latency_breakdown.tool_execution_ms = Date.now() - toolStart;
                 
                 console.log('✅ [TOOL_EXECUTION_COMPLETE]', {
                     executor: toolResult?.executor,
@@ -331,6 +361,8 @@ export async function runHybridPipeline(rawInput, options) {
         // ============================================================
         // STAGE 11: RECEIPT EMISSION
         // ============================================================
+        latency_breakdown.total_ms = Date.now() - timestamp;
+        
         const receipt = {
             request_id,
             session_id,
@@ -342,24 +374,52 @@ export async function runHybridPipeline(rawInput, options) {
             inference_executed: selectorDecision.inference_allowed,
             tools_executed: selectorDecision.tools_allowed,
             response_mode: selectorDecision.response_mode,
-            latency_ms: Date.now() - timestamp,
+            latency_ms: latency_breakdown.total_ms,
+            latency_breakdown,
             timestamp_utc: new Date().toISOString()
         };
         
         console.log('📋 [RECEIPT_EMITTED]', receipt);
 
+        // DIAGNOSTIC MODE: Emit detailed diagnostic receipt
+        let diagnosticReceipt = null;
+        if (diagnostic_mode) {
+            try {
+                diagnosticReceipt = await emitDiagnosticReceipt({
+                    request_id,
+                    session_id,
+                    selector_decision: selectorDecision,
+                    recall_result: recallResult,
+                    tool_result: toolResult,
+                    environment_declaration: environmentDeclaration,
+                    context_journal: contextJournal,
+                    latency_breakdown,
+                    diagnostic_mode: true
+                }, base44);
+            } catch (diagError) {
+                console.error('⚠️ [DIAGNOSTIC_RECEIPT_FAILED]', diagError.message);
+            }
+        }
+
         execution_state.status = 'SUCCESS';
         execution_state.ended_at = Date.now();
-        execution_state.latency_ms = execution_state.ended_at - execution_state.started_at;
+        execution_state.latency_ms = latency_breakdown.total_ms;
+
+        // Append diagnostic summary if diagnostic mode enabled
+        let responseWithDiagnostics = finalResponse;
+        if (diagnostic_mode && diagnosticReceipt) {
+            responseWithDiagnostics += formatDiagnosticSummary(diagnosticReceipt);
+        }
 
         return {
-            reply: finalResponse,
+            reply: responseWithDiagnostics,
             mode: 'GEN',
             session: session_id,
             request_id,
             execution_state,
             receipt,
-            selector_decision: selectorDecision
+            selector_decision: selectorDecision,
+            diagnostic_receipt: diagnosticReceipt
         };
 
     } catch (error) {
