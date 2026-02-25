@@ -71,11 +71,17 @@ async function detectAndApplyAlias(userInput, base44, userEmail) {
             const newName = match[1];
             console.log('🏷️ [ALIAS_DETECTED]', { newName, userEmail });
             
-            // Update UserProfile immediately
-            const { updateUserProfile } = await import('../middleware/identityContract.js');
-            await updateUserProfile(base44, userEmail, { assistant_name: newName });
-            
-            return newName;
+            try {
+                // Update UserProfile immediately (user-level, persists across all threads)
+                const { updateUserProfile } = await import('../middleware/identityContract.js');
+                await updateUserProfile(base44, userEmail, { assistant_name: newName });
+                
+                console.log('✅ [ALIAS_PERSISTED_SYSTEM_WIDE]', { newName, userEmail });
+                return newName;
+            } catch (error) {
+                console.error('🚨 [ALIAS_UPDATE_FAILED]', error.message);
+                return null;
+            }
         }
     }
     
