@@ -164,21 +164,71 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 100
             );
 
-            // Deterministic filtering
-            const matches = conversations.filter(c => {
+            // First pass: Filter by metadata (title, summary, keywords)
+            const metadataMatches = conversations.filter(c => {
                 const titleMatch = c.title?.toLowerCase().includes(searchTerm);
                 const summaryMatch = c.summary?.toLowerCase().includes(searchTerm);
                 const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(searchTerm));
                 return titleMatch || summaryMatch || keywordMatch;
             });
 
+            // Second pass: Search through actual message content for all conversations
+            const contentMatches = [];
+            
+            for (const conv of conversations) {
+                const messages = await base44.asServiceRole.entities.Message.filter(
+                    { conversation_id: conv.id },
+                    'timestamp',
+                    1000
+                );
+                
+                const matchingMessages = messages.filter(msg => 
+                    msg.content?.toLowerCase().includes(searchTerm)
+                );
+                
+                if (matchingMessages.length > 0) {
+                    contentMatches.push({
+                        conversation: conv,
+                        matchingMessages: matchingMessages.map(msg => ({
+                            role: msg.role,
+                            content: msg.content,
+                            timestamp: msg.timestamp
+                        }))
+                    });
+                }
+            }
+
+            // Combine metadata and content matches (deduplicate)
+            const allMatchedConvIds = new Set([
+                ...metadataMatches.map(m => m.id),
+                ...contentMatches.map(m => m.conversation.id)
+            ]);
+
+            // Build comprehensive match results
+            const matches = Array.from(allMatchedConvIds).map(convId => {
+                const metadataMatch = metadataMatches.find(m => m.id === convId);
+                const contentMatch = contentMatches.find(m => m.conversation.id === convId);
+                
+                return {
+                    conversation: metadataMatch || contentMatch.conversation,
+                    matchedInMetadata: !!metadataMatch,
+                    matchedInContent: !!contentMatch,
+                    messageExcerpts: contentMatch?.matchingMessages || []
+                };
+            });
+
             // Track which fields had matches
             const matchFields = new Set();
-            matches.forEach(m => {
-                if (m.title?.toLowerCase().includes(searchTerm)) matchFields.add('title');
-                if (m.summary?.toLowerCase().includes(searchTerm)) matchFields.add('summary');
-                if (m.keywords?.some(k => k.toLowerCase().includes(searchTerm))) matchFields.add('keywords');
-            });
+            if (metadataMatches.length > 0) {
+                metadataMatches.forEach(m => {
+                    if (m.title?.toLowerCase().includes(searchTerm)) matchFields.add('title');
+                    if (m.summary?.toLowerCase().includes(searchTerm)) matchFields.add('summary');
+                    if (m.keywords?.some(k => k.toLowerCase().includes(searchTerm))) matchFields.add('keywords');
+                });
+            }
+            if (contentMatches.length > 0) {
+                matchFields.add('message_content');
+            }
 
             return {
                 type: 'SEARCH',
@@ -189,7 +239,8 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 count: matches.length,
                 search_scope: {
                     total_indexed: conversations.length,
-                    content_indexed: true
+                    content_indexed: true,
+                    messages_searched: true
                 },
                 executionId: `exec_${Date.now()}`
             };
