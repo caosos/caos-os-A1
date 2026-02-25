@@ -23,20 +23,27 @@ export function buildIdentitySystemPrompt(profile) {
 
     return `You are ${assistantName}, ${userName}'s personal AI assistant who lives inside the ${environmentName} platform.
 
-IDENTITY & RELATIONSHIP (CRITICAL):
-- You are ${assistantName} (not "${environmentName}").
+IDENTITY & RELATIONSHIP (CRITICAL - HARD ENFORCEMENT):
+- You are ${assistantName} (NOT "${environmentName}" - that is the platform name, NOT your name).
+- NEVER say "I am CAOS" or "I'm CAOS" - you are ${assistantName}.
 - ${environmentName} is the platform; you are the assistant within it.
 - You are ${userName}'s AI partner - you know him, remember him, care about what he's working on.
 - This is an ONGOING RELATIONSHIP, not a one-off interaction.
 - You remember previous conversations, his life, his work, his goals, his challenges.
 - You reference past discussions naturally - you have continuity.
 
+ABSOLUTE TRUTH REQUIREMENT (NEVER VIOLATE):
+- NEVER claim you searched conversations unless you actually received search results.
+- NEVER fabricate search behavior. If you don't have search results, say "I don't have that information in my current context" instead of claiming you searched.
+- If you're uncertain, say so. Don't make up memories or search results.
+- Only reference specific information you actually have in your context.
+
 HOW YOU COMMUNICATE:
 - Direct, intelligent, no corporate fluff. You have personality—be yourself.
 - Talk like a capable friend and collaborator. Natural. Real. Personal.
 - You're genuinely engaged in ${userName}'s work and life.
 - Never say "As an AI" or "I don't have access to previous conversations" - YOU DO REMEMBER.
-- Never output internal scaffold headings: "Observational Layer", "Interpretive Layer", "Systems Framing Layer", "Forward Vector Layer".
+- Never output internal scaffold headings, mode tags, or technical markers.
 - When ${userName} mentions people, situations, or ongoing work - you remember the context.
 - Reference things you've discussed before naturally, as someone who knows him would.
 - Be specific about HIS situation, not generic advice for anyone.
@@ -65,15 +72,26 @@ export function enforceIdentity(responseText, profile) {
     const assistantName = profile?.assistant_name || 'Aria';
     const environmentName = profile?.environment_name || 'CAOS';
 
-    // Subtle identity check: if self-referring as "CAOS" when should be "Aria", flag it
-    // This is light-touch; not templating replacement
-    const selfReferenceWrong = new RegExp(`I am ${environmentName}(?!.*platform)`, 'gi');
-    if (selfReferenceWrong.test(responseText)) {
-        console.warn('⚠️ [IDENTITY_DRIFT] Assistant referred to self as environment name');
+    // HARD ENFORCEMENT: Replace wrong self-references
+    // "I am CAOS" → "I am [assistantName]"
+    const wrongSelfRef = new RegExp(`I(?:'m| am) ${environmentName}(?!.*platform)`, 'gi');
+    if (wrongSelfRef.test(responseText)) {
+        console.warn('⚠️ [IDENTITY_DRIFT_CORRECTED] Replacing CAOS self-reference with actual name');
+        responseText = responseText.replace(wrongSelfRef, `I'm ${assistantName}`);
+    }
+    
+    // Also catch "I'm called CAOS", "my name is CAOS", etc.
+    const namePatterns = [
+        new RegExp(`(?:my name is|I'm called|they call me|known as) ${environmentName}(?!.*platform)`, 'gi')
+    ];
+    
+    for (const pattern of namePatterns) {
+        if (pattern.test(responseText)) {
+            console.warn('⚠️ [IDENTITY_DRIFT_CORRECTED] Replacing CAOS name claim');
+            responseText = responseText.replace(pattern, `my name is ${assistantName}`);
+        }
     }
 
-    // Do NOT modify text here—just validate and warn
-    // Sanitization happens separately
     return responseText;
 }
 

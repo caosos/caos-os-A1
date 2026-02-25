@@ -253,6 +253,41 @@ export async function applyCognitiveLayer(formattedResult, userInput = null, bas
             }
         }
 
+        // CRITICAL: Anti-fabrication check for GEN mode
+        // If payload contains search/retrieval language but no actual search was run, block it
+        const fabricationPatterns = [
+            /I (?:searched|looked through|checked|scanned|reviewed|went through) (?:the|your|our) (?:system|conversations|threads|records)/i,
+            /I conducted a (?:search|review|scan)/i,
+            /I found (?:no record|nothing|no mention)/i,
+            /after (?:searching|looking through|checking)/i
+        ];
+        
+        let containsFabrication = false;
+        for (const pattern of fabricationPatterns) {
+            if (pattern.test(payload)) {
+                containsFabrication = true;
+                console.error('🚨 [FABRICATION_DETECTED_IN_GEN]', {
+                    pattern: pattern.source,
+                    payload: payload.substring(0, 200)
+                });
+                break;
+            }
+        }
+        
+        if (containsFabrication) {
+            // HARD FAIL: GEN mode cannot fabricate search behavior
+            throw {
+                error: 'GEN_MODE_FABRICATION_BLOCKED',
+                code: 'HALLUCINATION_DETECTED',
+                message: 'Assistant attempted to claim it searched when no search was performed',
+                receipt_fallback: {
+                    triggered: true,
+                    fallback_type: 'FABRICATION_BLOCKED',
+                    reason: 'GEN mode cannot claim to have searched conversations'
+                }
+            };
+        }
+        
         // PHASE ONE: Return structured cognition (renderer will create prose)
         return {
             mode: 'GEN',

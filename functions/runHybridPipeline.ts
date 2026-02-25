@@ -611,13 +611,21 @@ export async function runHybridPipeline(rawInput, options) {
         console.log('📋 [EXECUTION_RECEIPT]', execution_receipt);
 
         // FINAL SANITIZATION LAYER - Remove scaffold leakage and mode tags
-        // FAIL LOUD if leakage detected
         let finalClean;
         try {
-            finalClean = sanitizeUserFacingText(finalResponse.content, { failLoud: true });
+            // First: enforce identity (may rewrite self-references)
+            finalClean = enforceIdentity(finalResponse.content, userProfile);
             
-            // PATCH 01: Enforce identity contract (light validation)
-            finalClean = enforceIdentity(finalClean, userProfile);
+            // Then: sanitize technical markers
+            finalClean = sanitizeUserFacingText(finalClean, { failLoud: false });
+            
+            // CRITICAL: Check for mode tag leakage after sanitization
+            if (finalClean && /\[?MODE=[\w]+\]?/i.test(finalClean)) {
+                console.error('🚨 [MODE_TAG_LEAKED_AFTER_SANITIZATION]');
+                // Strip again aggressively
+                finalClean = finalClean.replace(/\[?MODE=[\w]+\]?/gi, '');
+            }
+            
         } catch (sanitizeError) {
             console.error('🚨 [SANITIZATION_FAILED]', sanitizeError);
             
@@ -629,13 +637,9 @@ export async function runHybridPipeline(rawInput, options) {
                 pattern: sanitizeError.pattern
             };
             
-            // Return error to surface the leak
-            return {
-                error: 'SCAFFOLD_LEAK_DETECTED',
-                details: sanitizeError.message,
-                pattern: sanitizeError.pattern,
-                execution_receipt
-            };
+            // Don't hard fail - sanitize and continue
+            finalClean = sanitizeUserFacingText(finalResponse.content, { failLoud: false });
+            finalClean = enforceIdentity(finalClean, userProfile);
         }
         
         if (finalClean && typeof finalClean === 'string') {
