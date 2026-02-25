@@ -27,6 +27,9 @@ import { sanitizeUserFacingText } from './core/sanitizer.js';
 import { loadUserProfile, buildIdentitySystemPrompt, enforceIdentity } from './middleware/identityContract.js';
 import { isDiagnosticMode, emitDiagnosticReceipt, formatDiagnosticSummary } from './core/diagnosticMode.js';
 import { validateResponseForUI } from './core/presentationSilence.js';
+import { createLatencyTracker, logLatencyBreakdown } from './core/latencyTracking.js';
+import { enforceWCWCeiling } from './core/wcwSelfRegulation.js';
+import { withErrorRecovery, ErrorSeverity, recallFallback, toolExecutionFallback } from './core/errorRecovery.js';
 
 export async function runHybridPipeline(rawInput, options) {
     const {
@@ -333,7 +336,8 @@ export async function runHybridPipeline(rawInput, options) {
         const userProfile = await loadUserProfile(base44, user.email);
         let finalResponse = inferenceResult.content;
         
-        // Sanitize and enforce identity
+        // STAGE 8: Render (sanitize, enforce identity, validate presentation)
+        latency.start('render');
         finalResponse = sanitizeUserFacingText(finalResponse, { failLoud: false });
         finalResponse = enforceIdentity(finalResponse, userProfile);
         
@@ -346,6 +350,7 @@ export async function runHybridPipeline(rawInput, options) {
         } catch (silenceError) {
             console.error('🚨 [PRESENTATION_SILENCE_VIOLATED]', silenceError.message);
         }
+        latency.end('render');
         
         console.log('✅ [RESPONSE_BUILT]', { length: finalResponse.length });
 
