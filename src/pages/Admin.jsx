@@ -8,6 +8,7 @@ import StatsViewer from '@/components/admin/StatsViewer';
 import WCWMonitor from '@/components/admin/WCWMonitor';
 import SystemHealth from '@/components/admin/SystemHealth';
 import RecentErrors from '@/components/admin/RecentErrors';
+import PipelineVisualizer from '@/components/admin/PipelineVisualizer';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
 
             <div className="max-w-7xl mx-auto px-6 py-6">
                 <Tabs defaultValue="health" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-6">
                         <TabsTrigger value="health" className="gap-2">
                             <Activity className="h-4 w-4" />
                             Health
@@ -86,6 +87,10 @@ export default function AdminDashboard() {
                         <TabsTrigger value="errors" className="gap-2">
                             <Shield className="h-4 w-4" />
                             Errors
+                        </TabsTrigger>
+                        <TabsTrigger value="pipeline" className="gap-2">
+                            <Zap className="h-4 w-4" />
+                            Pipeline
                         </TabsTrigger>
                     </TabsList>
 
@@ -107,6 +112,10 @@ export default function AdminDashboard() {
 
                     <TabsContent value="errors">
                         <RecentErrors />
+                    </TabsContent>
+
+                    <TabsContent value="pipeline">
+                        <PipelineVisualizer />
                     </TabsContent>
                 </Tabs>
             </div>

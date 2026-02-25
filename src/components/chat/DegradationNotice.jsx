@@ -28,6 +28,27 @@ export default function DegradationNotice({ degradation }) {
                     icon: Info,
                     variant: 'default'
                 };
+            case 'pipeline_error':
+                return {
+                    title: 'Pipeline Error',
+                    description: 'An error occurred in the processing pipeline. The system has logged this issue.',
+                    icon: AlertTriangle,
+                    variant: 'destructive'
+                };
+            case 'inference_error':
+                return {
+                    title: 'Generation Failed',
+                    description: 'Unable to generate a complete response. Please try again.',
+                    icon: AlertTriangle,
+                    variant: 'destructive'
+                };
+            case 'handler_error':
+                return {
+                    title: 'Request Handler Error',
+                    description: 'An error occurred processing your request. The system has logged this issue.',
+                    icon: AlertTriangle,
+                    variant: 'destructive'
+                };
             default:
                 return {
                     title: 'Degraded Mode',
