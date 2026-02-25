@@ -16,7 +16,19 @@ export function formatResult(routeResult, toolResult) {
 
     // ========== SESSION_METADATA_FORMATTER ==========
     if (formatter === 'SESSION_METADATA_FORMATTER' && toolResult?.type === 'SESSION_METADATA') {
-        const { start_time, last_message_time, duration, message_count } = toolResult;
+        const { start_time, last_message_time, duration, message_count, first_message } = toolResult;
+        
+        // If user asked for first message, return that
+        if (first_message) {
+            return {
+                mode: 'RETRIEVAL',
+                payload: `The very first thing you said in this thread was:\n\n> ${first_message}`,
+                summary: 'First message retrieved',
+                metadata: {
+                    confidence: 'HIGH'
+                }
+            };
+        }
         
         // Format start time conversationally
         const startDate = new Date(start_time);
