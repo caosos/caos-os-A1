@@ -619,12 +619,25 @@ export async function runHybridPipeline(rawInput, options) {
             // Then: sanitize technical markers
             finalClean = sanitizeUserFacingText(finalClean, { failLoud: false });
             
-            // CRITICAL: Check for mode tag leakage after sanitization
-            if (finalClean && /\[?MODE=[\w]+\]?/i.test(finalClean)) {
-                console.error('🚨 [MODE_TAG_LEAKED_AFTER_SANITIZATION]');
-                // Strip again aggressively
-                finalClean = finalClean.replace(/\[?MODE=[\w]+\]?/gi, '');
+            // CRITICAL: Multi-pass mode tag removal (some leak through)
+            const modeTagPatterns = [
+                /\[MODE=[\w]+\]/gi,
+                /\(MODE=[\w]+\)/gi,
+                /^MODE=[\w]+$/gmi,
+                /\[MODE:[\w]+\]/gi,
+                /MODE=GEN/gi,
+                /MODE=RETRIEVAL/gi
+            ];
+            
+            for (const pattern of modeTagPatterns) {
+                if (pattern.test(finalClean)) {
+                    console.warn('⚠️ [MODE_TAG_LEAK_DETECTED]', { pattern: pattern.source });
+                    finalClean = finalClean.replace(pattern, '');
+                }
             }
+            
+            // Trim again after stripping
+            finalClean = finalClean.trim();
             
         } catch (sanitizeError) {
             console.error('🚨 [SANITIZATION_FAILED]', sanitizeError);

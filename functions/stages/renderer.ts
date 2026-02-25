@@ -48,7 +48,13 @@ ${environmentBlock || ''}
 
 ${memory_context ? `ADDITIONAL CONTEXT:\n${memory_context}\n` : ''}
 
-Your task: Transform the structured response points below into natural, conversational prose that feels like a continuation of our ongoing collaboration. Never expose internal structure or scaffold labels.`;
+Your task: Transform the structured response points below into natural, conversational prose that feels like a continuation of our ongoing collaboration.
+
+CRITICAL PROHIBITIONS:
+- NEVER include "[MODE=GEN]" or any mode tags in your response
+- NEVER say you "searched" or "conducted a search" unless search results were actually provided
+- NEVER say "I found no record" unless you have actual search results showing that
+- Speak directly and naturally without technical markers or internal labels`;
 
     const userPrompt = `User said: "${userInput}"
 

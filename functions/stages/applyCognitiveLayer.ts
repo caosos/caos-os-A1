@@ -253,22 +253,25 @@ export async function applyCognitiveLayer(formattedResult, userInput = null, bas
             }
         }
 
-        // CRITICAL: Anti-fabrication check for GEN mode
-        // If payload contains search/retrieval language but no actual search was run, block it
+        // CRITICAL: Anti-fabrication check for GEN mode MUST run BEFORE returning
+        // This catches fabrication in the base payload before it reaches the renderer
         const fabricationPatterns = [
-            /I (?:searched|looked through|checked|scanned|reviewed|went through) (?:the|your|our) (?:system|conversations|threads|records)/i,
-            /I conducted a (?:search|review|scan)/i,
-            /I found (?:no record|nothing|no mention)/i,
-            /after (?:searching|looking through|checking)/i
+            /(?:I|Based on|After)\s+(?:a\s+)?(?:system-wide\s+)?(?:searched|conducted\s+a\s+search|looked through|checked|scanned|reviewed|went through)\s+(?:the|your|our|all)?\s*(?:system|conversations|threads|records)/i,
+            /I conducted a (?:search|review|scan|system-wide search)/i,
+            /(?:there is|I found)\s+no record\s+of\s+you\s+(?:calling|mentioning|saying)/i,
+            /after (?:searching|looking through|checking|conducting a search)/i,
+            /based on (?:a|my) (?:system-wide )?search/i
         ];
         
         let containsFabrication = false;
+        let matchedPattern = null;
         for (const pattern of fabricationPatterns) {
             if (pattern.test(payload)) {
                 containsFabrication = true;
-                console.error('🚨 [FABRICATION_DETECTED_IN_GEN]', {
-                    pattern: pattern.source,
-                    payload: payload.substring(0, 200)
+                matchedPattern = pattern.source;
+                console.error('🚨 [FABRICATION_DETECTED_IN_GEN_PAYLOAD]', {
+                    pattern: matchedPattern,
+                    payload_snippet: payload.substring(0, 300)
                 });
                 break;
             }
@@ -276,14 +279,15 @@ export async function applyCognitiveLayer(formattedResult, userInput = null, bas
         
         if (containsFabrication) {
             // HARD FAIL: GEN mode cannot fabricate search behavior
+            console.error('🔥 [BLOCKING_FABRICATED_SEARCH_CLAIM]', { pattern: matchedPattern });
             throw {
                 error: 'GEN_MODE_FABRICATION_BLOCKED',
                 code: 'HALLUCINATION_DETECTED',
-                message: 'Assistant attempted to claim it searched when no search was performed',
+                message: `Assistant falsely claimed to have searched. Pattern: ${matchedPattern}`,
                 receipt_fallback: {
                     triggered: true,
                     fallback_type: 'FABRICATION_BLOCKED',
-                    reason: 'GEN mode cannot claim to have searched conversations'
+                    reason: 'GEN mode cannot claim to have searched conversations without actual tool execution'
                 }
             };
         }
