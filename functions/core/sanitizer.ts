@@ -11,12 +11,14 @@ export function sanitizeUserFacingText(text, options = {}) {
 
     const original = text;
 
-    // 1) Strip [MODE=...] tags (any variant) - aggressive removal
-    text = text.replace(/\[MODE\s*=\s*[A-Z_]+\]/gi, "");
-    text = text.replace(/\[MODE=[A-Z_]+\]/gi, "");
-    text = text.replace(/^\s*\[MODE=.*?\]\s*$/gmi, "");
-    text = text.replace(/MODE\s*=\s*GEN/gi, "");
-    text = text.replace(/MODE\s*=\s*RETRIEVAL/gi, "");
+    // 1) Strip [MODE=...] tags (any variant) - ULTRA aggressive removal
+    text = text.replace(/\[?\s*MODE\s*=\s*[A-Z_]+\s*\]?/gi, "");
+    text = text.replace(/\(\s*MODE\s*=\s*[A-Z_]+\s*\)/gi, "");
+    text = text.replace(/MODE\s*=\s*[A-Z_]+/gi, "");
+    text = text.replace(/\[MODE:[^\]]+\]/gi, "");
+    // Also catch it at start of lines or standalone
+    text = text.replace(/^\s*\[?MODE\s*=\s*[A-Z_]+\]?\s*$/gmi, "");
+    text = text.replace(/\n\s*\[?MODE\s*=\s*[A-Z_]+\]?\s*\n/gi, "\n");
 
     // 2) Strip all internal scaffold headings and variations
     const bannedScaffold = [
@@ -75,18 +77,17 @@ export function sanitizeUserFacingText(text, options = {}) {
             };
         }
 
-        // Check for mode tags
-        if (/\[MODE=/i.test(text)) {
+        // Check for mode tags (broader pattern)
+        if (/\[?\s*MODE\s*[=:]/i.test(text)) {
             console.error('🚨 [MODE_TAG_LEAK_DETECTED]', {
                 original_length: original.length,
-                sanitized_length: text.length
+                sanitized_length: text.length,
+                leaked_text: text.match(/\[?\s*MODE\s*[=:][^\]]*\]?/i)?.[0]
             });
             
-            throw {
-                error: 'MODE_TAG_LEAK_DETECTED',
-                code: 'SANITIZATION_FAILED',
-                message: 'MODE tag leaked to user-facing output'
-            };
+            // Don't throw - just warn and strip again
+            console.warn('⚠️ [MODE_TAG_LEAK_AUTO_FIX] Stripping leaked mode tag');
+            text = text.replace(/\[?\s*MODE\s*[=:][^\]]*\]?/gi, '');
         }
     }
 
