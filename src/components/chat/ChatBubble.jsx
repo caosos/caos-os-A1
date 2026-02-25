@@ -11,6 +11,9 @@ import CopyBlock from './CopyBlock';
 import LinkPreview from './LinkPreview';
 import VoiceSettings from './VoiceSettings';
 import ExecutionReceipt from './ExecutionReceipt';
+import LatencyIndicator from './LatencyIndicator';
+import WCWStatusBadge from './WCWStatusBadge';
+import DegradationNotice from './DegradationNotice';
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);
@@ -921,10 +924,17 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               <span>Failed to send: {message.error}</span>
             </div>
           )}
+          {/* Degradation Notice */}
+          {!isUser && message.degradation && (
+            <div className="mb-3">
+              <DegradationNotice degradation={message.degradation} />
+            </div>
+          )}
+
           {renderContent()}
           {(message.timestamp || (!isUser && message.response_time_ms)) && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {message.timestamp && (
                   <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
                     {formatDateTime(message.timestamp)}
@@ -935,6 +945,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     {message.timestamp && <span>•</span>}
                     ⏱️ {(message.response_time_ms / 1000).toFixed(1)}s
                   </span>
+                )}
+                {/* Latency Indicator */}
+                {!isUser && message.latency && (
+                  <LatencyIndicator latency={message.latency} compact={true} />
+                )}
+                {/* WCW Status Badge */}
+                {!isUser && message.wcw_status && (
+                  <WCWStatusBadge wcwStatus={message.wcw_status} compact={true} />
                 )}
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
