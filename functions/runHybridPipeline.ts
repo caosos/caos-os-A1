@@ -503,30 +503,32 @@ function loadEnvironmentDeclaration() {
 async function executeRecall(params, base44) {
     const { session_id, user_email, user_input, tiers_allowed, limit } = params;
     
-    // Import tiered recall system
-    const { executeTieredRecall } = await import('./core/tieredRecall.js');
-    
-    // Get profile_id and lane_id from context
-    // For now, derive from session - in production this comes from context journal
-    const profile_id = user_email;
-    const lane_id = 'default'; // Default lane until lane system fully implemented
-    
-    const result = await executeTieredRecall({
-        profile_id,
-        session_id,
-        lane_id,
-        tiers_allowed,
-        limit
-    }, base44);
-
-    // Transform for pipeline compatibility
-    return {
-        messages: result.session_records,
-        facts: [...result.lane_anchors, ...result.profile_anchors],
-        global_lookups: result.global_lookups,
-        tiers_used: result.tiers_used,
-        wcw_tokens: result.wcw_tokens
+    const result = {
+        facts: [],
+        messages: [],
+        tiers_used: []
     };
+
+    // Tier 1: Session records (simple recall until full system ready)
+    if (tiers_allowed.includes('session')) {
+        try {
+            const sessionRecords = await base44.asServiceRole.entities.Record.filter(
+                { 
+                    session_id, 
+                    status: 'active',
+                    profile_id: user_email
+                },
+                '-seq',
+                limit
+            );
+            result.messages = sessionRecords || [];
+            result.tiers_used.push('session');
+        } catch (error) {
+            console.error('⚠️ [RECALL_FAILED]', error.message);
+        }
+    }
+
+    return result;
 }
 
 function assembleModelContext(params) {
@@ -665,22 +667,55 @@ function buildConversationHistory(context) {
 async function commitMemory(params, base44) {
     const { session_id, user_email, user_message, assistant_message, request_id } = params;
 
-    // Import Plane B writer
-    const { writeTurnToPlaneB } = await import('./core/planeB.js');
-    
-    // Write to Plane B (authoritative session transcript)
-    const profile_id = user_email;
-    const lane_id = 'default'; // Default lane
-    const correlator_id = request_id;
-    const timestamp_ms = Date.now();
-    
-    await writeTurnToPlaneB({
-        profile_id,
-        session_id,
-        lane_id,
-        correlator_id,
-        user_message,
-        assistant_message,
-        timestamp_ms
-    }, base44);
+    try {
+        // Simple record creation until full Plane B system is integrated
+        const timestamp = Date.now();
+        const timestamp_iso = new Date(timestamp).toISOString();
+
+        // Get next sequence number
+        const existingRecords = await base44.asServiceRole.entities.Record.filter(
+            { session_id },
+            '-seq',
+            1
+        );
+        const nextSeq = existingRecords && existingRecords.length > 0 ? existingRecords[0].seq + 1 : 1;
+
+        // Create user record
+        await base44.asServiceRole.entities.Record.create({
+            record_id: `${request_id}_user`,
+            profile_id: user_email,
+            session_id,
+            lane_id: 'default',
+            tier: 'session',
+            seq: nextSeq,
+            ts_snapshot_iso: timestamp_iso,
+            ts_snapshot_ms: timestamp,
+            role: 'user',
+            message: user_message,
+            anchors: [`session:${session_id}`],
+            correlator_id: request_id,
+            token_count: Math.ceil(user_message.length / 4),
+            status: 'active'
+        });
+
+        // Create assistant record
+        await base44.asServiceRole.entities.Record.create({
+            record_id: `${request_id}_assistant`,
+            profile_id: user_email,
+            session_id,
+            lane_id: 'default',
+            tier: 'session',
+            seq: nextSeq + 1,
+            ts_snapshot_iso: new Date(timestamp + 1).toISOString(),
+            ts_snapshot_ms: timestamp + 1,
+            role: 'assistant',
+            message: assistant_message,
+            anchors: [`session:${session_id}`],
+            correlator_id: request_id,
+            token_count: Math.ceil(assistant_message.length / 4),
+            status: 'active'
+        });
+    } catch (error) {
+        console.error('⚠️ [MEMORY_COMMIT_FAILED]', error.message);
+    }
 }
