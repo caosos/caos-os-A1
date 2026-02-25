@@ -9,18 +9,33 @@
  */
 
 export async function renderFinalResponse(structuredCognition, context) {
-    const { mode, response_points, tone, memory_context } = structuredCognition;
-    const { userInput, openaiKey, identitySystemPrompt, identityBlock, threadBlock, userBlock, environmentBlock } = context;
+    const { mode, response_points, tone, memory_context, alias_changed } = structuredCognition;
+    let { userInput, openaiKey, identitySystemPrompt, identityBlock, threadBlock, userBlock, environmentBlock, base44, userEmail } = context;
 
     // RETRIEVAL mode: pass through formatted content as-is
     if (mode === 'RETRIEVAL') {
         return structuredCognition.content;
     }
+    
+    // CRITICAL: If alias changed, reload identity immediately
+    let updatedResponsePoints = response_points;
+    if (alias_changed && base44 && userEmail) {
+        console.log('🔄 [RELOAD_IDENTITY_AFTER_ALIAS]', { newName: alias_changed });
+        const { loadUserProfile, buildIdentitySystemPrompt } = await import('../middleware/identityContract.js');
+        const updatedProfile = await loadUserProfile(base44, userEmail);
+        identitySystemPrompt = buildIdentitySystemPrompt(updatedProfile);
+        
+        // Acknowledge the alias change in response
+        updatedResponsePoints = [
+            `Got it—I'm ${alias_changed} now. I'll remember that.`,
+            ...(response_points || [])
+        ];
+    }
 
     // GEN mode: Transform structured points into natural prose
     if (!openaiKey) {
         console.warn('⚠️ No OPENAI_API_KEY - returning structured points as-is');
-        return response_points ? response_points.join('\n\n') : structuredCognition.content;
+        return updatedResponsePoints ? updatedResponsePoints.join('\n\n') : structuredCognition.content;
     }
 
     const systemPrompt = `${identitySystemPrompt || identityBlock || 'You are Aria, an AI assistant within the CAOS platform.'}
@@ -38,7 +53,7 @@ Your task: Transform the structured response points below into natural, conversa
     const userPrompt = `User said: "${userInput}"
 
 RESPONSE STRUCTURE:
-${JSON.stringify(structuredCognition, null, 2)}
+${JSON.stringify({ ...structuredCognition, response_points: updatedResponsePoints }, null, 2)}
 
 Transform this into natural conversational prose. No headings, no structure labels, just fluid dialogue.`;
 
@@ -77,8 +92,8 @@ Transform this into natural conversational prose. No headings, no structure labe
     } catch (error) {
         console.error('⚠️ [RENDERER_FAILED]', error.message);
         // Fallback: return structured points as prose
-        return response_points 
-            ? response_points.join('\n\n') 
+        return updatedResponsePoints 
+            ? updatedResponsePoints.join('\n\n') 
             : structuredCognition.content || 'Unable to generate response';
     }
 }
