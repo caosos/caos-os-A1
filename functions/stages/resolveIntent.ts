@@ -164,8 +164,15 @@ export function resolveIntent(input) {
         };
     }
 
-    // STEP 2: Check explicit list patterns
-    if (EXPLICIT_LIST_PATTERN.test(userMessage) || SHOW_ALL_PATTERN.test(userMessage)) {
+    // STEP 2: Check explicit list patterns (allow variations)
+    const flexibleListPatterns = [
+        /^list (my |all )?threads/i,  // "list threads", "list my threads", "list my threads by name"
+        /^show (me )?(my |all )?threads/i,  // "show threads", "show me my threads"
+        /^display (my |all )?threads/i,
+        /^get (my |all )?threads/i
+    ];
+    
+    if (flexibleListPatterns.some(p => p.test(userMessage))) {
         return {
             intent: 'LIST_THREADS',
             confidence: 1.0,
