@@ -49,6 +49,18 @@ Deno.serve(async (req) => {
                     console.error('⚠️ [FACT_EXTRACTION_ASYNC_FAILED]', err.message);
                 });
             });
+            
+            // MEMORY ANCHORS: Extract durable facts
+            import('./core/memoryAnchors.js').then(({ extractMemoryAnchors }) => {
+                extractMemoryAnchors({
+                    base44,
+                    userId: user.email,
+                    userMessage: rawInput,
+                    assistantMessage: result.reply
+                }).catch(err => {
+                    console.error('⚠️ [ANCHOR_EXTRACTION_ASYNC_FAILED]', err.message);
+                });
+            });
         }
 
         return Response.json(result);
