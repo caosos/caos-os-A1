@@ -72,9 +72,20 @@ export async function invokeSelector(params, base44) {
     }
 
     // AUTHORIZATION LOGIC
+    // FRICTIONLESS RECALL: Automatically authorize recall when intent implies memory dependency
+    const recall_patterns = [
+        /\b(remember|recall|you (said|told|mentioned)|I (said|told|mentioned)|earlier|before|last time|previously)\b/i,
+        /\b(what did|when did|where did|who (is|was)|the one I)\b/i,
+        /\b(do you know|tell me about|remind me)\b/i
+    ];
+    
+    const recall_implied = recall_patterns.some(pattern => pattern.test(user_input));
+    
     // Default: authorize recall and inference for normal queries
-    const recall_authorized = true;
-    const recall_tiers_allowed = ['session', 'lane', 'profile', 'global'];
+    const recall_authorized = true; // Frictionless by default, selector governs tiers
+    const recall_tiers_allowed = recall_implied 
+        ? ['session', 'lane', 'profile', 'global'] 
+        : ['session']; // Expand tiers when recall clearly implied
     const recall_limit = 25;
     const inference_allowed = true;
     

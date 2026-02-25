@@ -503,33 +503,30 @@ function loadEnvironmentDeclaration() {
 async function executeRecall(params, base44) {
     const { session_id, user_email, user_input, tiers_allowed, limit } = params;
     
-    const result = {
-        facts: [],
-        messages: [],
-        tiers_used: []
-    };
-
-    // Tier 1: Session records
-    if (tiers_allowed.includes('session')) {
-        const sessionRecords = await base44.asServiceRole.entities.Record.filter(
-            { session_id, status: 'active' },
-            '-seq',
-            limit
-        );
-        result.messages = sessionRecords;
-        result.tiers_used.push('session');
-    }
-
-    // Tier 2: Lane canonical anchors (if implemented)
-    // Tier 3: Profile canonical anchors (if implemented)
+    // Import tiered recall system
+    const { executeTieredRecall } = await import('./core/tieredRecall.js');
     
-    // Tier 4: Global bin
-    if (tiers_allowed.includes('global')) {
-        // Check global bin for external data
-        result.tiers_used.push('global');
-    }
+    // Get profile_id and lane_id from context
+    // For now, derive from session - in production this comes from context journal
+    const profile_id = user_email;
+    const lane_id = 'default'; // Default lane until lane system fully implemented
+    
+    const result = await executeTieredRecall({
+        profile_id,
+        session_id,
+        lane_id,
+        tiers_allowed,
+        limit
+    }, base44);
 
-    return result;
+    // Transform for pipeline compatibility
+    return {
+        messages: result.session_records,
+        facts: [...result.lane_anchors, ...result.profile_anchors],
+        global_lookups: result.global_lookups,
+        tiers_used: result.tiers_used,
+        wcw_tokens: result.wcw_tokens
+    };
 }
 
 function assembleModelContext(params) {
@@ -668,24 +665,22 @@ function buildConversationHistory(context) {
 async function commitMemory(params, base44) {
     const { session_id, user_email, user_message, assistant_message, request_id } = params;
 
-    // Create Record entries for user and assistant messages
-    await base44.asServiceRole.entities.Record.create({
-        record_id: `${request_id}_user`,
+    // Import Plane B writer
+    const { writeTurnToPlaneB } = await import('./core/planeB.js');
+    
+    // Write to Plane B (authoritative session transcript)
+    const profile_id = user_email;
+    const lane_id = 'default'; // Default lane
+    const correlator_id = request_id;
+    const timestamp_ms = Date.now();
+    
+    await writeTurnToPlaneB({
+        profile_id,
         session_id,
-        role: 'user',
-        message: user_message,
-        status: 'active',
-        ts_snapshot_iso: new Date().toISOString(),
-        ts_snapshot_ms: Date.now()
-    });
-
-    await base44.asServiceRole.entities.Record.create({
-        record_id: `${request_id}_assistant`,
-        session_id,
-        role: 'assistant',
-        message: assistant_message,
-        status: 'active',
-        ts_snapshot_iso: new Date().toISOString(),
-        ts_snapshot_ms: Date.now()
-    });
+        lane_id,
+        correlator_id,
+        user_message,
+        assistant_message,
+        timestamp_ms
+    }, base44);
 }
