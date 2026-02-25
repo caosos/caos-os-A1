@@ -7,6 +7,7 @@ import RoutesViewer from '@/components/admin/RoutesViewer';
 import StatsViewer from '@/components/admin/StatsViewer';
 import WCWMonitor from '@/components/admin/WCWMonitor';
 import SystemHealth from '@/components/admin/SystemHealth';
+import RecentErrors from '@/components/admin/RecentErrors';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
 
             <div className="max-w-7xl mx-auto px-6 py-6">
                 <Tabs defaultValue="health" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                         <TabsTrigger value="health" className="gap-2">
                             <Activity className="h-4 w-4" />
                             Health
@@ -81,6 +82,10 @@ export default function AdminDashboard() {
                         <TabsTrigger value="stats" className="gap-2">
                             <Activity className="h-4 w-4" />
                             Stats
+                        </TabsTrigger>
+                        <TabsTrigger value="errors" className="gap-2">
+                            <Shield className="h-4 w-4" />
+                            Errors
                         </TabsTrigger>
                     </TabsList>
 
@@ -98,6 +103,10 @@ export default function AdminDashboard() {
 
                     <TabsContent value="stats">
                         <StatsViewer />
+                    </TabsContent>
+
+                    <TabsContent value="errors">
+                        <RecentErrors />
                     </TabsContent>
                 </Tabs>
             </div>
