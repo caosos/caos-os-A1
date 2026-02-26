@@ -409,24 +409,24 @@ export async function runHybridPipeline(rawInput, options) {
         console.log('✅ [RESPONSE_BUILT]', { length: finalResponse.length });
 
         // ============================================================
-        // STAGE 10: MEMORY COMMIT
+        // STAGE 10: MEMORY COMMIT (TEMPORARILY DISABLED)
         // ============================================================
-        console.log('💾 [STAGE_10_MEMORY_COMMIT]');
+        console.log('⏭️ [MEMORY_COMMIT_SKIPPED] Temporarily disabled due to schema issues');
         
-        try {
-            await commitMemory({
-                session_id,
-                user_email: user.email,
-                user_message: input,
-                assistant_message: finalResponse,
-                request_id
-            }, base44);
-            
-            console.log('✅ [MEMORY_COMMITTED]');
-        } catch (memoryError) {
-            console.error('⚠️ [MEMORY_COMMIT_FAILED]', memoryError.message);
-            // Non-fatal - continue
-        }
+        // try {
+        //     await commitMemory({
+        //         session_id,
+        //         user_email: user.email,
+        //         user_message: input,
+        //         assistant_message: finalResponse,
+        //         request_id
+        //     }, base44);
+        //     
+        //     console.log('✅ [MEMORY_COMMITTED]');
+        // } catch (memoryError) {
+        //     console.error('⚠️ [MEMORY_COMMIT_FAILED]', memoryError.message);
+        //     // Non-fatal - continue
+        // }
 
         // ============================================================
         // STAGE 11: RECEIPT EMISSION
