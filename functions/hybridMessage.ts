@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         
         if (session_id) {
             try {
-                const messages = await base44.asServiceRole.entities.Message.filter(
+                const messages = await base44.entities.Message.filter(
                     { conversation_id: session_id },
                     'timestamp',
                     limit
@@ -96,7 +96,7 @@ Stay focused, be concise, and provide actionable information.`
         if (session_id) {
             try {
                 // Save user message
-                await base44.asServiceRole.entities.Message.create({
+                await base44.entities.Message.create({
                     conversation_id: session_id,
                     role: 'user',
                     content: input,
@@ -105,7 +105,7 @@ Stay focused, be concise, and provide actionable information.`
                 });
 
                 // Save AI response
-                await base44.asServiceRole.entities.Message.create({
+                await base44.entities.Message.create({
                     conversation_id: session_id,
                     role: 'assistant',
                     content: reply,
@@ -131,10 +131,14 @@ Stay focused, be concise, and provide actionable information.`
             mode: 'GEN',
             request_id,
             response_time_ms: responseTime,
+            tool_calls: [],
             execution_receipt: {
-                stages_completed: ['boot', 'recall', 'inference', 'memory_commit'],
-                message_count: conversationHistory.length + 1,
-                user_email: user.email
+                request_id,
+                session_id,
+                boot_valid: true,
+                recall_executed: conversationHistory.length > 0,
+                tools_executed: false,
+                latency_ms: responseTime
             }
         });
 
