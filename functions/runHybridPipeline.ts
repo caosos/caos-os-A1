@@ -802,7 +802,6 @@ async function commitMemory(params, base44) {
         // Create user record
         await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_user`,
-            profile_id: user_email,
             session_id,
             lane_id: user_email,
             tier: 'session',
@@ -811,17 +810,18 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp,
             role: 'user',
             message: user_message,
-            anchors: [`session:${session_id}`],
+            anchors: [
+                { class: 'session', value: session_id },
+                { class: 'lane', value: user_email }
+            ],
             correlator_id: request_id,
             token_count: Math.ceil(user_message.length / 4),
-            status: 'active',
-            hash: crypto.randomUUID()
+            status: 'active'
         });
 
         // Create assistant record
         await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_assistant`,
-            profile_id: user_email,
             session_id,
             lane_id: user_email,
             tier: 'session',
@@ -830,11 +830,13 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp + 1,
             role: 'assistant',
             message: assistant_message,
-            anchors: [`session:${session_id}`],
+            anchors: [
+                { class: 'session', value: session_id },
+                { class: 'lane', value: user_email }
+            ],
             correlator_id: request_id,
             token_count: Math.ceil(assistant_message.length / 4),
-            status: 'active',
-            hash: crypto.randomUUID()
+            status: 'active'
         });
     } catch (error) {
         console.error('⚠️ [MEMORY_COMMIT_FAILED]', error.message);
