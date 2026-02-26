@@ -804,7 +804,7 @@ async function commitMemory(params, base44) {
             record_id: `${request_id}_user`,
             profile_id: user_email,
             session_id,
-            lane_id: 'default',
+            lane_id: user_email,
             tier: 'session',
             seq: nextSeq,
             ts_snapshot_iso: timestamp_iso,
@@ -814,7 +814,8 @@ async function commitMemory(params, base44) {
             anchors: [`session:${session_id}`],
             correlator_id: request_id,
             token_count: Math.ceil(user_message.length / 4),
-            status: 'active'
+            status: 'active',
+            hash: crypto.randomUUID()
         });
 
         // Create assistant record
@@ -822,7 +823,7 @@ async function commitMemory(params, base44) {
             record_id: `${request_id}_assistant`,
             profile_id: user_email,
             session_id,
-            lane_id: 'default',
+            lane_id: user_email,
             tier: 'session',
             seq: nextSeq + 1,
             ts_snapshot_iso: new Date(timestamp + 1).toISOString(),
@@ -832,7 +833,8 @@ async function commitMemory(params, base44) {
             anchors: [`session:${session_id}`],
             correlator_id: request_id,
             token_count: Math.ceil(assistant_message.length / 4),
-            status: 'active'
+            status: 'active',
+            hash: crypto.randomUUID()
         });
     } catch (error) {
         console.error('⚠️ [MEMORY_COMMIT_FAILED]', error.message);
