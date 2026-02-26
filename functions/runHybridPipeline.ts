@@ -793,7 +793,7 @@ async function commitMemory(params, base44) {
 
         // Get next sequence number
         const existingRecords = await base44.asServiceRole.entities.Record.filter(
-            { session_id },
+            { session_id, profile_id: user_email },
             '-seq',
             1
         );
