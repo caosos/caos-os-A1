@@ -27,9 +27,33 @@ Deno.serve(async (req) => {
         console.log('✅ [USER_AUTHENTICATED]', { email: user?.email });
 
         const body = await req.json();
-        const { input, session_id } = body;
+        const { input, session_id, limit = 20 } = body;
 
-        // SIMPLE DIRECT CALL - ALL COMPLEX SYSTEMS DISABLED
+        // Load conversation history if session_id provided
+        let conversationHistory = [];
+        if (session_id) {
+            try {
+                const messages = await base44.asServiceRole.entities.Message.filter(
+                    { conversation_id: session_id },
+                    'timestamp',
+                    limit
+                );
+                conversationHistory = messages.map(m => ({
+                    role: m.role,
+                    content: m.content
+                }));
+            } catch (error) {
+                console.error('Failed to load conversation history:', error.message);
+            }
+        }
+
+        // Build messages array with history
+        const messages = [
+            { role: 'system', content: 'You are Aria, a helpful AI assistant.' },
+            ...conversationHistory,
+            { role: 'user', content: input }
+        ];
+
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -39,10 +63,7 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
                 model: 'gpt-4o',
-                messages: [
-                    { role: 'system', content: 'You are Aria, a helpful AI assistant.' },
-                    { role: 'user', content: input }
-                ],
+                messages,
                 temperature: 0.7,
                 max_tokens: 2000
             })
