@@ -76,7 +76,23 @@ export async function runHybridPipeline(rawInput, options) {
     };
 
     try {
-        console.log('🚀 [CAOS_A1_PIPELINE_START]', { request_id, session_id, user: user.email });
+        console.log('🚀 [CAOS_A1_PIPELINE_START]', { 
+            request_id, 
+            session_id, 
+            user: user?.email,
+            has_base44: !!base44,
+            has_user: !!user
+        });
+
+        // Validate critical dependencies
+        if (!base44) {
+            console.error('🚨 [CRITICAL] base44 client not provided');
+            throw new Error('base44 client not initialized');
+        }
+        if (!user || !user.email) {
+            console.error('🚨 [CRITICAL] user not provided');
+            throw new Error('user not authenticated');
+        }
 
         // ============================================================
         // STAGE 1: BOOT VALIDATION CHECK
@@ -86,7 +102,10 @@ export async function runHybridPipeline(rawInput, options) {
         const bootStart = Date.now();
         let bootReceipt;
         try {
+            console.log('🔍 [DEBUG] Calling validateBoot with:', { session_id, user_email: user.email });
             bootReceipt = await validateBoot(session_id, user.email, base44);
+            console.log('🔍 [DEBUG] validateBoot returned:', { valid: bootReceipt?.valid });
+            
             execution_state.boot_valid = bootReceipt.valid;
             latency_breakdown.boot_validation_ms = Date.now() - bootStart;
             
@@ -96,12 +115,21 @@ export async function runHybridPipeline(rawInput, options) {
             
             console.log('✅ [BOOT_VALID]', { session_id, paths: bootReceipt.context_paths_loaded.length });
         } catch (bootError) {
-            console.error('🚨 [BOOT_FAILED]', bootError.message);
+            console.error('🚨 [BOOT_FAILED]', { 
+                error: bootError.message, 
+                stack: bootError.stack,
+                name: bootError.name
+            });
             return {
+                reply: "I encountered an error during initialization. Please try again.",
                 error: 'BOOT_VALIDATION_FAILED',
-                details: bootError.message,
+                error_details: bootError.message,
                 request_id,
-                mode: 'HALT'
+                mode: 'ERROR',
+                degradation: {
+                    type: 'pipeline_error',
+                    details: `Boot validation failed: ${bootError.message}`
+                }
             };
         }
 
@@ -496,46 +524,68 @@ export async function runHybridPipeline(rawInput, options) {
 // ============================================================
 
 async function validateBoot(session_id, user_email, base44) {
-    const timestamp = new Date();
-    const timestamp_ms = timestamp.getTime();
+    try {
+        console.log('🔍 [validateBoot] Starting with:', { session_id, user_email });
+        
+        const timestamp = new Date();
+        const timestamp_ms = timestamp.getTime();
 
-    // Check if boot receipt exists and is valid
-    const existingReceipts = await base44.asServiceRole.entities.BootReceipt.filter(
-        { session_id, valid: true },
-        '-boot_timestamp_ms',
-        1
-    );
-
-    if (existingReceipts && existingReceipts.length > 0) {
-        // Boot already valid
-        return existingReceipts[0];
-    }
-
-    // Create new boot receipt
-    const bootReceipt = await base44.asServiceRole.entities.BootReceipt.create({
-        session_id,
-        boot_timestamp: timestamp.toISOString(),
-        boot_timestamp_ms: timestamp_ms,
-        valid: true,
-        context_paths_loaded: [
-            '/context/kernel/identity',
-            '/context/bootloader/config',
-            `/context/profiles/${user_email}`
-        ],
-        missing_contexts: [],
-        environment_declaration: {
-            mode: 'OPERATE',
-            policy_gating: 'ACTIVE'
-        },
-        capabilities_enabled: {
-            web_enabled: true,
-            file_search_enabled: true,
-            image_gen_enabled: true,
-            memory_enabled: true
+        // Check if boot receipt exists and is valid
+        console.log('🔍 [validateBoot] Checking for existing receipts...');
+        let existingReceipts;
+        try {
+            existingReceipts = await base44.asServiceRole.entities.BootReceipt.filter(
+                { session_id, valid: true },
+                '-boot_timestamp_ms',
+                1
+            );
+            console.log('🔍 [validateBoot] Existing receipts:', { count: existingReceipts?.length });
+        } catch (filterError) {
+            console.error('⚠️ [validateBoot] Filter failed:', filterError.message);
+            // Continue to create new receipt
+            existingReceipts = [];
         }
-    });
 
-    return bootReceipt;
+        if (existingReceipts && existingReceipts.length > 0) {
+            console.log('✅ [validateBoot] Using existing boot receipt');
+            return existingReceipts[0];
+        }
+
+        // Create new boot receipt
+        console.log('🔍 [validateBoot] Creating new boot receipt...');
+        const bootReceipt = await base44.asServiceRole.entities.BootReceipt.create({
+            session_id,
+            boot_timestamp: timestamp.toISOString(),
+            boot_timestamp_ms: timestamp_ms,
+            valid: true,
+            context_paths_loaded: [
+                '/context/kernel/identity',
+                '/context/bootloader/config',
+                `/context/profiles/${user_email}`
+            ],
+            missing_contexts: [],
+            environment_declaration: {
+                mode: 'OPERATE',
+                policy_gating: 'ACTIVE'
+            },
+            capabilities_enabled: {
+                web_enabled: true,
+                file_search_enabled: true,
+                image_gen_enabled: true,
+                memory_enabled: true
+            }
+        });
+
+        console.log('✅ [validateBoot] Boot receipt created:', { id: bootReceipt.id });
+        return bootReceipt;
+    } catch (error) {
+        console.error('🔥 [validateBoot] CRITICAL ERROR:', {
+            error: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        throw error;
+    }
 }
 
 function loadEnvironmentDeclaration() {

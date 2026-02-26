@@ -11,9 +11,22 @@ Deno.serve(async (req) => {
         console.log('🚀 [HYBRID_MESSAGE_START]', { request_id });
         
         const base44 = createClientFromRequest(req);
+        if (!base44) {
+            console.error('🚨 [CRITICAL] Failed to create base44 client');
+            throw new Error('Failed to initialize base44 client');
+        }
         console.log('✅ [CLIENT_CREATED]');
         
         const user = await base44.auth.me();
+        if (!user || !user.email) {
+            console.error('🚨 [AUTH_FAILED] User not authenticated');
+            return Response.json({
+                reply: "Authentication required. Please log in.",
+                error: 'UNAUTHORIZED',
+                request_id,
+                mode: 'ERROR'
+            }, { status: 401 });
+        }
         console.log('✅ [USER_AUTHENTICATED]', { email: user?.email });
 
         // Validate route authorization
