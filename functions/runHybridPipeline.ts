@@ -799,10 +799,17 @@ async function commitMemory(params, base44) {
         );
         const nextSeq = existingRecords && existingRecords.length > 0 ? existingRecords[0].seq + 1 : 1;
 
-        console.log('💾 [COMMIT_MEMORY_START]', { session_id, profile_id: user_email, nextSeq });
+        const anchorStrings = [`session:${session_id}`, `lane:${user_email}`];
+        console.log('💾 [COMMIT_MEMORY_START]', { 
+            session_id, 
+            profile_id: user_email, 
+            nextSeq,
+            anchor_sample: anchorStrings[0],
+            anchor_types: anchorStrings.map(a => typeof a)
+        });
 
-        // Create user record
-        const userRecord = await base44.asServiceRole.entities.Record.create({
+        // Create user record - VERIFIED STRING ANCHORS
+        const userRecordData = {
             record_id: `${request_id}_user`,
             profile_id: user_email,
             session_id,
@@ -813,16 +820,23 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp,
             role: 'user',
             message: user_message,
-            anchors: [`session:${session_id}`, `lane:${user_email}`],
+            anchors: anchorStrings,
             correlator_id: request_id,
             token_count: Math.ceil(user_message.length / 4),
             status: 'active'
+        };
+        
+        console.log('📋 [USER_RECORD_PAYLOAD]', { 
+            anchors: JSON.stringify(userRecordData.anchors),
+            anchor_0_type: typeof userRecordData.anchors[0],
+            has_profile_id: !!userRecordData.profile_id
         });
+        
+        const userRecord = await base44.asServiceRole.entities.Record.create(userRecordData);
+        console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id });
 
-        console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id, anchors_type: typeof userRecord.anchors[0] });
-
-        // Create assistant record
-        const assistantRecord = await base44.asServiceRole.entities.Record.create({
+        // Create assistant record - VERIFIED STRING ANCHORS
+        const assistantRecordData = {
             record_id: `${request_id}_assistant`,
             profile_id: user_email,
             session_id,
@@ -833,13 +847,20 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp + 1,
             role: 'assistant',
             message: assistant_message,
-            anchors: [`session:${session_id}`, `lane:${user_email}`],
+            anchors: anchorStrings,
             correlator_id: request_id,
             token_count: Math.ceil(assistant_message.length / 4),
             status: 'active'
+        };
+        
+        console.log('📋 [ASSISTANT_RECORD_PAYLOAD]', { 
+            anchors: JSON.stringify(assistantRecordData.anchors),
+            anchor_0_type: typeof assistantRecordData.anchors[0],
+            has_profile_id: !!assistantRecordData.profile_id
         });
-
-        console.log('✅ [ASSISTANT_RECORD_CREATED]', { id: assistantRecord.id, anchors_type: typeof assistantRecord.anchors[0] });
+        
+        const assistantRecord = await base44.asServiceRole.entities.Record.create(assistantRecordData);
+        console.log('✅ [ASSISTANT_RECORD_CREATED]', { id: assistantRecord.id });
     } catch (error) {
         console.error('⚠️ [MEMORY_COMMIT_FAILED]', { error: error.message, stack: error.stack });
         throw error; // Re-throw to surface the actual error
