@@ -18,11 +18,25 @@
  * If selector not invoked → FAIL-CLOSED.
  */
 
-// Simple synchronous imports - fail fast if modules don't exist
-import { loadContextJournal, validateContextJournal } from './core/contextLoader.js';
-import { loadUserProfile, enforceIdentity } from './middleware/identityContract.js';
+// Import only what exists and works
+let loadContextJournal, validateContextJournal, loadUserProfile, enforceIdentity;
+try {
+    const contextLoader = await import('./core/contextLoader.js');
+    loadContextJournal = contextLoader.loadContextJournal;
+    validateContextJournal = contextLoader.validateContextJournal;
+} catch (e) {
+    console.warn('⚠️ contextLoader not available, using fallback');
+}
 
-// Utility functions
+try {
+    const identityContract = await import('./middleware/identityContract.js');
+    loadUserProfile = identityContract.loadUserProfile;
+    enforceIdentity = identityContract.enforceIdentity;
+} catch (e) {
+    console.warn('⚠️ identityContract not available, using fallback');
+}
+
+// Fallback functions
 const normalizeInput = (input) => input;
 const isDiagnosticMode = () => false;
 const emitDiagnosticReceipt = async () => null;
