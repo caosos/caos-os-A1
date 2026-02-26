@@ -38,7 +38,7 @@ export async function writeTurnToPlaneB(params, base44) {
 
     // Get current sequence number
     const existingRecords = await base44.asServiceRole.entities.Record.filter(
-        { session_id },
+        { session_id, profile_id },
         '-seq',
         1
     );
