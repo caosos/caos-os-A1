@@ -508,32 +508,95 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       )}
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
-        {!isRecording ? (
-          <button
-            type="button"
-            onClick={startRecording}
-            disabled={isTranscribing}
-            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
-              isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
-            }`}
-            title={isTranscribing ? 'Transcribing...' : 'Start recording'}
-          >
-            {isTranscribing ? (
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Mic className="w-4 h-4 text-gray-700" />
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={stopRecording}
-            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
-            title="Finish recording"
-          >
-            <Check className="w-4 h-4 text-white" />
-          </button>
-        )}
+        <div className="relative" ref={voiceMenuRef}>
+          {isSpeaking ? (
+            <>
+              <button
+                type="button"
+                onClick={toggleReadAloud}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 bg-blue-100"
+              >
+                {isPaused ? (
+                  <Volume2 className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <Pause className="w-4 h-4 text-blue-600" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={stopReadAloud}
+                className="p-1.5 rounded-full hover:bg-red-100 transition-colors flex-shrink-0 bg-red-50"
+              >
+                <X className="w-4 h-4 text-red-600" />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleReadAloud}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowVoiceMenu(!showVoiceMenu);
+              }}
+              disabled={!lastAssistantMessage}
+              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-30"
+            >
+              <Volume2 className="w-4 h-4 text-gray-700" />
+            </button>
+          )}
+
+          {showVoiceMenu && (
+            <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[280px] max-h-[400px] overflow-y-auto z-50">
+              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-2">Voice Settings</div>
+              
+              {/* Speed Control */}
+              <div className="px-2 py-2 mb-3 border-b border-gray-200">
+                <label className="text-xs text-gray-600 mb-1 block">Speed: {speechRate.toFixed(1)}x</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2.0"
+                  step="0.1"
+                  value={speechRate}
+                  onChange={(e) => {
+                    const rate = parseFloat(e.target.value);
+                    setSpeechRate(rate);
+                    localStorage.setItem('caos_speech_rate', rate.toString());
+                  }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>Slow</span>
+                  <span>Fast</span>
+                </div>
+              </div>
+
+              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-1">Select Voice</div>
+              {availableVoices.filter(v => v.lang.startsWith('en')).map((voice) => (
+                <button
+                  key={voice.voiceURI}
+                  type="button"
+                  onClick={() => {
+                    setSelectedVoice(voice);
+                    localStorage.setItem('caos_voice_preference_input', voice.voiceURI);
+                    setShowVoiceMenu(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded transition-colors ${
+                    selectedVoice?.voiceURI === voice.voiceURI
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="truncate">{voice.name}</span>
+                  {selectedVoice?.voiceURI === voice.voiceURI && (
+                    <span className="text-blue-600 ml-2">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+        </div>
 
         <textarea
           ref={textareaRef}
@@ -632,95 +695,32 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </div>
 
-        <div className="relative" ref={voiceMenuRef}>
-          {isSpeaking ? (
-            <>
-              <button
-                type="button"
-                onClick={toggleReadAloud}
-                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 bg-blue-100"
-              >
-                {isPaused ? (
-                  <Volume2 className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <Pause className="w-4 h-4 text-blue-600" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={stopReadAloud}
-                className="p-1.5 rounded-full hover:bg-red-100 transition-colors flex-shrink-0 bg-red-50"
-              >
-                <X className="w-4 h-4 text-red-600" />
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={toggleReadAloud}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setShowVoiceMenu(!showVoiceMenu);
-              }}
-              disabled={!lastAssistantMessage}
-              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-30"
-            >
-              <Volume2 className="w-4 h-4 text-gray-700" />
-            </button>
-          )}
-
-          {showVoiceMenu && (
-            <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[280px] max-h-[400px] overflow-y-auto z-50">
-              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-2">Voice Settings</div>
-              
-              {/* Speed Control */}
-              <div className="px-2 py-2 mb-3 border-b border-gray-200">
-                <label className="text-xs text-gray-600 mb-1 block">Speed: {speechRate.toFixed(1)}x</label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2.0"
-                  step="0.1"
-                  value={speechRate}
-                  onChange={(e) => {
-                    const rate = parseFloat(e.target.value);
-                    setSpeechRate(rate);
-                    localStorage.setItem('caos_speech_rate', rate.toString());
-                  }}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>Slow</span>
-                  <span>Fast</span>
-                </div>
-              </div>
-
-              <div className="text-xs font-semibold text-gray-500 px-2 py-1 mb-1">Select Voice</div>
-              {availableVoices.filter(v => v.lang.startsWith('en')).map((voice) => (
-                <button
-                  key={voice.voiceURI}
-                  type="button"
-                  onClick={() => {
-                    setSelectedVoice(voice);
-                    localStorage.setItem('caos_voice_preference_input', voice.voiceURI);
-                    setShowVoiceMenu(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded transition-colors ${
-                    selectedVoice?.voiceURI === voice.voiceURI
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="truncate">{voice.name}</span>
-                  {selectedVoice?.voiceURI === voice.voiceURI && (
-                    <span className="text-blue-600 ml-2">✓</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-        </div>
+        {!isRecording ? (
+          <button
+            type="button"
+            onClick={startRecording}
+            disabled={isTranscribing}
+            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+              isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
+            }`}
+            title={isTranscribing ? 'Transcribing...' : 'Start recording'}
+          >
+            {isTranscribing ? (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Mic className="w-4 h-4 text-gray-700" />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={stopRecording}
+            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
+            title="Finish recording"
+          >
+            <Check className="w-4 h-4 text-white" />
+          </button>
+        )}
 
         <input
           ref={fileInputRef}
