@@ -534,7 +534,7 @@ async function validateBoot(session_id, user_email, base44) {
         console.log('🔍 [validateBoot] Checking for existing receipts...');
         let existingReceipts;
         try {
-            existingReceipts = await base44.asServiceRole.entities.BootReceipt.filter(
+            existingReceipts = await base44.entities.BootReceipt.filter(
                 { session_id, valid: true },
                 '-boot_timestamp_ms',
                 1
@@ -553,7 +553,7 @@ async function validateBoot(session_id, user_email, base44) {
 
         // Create new boot receipt
         console.log('🔍 [validateBoot] Creating new boot receipt...');
-        const bootReceipt = await base44.asServiceRole.entities.BootReceipt.create({
+        const bootReceipt = await base44.entities.BootReceipt.create({
             session_id,
             boot_timestamp: timestamp.toISOString(),
             boot_timestamp_ms: timestamp_ms,
@@ -617,7 +617,7 @@ async function executeRecall(params, base44) {
     // Tier 1: Session records (simple recall until full system ready)
     if (tiers_allowed.includes('session')) {
         try {
-            const sessionRecords = await base44.asServiceRole.entities.Record.filter(
+            const sessionRecords = await base44.entities.Record.filter(
                 { 
                     session_id, 
                     status: 'active',
@@ -792,7 +792,7 @@ async function commitMemory(params, base44) {
         const timestamp_iso = new Date(timestamp).toISOString();
 
         // Get next sequence number
-        const existingRecords = await base44.asServiceRole.entities.Record.filter(
+        const existingRecords = await base44.entities.Record.filter(
             { session_id, profile_id: user_email },
             '-seq',
             1
@@ -802,7 +802,7 @@ async function commitMemory(params, base44) {
         console.log('💾 [COMMIT_MEMORY_START]', { session_id, profile_id: user_email, nextSeq });
 
         // Create user record WITHOUT anchors (temporarily disabled)
-        const userRecord = await base44.asServiceRole.entities.Record.create({
+        const userRecord = await base44.entities.Record.create({
             record_id: `${request_id}_user`,
             profile_id: user_email,
             session_id,
@@ -821,7 +821,7 @@ async function commitMemory(params, base44) {
         console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id });
 
         // Create assistant record WITHOUT anchors (temporarily disabled)
-        const assistantRecord = await base44.asServiceRole.entities.Record.create({
+        const assistantRecord = await base44.entities.Record.create({
             record_id: `${request_id}_assistant`,
             profile_id: user_email,
             session_id,
