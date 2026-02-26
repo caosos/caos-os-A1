@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
         console.log('✅ [USER_AUTHENTICATED]', { email: user?.email });
 
         const body = await req.json();
-        const { input } = body;
+        const { input, session_id } = body;
 
         // SIMPLE DIRECT CALL - ALL COMPLEX SYSTEMS DISABLED
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
@@ -50,6 +50,30 @@ Deno.serve(async (req) => {
 
         const data = await response.json();
         const reply = data.choices[0].message.content;
+
+        // Save messages to database if session_id provided
+        if (session_id) {
+            try {
+                // Save user message
+                await base44.asServiceRole.entities.Message.create({
+                    conversation_id: session_id,
+                    role: 'user',
+                    content: input,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Save AI response
+                await base44.asServiceRole.entities.Message.create({
+                    conversation_id: session_id,
+                    role: 'assistant',
+                    content: reply,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (saveError) {
+                console.error('Failed to save messages:', saveError.message);
+                // Don't fail the request if saving fails
+            }
+        }
 
         return Response.json({ reply, mode: 'GEN', request_id });
 
