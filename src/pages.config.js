@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Admin from './pages/Admin';
 import Chat from './pages/Chat';
 import Console from './pages/Console';
 import Implementation from './pages/Implementation';
@@ -55,10 +56,10 @@ import News from './pages/News';
 import SystemBlueprint from './pages/SystemBlueprint';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
-import Admin from './pages/Admin';
 
 
 export const PAGES = {
+    "Admin": Admin,
     "Chat": Chat,
     "Console": Console,
     "Implementation": Implementation,
@@ -67,7 +68,6 @@ export const PAGES = {
     "SystemBlueprint": SystemBlueprint,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
-    "Admin": Admin,
 }
 
 export const pagesConfig = {

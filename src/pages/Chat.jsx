@@ -563,11 +563,17 @@ export default function Chat() {
         currentLane
       });
 
-      const response = await base44.functions.invoke('hybridMessage', {
-        input: fullMessage,
+      const response = await base44.functions.invoke('runHybridPipeline', {
+        rawInput: fullMessage,
         session_id: conversationId,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-        limit: 20
+        options: {
+          base44,
+          user,
+          session_id: conversationId,
+          trace: false,
+          timestamp: Date.now()
+        }
       });
 
       console.log('📥 BACKEND RESPONSE - Received:', { 
