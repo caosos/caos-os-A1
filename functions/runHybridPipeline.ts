@@ -799,8 +799,10 @@ async function commitMemory(params, base44) {
         );
         const nextSeq = existingRecords && existingRecords.length > 0 ? existingRecords[0].seq + 1 : 1;
 
+        console.log('💾 [COMMIT_MEMORY_START]', { session_id, profile_id: user_email, nextSeq });
+
         // Create user record
-        await base44.asServiceRole.entities.Record.create({
+        const userRecord = await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_user`,
             profile_id: user_email,
             session_id,
@@ -817,8 +819,10 @@ async function commitMemory(params, base44) {
             status: 'active'
         });
 
+        console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id, anchors_type: typeof userRecord.anchors[0] });
+
         // Create assistant record
-        await base44.asServiceRole.entities.Record.create({
+        const assistantRecord = await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_assistant`,
             profile_id: user_email,
             session_id,
@@ -834,7 +838,10 @@ async function commitMemory(params, base44) {
             token_count: Math.ceil(assistant_message.length / 4),
             status: 'active'
         });
+
+        console.log('✅ [ASSISTANT_RECORD_CREATED]', { id: assistantRecord.id, anchors_type: typeof assistantRecord.anchors[0] });
     } catch (error) {
-        console.error('⚠️ [MEMORY_COMMIT_FAILED]', error.message);
+        console.error('⚠️ [MEMORY_COMMIT_FAILED]', { error: error.message, stack: error.stack });
+        throw error; // Re-throw to surface the actual error
     }
 }
