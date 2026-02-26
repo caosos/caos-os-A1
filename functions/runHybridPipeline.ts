@@ -802,6 +802,7 @@ async function commitMemory(params, base44) {
         // Create user record
         await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_user`,
+            profile_id: user_email,
             session_id,
             lane_id: user_email,
             tier: 'session',
@@ -810,10 +811,7 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp,
             role: 'user',
             message: user_message,
-            anchors: [
-                { class: 'session', value: session_id },
-                { class: 'lane', value: user_email }
-            ],
+            anchors: [`session:${session_id}`, `lane:${user_email}`],
             correlator_id: request_id,
             token_count: Math.ceil(user_message.length / 4),
             status: 'active'
@@ -822,6 +820,7 @@ async function commitMemory(params, base44) {
         // Create assistant record
         await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_assistant`,
+            profile_id: user_email,
             session_id,
             lane_id: user_email,
             tier: 'session',
@@ -830,10 +829,7 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp + 1,
             role: 'assistant',
             message: assistant_message,
-            anchors: [
-                { class: 'session', value: session_id },
-                { class: 'lane', value: user_email }
-            ],
+            anchors: [`session:${session_id}`, `lane:${user_email}`],
             correlator_id: request_id,
             token_count: Math.ceil(assistant_message.length / 4),
             status: 'active'
