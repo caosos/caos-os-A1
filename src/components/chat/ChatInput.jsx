@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, RotateCcw } from 'lucide-react';
+import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, RotateCcw, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
@@ -508,28 +508,32 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       )}
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
-        <button
-          type="button"
-          onClick={toggleVoiceRecording}
-          disabled={isTranscribing}
-          className={`p-1.5 rounded-full transition-colors flex-shrink-0 relative ${
-            isRecording ? 'bg-red-100 animate-pulse' : 
-            isTranscribing ? 'bg-blue-100' : 
-            'hover:bg-gray-100'
-          }`}
-          title={isTranscribing ? 'Transcribing...' : isRecording ? 'Stop' : 'Start recording'}
-        >
-          {isTranscribing ? (
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <Mic className={`w-4 h-4 ${isRecording ? 'text-red-500' : 'text-gray-700'}`} />
-              {isRecording && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-              )}
-            </>
-          )}
-        </button>
+        {!isRecording ? (
+          <button
+            type="button"
+            onClick={startRecording}
+            disabled={isTranscribing}
+            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+              isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
+            }`}
+            title={isTranscribing ? 'Transcribing...' : 'Start recording'}
+          >
+            {isTranscribing ? (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Mic className="w-4 h-4 text-gray-700" />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={stopRecording}
+            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
+            title="Finish recording"
+          >
+            <Check className="w-4 h-4 text-white" />
+          </button>
+        )}
 
         <textarea
           ref={textareaRef}
