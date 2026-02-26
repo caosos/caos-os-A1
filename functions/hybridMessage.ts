@@ -26,6 +26,20 @@ Deno.serve(async (req) => {
         // ============ STAGE 2: RECALL (Load conversation history) ============
         console.log('📚 [STAGE_RECALL_START]');
         let conversationHistory = [];
+        let userProfile = null;
+        
+        // Load user profile for context
+        try {
+            const profiles = await base44.entities.UserProfile.filter(
+                { user_email: user.email },
+                '-created_date',
+                1
+            );
+            userProfile = profiles && profiles.length > 0 ? profiles[0] : null;
+            console.log('✅ [USER_PROFILE_LOADED]', { has_profile: !!userProfile });
+        } catch (profileError) {
+            console.warn('⚠️ [PROFILE_LOAD_FAILED]', profileError.message);
+        }
         
         if (session_id) {
             try {
@@ -49,14 +63,22 @@ Deno.serve(async (req) => {
         // ============ STAGE 3: INFERENCE (Call OpenAI) ============
         console.log('🧠 [STAGE_INFERENCE_START]');
         
-        // Build messages with history
+        // Build system prompt with user context
+        let systemPrompt = `You are Aria, a thoughtful AI assistant for ${userProfile?.preferred_name || user.full_name || 'the user'}.`;
+        
+        if (userProfile) {
+            systemPrompt += `\n\nUser Context:
+- Name: ${userProfile.preferred_name || user.full_name}
+- Communication Style: ${userProfile.tone?.style || 'natural and conversational'}
+${userProfile.memory_anchors && userProfile.memory_anchors.length > 0 ? `- Key Facts About User: ${userProfile.memory_anchors.join('; ')}` : ''}
+${userProfile.project?.name ? `- Current Project: ${userProfile.project.name}` : ''}`;
+        }
+        
+        systemPrompt += `\n\nYour role: Provide thoughtful, personalized responses. Reference conversation history when relevant. Be conversational and remember context from earlier in the conversation.`;
+        
+        // Build messages with full conversation history
         const messages = [
-            { 
-                role: 'system', 
-                content: `You are Aria, a helpful AI assistant. You provide thoughtful, accurate responses.
-You have access to tools for web search, image generation, and file operations when needed.
-Stay focused, be concise, and provide actionable information.` 
-            },
+            { role: 'system', content: systemPrompt },
             ...conversationHistory,
             { role: 'user', content: input }
         ];
