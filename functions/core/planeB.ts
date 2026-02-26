@@ -52,6 +52,7 @@ export async function writeTurnToPlaneB(params, base44) {
     const assistant_anchors = extractAnchors(assistant_message, { session_id, lane_id });
 
     // Write user record
+    // TEMPORARY: Disable anchors until Base44 fixes transformation bug
     const user_record = await base44.asServiceRole.entities.Record.create({
         record_id: `${correlator_id}_user`,
         profile_id,
@@ -63,7 +64,7 @@ export async function writeTurnToPlaneB(params, base44) {
         ts_snapshot_ms: timestamp_ms,
         role: 'user',
         message: user_message,
-        anchors: user_anchors,
+        // anchors: user_anchors,  // DISABLED - Base44 bug transforming string[] to object[]
         correlator_id,
         token_count: estimateTokens(user_message),
         status: 'active',
@@ -71,6 +72,7 @@ export async function writeTurnToPlaneB(params, base44) {
     });
 
     // Write assistant record
+    // TEMPORARY: Disable anchors until Base44 fixes transformation bug
     const assistant_record = await base44.asServiceRole.entities.Record.create({
         record_id: `${correlator_id}_assistant`,
         profile_id,
@@ -82,7 +84,7 @@ export async function writeTurnToPlaneB(params, base44) {
         ts_snapshot_ms: timestamp_ms + 1,
         role: 'assistant',
         message: assistant_message,
-        anchors: assistant_anchors,
+        // anchors: assistant_anchors,  // DISABLED - Base44 bug transforming string[] to object[]
         correlator_id,
         token_count: estimateTokens(assistant_message),
         status: 'active',
