@@ -801,7 +801,7 @@ async function commitMemory(params, base44) {
 
         console.log('💾 [COMMIT_MEMORY_START]', { session_id, profile_id: user_email, nextSeq });
 
-        // Create user record
+        // Create user record WITHOUT anchors (temporarily disabled)
         const userRecord = await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_user`,
             profile_id: user_email,
@@ -813,15 +813,14 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp,
             role: 'user',
             message: user_message,
-            anchors: [`session:${session_id}`, `lane:${user_email}`],
             correlator_id: request_id,
             token_count: Math.ceil(user_message.length / 4),
             status: 'active'
         });
 
-        console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id, anchors_type: typeof userRecord.anchors[0] });
+        console.log('✅ [USER_RECORD_CREATED]', { id: userRecord.id });
 
-        // Create assistant record
+        // Create assistant record WITHOUT anchors (temporarily disabled)
         const assistantRecord = await base44.asServiceRole.entities.Record.create({
             record_id: `${request_id}_assistant`,
             profile_id: user_email,
@@ -833,13 +832,12 @@ async function commitMemory(params, base44) {
             ts_snapshot_ms: timestamp + 1,
             role: 'assistant',
             message: assistant_message,
-            anchors: [`session:${session_id}`, `lane:${user_email}`],
             correlator_id: request_id,
             token_count: Math.ceil(assistant_message.length / 4),
             status: 'active'
         });
 
-        console.log('✅ [ASSISTANT_RECORD_CREATED]', { id: assistantRecord.id, anchors_type: typeof assistantRecord.anchors[0] });
+        console.log('✅ [ASSISTANT_RECORD_CREATED]', { id: assistantRecord.id });
     } catch (error) {
         console.error('⚠️ [MEMORY_COMMIT_FAILED]', { error: error.message, stack: error.stack });
         throw error; // Re-throw to surface the actual error
