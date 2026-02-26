@@ -61,18 +61,11 @@ export default function Welcome() {
     e.stopPropagation();
     if (!email.trim()) return;
     
-    // Create user with email sign-in
-    const user = {
-      full_name: email.split('@')[0],
-      email: email,
-      isGuest: true
-    };
-    localStorage.setItem('caos_guest_user', JSON.stringify(user));
+    // Remove any guest flag - email sign-in is authenticated
+    localStorage.removeItem('caos_guest_user');
     
-    // Small delay to ensure localStorage is written
-    setTimeout(() => {
-      navigate(createPageUrl('Chat'));
-    }, 100);
+    // Redirect to authenticated Chat - no guest flag
+    navigate(createPageUrl('Chat'));
   };
 
   const handleCreateAccount = async (e) => {
@@ -80,18 +73,11 @@ export default function Welcome() {
     e.stopPropagation();
     if (!name.trim() || !email.trim()) return;
     
-    // Create user with provided info
-    const user = {
-      full_name: name,
-      email: email,
-      isGuest: true
-    };
-    localStorage.setItem('caos_guest_user', JSON.stringify(user));
+    // Remove any guest flag - account creation is authenticated
+    localStorage.removeItem('caos_guest_user');
     
-    // Small delay to ensure localStorage is written
-    setTimeout(() => {
-      navigate(createPageUrl('Chat'));
-    }, 100);
+    // Redirect to authenticated Chat - no guest flag
+    navigate(createPageUrl('Chat'));
   };
 
   if (checking) {

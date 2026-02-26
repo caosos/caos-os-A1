@@ -89,7 +89,7 @@ export default function Chat() {
     
     const loadUserData = async () => {
       try {
-        // Check if guest mode
+        // Check if guest mode (ONLY if explicitly set)
         const guestUser = localStorage.getItem('caos_guest_user');
         if (guestUser) {
           if (!mounted) return;
@@ -112,7 +112,7 @@ export default function Chat() {
         if (!mounted) return;
         
         if (!isAuthenticated) {
-          // Not logged in - become guest
+          // Not logged in - become guest ONLY if they chose guest mode
           const guestUser = {
             full_name: 'Guest User',
             email: `guest_${Date.now()}@caos.local`,
@@ -127,25 +127,28 @@ export default function Chat() {
         const currentUser = await base44.auth.me();
         if (!mounted) return;
         setUser(currentUser);
+        
+        // CRITICAL: Remove guest flag for authenticated users
+        localStorage.removeItem('caos_guest_user');
 
-        // Load conversations for this user
+        // Load conversations for this user (across all time)
         const userConvos = await base44.entities.Conversation.filter(
           { created_by: currentUser.email },
           '-last_message_time',
-          100
+          500  // Load more history
         );
         if (!mounted) return;
-        setConversations(userConvos);
+        setConversations(userConvos || []);
 
         // Load messages for all conversations
         const messagesMap = {};
-        for (const conv of userConvos) {
+        for (const conv of userConvos || []) {
           const convMessages = await base44.entities.Message.filter(
             { conversation_id: conv.id },
             'timestamp',
-            1000
+            5000  // Load full history per conversation
           );
-          messagesMap[conv.id] = convMessages;
+          messagesMap[conv.id] = convMessages || [];
         }
         if (!mounted) return;
         setMessages(messagesMap);
