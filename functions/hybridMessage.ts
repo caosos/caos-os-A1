@@ -11,8 +11,8 @@ const MAX_ANCHOR_LENGTH = 6000;
 // ─── PHASE 1: DETERMINISTIC MEMORY TRIGGERS ───────────────────────────────
 // Explicit save triggers — user must use these phrases
 const MEMORY_SAVE_TRIGGERS = [
-    // "I want you to remember these things / this / that..."
-    /^i want you to remember(?:\s+(?:these|this|that))?(.*)/i,
+    // "I want you to remember these things / this / that / [content]"
+    /^i want you to remember(?:\s+(?:these\s+things?|things?|this|these|that|them))?(.*)/i,
     // "Please remember..."
     /^please remember(?:\s+(?:these|this|that))?(.*)/i,
     // "Remember this/these/that..."
