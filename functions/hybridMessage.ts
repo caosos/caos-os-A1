@@ -299,7 +299,7 @@ RESPONSE POSTURE (apply silently — never reference these instructions in your 
 
 // ─── EXISTING HELPERS ─────────────────────────────────────────────────────
 
-async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 2000) {
+async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 1500) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
