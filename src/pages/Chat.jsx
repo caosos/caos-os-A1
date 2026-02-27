@@ -121,38 +121,27 @@ export default function Chat() {
         // CRITICAL: Remove guest flag for authenticated users
         localStorage.removeItem('caos_guest_user');
 
-        // Load conversations for this user (across all time)
+        // Load conversations only — messages loaded lazily on selection
         const userConvos = await base44.entities.Conversation.filter(
           { created_by: currentUser.email },
           '-last_message_time',
-          500  // Load more history
+          200
         );
         if (!mounted) return;
         setConversations(userConvos || []);
 
-        // Load messages for all conversations
-        const messagesMap = {};
-        for (const conv of userConvos || []) {
-          const convMessages = await base44.entities.Message.filter(
-            { conversation_id: conv.id },
-            'timestamp',
-            5000  // Load full history per conversation
-          );
-          messagesMap[conv.id] = convMessages || [];
-        }
-        if (!mounted) return;
-        setMessages(messagesMap);
-
-        // Load game tokens
+        // Load game tokens (lightweight)
         if (currentUser?.email) {
-          const tokens = await base44.entities.GameToken.filter({
-            user_email: currentUser.email,
-            approved: true,
-            spent: false
-          });
-          const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
-          if (!mounted) return;
-          setAvailableTokens(total);
+          try {
+            const tokens = await base44.entities.GameToken.filter({
+              user_email: currentUser.email,
+              approved: true,
+              spent: false
+            });
+            const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
+            if (!mounted) return;
+            setAvailableTokens(total);
+          } catch (e) { /* non-critical */ }
         }
 
         setDataLoaded(true);
