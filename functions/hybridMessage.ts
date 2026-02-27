@@ -3,10 +3,113 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
 // Token budget constants
-const MAX_HISTORY_MESSAGES = 200;   // Load up to 200 messages per session
-const HOT_TAIL = 80;                // Always keep last 80 messages
-const HOT_HEAD = 20;                // Always keep first 20 messages (for "first message" recall)
-const MAX_ANCHOR_LENGTH = 6000;     // Max chars for all memory anchors combined
+const MAX_HISTORY_MESSAGES = 200;
+const HOT_TAIL = 80;
+const HOT_HEAD = 20;
+const MAX_ANCHOR_LENGTH = 6000;
+
+// ─── PHASE 1: DETERMINISTIC MEMORY TRIGGERS ───────────────────────────────
+// Explicit save triggers — user must use these phrases
+const MEMORY_SAVE_TRIGGERS = [
+    /^(?:i want you to remember(?: that)?)[:\s]+(.+)/i,
+    /^(?:please remember(?: that)?)[:\s]+(.+)/i,
+    /^(?:remember this)[:\s]+(.+)/i,
+    /^(?:save this to memory)[:\s]+(.+)/i,
+    /^(?:add to memory)[:\s]+(.+)/i,
+    /^(?:note this)[:\s]+(.+)/i,
+];
+
+// Explicit retrieval triggers
+const MEMORY_RECALL_TRIGGERS = [
+    /\b(?:what do you remember about|do you remember|recall|you told me|you mentioned|what did I tell you about)\b/i,
+    /\b(?:what do you know about me|what have I told you)\b/i,
+];
+
+/**
+ * Detect if input is a memory save command.
+ * Returns extracted content string or null.
+ */
+function detectMemorySave(input) {
+    for (const pattern of MEMORY_SAVE_TRIGGERS) {
+        const match = input.trim().match(pattern);
+        if (match) return match[1]?.trim() || null;
+    }
+    return null;
+}
+
+/**
+ * Detect if input is a memory recall query.
+ */
+function detectMemoryRecall(input) {
+    return MEMORY_RECALL_TRIGGERS.some(p => p.test(input));
+}
+
+/**
+ * Extract simple keyword tags from a content string.
+ */
+function extractTags(content) {
+    const stopwords = new Set(['a','an','the','is','it','to','of','and','or','in','on','at','for','with','that','this','was','are']);
+    return content
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopwords.has(w))
+        .slice(0, 8);
+}
+
+/**
+ * Save a structured memory entry to UserProfile.structured_memory.
+ * Returns the saved entry.
+ */
+async function saveStructuredMemory(base44, userProfile, content, userEmail) {
+    const entry = {
+        id: crypto.randomUUID(),
+        content: content.trim(),
+        timestamp: new Date().toISOString(),
+        scope: 'profile',
+        tags: extractTags(content),
+        source: 'explicit'
+    };
+
+    const existing = userProfile?.structured_memory || [];
+    const updated = [...existing, entry];
+
+    if (userProfile) {
+        await base44.entities.UserProfile.update(userProfile.id, { structured_memory: updated });
+    } else {
+        await base44.entities.UserProfile.create({
+            user_email: userEmail,
+            structured_memory: [entry]
+        });
+    }
+
+    console.log('🧠 [MEMORY_SAVED]', { id: entry.id, tags: entry.tags });
+    return entry;
+}
+
+/**
+ * Deterministic recall: keyword-match against structured_memory.
+ * Returns only matched entries — no full dump.
+ */
+function recallStructuredMemory(structuredMemory, query) {
+    if (!structuredMemory || structuredMemory.length === 0) return [];
+    const queryTokens = extractTags(query);
+    if (queryTokens.length === 0) return structuredMemory.slice(-5); // fallback: last 5
+
+    const scored = structuredMemory.map(entry => {
+        const entryTokens = new Set(entry.tags || extractTags(entry.content));
+        const hits = queryTokens.filter(t => entryTokens.has(t)).length;
+        return { entry, hits };
+    });
+
+    return scored
+        .filter(s => s.hits > 0)
+        .sort((a, b) => b.hits - a.hits)
+        .slice(0, 10)
+        .map(s => s.entry);
+}
+
+// ─── EXISTING HELPERS ─────────────────────────────────────────────────────
 
 async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 2000) {
     const response = await fetch(OPENAI_API, {
@@ -22,7 +125,6 @@ async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 2000) {
     return data.choices[0]?.message?.content || '';
 }
 
-// Compress middle of long session into a summary block
 function compressHistory(messages) {
     if (messages.length <= HOT_HEAD + HOT_TAIL) return messages;
     const head = messages.slice(0, HOT_HEAD);
@@ -30,23 +132,22 @@ function compressHistory(messages) {
     const middleCount = messages.length - HOT_HEAD - HOT_TAIL;
     const summaryBlock = {
         role: 'system',
-        content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted for brevity. The first ${HOT_HEAD} messages and last ${HOT_TAIL} messages are included in full above and below this note.]`
+        content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]`
     };
     return [...head, summaryBlock, ...tail];
 }
 
-// Extract key facts worth remembering long-term
 async function extractMemoryAnchors(openaiKey, conversationExcerpt, existingAnchors) {
-    const prompt = `You are a memory extraction system. Given this conversation excerpt, extract any NEW facts worth remembering long-term about the user. Focus on: purchases, names, dates, decisions, preferences, life events, important numbers/details.
+    const prompt = `You are a memory extraction system. Extract any NEW facts worth remembering long-term about the user. Focus on: names, dates, decisions, preferences, life events.
 
-EXISTING ANCHORS (already stored - do not duplicate):
+EXISTING (do not duplicate):
 ${existingAnchors || 'None yet'}
 
 CONVERSATION:
 ${conversationExcerpt}
 
-Output ONLY new facts, one per line, in format: "[DATE if known]: [fact]"
-If nothing new is worth storing, output exactly: NONE`;
+Output ONLY new facts, one per line, format: "[DATE if known]: [fact]"
+If nothing new: output exactly: NONE`;
 
     const result = await openAICall(openaiKey, [{ role: 'user', content: prompt }], 'gpt-4o-mini', 500);
     return result.trim() === 'NONE' ? [] : result.split('\n').filter(l => l.trim().length > 0);
