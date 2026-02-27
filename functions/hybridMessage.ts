@@ -55,9 +55,11 @@ function detectMemorySave(input) {
                     .replace(/[?.]$/, '')
                     .replace(/^[\s,?:]+/, '') // strip leading punctuation
                     .trim();
-                // If what remains is vague (pronoun/filler/connective only) or empty, use the full input as content
-                // Matches: "these things too", "this", "these things", "them too", etc.
-                const vagueOnly = /^((?:these|this|that|them|it|things?|all\s+of\s+this|all\s+this)(?:\s+(?:too|as\s+well|also|please|ok|okay))?\.?)$/i.test(cleaned);
+                // If what remains is vague (only pronouns/fillers with no real content), use full input
+                // Strategy: count "meaningful" words — words that are not pronouns/fillers/softeners
+                const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
+                const meaningfulWords = cleaned.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(w => w.length > 1 && !VAGUE_WORDS.has(w));
+                const vagueOnly = meaningfulWords.length === 0;
                 if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
                 return cleaned;
             }
