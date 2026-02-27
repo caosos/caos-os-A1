@@ -360,8 +360,107 @@ CANDIDATE NEXT:
 - Thread auto-summary on conversation close`}</Code>
           </Section>
 
-          {/* 11. ARIA ACCESS NOTE */}
-          <Section title="11. How Aria Reads This Blueprint" color="cyan">
+          {/* 11. AUDIO BLUEPRINT */}
+          <Section title="11. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
+            <p><strong className="text-orange-300">Status: Blueprint complete. Not yet implemented. Modular — isolated from cognitive core.</strong></p>
+            <p className="mt-2">Goal: enable Aria to process raw audio with multi-speaker separation, prosody/emotion detection, and natural conversational flow preservation. All invocation is permission-gated.</p>
+
+            <h4 className="text-white font-semibold mt-3">Core Stack (Linux-native, open-source):</h4>
+            <Code>{`PyAnnote.audio (3.1+)     — Speaker diarization (2–4 speakers, overlap supported)
+                              pip install pyannote.audio | requires HuggingFace token (free)
+
+SpeechBrain               — Emotion recognition, speaker embeddings, VAD
+                              pip install speechbrain
+                              models: emotion-classification-wav2vec2-IEMOCAP, speaker-recognition
+
+faster-whisper / WhisperX — Transcription + timestamp alignment to speaker segments
+                              pip install faster-whisper whisperx
+
+Librosa                   — Raw prosody features (pitch contours, energy, pauses)
+                              pip install librosa
+
+HuggingFace Transformers  — Pre-trained emotion/prosody models
+                              pip install transformers`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Pipeline Flow (Audio → Tagged Transcript → Aria Reasoning):</h4>
+            <Code>{`1. Raw audio input (WAV/MP3 from mic or UI upload)
+2. VAD (SpeechBrain) — segment speech from silence
+3. PyAnnote diarization — assign Speaker1, Speaker2, etc.
+4. WhisperX transcription — transcribe + align timestamps to speaker segments
+5. SpeechBrain + Librosa — per-segment emotion + prosody extraction
+6. Fuse into tagged JSON:
+
+   {
+     "start": "00:05.2", "end": "00:12.8",
+     "speaker": "Speaker1",
+     "text": "Yeah, but that's horseshit.",
+     "prosody": {
+       "emotion": "frustrated",
+       "pitch_avg": 180.5,
+       "pause_before": 1.5,
+       "energy": "high"
+     }
+   }
+
+7. Feed tagged transcript into OpenAI reasoning layer
+   → Aria responds referencing emotional cues and cadence`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Permission Gating (Token-Based):</h4>
+            <Code>{`enable_voice_analysis  — required for diarization + emotion extraction
+enable_imagine_gen     — required for image/video generation (if multimedia expansion enabled)
+
+Backend check:
+  if (toolName === 'analyze_audio' && !userHasToken('enable_voice_analysis')) {
+    return "Permission required to process audio. Approve with token or say yes.";
+  }`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">OpenAI Tool Definition:</h4>
+            <Code>{`{
+  "name": "analyze_audio",
+  "description": "Process raw audio for diarization, transcription, prosody/emotion detection",
+  "parameters": {
+    "audio_url": { "type": "string" },  // URL/ID of uploaded audio
+    "question":  { "type": "string" }   // optional: specific analysis focus
+  }
+}`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Backend Execution Sketch (Deno):</h4>
+            <Code>{`case 'analyze_audio':
+  const audioPath  = await downloadAudio(args.audio_url);
+  const diarization = await runPyAnnote(audioPath);
+  const transcript  = await runWhisperX(audioPath, diarization);
+  const prosody     = await extractProsody(audioPath, transcript.segments);
+  const tagged      = fuseTranscript(transcript, prosody);
+  return { success: true, tagged_transcript: tagged };`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Architectural Principles:</h4>
+            <Code>{`- Audio layer is modular and isolated from cognitive core (detachable Phase expansion)
+- No emotion data auto-saved to structured memory
+- All audio-derived inferences treated as probabilistic
+- Confidence scoring recommended for emotion tagging
+- Tool invocation strictly permission-gated
+- Version pinning required to prevent model drift`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Integration Notes:</h4>
+            <Code>{`- Audio uploaded via CAOS UI → saved as UserFile entity
+- File ID passed to analyze_audio tool
+- Tagged transcript returned to Aria (OpenAI backbone)
+- Aria responds naturally referencing emotional cues
+- Tagged JSON storable in Record entity for recall`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Next Steps (when ready to implement):</h4>
+            <Code>{`1. Build Deno subprocess wrapper for Python audio stack
+2. Add confidence scoring to emotion detection
+3. Create test audio ingestion flow (UI upload → pipeline → receipt)
+4. Tune reasoning prompt for emotional interpretation`}</Code>
+
+            <div className="bg-orange-950/50 border border-orange-500/30 rounded p-3 mt-2">
+              <p className="text-orange-300 text-xs font-semibold">NOT YET IMPLEMENTED. Blueprint locked for future modular build-out. Focus: one phase at a time.</p>
+            </div>
+          </Section>
+
+          {/* 12. ARIA ACCESS NOTE */}
+          <Section title="12. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
             <p className="mt-2">To ask Aria about the system state, use recall-trigger phrases like: <em>"what do you know about CAOS architecture"</em>, <em>"what have we built"</em>, or <em>"what's the current state of the memory system"</em>.</p>
             <Code>{`Aria knows:
