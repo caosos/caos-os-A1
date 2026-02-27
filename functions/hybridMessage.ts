@@ -11,16 +11,17 @@ const MAX_ANCHOR_LENGTH = 6000;
 // ─── PHASE 1: DETERMINISTIC MEMORY TRIGGERS ───────────────────────────────
 // Explicit save triggers — user must use these phrases
 const MEMORY_SAVE_TRIGGERS = [
-    // "I want you to remember these things / this / that / [content]"
-    /^i want you to remember(?:\s+(?:these\s+things?|things?|this|these|that|them))?(.*)/i,
-    // "Please remember..."
-    /^please remember(?:\s+(?:these|this|that))?(.*)/i,
-    // "Remember this/these/that..."
-    /^remember\s+(?:this|these|that)[:\s]*(.*)/i,
-    // "Can you remember..."
-    /^can you remember(?:\s+(?:these|this|that))?(.*)/i,
-    // "Save this/these to memory"
-    /^save\s+(?:this|these)(?:\s+to\s+memory)?[:\s]*(.*)/i,
+    // "I want you to remember [content]"
+    // The key: capture everything AFTER any vague pronoun, then vague detection cleans up
+    /^i want you to remember\b(.*)/i,
+    // "Please remember [content]"
+    /^please remember\b(.*)/i,
+    // "Remember this/these/that [content]"
+    /^remember\s+(?:this|these|that)\b[:\s]*(.*)/i,
+    // "Can you remember [content]"
+    /^can you remember\b(.*)/i,
+    // "Save this to memory / save to memory"
+    /^save(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
     // "Add to memory / add this to memory"
     /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
     // "Note this / note that"
