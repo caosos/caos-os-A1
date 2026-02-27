@@ -46,14 +46,16 @@ function detectMemoryRecall(input) {
 
 /**
  * Extract simple keyword tags from a content string.
+ * Normalizes: lowercase, strip punctuation, remove stopwords, stem plurals.
  */
 function extractTags(content) {
-    const stopwords = new Set(['a','an','the','is','it','to','of','and','or','in','on','at','for','with','that','this','was','are']);
+    const stopwords = new Set(['a','an','the','is','it','to','of','and','or','in','on','at','for','with','that','this','was','are','do','you','what','how','why','when','who','did','have','has','had','my','me','i','we','he','she','they','be','been','am','not','no','if','so']);
     return content
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .split(/\s+/)
         .filter(w => w.length > 2 && !stopwords.has(w))
+        .map(w => w.endsWith('s') && w.length > 4 ? w.slice(0, -1) : w) // basic de-plural
         .slice(0, 8);
 }
 
