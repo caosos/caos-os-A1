@@ -287,48 +287,56 @@ Deno.serve(async (req) => {
             userProfile = profiles?.[0] || null;
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
-        // ─── PHASE 1: EXPLICIT MEMORY SAVE ────────────────────────────────────────
-        let memorySaveContent = detectMemorySave(input);
-        // __USE_FULL_INPUT__ means the trigger fired but the content after it was vague (no real facts)
-        // In this case we cannot guess what to save — ask the user to be specific
-        if (memorySaveContent === '__USE_FULL_INPUT__') {
+        // ─── PHASE A: ATOMIC MEMORY SAVE ──────────────────────────────────────────
+        const memorySaveSignal = detectMemorySave(input);
+
+        if (memorySaveSignal === '__VAGUE__') {
             const clarifyReply = `Sure — what specifically would you like me to remember? Please share the facts and I'll save them.`;
             if (session_id) {
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: clarifyReply, timestamp: new Date().toISOString() });
             }
             return Response.json({
-                reply: clarifyReply,
-                mode: 'MEMORY_CLARIFY',
-                memory_saved: false,
-                request_id,
-                response_time_ms: Date.now() - startTime,
-                tool_calls: [],
+                reply: clarifyReply, mode: 'MEMORY_CLARIFY', memory_saved: false,
+                entries_created: 0, entry_ids: [], request_id,
+                response_time_ms: Date.now() - startTime, tool_calls: [],
                 execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime }
             });
         }
-        if (memorySaveContent) {
-            const saved = await saveStructuredMemory(base44, userProfile, memorySaveContent, user.email);
+
+        if (memorySaveSignal === '__PRONOUN__') {
+            const pronoun = (input.match(PRONOUN_PATTERN) || ['they'])[0];
+            const clarifyReply = `Who is "${pronoun}" referring to? I need a name before I can save this.`;
+            if (session_id) {
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: clarifyReply, timestamp: new Date().toISOString() });
+            }
+            return Response.json({
+                reply: clarifyReply, mode: 'MEMORY_CLARIFY_PRONOUN', memory_saved: false,
+                entries_created: 0, entry_ids: [], request_id,
+                response_time_ms: Date.now() - startTime, tool_calls: [],
+                execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime }
+            });
+        }
+
+        if (memorySaveSignal) {
+            const { saved, deduped, rejected } = await saveAtomicMemory(base44, userProfile, memorySaveSignal, user.email);
+            const memory_saved = saved.length > 0;
+            const entry_ids = saved.map(e => e.id);
 
             let confirmReply;
-            let memory_saved = false;
-            let memory_id = null;
-
-            if (!saved) {
-                // Content failed validation (empty/garbage)
+            if (!memory_saved && deduped.length === 0) {
                 confirmReply = `I couldn't save that — it doesn't contain enough information to store.`;
-            } else if (saved.source === 'explicit' && !saved.timestamp) {
-                confirmReply = `I couldn't save that — it doesn't contain enough information to store.`;
+            } else if (!memory_saved && deduped.length > 0) {
+                const items = deduped.map(e => `"${e.content}"`).join(', ');
+                confirmReply = `Already in memory: ${items}`;
+            } else if (saved.length === 1 && deduped.length === 0) {
+                confirmReply = `Memory saved. I'll remember: "${saved[0].content}"\n\nMEMORY_SAVED: TRUE | entries: 1 | id: ${saved[0].id}`;
             } else {
-                // Check if it was a dedup (entry already existed before this call)
-                const isDedup = saved.timestamp < new Date(Date.now() - 2000).toISOString();
-                if (isDedup) {
-                    confirmReply = `Already in memory: "${memorySaveContent}"`;
-                } else {
-                    confirmReply = `Memory saved. I'll remember: "${memorySaveContent}"`;
-                    memory_saved = true;
-                    memory_id = saved.id;
-                }
+                const savedLines = saved.map((e, i) => `${i + 1}. "${e.content}"`).join('\n');
+                const dupNote = deduped.length > 0 ? `\n(${deduped.length} already existed)` : '';
+                const rejNote = rejected.length > 0 ? `\n(${rejected.length} rejected — too vague)` : '';
+                confirmReply = `Saved ${saved.length} fact${saved.length !== 1 ? 's' : ''}:\n${savedLines}${dupNote}${rejNote}\n\nMEMORY_SAVED: TRUE | entries: ${saved.length} | ids: [${entry_ids.join(', ')}]`;
             }
 
             if (session_id) {
@@ -337,14 +345,11 @@ Deno.serve(async (req) => {
             }
 
             return Response.json({
-                reply: confirmReply,
-                mode: 'MEMORY_SAVE',
-                memory_saved,
-                memory_id,
-                request_id,
-                response_time_ms: Date.now() - startTime,
-                tool_calls: [],
-                execution_receipt: { request_id, session_id, memory_saved, latency_ms: Date.now() - startTime }
+                reply: confirmReply, mode: 'MEMORY_SAVE', memory_saved,
+                entries_created: saved.length, entry_ids,
+                dedup_ids: deduped.map(e => e.id), rejected_entries: rejected,
+                request_id, response_time_ms: Date.now() - startTime, tool_calls: [],
+                execution_receipt: { request_id, session_id, memory_saved, entries_created: saved.length, latency_ms: Date.now() - startTime }
             });
         }
 
