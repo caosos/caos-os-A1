@@ -77,16 +77,32 @@ function isValidMemoryContent(content) {
  * Returns the saved entry.
  */
 async function saveStructuredMemory(base44, userProfile, content, userEmail) {
+    const trimmed = content.trim();
+
+    // VALIDATION: reject meaningless content
+    if (!isValidMemoryContent(trimmed)) {
+        console.warn('⚠️ [MEMORY_REJECTED] Content failed validation:', trimmed);
+        return null;
+    }
+
+    const existing = userProfile?.structured_memory || [];
+
+    // DEDUP: reject if identical content already exists (case-insensitive)
+    const duplicate = existing.find(e => e.content.toLowerCase() === trimmed.toLowerCase());
+    if (duplicate) {
+        console.log('🔁 [MEMORY_DEDUP] Identical content already saved:', duplicate.id);
+        return duplicate; // return existing entry, do not re-save
+    }
+
     const entry = {
         id: crypto.randomUUID(),
-        content: content.trim(),
+        content: trimmed,
         timestamp: new Date().toISOString(),
         scope: 'profile',
-        tags: extractTags(content),
+        tags: extractTags(trimmed),
         source: 'explicit'
     };
 
-    const existing = userProfile?.structured_memory || [];
     const updated = [...existing, entry];
 
     if (userProfile) {
