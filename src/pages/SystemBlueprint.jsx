@@ -1,999 +1,378 @@
-import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const Section = ({ title, color = 'blue', children, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const borderColor = {
+    blue: 'border-blue-500/30', green: 'border-green-500/30', red: 'border-red-500/30',
+    purple: 'border-purple-500/30', yellow: 'border-yellow-500/30', cyan: 'border-cyan-500/30',
+    indigo: 'border-indigo-500/30', orange: 'border-orange-500/30'
+  }[color];
+  const textColor = {
+    blue: 'text-blue-300', green: 'text-green-300', red: 'text-red-300',
+    purple: 'text-purple-300', yellow: 'text-yellow-300', cyan: 'text-cyan-300',
+    indigo: 'text-indigo-300', orange: 'text-orange-300'
+  }[color];
+  const bgColor = {
+    blue: 'bg-blue-950/40', green: 'bg-green-950/40', red: 'bg-red-950/40',
+    purple: 'bg-purple-950/40', yellow: 'bg-yellow-950/40', cyan: 'bg-cyan-950/40',
+    indigo: 'bg-indigo-950/40', orange: 'bg-orange-950/40'
+  }[color];
+
+  return (
+    <div className={`${bgColor} border ${borderColor} rounded-xl overflow-hidden`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
+      >
+        <h2 className={`text-xl font-bold ${textColor}`}>{title}</h2>
+        {open ? <ChevronDown className="w-5 h-5 text-white/50" /> : <ChevronRight className="w-5 h-5 text-white/50" />}
+      </button>
+      {open && <div className="px-5 pb-5 space-y-4 text-gray-200 text-sm">{children}</div>}
+    </div>
+  );
+};
+
+const Code = ({ children }) => (
+  <pre className="bg-black/40 border border-white/10 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">{children}</pre>
+);
+
+const Tag = ({ label, color = 'blue' }) => {
+  const cls = {
+    blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    green: 'bg-green-500/20 text-green-300 border-green-500/30',
+    red: 'bg-red-500/20 text-red-300 border-red-500/30',
+    yellow: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+  }[color];
+  return <span className={`inline-block text-xs px-2 py-0.5 rounded border ${cls} mr-1`}>{label}</span>;
+};
 
 export default function SystemBlueprint() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
+    <div className="min-h-screen bg-[#0a1628] text-white p-6">
       <button
         onClick={() => navigate(createPageUrl('Chat'))}
-        className="mb-6 flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors"
+        className="mb-6 flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Chat
       </button>
 
-      <ScrollArea className="h-[calc(100vh-8rem)]">
-        <div className="max-w-5xl mx-auto space-y-8 pb-8">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4">CAOS System Blueprint</h1>
-            <p className="text-xl text-blue-300">Complete Technical Specification - Unified Governance Architecture</p>
-            <p className="text-sm text-gray-400 mt-2">Last Updated: Feb 22, 2026</p>
-            <p className="text-sm text-red-400 mt-1 font-bold">STABILIZATION PHASE: Deterministic execution, contract enforcement, fail-loudly discipline</p>
+      <ScrollArea className="h-[calc(100vh-6rem)]">
+        <div className="max-w-4xl mx-auto space-y-4 pb-8">
+
+          {/* HEADER */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint</h1>
+            <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Feb 27, 2026 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅</p>
+            <div className="flex flex-wrap gap-2 justify-center mt-3">
+              <Tag label="hybridMessage: ACTIVE" color="green" />
+              <Tag label="Phase A Memory: LOCKED" color="green" />
+              <Tag label="Heuristics Engine v1: LOCKED" color="green" />
+              <Tag label="Phase B/C: RESERVED" color="yellow" />
+            </div>
           </div>
 
-          {/* ARCHITECTURE OVERVIEW */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">1. Architecture Overview - UNIFIED GOVERNANCE GATE</h2>
-            
-            <div className="space-y-4 text-gray-200">
-              <h3 className="text-xl font-semibold text-white">10-Stage Deterministic Pipeline:</h3>
-              
-              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <pre className="text-sm overflow-x-auto">{`
-┌─────────────────────────────────────────────────────────────────┐
-│           FRONTEND (React + Base44)                             │
-│  • Mode Banner (RETRIEVAL | GEN | LIVE_WEB | FILE_SEARCH)      │
-│  • Receipt Drawer (claim verification, drift status)           │
-│  • Memory Dashboard (BeliefNodes, reaffirmation)               │
-│  • Drift Alert Modal (conflict resolution)                     │
-└─────────────┬───────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│      UNIFIED GOVERNANCE GATE (hybridMessage v2026-02-22)       │
-│                                                                 │
-│  STAGE 0: PRE-INFERENCE NORMALIZATION                          │
-│    └─ Apply lexical rules (chaos → CAOS)                       │
-│    └─ Clean STT artifacts                                      │
-│                                                                 │
-│  STAGE 1: INTENT RESOLUTION                                    │
-│    └─ Classify: LIST_THREADS | SEARCH_THREADS | GEN           │
-│    └─ Extract terms deterministically                          │
-│    └─ Drift guard: forceRetrievalMode enforcement             │
-│                                                                 │
-│  STAGE 2: MODE ASSIGNMENT                                      │
-│    └─ Map intent → mode (RETRIEVAL | GEN | LIVE_WEB...)       │
-│    └─ Verify capability in SessionManifest                     │
-│                                                                 │
-│  STAGE 3: TOOL ROUTING                                         │
-│    └─ Select route + formatter                                 │
-│    └─ Verify route ↔ mode consistency                         │
-│                                                                 │
-│  STAGE 4: MEMORY ACTIVATION (if enabled)                       │
-│    └─ Query BeliefNode records                                 │
-│    └─ Compute activation: recency × relevance                  │
-│    └─ Top-K selection (threshold: 0.35, top_k: 25)            │
-│                                                                 │
-│  STAGE 5: DRIFT CHECK (if memory active)                       │
-│    └─ Detect conflicts (contradiction, incompatible facts)     │
-│    └─ Status: PASS | ALERT | BLOCKED                           │
-│    └─ Log DriftEvent if severity ≥ HIGH                        │
-│                                                                 │
-│  STAGE 6: TOOL EXECUTION                                        │
-│    └─ Execute deterministic database queries                   │
-│    └─ Return executor contract: {ok, latency_ms, fingerprints}│
-│                                                                 │
-│  STAGE 7: RESULT FORMATTING                                    │
-│    └─ Apply formatter (LIST | SEARCH_REPORT | GEN)            │
-│    └─ Structure output with metadata                           │
-│                                                                 │
-│  STAGE 8: CLAIM VERIFICATION                                   │
-│    └─ Classify claims: OBSERVED | RETRIEVED | MEMORY | etc.   │
-│    └─ Enforce: GEN cannot produce RETRIEVED claims            │
-│                                                                 │
-│  STAGE 9: RECEIPT GENERATION                                   │
-│    └─ Aggregate execution metadata                             │
-│    └─ Build audit trail with request_id                        │
-│                                                                 │
-│  STAGE 10: COGNITIVE LAYER                                     │
-│    └─ If GEN: optional LLM expansion                           │
-│    └─ If RETRIEVAL: pass through (no modification)            │
-│    └─ Enforce: no citations in GEN, no search simulation      │
-│                                                                 │
-└─────────────┬───────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│        DATABASE (Base44 Entities)                               │
-│  CORE:                                                          │
-│  • Record (all messages w/ token_count)                         │
-│  • Lane (hot context per topic)                                 │
-│  • Conversation (thread metadata + title index)                 │
-│  • Message (UI layer)                                           │
-│                                                                 │
-│  GOVERNANCE:                                                    │
-│  • LexicalRule (normalization: chaos → CAOS)                   │
-│  • SessionManifest (capability contracts)                       │
-│  • Anchor (hash-chained first-class anchors)                   │
-│  • ThreadSnapshot (rotation integrity)                          │
-│  • DriftEvent (contract violations)                             │
-│  • RetrievalReceipt (LIST/SEARCH audit trail)                  │
-│  • ThreadToken + ThreadTokenMeta (title search index)          │
-│  • ConfigChangeLog (immutable config audit)                     │
-│                                                                 │
-│  MEMORY CONTINUITY (spec ready, not yet implemented):          │
-│  • BeliefNode (core/peripheral knowledge graph)                │
-│  • AmendmentChain (belief revision history)                    │
-│  • ReaffirmationLog (decay prevention)                         │
-└─────────────────────────────────────────────────────────────────┘
-                `}</pre>
-              </div>
-              
-              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30 mt-4">
-                <h3 className="text-lg font-semibold text-red-300 mb-3">🔴 CRITICAL: Contract Enforcement</h3>
-                <ul className="space-y-2 text-sm">
-                  <li><strong>GEN No Search:</strong> GEN mode cannot produce citations or simulate retrieval</li>
-                  <li><strong>Mode Discipline:</strong> Every response has exactly one mode (mutually exclusive)</li>
-                  <li><strong>Fail Loudly:</strong> No silent errors, no smoothing, explicit error propagation</li>
-                  <li><strong>Executor Contract:</strong> All tools return {'{ok, latency_ms, fingerprints}'}</li>
-                  <li><strong>Receipt Mandatory:</strong> Every request produces audit trail with request_id</li>
-                </ul>
-              </div>
+          {/* 1. WHAT CAOS IS */}
+          <Section title="1. What CAOS Is" color="blue" defaultOpen={true}>
+            <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
+            <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with OpenAI gpt-4o as the inference engine. It has a deterministic memory system, a heuristics formatting layer, and a chat UI with thread management, file support, and developer tools.</p>
+            <Code>{`Platform:   Base44 (React + Deno serverless functions)
+AI:         OpenAI gpt-4o (primary), gpt-4o-mini (utility tasks)
+Storage:    Base44 entities (database)
+Auth:       Base44 built-in auth + guest mode
+Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
+          </Section>
+
+          {/* 2. ACTIVE ARCHITECTURE */}
+          <Section title="2. Active Architecture — hybridMessage Pipeline" color="cyan" defaultOpen={true}>
+            <p>All messages flow through a single backend function: <code className="text-cyan-300">hybridMessage</code>. It is the unified governance gate. There is no separate pipeline runner — everything is in this one file.</p>
+            <Code>{`Request → hybridMessage
+  │
+  ├─ 1. AUTH: base44.auth.me() — reject if not authenticated
+  │
+  ├─ 2. LOAD USER PROFILE: UserProfile entity (structured_memory, anchors, tone, project)
+  │
+  ├─ 3. PHASE A: ATOMIC MEMORY SAVE (if input matches trigger phrases)
+  │      └─ detectMemorySave() → '__VAGUE__' | '__PRONOUN__' | content string | null
+  │      └─ If vague → ask for clarification (MEMORY_CLARIFY mode)
+  │      └─ If pronoun → ask who (MEMORY_CLARIFY_PRONOUN mode)
+  │      └─ If content → splitAtomicFacts() → saveAtomicMemory() → receipt
+  │      └─ Returns immediately — BYPASSES inference entirely
+  │
+  ├─ 4. LOAD SESSION HISTORY: Message entity, up to 200 messages
+  │      └─ compressHistory() → HOT_HEAD(20) + summary block + HOT_TAIL(80)
+  │
+  ├─ 5. DETERMINISTIC RECALL: if detectMemoryRecall(input)
+  │      └─ recallStructuredMemory() → keyword match against structured_memory
+  │      └─ Returns top 10 matched entries, injected into system prompt
+  │
+  ├─ 6. HEURISTICS ENGINE v1 (internal — never surfaced in output)
+  │      └─ classifyIntent() → MEMORY_ACTION | TECHNICAL_DESIGN | PARTNER_REVIEW |
+  │                              EXECUTION_DIRECTIVE | SUMMARY_COMPACT | TOOL_INVOCATION | GENERAL_QUERY
+  │      └─ calibrateDepth() → COMPACT | STANDARD | LAYERED
+  │      └─ buildHeuristicsDirective() → appended to system prompt
+  │      └─ MEMORY_ACTION bypasses — no directive injected
+  │
+  ├─ 7. BUILD SYSTEM PROMPT
+  │      └─ Aria identity + truth discipline rules
+  │      └─ OUTPUT FORMAT: prose only, no lists/headers unless asked
+  │      └─ Recalled memories (if any)
+  │      └─ Legacy memory_anchors (filtered, labeled INFERRED)
+  │      └─ Tone/project context from UserProfile
+  │      └─ Heuristics directive (depth + posture)
+  │
+  ├─ 8. OPENAI CALL: gpt-4o, max_tokens=2000
+  │
+  ├─ 9. SAVE MESSAGES: Message entity (user + assistant)
+  │
+  ├─ 10. BACKGROUND: auto-extract legacy anchors (every 5 turns)
+  │
+  └─ RETURN: { reply, mode, request_id, execution_receipt, ... }`}</Code>
+          </Section>
+
+          {/* 3. MEMORY SYSTEM — PHASE A LOCKED */}
+          <Section title="3. Memory System — Phase A (LOCKED)" color="green">
+            <p><strong className="text-green-300">Phase A is complete and locked.</strong> It provides deterministic, explicit-only memory saves with full receipt contracts. No silent saves. No hallucinated recall.</p>
+
+            <h4 className="text-white font-semibold mt-3">Save Triggers (user must say one of these):</h4>
+            <Code>{`"I want you to remember..."
+"Please remember..."
+"Remember this: ..."
+"Remember that..."
+"Save this to memory: ..."
+"Add this to memory: ..."
+"Note that..."
+"Store that..."`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Save Flow:</h4>
+            <Code>{`1. detectMemorySave(input) → extract content string
+2. splitAtomicFacts(content) → split on "X and Y" when both are facts
+3. For each clause: saveOneAtomicEntry() → dedup check → validate
+4. Single DB write: UserProfile.structured_memory updated
+5. Return receipt:
+   {
+     reply: "Memory saved. I'll remember: \"...\"\\nMEMORY_SAVED: TRUE | entries: 1 | id: <uuid>",
+     mode: "MEMORY_SAVE",
+     memory_saved: true,
+     entries_created: 1,
+     entry_ids: ["<uuid>"],
+     dedup_ids: [],
+     rejected_entries: []
+   }`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Recall Flow:</h4>
+            <Code>{`detectMemoryRecall(input) → keyword trigger check
+recallStructuredMemory(structuredMemory, query) → extractTags → score by hits
+Returns top 10 matched entries → injected as "RECALLED MEMORY:" block in system prompt
+No full dump. No fabrication. Source labeled "(from memory)".`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Entry Schema (stored in UserProfile.structured_memory):</h4>
+            <Code>{`{
+  id: "<uuid>",
+  content: "my dog's name is Biscuit",
+  created_at: "2026-02-27T...",
+  timestamp: "2026-02-27T...",   // legacy compat
+  scope: "profile",
+  tags: ["dog", "biscuit"],      // auto-extracted keywords
+  source: "user_trigger",
+  normalized_fields: null,        // Phase B reserved
+  entity_refs: null               // Phase C reserved
+}`}</Code>
+
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-2">
+              <p className="text-yellow-300 text-xs font-semibold">PHASE B (Typed Schema) and PHASE C (Entity Graph) are reserved. Fields exist but are null. Do not implement until Phase A has been used in production.</p>
             </div>
-          </section>
+          </Section>
 
-          {/* MESSAGE FLOW */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">2. Message Flow - Unified Governance Gate Pipeline</h2>
-            
-            <div className="space-y-6">
-              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
-                <h3 className="text-lg font-semibold text-green-300 mb-3">Step 1: User sends message</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-// Frontend calls hybridMessage
-const response = await fetch('http://YOUR_API/api/functions/hybridMessage', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer TOKEN',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    input: "What's the weather like?",
-    session_id: "sess_12345",
-    file_urls: [], // optional images
-    rotation_seed: null, // injected if thread was rotated
-    current_lane: null // auto-detected or manual
-  })
-});
-                `}</pre>
-              </div>
+          {/* 4. HEURISTICS ENGINE v1 */}
+          <Section title="4. Heuristics Engine v1 (LOCKED)" color="purple">
+            <p>Non-invasive formatting layer. Shapes output posture and depth. Detachable via <code className="text-purple-300">HEURISTICS_ENABLED = false</code>. Never surfaces labels or classifications in output.</p>
 
-              <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
-                <h3 className="text-lg font-semibold text-purple-300 mb-3">Step 2: Unified Governance Gate (10 stages)</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-1. Authenticate user (base44.auth.me())
-2. Generate request_id (UUID) + start execution_state tracker
-3. STAGE 0: Normalize input (lexical rules, STT cleanup)
-4. STAGE 1: Resolve intent (LIST | SEARCH | GEN)
-5. STAGE 2: Assign mode (verify capability in manifest)
-6. STAGE 3: Route tool (select pipeline + formatter)
-7. STAGE 4: Activate memory (query BeliefNodes, compute scores)
-8. STAGE 5: Drift check (detect conflicts, block if critical)
-9. STAGE 6: Execute tool (deterministic DB query, contract-compliant)
-10. STAGE 7: Format result (structured output with metadata)
-11. STAGE 8: Verify claims (classify: OBSERVED | MEMORY | INFERRED)
-12. STAGE 9: Generate receipt (audit trail with fingerprints)
-13. STAGE 10: Cognitive layer (GEN expansion or pass-through)
-14. Store messages in Record entity with token counts
-15. Log DriftEvent if violations detected
-16. Return response with execution_state + receipt
-                `}</pre>
-              </div>
+            <h4 className="text-white font-semibold mt-3">Intent Classification:</h4>
+            <Code>{`MEMORY_ACTION      → save/remember triggers → BYPASSES heuristics entirely
+TECHNICAL_DESIGN   → architect/schema/spec + long input → LAYERED
+PARTNER_REVIEW     → review/thoughts on/critique → STANDARD+
+EXECUTION_DIRECTIVE → run/build/create (short) → COMPACT
+SUMMARY_COMPACT    → summarize/tldr → COMPACT
+TOOL_INVOCATION    → search/find/calculate → STANDARD
+GENERAL_QUERY      → everything else → COMPACT or STANDARD by length`}</Code>
 
-              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">Step 3: AI decides + executes</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-OpenAI receives:
-- System prompt (identity + profile + lane context)
-- Optional rotation seed (if > 90K)
-- Lane hot messages
-- Recent cross-lane messages
-- User's current message
+            <h4 className="text-white font-semibold mt-3">Depth Calibration:</h4>
+            <Code>{`COMPACT  → 1-3 sentences. Short input, simple queries, directives.
+STANDARD → Natural paragraphing. Default.
+LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 abstract terms.`}</Code>
 
-AI can call tools:
-- search_internet → InvokeLLM with web context
-- recall_memory → Search ALL Record history (no caps)
-- read_app_file → Read own source code
-- update_user_profile → Store permanent facts about user
-- list_app_structure → See available pages/components
+            <h4 className="text-white font-semibold mt-3">Output Posture (always active for non-MEMORY_ACTION):</h4>
+            <Code>{`- Flowing prose. No bullet lists, numbered lists, or section headers unless asked.
+- No praise openers ("Great question!", "Absolutely!")
+- No emotional mirroring
+- No CRM-style summaries
+- No internal pipeline terminology in output
+- Shared ownership framing ("we could...", "the approach here is...")
+- Calm, direct, architect-level tone`}</Code>
 
-Tools execute in backend, results returned to OpenAI, final response generated
-                `}</pre>
-              </div>
-            </div>
-          </section>
-          
-          {/* MULTI-LANE CONTEXT SYSTEM */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">3. Multi-Lane Context Windows</h2>
-            
-            <div className="space-y-6 text-gray-200">
-              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
-                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Problem Solved</h3>
-                <p className="text-sm">Traditional single-thread chat gets bloated over time. Every message adds to context, slowing responses and hitting token limits. CAOS splits conversations into topic-based lanes.</p>
-              </div>
+            <p className="mt-2">The heuristics intent and depth are logged in <code className="text-purple-300">execution_receipt</code>: <code>heuristics_intent</code>, <code>heuristics_depth</code>.</p>
+          </Section>
 
-              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">Lane Detection (Auto)</h3>
-                <pre className="text-sm overflow-x-auto">{`
-function detectLane(text) {
-  const lower = text.toLowerCase();
-  if (/ui|interface|design|button/.test(lower)) return 'ui';
-  if (/immigr|visa|ice|border/.test(lower)) return 'immigration';
-  if (/token|context|memory|recall/.test(lower)) return 'tokens';
-  if (/function|backend|api|code/.test(lower)) return 'backend';
-  if (/news|current|today|latest/.test(lower)) return 'news';
-  return 'general';
-}
-                `}</pre>
-              </div>
+          {/* 5. DATA ENTITIES */}
+          <Section title="5. Data Entities (Active)" color="indigo">
+            <h4 className="text-white font-semibold">Core Chat:</h4>
+            <Code>{`Conversation  — thread metadata (title, last_message_time, summary, keywords)
+Message       — individual messages (conversation_id, role, content, tool_calls,
+                execution_receipt, reactions, replies, file_urls)
+UserProfile   — persistent user data:
+                  preferred_name, assistant_name, environment_name
+                  tone: { style, humor_ok, emoji_light, no_scaffold_titles, no_flattery }
+                  project: { name, current_focus, known_friction_points }
+                  memory_anchors: string[]   (legacy auto-extracted)
+                  structured_memory: []       (Phase A atomic entries — ACTIVE)
+UserFile      — uploaded files (name, url, type, folder_path, size, mime_type)`}</Code>
 
-              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
-                <h3 className="text-lg font-semibold text-green-300 mb-3">Context Layers per Lane</h3>
-                <pre className="text-sm overflow-x-auto">{`
-Lane Entity Structure:
-{
-  session_id: "sess_123",
-  lane_name: "ui",
-  hot_messages: [
-    { role: "user", content: "...", timestamp: "..." },
-    { role: "assistant", content: "...", timestamp: "..." }
-    // Last 5 messages kept hot
-  ],
-  summary: "Compressed warm context (archived every 10 msgs)",
-  message_count: 47
-}
+            <h4 className="text-white font-semibold mt-3">Governance / Advanced (built, partially used):</h4>
+            <Code>{`Anchor         — hash-chained profile-global memory anchors (BUILT, not fully active)
+Record         — Plane B message storage (BUILT, not the primary message store)
+SessionContext — WCW budget tracking (BUILT)
+Lane           — topic-based context windows (BUILT, not active in hybridMessage v2)
+LexicalRule    — normalization rules (BUILT)
+SessionManifest — capability contracts (BUILT)
+DriftEvent     — contract violation log (BUILT)
+RetrievalReceipt — retrieval audit trail (BUILT)
+ThreadToken/Meta — title search index (BUILT)
+ErrorLog       — failed message log (ACTIVE)
+ConfigChangeLog — config audit trail (BUILT)`}</Code>
+          </Section>
 
-Hot Context: Last 5 messages per lane (immediate recall)
-Warm Context: Compressed summary (background knowledge)
-Cold Storage: Full Record history (searchable via tools)
-                `}</pre>
-              </div>
+          {/* 6. FRONTEND STRUCTURE */}
+          <Section title="6. Frontend Structure" color="orange">
+            <h4 className="text-white font-semibold">Pages:</h4>
+            <Code>{`Welcome         — auth gate (Google sign-in, email, guest mode)
+Chat            — main interface (all chat logic lives here)
+Admin           — admin dashboard (errors, stats, pipeline visualizer)
+Console         — SSH/terminal console view
+Implementation  — CAOS-A1 Python backend blueprint (FastAPI + SQLite)
+MemoryIsolation — memory isolation architecture docs
+SystemBlueprint — THIS FILE (living architecture doc)
+News            — news feed page`}</Code>
 
-              <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
-                <h3 className="text-lg font-semibold text-purple-300 mb-3">Working Context Assembly</h3>
-                <pre className="text-sm overflow-x-auto">{`
-Per Request to OpenAI:
-1. UserProfile (persistent facts about user)
-2. Identity contract (response style rules)
-3. Active lane hot messages (5 most recent in this topic)
-4. Active lane summary (compressed history)
-5. 3 most recent cross-lane messages (continuity)
-6. Optional: Rotation seed (if previous thread > 90K)
+            <h4 className="text-white font-semibold mt-3">Key Components:</h4>
+            <Code>{`components/chat/
+  ChatBubble       — message rendering (markdown, code, reactions, replies, receipts)
+  ChatHeader       — header (thread controls, search, token meter)
+  ChatInput        — input (file upload, voice, screen capture, camera, TTS)
+  ThreadList       — conversation sidebar
+  ProfilePanel     — user profile + file manager + memory panel
+  TokenMeter       — WCW usage visualization
+  ConversationSearch — in-thread search with jump-to
+  StarfieldBackground — animated canvas backdrop
+  WelcomeGreeting  — randomized greeting on empty thread
 
-Result: Clean, focused context without bloat
-                `}</pre>
-              </div>
-            </div>
-          </section>
+components/game/   — embedded game viewer (iframe)
+components/terminal/ — code terminal panel (developer mode)
+components/admin/  — admin widgets (StatsViewer, RecentErrors, etc.)
+components/profile/MemoryPanel — structured_memory viewer
+components/docs/   — architecture doc components`}</Code>
 
-          {/* TOKEN MANAGEMENT & ROTATION */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">4. Token Management & Rotation</h2>
-            
-            <div className="space-y-6 text-gray-200">
-              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30">
-                <h3 className="text-lg font-semibold text-red-300 mb-3">⚠️ CRITICAL: How Rotation Works</h3>
-                <p className="text-sm mb-3">The 90K rotation trigger is NOT a hard cap. It's a compression checkpoint to prevent thread bloat.</p>
-                <pre className="text-sm overflow-x-auto">{`
-Token Calculation:
-- Sum all hot_messages across ALL lanes
-- Each message: ~length / 4 tokens
-- When total > 90,000 → rotation triggered
+            <h4 className="text-white font-semibold mt-3">Modes (localStorage flags):</h4>
+            <Code>{`caos_developer_mode   — shows resizable code terminal panel
+caos_game_mode        — shows embedded game viewer
+caos_multi_agent_mode — shows blackboard panel (placeholder)
+caos_guest_user       — guest session data`}</Code>
+          </Section>
 
-What Happens:
-1. Compress all lane contexts into seed (2-3K chars)
-2. Seed injected as system message in NEXT request
-3. Lanes continue normally (no data loss)
-4. Thread stays lean and fast
-                `}</pre>
-              </div>
+          {/* 7. BACKEND FUNCTIONS */}
+          <Section title="7. Backend Functions" color="green">
+            <Code>{`hybridMessage          ← MAIN FUNCTION. All chat goes through here.
+simpleMessage          — lightweight fallback (no memory)
+textToSpeech           — TTS using OpenAI audio
+transcribeAudio        — Whisper transcription
+generateThreadSummary  — summarize a thread
+systemHealth           — admin health check
+diagnosticSnapshot     — session state snapshot
+diagnosticRecall       — memory recall diagnostic
+inspectPipeline        — pipeline inspection
+inspectRouting         — routing trace
+quickInspect           — fast inspection
+postPatchAudit         — post-deploy audit
+testAnchors            — anchor system test
+extractUserPreference  — preference extraction
+pinMemory              — pin a memory entry
+grokProvider           — Grok/xAI API integration (built, not primary)
+checkGrokModels        — list Grok models`}</Code>
+          </Section>
 
-              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">Seed Generation</h3>
-                <pre className="text-sm overflow-x-auto">{`
-When rotation triggered:
-1. Gather all lane summaries + hot messages
-2. Send to OpenAI: "Compress into 2-3K chars max"
-3. Result: Ultra-compact seed with key facts
-4. Example seed:
-   "CAOS v3 Seed: UI lane focused on chat styling, 
-   token system discussion about context rotation, 
-   backend work on error handling. User prefers 
-   casual tone, works on immigration app. Recent: 
-   Fixed message persistence bug."
-   
-5. Seed stored with session
-6. Injected into next OpenAI call as system message
+          {/* 8. TRUTH DISCIPLINE */}
+          <Section title="8. Aria Truth Discipline (Active Rules)" color="red">
+            <p>These rules are injected into Aria's system prompt on every request:</p>
+            <Code>{`1. PRIOR-MENTION CLAIMS: Never say "you mentioned" / "you previously said" / "as we discussed"
+   unless the fact is in STRUCTURED MEMORY or verbatim in session history.
 
-WHEN seed is injected:
-- Only when user sends new message AFTER rotation
-- Not automatically - requires new user input
-- Seed becomes part of system prompt
-- Replaces need to send full history
-                `}</pre>
-              </div>
+2. NEW INFORMATION RULE: If user introduces a fact in the current message,
+   respond with "Got it —" and treat it as new.
 
-              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
-                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Why This Prevents Bloat</h3>
-                <ul className="text-sm space-y-2 list-disc list-inside">
-                  <li>Each lane stays lean (5 hot messages max)</li>
-                  <li>Summaries compress every 10 messages</li>
-                  <li>Seeds compress entire conversation history</li>
-                  <li>No exponential growth like traditional chat</li>
-                  <li>Fast responses maintained indefinitely</li>
-                  <li>Full history still searchable via recall_memory tool</li>
-                </ul>
-              </div>
+3. PREFERENCE CLAIMS: Never assert "you like X" or "you prefer X" unless in
+   structured_memory or stated this session. Use "It sounds like..." for inferences.
 
-              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
-                <h3 className="text-lg font-semibold text-green-300 mb-3">Token Meter Display</h3>
-                <pre className="text-sm overflow-x-auto">{`
-// What you see in UI (NOW UPDATED)
-Token Meter: 30,520 / 90K
+4. NO FABRICATION: If a fact isn't stored, say "I don't have that stored."
 
-What it means:
-- 30,520: Actual tokens in working context (all lanes hot)
-- 90K: Rotation trigger point
-- Shows proximity to rotation threshold
-- Color changes: green → blue → yellow → red
+5. SOURCE LABELING: When recalling facts, label the source:
+   "(from memory)" | "(from this conversation)" | "(inferred)"`}</Code>
+          </Section>
 
-When meter approaches 90K:
-- System generates compressed seed automatically
-- Next message injects seed + continues normally
-- Meter resets to current working context size
-- No data loss - full history in Record entity
-                `}</pre>
-              </div>
-            </div>
-          </section>
+          {/* 9. WHAT IS NOT YET ACTIVE */}
+          <Section title="9. Built But Not Yet Active" color="yellow">
+            <Code>{`Lane-based context isolation    — entities exist, not wired into hybridMessage
+Plane B (Record entity)         — schema built, not the primary message store
+Anchor hash-chain               — entity schema built, not active
+ThreadSnapshot / rotation       — built, not triggered (no 90K limit in current pipeline)
+LexicalRule normalization       — entity built, not applied in hybridMessage
+Drift detection (DriftEvent)    — entity built, detection not active
+SessionManifest capability gate — built, not enforced
+Multi-agent blackboard          — UI placeholder only, no backend
+CAOS-A1 Python backend          — full FastAPI+SQLite blueprint documented in /Implementation
+                                   but not deployed (no external Python server running)`}</Code>
+          </Section>
 
-          {/* PERSISTENT MEMORY SYSTEM */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">5. Persistent Memory System</h2>
-            
-            <div className="space-y-6 text-gray-200">
-              <div className="bg-indigo-950/50 p-4 rounded-lg border border-indigo-500/30">
-                <h3 className="text-lg font-semibold text-indigo-300 mb-3">UserProfile Entity</h3>
-                <pre className="text-sm overflow-x-auto">{`
-{
-  user_email: "user@example.com",
-  presentation_preferences: {
-    formatting_style: "dashes for lists, clean formatting",
-    tone: "casual, direct, witty",
-    response_length: "concise",
-    code_preferences: "commented examples"
-  },
-  visual_context: {
-    workspace: "Standing desk with 3 monitors",
-    appearance: "Developer in casual attire",
-    projects: ["CAOS", "Immigration app"],
-    environment: "Home office setup"
-  },
-  interaction_patterns: {
-    prefers_examples: true,
-    prefers_visuals: true,
-    common_tasks: ["debugging", "architecture design"]
-  },
-  learned_facts: [
-    {
-      fact: "Works on immigration-related projects",
-      category: "work",
-      learned_date: "2026-02-15"
-    },
-    {
-      fact: "Prefers direct communication",
-      category: "style",
-      learned_date: "2026-02-18"
-    }
-  ],
-  interests: ["AI systems", "memory architecture"],
-  goals: ["Build shippable CAOS", "Integrate Python server"]
-}
+          {/* 10. KNOWN ISSUES / NEXT WORK */}
+          <Section title="10. Known Issues & Candidate Next Work" color="blue">
+            <Code>{`KNOWN:
+- Memory save strips "that" from "remember that my dog..." → saves "my dog's name is Biscuit"
+  (acceptable — content is accurate)
+- Legacy memory_anchors (auto-extracted) are still injected as INFERRED context
+  → could accumulate noise over time → Phase B will replace this
+- hybridMessage is 620 lines — consider splitting into sub-modules
 
-This profile is loaded EVERY request and injected into system prompt.
-Result: CAOS remembers you across ALL threads forever.
-                `}</pre>
-              </div>
+CANDIDATE NEXT:
+- Phase B: Typed schema normalization for structured_memory entries
+  (person/place/preference/date classification)
+- Phase C: Entity graph (link related facts)
+- Wire hybridMessage to read UserProfile.tone.style and apply to Aria's personality
+- Expose structured_memory in ProfilePanel MemoryPanel (partially done)
+- Add memory delete/edit capability to MemoryPanel
+- Activate LexicalRule normalization (chaos → CAOS)
+- Thread auto-summary on conversation close`}</Code>
+          </Section>
 
-              <div className="bg-cyan-950/50 p-4 rounded-lg border border-cyan-500/30">
-                <h3 className="text-lg font-semibold text-cyan-300 mb-3">How Profile Updates Work</h3>
-                <pre className="text-sm overflow-x-auto">{`
-1. AI recognizes important facts during conversation
-2. AI calls update_user_profile tool with new data
-3. Backend merges with existing profile (no overwrites)
-4. Profile persists forever across all sessions
-5. Next request automatically includes updated profile
+          {/* 11. ARIA ACCESS NOTE */}
+          <Section title="11. How Aria Reads This Blueprint" color="cyan">
+            <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
+            <p className="mt-2">To ask Aria about the system state, use recall-trigger phrases like: <em>"what do you know about CAOS architecture"</em>, <em>"what have we built"</em>, or <em>"what's the current state of the memory system"</em>.</p>
+            <Code>{`Aria knows:
+- The active pipeline (hybridMessage stages)
+- Phase A memory is locked, Phase B/C reserved
+- Heuristics Engine v1 is locked
+- Truth discipline rules
+- What is built vs not yet active
+- The Python backend blueprint exists but is not deployed`}</Code>
+          </Section>
 
-Example:
-User: "I work at X company now"
-AI: *calls update_user_profile*
-     {learned_facts: [{fact: "Works at X company"}]}
-Next thread: AI already knows without being told
-                `}</pre>
-              </div>
-
-              <div className="bg-teal-950/50 p-4 rounded-lg border border-teal-500/30">
-                <h3 className="text-lg font-semibold text-teal-300 mb-3">Record vs Lane vs Profile</h3>
-                <pre className="text-sm overflow-x-auto">{`
-Record: Every message ever sent (searchable via recall_memory)
-  - Full conversation history
-  - Timestamped with token counts
-  - Queryable across all sessions
-
-Lane: Topic-specific working memory (ui, backend, tokens, etc.)
-  - Hot: Last 5 messages per lane
-  - Warm: Compressed summaries
-  - Auto-switches based on topic
-
-Profile: Permanent facts about user (YOU)
-  - Name, work, preferences, style
-  - Learned over time
-  - Never expires
-  - Loaded every request
-
-Result: Three-tier memory hierarchy
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* AI API INTEGRATION */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">6. AI API Integration (Current: OpenAI)</h2>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-white">OpenAI gpt-4o (Native Tools)</h3>
-                <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-// OpenAI API with native tool calling
-const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer OPENAI_API_KEY',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory,
-      { role: 'user', content: userMessage }
-    ],
-    tools: [
-      {
-        type: 'function',
-        function: {
-          name: 'search_internet',
-          description: 'Search the web for real-time information',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query' }
-            },
-            required: ['query']
-          }
-        }
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'analyze_image',
-          description: 'Analyze image content',
-          parameters: {
-            type: 'object',
-            properties: {
-              image_url: { type: 'string' },
-              question: { type: 'string' }
-            },
-            required: ['image_url']
-          }
-        }
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'recall_memory',
-          description: 'Search conversation history',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string' },
-              limit: { type: 'number' }
-            },
-            required: ['query']
-          }
-        }
-      }
-    ],
-    tool_choice: 'auto'
-  })
-});
-
-// Handle tool calls (OpenAI executes them natively)
-if (response.choices[0].message.tool_calls) {
-  for (const toolCall of response.choices[0].message.tool_calls) {
-    const result = await executeToolFunction(
-      toolCall.function.name, 
-      JSON.parse(toolCall.function.arguments)
-    );
-    // Send result back to OpenAI for final response
-  }
-}
-
-// Key tools available:
-// - search_internet: InvokeLLM with web context
-// - recall_memory: Search full Record history
-// - read_app_file: Read CAOS source code
-// - update_user_profile: Store permanent facts
-// - list_app_structure: See pages/components
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* ERROR HANDLING */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">7. Error Handling & Recovery</h2>
-            
-            <div className="space-y-6 text-gray-200">
-              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30">
-                <h3 className="text-lg font-semibold text-red-300 mb-3">Failed Message Persistence</h3>
-                <pre className="text-sm overflow-x-auto">{`
-Frontend sends message → Backend timeout/error
-  ↓
-Message stored locally (caos_last_message_backup)
-  ↓
-Error logged to ErrorLog entity:
-{
-  user_email: "user@example.com",
-  conversation_id: "conv_123",
-  error_type: "timeout" | "network_error" | "server_error",
-  error_message: "Request timeout after 120s",
-  lost_message_content: "Original message text",
-  lost_message_files: ["file_url1", "file_url2"],
-  request_payload: { full payload for debugging },
-  retry_count: 0,
-  resolved: false
-}
-  ↓
-Failed message displayed with RED styling + error icon
-User can see what was lost, retry manually
-Backup cleared ONLY on successful send
-                `}</pre>
-              </div>
-
-              <div className="bg-orange-950/50 p-4 rounded-lg border border-orange-500/30">
-                <h3 className="text-lg font-semibold text-orange-300 mb-3">Detailed Console Logging</h3>
-                <pre className="text-sm overflow-x-auto">{`
-Before hybridMessage invoke:
-  console.log('=== SEND MESSAGE DEBUG ===')
-  console.log('Conversation ID:', conversationId)
-  console.log('Message text:', messageText)
-  console.log('File URLs:', fileUrls)
-  console.log('Session ID:', session_id)
-
-Error detection:
-  if (error.name === 'AbortError') → "timeout"
-  else if (error.message.includes('fetch')) → "network_error"
-  else if (response.status >= 500) → "server_error"
-  else → "unknown"
-
-All errors logged to ErrorLog for admin review
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* TOOL DEFINITIONS */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">8. Tool Definitions & Execution</h2>
-            
-            <div className="space-y-6">
-              <div className="bg-orange-950/50 p-4 rounded-lg border border-orange-500/30">
-                <h3 className="text-lg font-semibold text-orange-300 mb-3">Tool: search_internet</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-// Function signature
-async function search_internet({ query }) {
-  const result = await base44.integrations.Core.InvokeLLM({
-    prompt: query,
-    add_context_from_internet: true
-  });
-  return { results: result };
-}
-
-// Example call from AI:
-{
-  "name": "search_internet",
-  "arguments": "{\\"query\\": \\"current weather in New York\\"}"
-}
-
-// Returns to AI:
-{
-  "results": "Current weather in New York is 45°F, partly cloudy..."
-}
-                `}</pre>
-              </div>
-
-              <div className="bg-pink-950/50 p-4 rounded-lg border border-pink-500/30">
-                <h3 className="text-lg font-semibold text-pink-300 mb-3">Tool: analyze_image</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-// Function signature
-async function analyze_image({ image_url, question }) {
-  const result = await base44.integrations.Core.InvokeLLM({
-    prompt: question || "Describe this image in detail",
-    file_urls: [image_url]
-  });
-  return { analysis: result };
-}
-
-// Example call from AI:
-{
-  "name": "analyze_image",
-  "arguments": "{\\"image_url\\": \\"https://...\\"}"
-}
-                `}</pre>
-              </div>
-
-              <div className="bg-cyan-950/50 p-4 rounded-lg border border-cyan-500/30">
-                <h3 className="text-lg font-semibold text-cyan-300 mb-3">Tool: recall_memory</h3>
-                <pre className="text-sm overflow-x-auto text-gray-200">{`
-// Function signature
-async function recall_memory({ query, limit = 10 }) {
-  const records = await base44.entities.Record.filter(
-    { session_id, status: "active" },
-    '-created_date',
-    limit
-  );
-  
-  // Simple keyword search
-  const matches = records.filter(r => 
-    r.message.toLowerCase().includes(query.toLowerCase())
-  );
-  
-  return {
-    found: matches.length,
-    messages: matches.map(m => ({
-      role: m.role,
-      content: m.message,
-      timestamp: m.ts_snapshot_iso
-    }))
-  };
-}
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* DATA STRUCTURES */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">5. Data Structures</h2>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-3 text-white">Record Entity (Message Storage)</h3>
-                <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-{
-  "record_id": "sess_123_1_1234567890",
-  "session_id": "sess_123",
-  "seq": 1,
-  "role": "user" | "assistant",
-  "message": "The actual message text",
-  "ts_snapshot_iso": "2026-02-17T12:00:00Z",
-  "ts_snapshot_ms": 1234567890,
-  "status": "active" | "superseded",
-  "token_count": 50,
-  "tier": "session" | "lane" | "profile" | "global"
-}
-                `}</pre>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold mb-3 text-white">SessionContext Entity</h3>
-                <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-{
-  "session_id": "sess_123",
-  "lane_id": "user@email.com",
-  "wcw_budget": 8000,
-  "wcw_used": 1500,
-  "last_seq": 42,
-  "context_paths": [],
-  "kernel_context_valid": true,
-  "bootloader_context_valid": true
-}
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* SYSTEM PROMPT */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">6. System Prompt Design</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
-                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Current Issue: Too Robotic</h3>
-                <pre className="text-sm text-gray-200">{`
-❌ "I am CAOS with the following capabilities..."
-❌ Lists features every time
-❌ Formal language
-❌ Doesn't flow naturally
-                `}</pre>
-              </div>
-
-              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
-                <h3 className="text-lg font-semibold text-green-300 mb-3">Proposed: Natural Conversation</h3>
-                <pre className="text-sm text-gray-200 whitespace-pre-wrap">{`
-You're CAOS - a helpful AI assistant. You can:
-- Search the web when needed (don't announce it, just do it)
-- Look at images users share
-- Remember past conversations
-- Help with files and code
-
-Talk naturally. No need to introduce yourself or list capabilities unless asked.
-If you need to use a tool, just use it - the user will see what you're doing.
-
-Be casual, helpful, and conversational like talking to a friend.
-                `}</pre>
-              </div>
-            </div>
-          </section>
-
-          {/* REQUIRED INFORMATION */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-red-300">7. Information Needed from AI Provider</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-red-950/50 p-4 rounded-lg border border-red-500/30">
-                <h3 className="text-xl font-semibold text-red-300 mb-4">Required:</h3>
-                <ul className="space-y-3 text-gray-200">
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">1.</span>
-                    <div>
-                      <strong>API Endpoint URL</strong>
-                      <p className="text-sm text-gray-400">Example: https://api.x.ai/v1/chat/completions</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">2.</span>
-                    <div>
-                      <strong>Authentication Method</strong>
-                      <p className="text-sm text-gray-400">Bearer token? API key header? Format?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">3.</span>
-                    <div>
-                      <strong>Model Name/ID</strong>
-                      <p className="text-sm text-gray-400">Example: grok-beta, grok-2, etc.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">4.</span>
-                    <div>
-                      <strong>Tool/Function Calling Format</strong>
-                      <p className="text-sm text-gray-400">OpenAI format? Custom format? Schema structure?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">5.</span>
-                    <div>
-                      <strong>Response Structure</strong>
-                      <p className="text-sm text-gray-400">How are messages, tool calls, and completions formatted?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">6.</span>
-                    <div>
-                      <strong>Native Capabilities</strong>
-                      <p className="text-sm text-gray-400">Does Grok have built-in web search? Vision? Or need tools for both?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">7.</span>
-                    <div>
-                      <strong>Rate Limits</strong>
-                      <p className="text-sm text-gray-400">Requests per minute/hour? Token limits?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">8.</span>
-                    <div>
-                      <strong>Streaming Support</strong>
-                      <p className="text-sm text-gray-400">Server-sent events? Websockets? Needed for real-time responses</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">9.</span>
-                    <div>
-                      <strong>Error Codes</strong>
-                      <p className="text-sm text-gray-400">How are errors returned? Status codes? Error format?</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-red-400 font-bold">10.</span>
-                    <div>
-                      <strong>Context Window Size</strong>
-                      <p className="text-sm text-gray-400">Max tokens for conversation history?</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* IMPLEMENTATION EXAMPLE */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">8. Implementation Example</h2>
-            
-            <div className="space-y-4">
-              <p className="text-gray-300">Once we have the information above, we'll create a new backend function:</p>
-              
-              <pre className="bg-slate-950/80 p-4 rounded-lg text-sm overflow-x-auto border border-slate-700">{`
-// functions/grokProvider.js
-
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
-const GROK_API_URL = 'PROVIDED_BY_XAI';
-const GROK_API_KEY = Deno.env.get('GROK_API_KEY');
-
-Deno.serve(async (req) => {
-  const base44 = createClientFromRequest(req);
-  const user = await base44.auth.me();
-  
-  const { messages, tools, session_id } = await req.json();
-  
-  // Call Grok API
-  const response = await fetch(GROK_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': \`Bearer \${GROK_API_KEY}\`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'grok-beta',
-      messages,
-      tools,
-      tool_choice: 'auto'
-    })
-  });
-  
-  const result = await response.json();
-  
-  // Handle tool calls if any
-  if (result.choices[0].message.tool_calls) {
-    const toolResults = [];
-    
-    for (const toolCall of result.choices[0].message.tool_calls) {
-      const toolResult = await executeTool(
-        toolCall.function.name,
-        JSON.parse(toolCall.function.arguments),
-        base44,
-        session_id
-      );
-      toolResults.push(toolResult);
-    }
-    
-    // Call Grok again with tool results
-    const finalResponse = await fetch(GROK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': \`Bearer \${GROK_API_KEY}\`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'grok-beta',
-        messages: [
-          ...messages,
-          result.choices[0].message,
-          ...toolResults.map(tr => ({
-            role: 'tool',
-            tool_call_id: tr.id,
-            content: JSON.stringify(tr.result)
-          }))
-        ]
-      })
-    });
-    
-    return Response.json(await finalResponse.json());
-  }
-  
-  return Response.json(result);
-});
-
-async function executeTool(name, args, base44, session_id) {
-  switch (name) {
-    case 'search_internet':
-      return await searchInternet(args.query, base44);
-    case 'analyze_image':
-      return await analyzeImage(args.image_url, args.question, base44);
-    case 'recall_memory':
-      return await recallMemory(args.query, session_id, base44);
-    default:
-      throw new Error(\`Unknown tool: \${name}\`);
-  }
-}
-              `}</pre>
-            </div>
-          </section>
-
-          {/* TESTING PLAN */}
-          <section className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">9. Testing & Validation Plan</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-blue-950/50 p-4 rounded-lg border border-blue-500/30">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">Phase 1: Basic Connection</h3>
-                <ul className="space-y-2 text-gray-200 text-sm">
-                  <li>✓ Can we connect to the API?</li>
-                  <li>✓ Does authentication work?</li>
-                  <li>✓ Can we send a simple message and get a response?</li>
-                </ul>
-              </div>
-
-              <div className="bg-purple-950/50 p-4 rounded-lg border border-purple-500/30">
-                <h3 className="text-lg font-semibold text-purple-300 mb-3">Phase 2: Tool Integration</h3>
-                <ul className="space-y-2 text-gray-200 text-sm">
-                  <li>✓ Does Grok recognize tool definitions?</li>
-                  <li>✓ Can it decide when to use tools?</li>
-                  <li>✓ Do tool results flow back correctly?</li>
-                </ul>
-              </div>
-
-              <div className="bg-green-950/50 p-4 rounded-lg border border-green-500/30">
-                <h3 className="text-lg font-semibold text-green-300 mb-3">Phase 3: Personality</h3>
-                <ul className="space-y-2 text-gray-200 text-sm">
-                  <li>✓ Is the conversation natural?</li>
-                  <li>✓ Does it maintain context?</li>
-                  <li>✓ No repetitive capability lists?</li>
-                </ul>
-              </div>
-
-              <div className="bg-yellow-950/50 p-4 rounded-lg border border-yellow-500/30">
-                <h3 className="text-lg font-semibold text-yellow-300 mb-3">Phase 4: Production Ready</h3>
-                <ul className="space-y-2 text-gray-200 text-sm">
-                  <li>✓ Error handling works</li>
-                  <li>✓ Rate limiting handled</li>
-                  <li>✓ Performance acceptable</li>
-                  <li>✓ Memory management stable</li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* SUMMARY */}
-          <section className="bg-gradient-to-br from-blue-950/50 to-purple-950/50 border border-blue-500/30 rounded-xl p-8">
-            <h2 className="text-3xl font-bold mb-6 text-blue-300">Summary</h2>
-            
-            <div className="space-y-4 text-gray-200">
-              <p className="text-lg">
-                <strong className="text-white">Current State:</strong> Working system using InvokeLLM, but personality is robotic and repetitive.
-              </p>
-              
-              <p className="text-lg">
-                <strong className="text-white">Goal:</strong> Switch to Grok API for more natural conversation with proper tool calling.
-              </p>
-              
-              <p className="text-lg">
-                <strong className="text-white">What We Need:</strong> The 10 pieces of information in Section 7 from xAI/Grok documentation.
-              </p>
-              
-              <p className="text-lg">
-                <strong className="text-white">Timeline:</strong>
-              </p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Get API details: 1 hour</li>
-                <li>Implement Grok provider: 2-3 hours</li>
-                <li>Test and refine: 2-4 hours</li>
-                <li>Total: ~1 day for complete transition</li>
-              </ul>
-            </div>
-          </section>
         </div>
       </ScrollArea>
     </div>
