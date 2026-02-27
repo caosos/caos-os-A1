@@ -240,7 +240,9 @@ Deno.serve(async (req) => {
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
         // ─── PHASE 1: EXPLICIT MEMORY SAVE ────────────────────────────────────────
-        const memorySaveContent = detectMemorySave(input);
+        let memorySaveContent = detectMemorySave(input);
+        // __USE_FULL_INPUT__ means the trigger fired but no content followed the phrase — save the whole message
+        if (memorySaveContent === '__USE_FULL_INPUT__') memorySaveContent = input.trim();
         if (memorySaveContent) {
             const saved = await saveStructuredMemory(base44, userProfile, memorySaveContent, user.email);
 
