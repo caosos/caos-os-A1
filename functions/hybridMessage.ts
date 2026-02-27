@@ -221,32 +221,41 @@ Deno.serve(async (req) => {
         if (memorySaveContent) {
             const saved = await saveStructuredMemory(base44, userProfile, memorySaveContent, user.email);
 
-            // Save user message to session
+            let confirmReply;
+            let memory_saved = false;
+            let memory_id = null;
+
+            if (!saved) {
+                // Content failed validation (empty/garbage)
+                confirmReply = `I couldn't save that — it doesn't contain enough information to store.`;
+            } else if (saved.source === 'explicit' && !saved.timestamp) {
+                confirmReply = `I couldn't save that — it doesn't contain enough information to store.`;
+            } else {
+                // Check if it was a dedup (entry already existed before this call)
+                const isDedup = saved.timestamp < new Date(Date.now() - 2000).toISOString();
+                if (isDedup) {
+                    confirmReply = `Already in memory: "${memorySaveContent}"`;
+                } else {
+                    confirmReply = `Memory saved. I'll remember: "${memorySaveContent}"`;
+                    memory_saved = true;
+                    memory_id = saved.id;
+                }
+            }
+
             if (session_id) {
-                await base44.entities.Message.create({
-                    conversation_id: session_id,
-                    role: 'user',
-                    content: input,
-                    timestamp: new Date().toISOString()
-                });
-                const confirmReply = `Memory saved. I'll remember: "${memorySaveContent}"`;
-                await base44.entities.Message.create({
-                    conversation_id: session_id,
-                    role: 'assistant',
-                    content: confirmReply,
-                    timestamp: new Date().toISOString()
-                });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: confirmReply, timestamp: new Date().toISOString() });
             }
 
             return Response.json({
-                reply: `Memory saved. I'll remember: "${memorySaveContent}"`,
+                reply: confirmReply,
                 mode: 'MEMORY_SAVE',
-                memory_saved: true,
-                memory_id: saved.id,
+                memory_saved,
+                memory_id,
                 request_id,
                 response_time_ms: Date.now() - startTime,
                 tool_calls: [],
-                execution_receipt: { request_id, session_id, memory_saved: true, latency_ms: Date.now() - startTime }
+                execution_receipt: { request_id, session_id, memory_saved, latency_ms: Date.now() - startTime }
             });
         }
 
