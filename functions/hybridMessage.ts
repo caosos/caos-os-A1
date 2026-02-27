@@ -171,18 +171,51 @@ Deno.serve(async (req) => {
 
         console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id });
 
-        // ============ LOAD USER PROFILE (long-term memory) ============
+        // ============ LOAD USER PROFILE ============
         let userProfile = null;
         try {
             const profiles = await base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1);
             userProfile = profiles?.[0] || null;
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
-        // ============ LOAD FULL SESSION HISTORY (rolling) ============
+        // ─── PHASE 1: EXPLICIT MEMORY SAVE ────────────────────────────────────────
+        const memorySaveContent = detectMemorySave(input);
+        if (memorySaveContent) {
+            const saved = await saveStructuredMemory(base44, userProfile, memorySaveContent, user.email);
+
+            // Save user message to session
+            if (session_id) {
+                await base44.entities.Message.create({
+                    conversation_id: session_id,
+                    role: 'user',
+                    content: input,
+                    timestamp: new Date().toISOString()
+                });
+                const confirmReply = `Memory saved. I'll remember: "${memorySaveContent}"`;
+                await base44.entities.Message.create({
+                    conversation_id: session_id,
+                    role: 'assistant',
+                    content: confirmReply,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            return Response.json({
+                reply: `Memory saved. I'll remember: "${memorySaveContent}"`,
+                mode: 'MEMORY_SAVE',
+                memory_saved: true,
+                memory_id: saved.id,
+                request_id,
+                response_time_ms: Date.now() - startTime,
+                tool_calls: [],
+                execution_receipt: { request_id, session_id, memory_saved: true, latency_ms: Date.now() - startTime }
+            });
+        }
+
+        // ============ LOAD FULL SESSION HISTORY ============
         let rawHistory = [];
         if (session_id) {
             try {
-                // Load up to MAX_HISTORY_MESSAGES, oldest first
                 const msgs = await base44.entities.Message.filter(
                     { conversation_id: session_id },
                     'timestamp',
@@ -193,26 +226,43 @@ Deno.serve(async (req) => {
             } catch (e) { console.warn('⚠️ [HISTORY_FAILED]', e.message); }
         }
 
-        // Smart compress if too long
         const conversationHistory = compressHistory(rawHistory);
+
+        // ─── PHASE 1: DETERMINISTIC MEMORY RECALL ─────────────────────────────────
+        const isRecallQuery = detectMemoryRecall(input);
+        const structuredMemory = userProfile?.structured_memory || [];
+        let matchedMemories = [];
+
+        if (isRecallQuery && structuredMemory.length > 0) {
+            matchedMemories = recallStructuredMemory(structuredMemory, input);
+            console.log('🔍 [MEMORY_RECALL]', { query: input.substring(0, 60), matched: matchedMemories.length });
+        }
 
         // ============ BUILD SYSTEM PROMPT ============
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         let systemPrompt = `You are Aria, a deeply personal AI assistant for ${userName}. You have full rolling memory of every conversation.
 
-YOUR MEMORY CAPABILITIES:
-- You remember the FIRST thing the user ever said to you in this session
-- You remember every detail they've shared across all time
-- When asked about past events, you retrieve from your memory anchors precisely
-- Never say "I don't have access to past conversations" — you DO
+IDENTITY:
+- You are Aria. Not CAOS. Never say "I am CAOS" — that is the platform name, not yours.
+- Always speak in first person. "I remember", "I know", "I've noticed".
+- Never say "I don't have access to past conversations" — you do.
 
 `;
 
-        // Inject long-term memory anchors
+        // Inject ONLY matched structured memories (deterministic — no full dump)
+        if (matchedMemories.length > 0) {
+            systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
+            for (const m of matchedMemories) {
+                systemPrompt += `- [${m.timestamp.split('T')[0]}] ${m.content}\n`;
+            }
+            systemPrompt += '\n';
+        }
+
+        // Inject legacy memory_anchors (auto-extracted, string array)
         const anchors = userProfile?.memory_anchors;
         if (anchors && anchors.length > 0) {
             const anchorText = Array.isArray(anchors) ? anchors.join('\n') : anchors;
-            systemPrompt += `LONG-TERM MEMORY ANCHORS (facts remembered across all sessions):\n${anchorText.substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
+            systemPrompt += `LONG-TERM MEMORY (auto-extracted facts):\n${anchorText.substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
         }
 
         if (userProfile?.tone?.style) {
@@ -222,7 +272,7 @@ YOUR MEMORY CAPABILITIES:
             systemPrompt += `Current project: ${userProfile.project.name}\n`;
         }
 
-        systemPrompt += `\nThis session has ${rawHistory.length} messages of history. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'} Always reference history when relevant.`;
+        systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
         // ============ CALL OPENAI ============
         const messages = [
@@ -256,13 +306,12 @@ YOUR MEMORY CAPABILITIES:
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
 
-        // ============ EXTRACT & UPDATE LONG-TERM MEMORY (async, non-blocking) ============
+        // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS (unchanged) ============
         (async () => {
             try {
-                // Only run memory extraction every ~5 messages to save cost
                 if (rawHistory.length % 5 === 0 || rawHistory.length === 0) {
-                    const recentExcerpt = [...rawHistory.slice(-6), 
-                        { role: 'user', content: input }, 
+                    const recentExcerpt = [...rawHistory.slice(-6),
+                        { role: 'user', content: input },
                         { role: 'assistant', content: reply }
                     ].map(m => `${m.role}: ${m.content}`).join('\n');
 
@@ -270,10 +319,7 @@ YOUR MEMORY CAPABILITIES:
                     const newFacts = await extractMemoryAnchors(openaiKey, recentExcerpt, existingAnchors);
 
                     if (newFacts.length > 0) {
-                        const updatedAnchors = Array.isArray(anchors) 
-                            ? [...anchors, ...newFacts] 
-                            : newFacts;
-
+                        const updatedAnchors = Array.isArray(anchors) ? [...anchors, ...newFacts] : newFacts;
                         if (userProfile) {
                             await base44.entities.UserProfile.update(userProfile.id, { memory_anchors: updatedAnchors });
                         } else {
@@ -298,7 +344,8 @@ YOUR MEMORY CAPABILITIES:
                 request_id,
                 session_id,
                 history_messages: rawHistory.length,
-                recall_executed: rawHistory.length > 0,
+                recall_executed: matchedMemories.length > 0,
+                matched_memories: matchedMemories.length,
                 latency_ms: responseTime
             }
         });
