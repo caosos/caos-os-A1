@@ -3,10 +3,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
 // Token budget constants
-const MAX_HISTORY_MESSAGES = 200;
-const HOT_TAIL = 80;
-const HOT_HEAD = 20;
-const MAX_ANCHOR_LENGTH = 6000;
+const MAX_HISTORY_MESSAGES = 100;
+const HOT_TAIL = 40;
+const HOT_HEAD = 15;
+const MAX_ANCHOR_LENGTH = 3000;
 
 // ─── PHASE A: ATOMIC MEMORY FOUNDATION ───────────────────────────────────
 // Explicit save triggers — user must use one of these phrases
