@@ -117,49 +117,76 @@ function isValidMemoryContent(content) {
 }
 
 /**
- * Save a structured memory entry to UserProfile.structured_memory.
- * Returns the saved entry.
+ * Phase A: Save a single atomic fact entry.
+ * Entry schema includes Phase B/C reserved fields (nullable) for future upgrade.
+ * Returns: { entry, status: 'saved'|'dedup'|'rejected' }
  */
-async function saveStructuredMemory(base44, userProfile, content, userEmail) {
+async function saveOneAtomicEntry(existing, content) {
     const trimmed = content.trim();
 
-    // VALIDATION: reject meaningless content
     if (!isValidMemoryContent(trimmed)) {
-        console.warn('⚠️ [MEMORY_REJECTED] Content failed validation:', trimmed);
-        return null;
+        console.warn('⚠️ [MEMORY_REJECTED]', trimmed);
+        return { entry: null, status: 'rejected' };
     }
 
-    const existing = userProfile?.structured_memory || [];
-
-    // DEDUP: reject if identical content already exists (case-insensitive)
     const duplicate = existing.find(e => e.content.toLowerCase() === trimmed.toLowerCase());
     if (duplicate) {
-        console.log('🔁 [MEMORY_DEDUP] Identical content already saved:', duplicate.id);
-        return duplicate; // return existing entry, do not re-save
+        console.log('🔁 [MEMORY_DEDUP]', duplicate.id);
+        return { entry: duplicate, status: 'dedup' };
     }
 
     const entry = {
         id: crypto.randomUUID(),
         content: trimmed,
+        created_at: new Date().toISOString(),
+        // Legacy compat
         timestamp: new Date().toISOString(),
         scope: 'profile',
         tags: extractTags(trimmed),
-        source: 'explicit'
+        source: 'user_trigger',
+        // Phase B reserved — typed schema normalization (not yet implemented)
+        normalized_fields: null,
+        // Phase C reserved — entity graph references (not yet implemented)
+        entity_refs: null
     };
 
-    const updated = [...existing, entry];
+    return { entry, status: 'saved' };
+}
 
-    if (userProfile) {
-        await base44.entities.UserProfile.update(userProfile.id, { structured_memory: updated });
-    } else {
-        await base44.entities.UserProfile.create({
-            user_email: userEmail,
-            structured_memory: [entry]
-        });
+/**
+ * Phase A: Save one or more atomic facts to UserProfile.structured_memory.
+ * Handles atomic splitting, dedup, validation, and DB persistence in one write.
+ * Returns: { saved: [...], deduped: [...], rejected: [...] }
+ */
+async function saveAtomicMemory(base44, userProfile, content, userEmail) {
+    const clauses = splitAtomicFacts(content);
+    const existing = userProfile?.structured_memory || [];
+    const newEntries = [];
+    const deduped = [];
+    const rejected = [];
+
+    for (const clause of clauses) {
+        const { entry, status } = await saveOneAtomicEntry(existing, clause);
+        if (status === 'saved') {
+            newEntries.push(entry);
+            existing.push(entry); // prevent within-batch duplication
+        } else if (status === 'dedup') {
+            deduped.push(entry);
+        } else {
+            rejected.push(clause);
+        }
     }
 
-    console.log('🧠 [MEMORY_SAVED]', { id: entry.id, tags: entry.tags });
-    return entry;
+    if (newEntries.length > 0) {
+        if (userProfile) {
+            await base44.entities.UserProfile.update(userProfile.id, { structured_memory: existing });
+        } else {
+            await base44.entities.UserProfile.create({ user_email: userEmail, structured_memory: newEntries });
+        }
+        console.log('🧠 [ATOMIC_MEMORY_SAVED]', { count: newEntries.length, ids: newEntries.map(e => e.id) });
+    }
+
+    return { saved: newEntries, deduped, rejected };
 }
 
 /**
