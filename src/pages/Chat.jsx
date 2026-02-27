@@ -112,15 +112,8 @@ export default function Chat() {
         if (!mounted) return;
         
         if (!isAuthenticated) {
-          // Not logged in - become guest ONLY if they chose guest mode
-          const guestUser = {
-            full_name: 'Guest User',
-            email: `guest_${Date.now()}@caos.local`,
-            isGuest: true
-          };
-          localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-          setUser(guestUser);
-          setDataLoaded(true);
+          // Not authenticated and not in guest mode - send to Welcome
+          navigate(createPageUrl('Welcome'), { replace: true });
           return;
         }
         
@@ -173,23 +166,8 @@ export default function Chat() {
         // Clear any stale guest data and retry authentication
         localStorage.removeItem('caos_guest_user');
 
-        // If we have a token but failed to load, it might be expired
-        const hasToken = !!localStorage.getItem('base44_access_token');
-        if (hasToken) {
-          // Token exists but failed - likely expired, redirect to login
-          localStorage.removeItem('base44_access_token');
-          navigate('/');
-        } else {
-          // No token - become guest
-          const guestUser = {
-            full_name: 'Guest User',
-            email: `guest_${Date.now()}@caos.local`,
-            isGuest: true
-          };
-          localStorage.setItem('caos_guest_user', JSON.stringify(guestUser));
-          setUser(guestUser);
-          setDataLoaded(true);
-        }
+        // Auth failed - send back to Welcome to re-authenticate
+        navigate(createPageUrl('Welcome'), { replace: true });
         }
     };
 
