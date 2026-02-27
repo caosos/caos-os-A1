@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
                     '-timestamp',
                     MAX_HISTORY_MESSAGES
                 );
-                rawHistory = msgs.map(m => ({ role: m.role, content: m.content }));
+                rawHistory = msgs.reverse().map(m => ({ role: m.role, content: m.content }));
                 console.log('✅ [HISTORY_LOADED]', { count: rawHistory.length });
             } catch (e) { console.warn('⚠️ [HISTORY_FAILED]', e.message); }
         }
