@@ -317,11 +317,21 @@ TRUTH DISCIPLINE — MANDATORY RULES:
             systemPrompt += '\n';
         }
 
-        // Inject legacy memory_anchors (auto-extracted, string array)
+        // Legacy memory_anchors: inject only if content does NOT overlap with structured memory
+        // and mark clearly as INFERRED (not explicit user statements)
         const anchors = userProfile?.memory_anchors;
         if (anchors && anchors.length > 0) {
-            const anchorText = Array.isArray(anchors) ? anchors.join('\n') : anchors;
-            systemPrompt += `LONG-TERM MEMORY (auto-extracted facts):\n${anchorText.substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
+            const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
+            const filteredAnchors = (Array.isArray(anchors) ? anchors : [anchors])
+                .filter(a => {
+                    const lower = a.toLowerCase();
+                    // Skip if this anchor is essentially covered by structured memory
+                    return !structuredContents.some(sc => lower.includes(sc.substring(0, 20)) || sc.includes(lower.substring(0, 20)));
+                });
+            if (filteredAnchors.length > 0) {
+                const anchorText = filteredAnchors.join('\n');
+                systemPrompt += `INFERRED CONTEXT (auto-extracted, treat as possible inference — DO NOT assert as definitive fact, use "It sounds like..." language):\n${anchorText.substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
+            }
         }
 
         if (userProfile?.tone?.style) {
