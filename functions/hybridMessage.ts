@@ -438,7 +438,7 @@ Deno.serve(async (req) => {
             try {
                 const msgs = await base44.entities.Message.filter(
                     { conversation_id: session_id },
-                    'timestamp',
+                    '-timestamp',
                     MAX_HISTORY_MESSAGES
                 );
                 rawHistory = msgs.map(m => ({ role: m.role, content: m.content }));
