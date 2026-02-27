@@ -55,8 +55,9 @@ function detectMemorySave(input) {
                     .replace(/[?.]$/, '')
                     .replace(/^[\s,?:]+/, '') // strip leading punctuation
                     .trim();
-                // If what remains is vague (pronoun/filler only) or empty, use the full input as content
-                const vagueOnly = /^(these\s+things?|things?|this|these|them|that|it|all\s+of\s+this|all\s+this)$/i.test(cleaned);
+                // If what remains is vague (pronoun/filler/connective only) or empty, use the full input as content
+                // Matches: "these things too", "this", "these things", "them too", etc.
+                const vagueOnly = /^((?:these|this|that|them|it|things?|all\s+of\s+this|all\s+this)(?:\s+(?:too|as\s+well|also|please|ok|okay))?\.?)$/i.test(cleaned);
                 if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
                 return cleaned;
             }
