@@ -46,17 +46,30 @@ function detectMemoryRecall(input) {
 
 /**
  * Extract simple keyword tags from a content string.
- * Normalizes: lowercase, strip punctuation, remove stopwords, stem plurals.
+ * Normalizes: lowercase, strip punctuation, remove stopwords.
+ * Does NOT stem proper nouns (capitalized words preserved as-is after lower).
  */
 function extractTags(content) {
     const stopwords = new Set(['a','an','the','is','it','to','of','and','or','in','on','at','for','with','that','this','was','are','do','you','what','how','why','when','who','did','have','has','had','my','me','i','we','he','she','they','be','been','am','not','no','if','so']);
-    return content
+    const words = content
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .split(/\s+/)
-        .filter(w => w.length > 2 && !stopwords.has(w))
-        .map(w => w.endsWith('s') && w.length >= 4 ? w.slice(0, -1) : w) // basic de-plural
+        .filter(w => w.length > 2 && !stopwords.has(w));
+    // Only de-plural common words (skip short words where stemming causes loss like "atlas" -> "atla")
+    return words
+        .map(w => w.endsWith('s') && w.length >= 6 ? w.slice(0, -1) : w)
         .slice(0, 8);
+}
+
+/**
+ * Check if content is meaningful enough to save.
+ * Rejects empty, pure-punctuation, or whitespace-only content.
+ */
+function isValidMemoryContent(content) {
+    if (!content || content.trim().length < 3) return false;
+    const stripped = content.replace(/[^a-z0-9\s]/gi, '').trim();
+    return stripped.length >= 2; // must have at least some alphanumeric chars
 }
 
 /**
