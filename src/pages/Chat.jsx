@@ -167,6 +167,22 @@ export default function Chat() {
   const isGuestMode = !!localStorage.getItem('caos_guest_user');
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
+  // Lazy-load messages when conversation is selected
+  useEffect(() => {
+    if (!currentConversationId || isGuestMode) return;
+    if (messages[currentConversationId]) return; // already loaded
+    let mounted = true;
+    base44.entities.Message.filter(
+      { conversation_id: currentConversationId },
+      'timestamp',
+      500
+    ).then(msgs => {
+      if (!mounted) return;
+      setMessages(prev => ({ ...prev, [currentConversationId]: msgs || [] }));
+    }).catch(console.error);
+    return () => { mounted = false; };
+  }, [currentConversationId, isGuestMode]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentMessages.length]);
