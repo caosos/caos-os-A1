@@ -522,6 +522,10 @@ TRUTH DISCIPLINE — MANDATORY RULES:
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
+        // ─── HEURISTICS LAYER: inject formatting directive ───────────────────────
+        const hDirective = buildHeuristicsDirective(hIntent, hDepth);
+        if (hDirective) systemPrompt += hDirective;
+
         // ============ CALL OPENAI ============
         const messages = [
             { role: 'system', content: systemPrompt },
