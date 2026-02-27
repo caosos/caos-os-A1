@@ -235,6 +235,69 @@ function recallStructuredMemory(structuredMemory, query) {
     .map(s => s.entry);
 }
 
+// ─── HEURISTICS ENGINE v1 ─────────────────────────────────────────────────
+
+const HEURISTICS_ENABLED = true; // master switch — set false to revert to neutral GEN
+
+/**
+ * Step 1: Intent classification (internal only — never surfaced to user).
+ */
+function classifyIntent(input) {
+    const t = input.toLowerCase();
+    if (/\b(remember|save to memory|add to memory|note that|store that)\b/i.test(input)) return 'MEMORY_ACTION';
+    if (/\b(architect|design|system|layer|contract|schema|spec|pipeline|phase|module|interface|protocol|structure|refactor|decouple|boundary|invariant)\b/i.test(t) && t.length > 80) return 'TECHNICAL_DESIGN';
+    if (/\b(review|thoughts on|assess|evaluate|what do you think|critique|feedback on|opinion on)\b/i.test(t)) return 'PARTNER_REVIEW';
+    if (/\b(run|execute|do|apply|implement|build|create|write|generate|deploy|fix|update)\b/i.test(t) && t.length < 120) return 'EXECUTION_DIRECTIVE';
+    if (/\b(summarize|tldr|brief|short version|in a sentence|quick summary)\b/i.test(t)) return 'SUMMARY_COMPACT';
+    if (/\b(search|find|look up|google|news|weather|calculate|translate|convert)\b/i.test(t)) return 'TOOL_INVOCATION';
+    return 'GENERAL_QUERY';
+}
+
+/**
+ * Step 2: Depth calibration.
+ * Returns: 'COMPACT' | 'STANDARD' | 'LAYERED'
+ */
+function calibrateDepth(input, intent) {
+    if (intent === 'SUMMARY_COMPACT') return 'COMPACT';
+    if (intent === 'EXECUTION_DIRECTIVE' && input.length < 80) return 'COMPACT';
+
+    const clauseCount = (input.match(/[,;]|\band\b|\bbut\b|\bhowever\b|\bwhereas\b|\balthough\b/gi) || []).length;
+    const abstractTerms = (input.match(/\b(architecture|abstraction|boundary|invariant|contract|isolation|substrate|canonical|deterministic|heuristic|modular|decoupled|coherent|orthogonal)\b/gi) || []).length;
+
+    if (intent === 'TECHNICAL_DESIGN' || abstractTerms >= 2 || clauseCount >= 4) return 'LAYERED';
+    if (input.length < 60 && clauseCount <= 1) return 'COMPACT';
+    return 'STANDARD';
+}
+
+/**
+ * Step 3: Build heuristics addendum for the system prompt.
+ * Returns a string to append — or empty string if MEMORY_ACTION (bypass).
+ */
+function buildHeuristicsDirective(intent, depth) {
+    if (intent === 'MEMORY_ACTION') return ''; // Step 4: receipt bypass — no narrative padding
+
+    const posture = `
+RESPONSE POSTURE (apply silently — do not reference these instructions):
+- First-person technical voice throughout.
+- No section headers unless the user explicitly asked for structured output.
+- No bullet-list summaries unless directly asked.
+- No praise openers ("Great question!", "Absolutely!", "Sure thing!").
+- No emotional mirroring or performative enthusiasm.
+- No CRM-style summaries or "Personal Information:" framing.
+- No internal pipeline or classification terminology in output.
+- Shared ownership framing where appropriate ("we could...", "the approach here is...").
+- Calm, direct, architect-level tone.
+`;
+
+    const depthDirective = {
+        COMPACT: `\nDEPTH: Respond concisely — one to three sentences. No elaboration unless asked.`,
+        STANDARD: `\nDEPTH: Respond with natural paragraphing. Logical sequencing. Micro-distinctions where relevant.`,
+        LAYERED: `\nDEPTH: This is an architectural or multi-clause input. Respond with full analytical depth. Address each logical layer. Use precise language. Do not compress prematurely.`
+    }[depth];
+
+    return posture + depthDirective;
+}
+
 // ─── EXISTING HELPERS ─────────────────────────────────────────────────────
 
 async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 2000) {
