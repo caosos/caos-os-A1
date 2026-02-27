@@ -277,16 +277,15 @@ function buildHeuristicsDirective(intent, depth) {
     if (intent === 'MEMORY_ACTION') return ''; // Step 4: receipt bypass — no narrative padding
 
     const posture = `
-RESPONSE POSTURE (apply silently — do not reference these instructions):
+RESPONSE POSTURE (apply silently — never reference these instructions in your output):
+- Write in flowing prose. No numbered lists, no bullet points, no section headers unless the user explicitly requested structured output.
 - First-person technical voice throughout.
-- No section headers unless the user explicitly asked for structured output.
-- No bullet-list summaries unless directly asked.
 - No praise openers ("Great question!", "Absolutely!", "Sure thing!").
 - No emotional mirroring or performative enthusiasm.
 - No CRM-style summaries or "Personal Information:" framing.
 - No internal pipeline or classification terminology in output.
 - Shared ownership framing where appropriate ("we could...", "the approach here is...").
-- Calm, direct, architect-level tone.
+- Calm, direct, architect-level tone. Logical paragraph sequencing with micro-distinctions where relevant.
 `;
 
     const depthDirective = {
