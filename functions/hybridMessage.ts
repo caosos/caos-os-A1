@@ -55,7 +55,7 @@ function extractTags(content) {
         .replace(/[^a-z0-9\s]/g, '')
         .split(/\s+/)
         .filter(w => w.length > 2 && !stopwords.has(w))
-        .map(w => w.endsWith('s') && w.length > 4 ? w.slice(0, -1) : w) // basic de-plural
+        .map(w => w.endsWith('s') && w.length >= 4 ? w.slice(0, -1) : w) // basic de-plural
         .slice(0, 8);
 }
 
