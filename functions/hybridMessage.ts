@@ -50,8 +50,12 @@ function detectMemorySave(input) {
             if (captured) {
                 const cleaned = captured
                     .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
+                    .replace(/[?]$/, '') // strip trailing question marks from saved content
                     .trim();
-                return cleaned.length >= 3 ? cleaned : '__USE_FULL_INPUT__';
+                // If what's left after stripping is too vague (e.g. "these things", "this"), fall through to full input
+                const vagueOnly = /^(these\s+things?|this|these|them|that)$/i.test(cleaned);
+                if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
+                return cleaned;
             }
             // Trigger matched but no inline content — signal to use full input
             return '__USE_FULL_INPUT__';
