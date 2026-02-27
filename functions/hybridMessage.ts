@@ -40,9 +40,22 @@ const MEMORY_RECALL_TRIGGERS = [
  * Returns extracted content string or null.
  */
 function detectMemorySave(input) {
+    const trimmed = input.trim();
     for (const pattern of MEMORY_SAVE_TRIGGERS) {
-        const match = input.trim().match(pattern);
-        if (match) return match[1]?.trim() || null;
+        const match = trimmed.match(pattern);
+        if (match) {
+            const captured = match[1]?.trim();
+            // If content was captured after the trigger phrase, use it
+            // Strip trailing filler like "okay?", "ok?", "alright?", "too"
+            if (captured) {
+                const cleaned = captured
+                    .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
+                    .trim();
+                return cleaned.length >= 3 ? cleaned : '__USE_FULL_INPUT__';
+            }
+            // Trigger matched but no inline content — signal to use full input
+            return '__USE_FULL_INPUT__';
+        }
     }
     return null;
 }
