@@ -50,10 +50,10 @@ function detectMemorySave(input) {
             if (captured) {
                 const cleaned = captured
                     .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
-                    .replace(/[?]$/, '') // strip trailing question marks from saved content
+                    .replace(/[?]$/, '')
                     .trim();
-                // If what's left after stripping is too vague (e.g. "these things", "this"), fall through to full input
-                const vagueOnly = /^(these\s+things?|this|these|them|that)$/i.test(cleaned);
+                // Vague pronoun-only content means the trigger fired but the actual facts are the whole input
+                const vagueOnly = /^(these\s+things?|things?|this|these|them|that|it)$/i.test(cleaned);
                 if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
                 return cleaned;
             }
