@@ -89,30 +89,27 @@ export default function Chat() {
     
     const loadUserData = async () => {
       try {
-        // Check if guest mode (ONLY if explicitly set)
-        const guestUser = localStorage.getItem('caos_guest_user');
-        if (guestUser) {
-          if (!mounted) return;
-          const currentUser = JSON.parse(guestUser);
-          setUser(currentUser);
-
-          // Load guest conversations from localStorage
-          const guestConvos = JSON.parse(localStorage.getItem('caos_guest_conversations') || '[]');
-          setConversations(guestConvos);
-
-          const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-          setMessages(guestMessages);
-
-          setDataLoaded(true);
-          return;
-        }
-
-        // For authenticated users - verify authentication
+        // ALWAYS check real auth status first — never trust localStorage alone
         const isAuthenticated = await base44.auth.isAuthenticated();
         if (!mounted) return;
-        
-        if (!isAuthenticated) {
-          // Not authenticated and not in guest mode - send to Welcome
+
+        if (isAuthenticated) {
+          // Authenticated user: clear any stale guest flag immediately
+          localStorage.removeItem('caos_guest_user');
+        } else {
+          // Not authenticated — check if user chose guest mode
+          const guestUser = localStorage.getItem('caos_guest_user');
+          if (guestUser) {
+            const currentUser = JSON.parse(guestUser);
+            setUser(currentUser);
+            const guestConvos = JSON.parse(localStorage.getItem('caos_guest_conversations') || '[]');
+            setConversations(guestConvos);
+            const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
+            setMessages(guestMessages);
+            setDataLoaded(true);
+            return;
+          }
+          // Not authenticated, not guest — send to Welcome
           navigate(createPageUrl('Welcome'), { replace: true });
           return;
         }
