@@ -598,6 +598,8 @@ TRUTH DISCIPLINE — MANDATORY RULES:
                 history_messages: rawHistory.length,
                 recall_executed: matchedMemories.length > 0,
                 matched_memories: matchedMemories.length,
+                heuristics_intent: hIntent,
+                heuristics_depth: hDepth,
                 latency_ms: responseTime
             }
         });
