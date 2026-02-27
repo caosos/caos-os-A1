@@ -8,25 +8,16 @@ const HOT_TAIL = 80;
 const HOT_HEAD = 20;
 const MAX_ANCHOR_LENGTH = 6000;
 
-// ─── PHASE 1: DETERMINISTIC MEMORY TRIGGERS ───────────────────────────────
-// Explicit save triggers — user must use these phrases
+// ─── PHASE A: ATOMIC MEMORY FOUNDATION ───────────────────────────────────
+// Explicit save triggers — user must use one of these phrases
 const MEMORY_SAVE_TRIGGERS = [
-    // "I want you to remember [content]"
-    // The key: capture everything AFTER any vague pronoun, then vague detection cleans up
     /^i want you to remember\b(.*)/i,
-    // "Please remember [content]"
     /^please remember\b(.*)/i,
-    // "Remember this/these/that [content]"
     /^remember\s+(?:this|these|that)\b[:\s]*(.*)/i,
-    // "Can you remember [content]"
     /^can you remember\b(.*)/i,
-    // "Save this to memory / save to memory"
     /^save(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
-    // "Add to memory / add this to memory"
     /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
-    // "Note this / note that"
     /^note\s+(?:this|that)[:\s]*(.*)/i,
-    // "Store this / store that"
     /^store\s+(?:this|that)[:\s]*(.*)/i,
 ];
 
@@ -36,38 +27,58 @@ const MEMORY_RECALL_TRIGGERS = [
     /\b(?:what do you know about me|what have I told you)\b/i,
 ];
 
+// Pronouns that require entity clarification before saving
+const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
+
+const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
+
 /**
- * Detect if input is a memory save command.
- * Returns extracted content string or null.
+ * Phase A: Detect memory save trigger and extract raw content string.
+ * Returns: content string | '__VAGUE__' | '__PRONOUN__' | null
  */
 function detectMemorySave(input) {
     const trimmed = input.trim();
     for (const pattern of MEMORY_SAVE_TRIGGERS) {
         const match = trimmed.match(pattern);
         if (match) {
-            const captured = match[1]?.trim();
-            // If content was captured after the trigger phrase, use it
-            // Strip trailing filler like "okay?", "ok?", "alright?", "too"
-            if (captured) {
-                // Strip trailing softeners/filler
-                const cleaned = captured
-                    .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
-                    .replace(/[?.]$/, '')
-                    .replace(/^[\s,?:]+/, '') // strip leading punctuation
-                    .trim();
-                // If what remains is vague (only pronouns/fillers with no real content), use full input
-                // Strategy: count "meaningful" words — words that are not pronouns/fillers/softeners
-                const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
-                const meaningfulWords = cleaned.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(w => w.length > 1 && !VAGUE_WORDS.has(w));
-                const vagueOnly = meaningfulWords.length === 0;
-                if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
-                return cleaned;
-            }
-            // Trigger matched but no inline content — signal to use full input
-            return '__USE_FULL_INPUT__';
+            const captured = (match[1] || '').trim();
+
+            // Strip trailing filler
+            const cleaned = captured
+                .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
+                .replace(/[?.]$/, '')
+                .replace(/^[\s,?:.]+/, '')
+                .trim();
+
+            if (!cleaned || cleaned.length < 3) return '__VAGUE__';
+
+            // Check if content is pure vague pronouns/fillers with no substance
+            const meaningfulWords = cleaned.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1 && !VAGUE_WORDS.has(w));
+            if (meaningfulWords.length === 0) return '__VAGUE__';
+
+            // Check for unresolved pronouns (no entity graph yet — must clarify)
+            if (PRONOUN_PATTERN.test(cleaned)) return '__PRONOUN__';
+
+            return cleaned;
         }
     }
     return null;
+}
+
+/**
+ * Phase A: Split a content string into atomic fact clauses.
+ * Splits on: ", and", " and ", "; ", " but also "
+ * Each clause is trimmed and validated independently.
+ */
+function splitAtomicFacts(content) {
+    // Split on conjunctions that typically separate independent facts
+    const clauses = content
+        .split(/\s*(?:,\s*and\s+|;\s*|,\s*(?=\w)|\s+and\s+(?=[a-z](?:my|i |the |a |an |\w+\s+(?:is|are|was|were|have|has|prefer|like|own|work)))/i)
+        .map(c => c.trim())
+        .filter(c => c.length >= 3);
+
+    // If no meaningful split occurred, return original as single-element array
+    return clauses.length > 1 ? clauses : [content];
 }
 
 /**
