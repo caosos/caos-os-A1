@@ -49,12 +49,14 @@ function detectMemorySave(input) {
             // If content was captured after the trigger phrase, use it
             // Strip trailing filler like "okay?", "ok?", "alright?", "too"
             if (captured) {
+                // Strip trailing softeners/filler
                 const cleaned = captured
                     .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
-                    .replace(/[?]$/, '')
+                    .replace(/[?.]$/, '')
+                    .replace(/^[\s,?:]+/, '') // strip leading punctuation
                     .trim();
-                // Vague pronoun-only content means the trigger fired but the actual facts are the whole input
-                const vagueOnly = /^(these\s+things?|things?|this|these|them|that|it)$/i.test(cleaned);
+                // If what remains is vague (pronoun/filler only) or empty, use the full input as content
+                const vagueOnly = /^(these\s+things?|things?|this|these|them|that|it|all\s+of\s+this|all\s+this)$/i.test(cleaned);
                 if (vagueOnly || cleaned.length < 3) return '__USE_FULL_INPUT__';
                 return cleaned;
             }
