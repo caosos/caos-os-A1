@@ -69,18 +69,33 @@ function detectMemorySave(input) {
 
 /**
  * Phase A: Split a content string into atomic fact clauses.
- * Splits on: ", and", " and ", "; ", " but also "
- * Each clause is trimmed and validated independently.
+ * Strategy: split on " and " when it connects two independent fact phrases.
+ * Conservative — only splits when both sides look like noun phrases (not compound adjectives).
  */
 function splitAtomicFacts(content) {
-    // Split on conjunctions that typically separate independent facts
-    const clauses = content
-        .split(/\s*(?:,\s*and\s+|;\s*|,\s*(?=\w)|\s+and\s+(?=[a-z](?:my|i |the |a |an |\w+\s+(?:is|are|was|were|have|has|prefer|like|own|work)))/i)
-        .map(c => c.trim())
-        .filter(c => c.length >= 3);
+    // Split on " and " boundaries — simple and reliable
+    // Each resulting clause must have subject-like content (min 4 chars, has alphanumeric)
+    const parts = content.split(/\s+and\s+/i).map(p => p.trim()).filter(p => p.length >= 4);
 
-    // If no meaningful split occurred, return original as single-element array
-    return clauses.length > 1 ? clauses : [content];
+    if (parts.length <= 1) return [content];
+
+    // Rebuild: if a part doesn't look like a standalone fact (no verb-like word), merge it back
+    const facts = [];
+    let buffer = '';
+    for (const part of parts) {
+        const candidate = buffer ? `${buffer} and ${part}` : part;
+        // A standalone fact should have at least one "predicate word" (is/was/are/have/prefer/like/own/prefer/named/called)
+        const looksLikeFact = /\b(is|was|are|were|have|has|prefer|like|own|named|called|born|died|work|live|drive|use|my|the)\b/i.test(part);
+        if (looksLikeFact || facts.length === 0) {
+            if (buffer) facts.push(buffer);
+            buffer = part;
+        } else {
+            buffer = candidate;
+        }
+    }
+    if (buffer) facts.push(buffer);
+
+    return facts.length > 1 ? facts : [content];
 }
 
 /**
