@@ -99,16 +99,23 @@ function recallStructuredMemory(structuredMemory, query) {
     if (queryTokens.length === 0) return structuredMemory.slice(-5); // fallback: last 5
 
     const scored = structuredMemory.map(entry => {
-        const entryTokens = new Set(entry.tags || extractTags(entry.content));
-        const hits = queryTokens.filter(t => entryTokens.has(t)).length;
-        return { entry, hits };
+    // Re-extract tags at query time so de-plural logic is consistent
+    const entryTokens = new Set([
+        ...(entry.tags || []),
+        ...extractTags(entry.content)
+    ]);
+    const hits = queryTokens.filter(t => entryTokens.has(t)).length;
+    return { entry, hits };
     });
 
-    return scored
-        .filter(s => s.hits > 0)
-        .sort((a, b) => b.hits - a.hits)
-        .slice(0, 10)
-        .map(s => s.entry);
+    // If no token hits, fall back to most recent 5 entries for recall queries
+    const matched = scored.filter(s => s.hits > 0);
+    if (matched.length === 0) return structuredMemory.slice(-5);
+
+    return matched
+    .sort((a, b) => b.hits - a.hits)
+    .slice(0, 10)
+    .map(s => s.entry);
 }
 
 // ─── EXISTING HELPERS ─────────────────────────────────────────────────────
