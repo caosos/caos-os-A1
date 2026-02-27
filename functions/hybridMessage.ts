@@ -11,12 +11,22 @@ const MAX_ANCHOR_LENGTH = 6000;
 // ─── PHASE 1: DETERMINISTIC MEMORY TRIGGERS ───────────────────────────────
 // Explicit save triggers — user must use these phrases
 const MEMORY_SAVE_TRIGGERS = [
-    /^(?:i want you to remember(?: that)?)[:\s]+(.+)/i,
-    /^(?:please remember(?: that)?)[:\s]+(.+)/i,
-    /^(?:remember this)[:\s]+(.+)/i,
-    /^(?:save this to memory)[:\s]+(.+)/i,
-    /^(?:add to memory)[:\s]+(.+)/i,
-    /^(?:note this)[:\s]+(.+)/i,
+    // "I want you to remember these things / this / that..."
+    /^i want you to remember(?:\s+(?:these|this|that))?(.*)/i,
+    // "Please remember..."
+    /^please remember(?:\s+(?:these|this|that))?(.*)/i,
+    // "Remember this/these/that..."
+    /^remember\s+(?:this|these|that)[:\s]*(.*)/i,
+    // "Can you remember..."
+    /^can you remember(?:\s+(?:these|this|that))?(.*)/i,
+    // "Save this/these to memory"
+    /^save\s+(?:this|these)(?:\s+to\s+memory)?[:\s]*(.*)/i,
+    // "Add to memory / add this to memory"
+    /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
+    // "Note this / note that"
+    /^note\s+(?:this|that)[:\s]*(.*)/i,
+    // "Store this / store that"
+    /^store\s+(?:this|that)[:\s]*(.*)/i,
 ];
 
 // Explicit retrieval triggers
