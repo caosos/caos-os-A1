@@ -459,6 +459,11 @@ Deno.serve(async (req) => {
             console.log('🔍 [MEMORY_RECALL]', { query: input.substring(0, 60), matched: matchedMemories.length });
         }
 
+        // ─── HEURISTICS ENGINE: CLASSIFY & CALIBRATE (internal) ─────────────────
+        const hIntent = HEURISTICS_ENABLED ? classifyIntent(input) : 'GENERAL_QUERY';
+        const hDepth  = HEURISTICS_ENABLED ? calibrateDepth(input, hIntent) : 'STANDARD';
+        console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth });
+
         // ============ BUILD SYSTEM PROMPT ============
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
