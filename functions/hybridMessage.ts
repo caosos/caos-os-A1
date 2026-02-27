@@ -14,6 +14,8 @@ const MEMORY_SAVE_TRIGGERS = [
     /^i want you to remember\b(.*)/i,
     /^please remember\b(.*)/i,
     /^remember\s+(?:this|these|that)\b[:\s]*(.*)/i,
+    /^remember\s+that\b(.*)/i,
+    /^remember\b[:\s]+(.*)/i,
     /^can you remember\b(.*)/i,
     /^save(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
     /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
