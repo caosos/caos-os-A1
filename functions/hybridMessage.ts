@@ -251,8 +251,24 @@ Deno.serve(async (req) => {
 
         // ─── PHASE 1: EXPLICIT MEMORY SAVE ────────────────────────────────────────
         let memorySaveContent = detectMemorySave(input);
-        // __USE_FULL_INPUT__ means the trigger fired but no content followed the phrase — save the whole message
-        if (memorySaveContent === '__USE_FULL_INPUT__') memorySaveContent = input.trim();
+        // __USE_FULL_INPUT__ means the trigger fired but the content after it was vague (no real facts)
+        // In this case we cannot guess what to save — ask the user to be specific
+        if (memorySaveContent === '__USE_FULL_INPUT__') {
+            const clarifyReply = `Sure — what specifically would you like me to remember? Please share the facts and I'll save them.`;
+            if (session_id) {
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: clarifyReply, timestamp: new Date().toISOString() });
+            }
+            return Response.json({
+                reply: clarifyReply,
+                mode: 'MEMORY_CLARIFY',
+                memory_saved: false,
+                request_id,
+                response_time_ms: Date.now() - startTime,
+                tool_calls: [],
+                execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime }
+            });
+        }
         if (memorySaveContent) {
             const saved = await saveStructuredMemory(base44, userProfile, memorySaveContent, user.email);
 
