@@ -625,14 +625,42 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
 
         // ============ CALL OPENAI ============
         setStage(STAGES.OPENAI_CALL);
+        const inferenceStart = Date.now();
         const messages = [
             { role: 'system', content: systemPrompt },
             ...conversationHistory,
             { role: 'user', content: input }
         ];
 
-        const reply = await openAICall(openaiKey, messages, ACTIVE_MODEL, 2000);
+        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, messages, ACTIVE_MODEL, 2000);
+        const inferenceMs = Date.now() - inferenceStart;
         if (!reply) throw new Error('No response from OpenAI');
+
+        // ─── WCW INSTRUMENTATION ──────────────────────────────────────────────────
+        // Use OpenAI's actual usage data — not estimates
+        const wcwBudget = getContextWindow(ACTIVE_MODEL);
+        const promptTokens = openaiUsage?.prompt_tokens || 0;
+        const completionTokens = openaiUsage?.completion_tokens || 0;
+        const totalTokens = openaiUsage?.total_tokens || 0;
+        const wcwRemaining = wcwBudget - promptTokens;
+
+        const tokenBreakdown = {
+            system_prompt_tokens: null, // OpenAI doesn't break this down — total prompt is accurate
+            history_tokens: null,
+            user_input_tokens: null,
+            total_prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            total_tokens: totalTokens
+        };
+
+        console.log('📊 [WCW_INSTRUMENTATION]', {
+            request_id,
+            model: ACTIVE_MODEL,
+            wcw_budget: wcwBudget,
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            wcw_remaining: wcwRemaining
+        });
 
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length, historyMessages: conversationHistory.length });
 
