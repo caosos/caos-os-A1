@@ -51,15 +51,10 @@ export default function VoiceSettings({ isOpen, onClose }) {
     console.log('Testing voice:', voiceId);
 
     try {
-      const token = localStorage.getItem('base44_access_token');
-      console.log('Token exists:', !!token);
-      
-      const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+      const response = await fetch('/api/functions/textToSpeech', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           text: "Hey, I'm Aria. How does this voice sound?",
           voice: voiceId,
