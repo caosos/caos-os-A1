@@ -877,7 +877,11 @@ export default function Chat() {
             {currentConversationId && currentMessages.length > 0 && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-32 sm:w-40">
-                  <TokenMeter messages={currentMessages} />
+                  <TokenMeter 
+                    messages={currentMessages}
+                    wcwUsed={wcwState.used}
+                    wcwBudget={wcwState.budget}
+                  />
                 </div>
               </div>
             )}
