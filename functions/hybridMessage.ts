@@ -343,7 +343,7 @@ async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500)
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: maxTokens })
+        body: JSON.stringify({ model, messages, temperature: 0.7, max_completion_tokens: maxTokens })
     });
     if (!response.ok) {
         const err = await response.json();
