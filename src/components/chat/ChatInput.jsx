@@ -21,8 +21,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const [googleSpeechRate, setGoogleSpeechRate] = useState(() => parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0'));
-  const [googleVoice, setGoogleVoice] = useState(() => localStorage.getItem('caos_google_voice') || 'Google US English');
+  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('caos_speech_rate') || '1.0'));
+  const [preferredVoice, setPreferredVoice] = useState(() => localStorage.getItem('caos_voice_preference_message') || 'nova');
   const [speechProgress, setSpeechProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
