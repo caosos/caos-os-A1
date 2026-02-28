@@ -385,20 +385,52 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                       </div>
                     </Link>
                   </>
-                )}
-              </div>
-            </div>
-              ) : (
-                <FileManager 
+                  )}
+
+                  <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 p-3 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 transition-colors text-red-400 font-medium text-sm mt-6"
+                  >
+                  <AlertTriangle className="w-4 h-4" />
+                  Delete Account
+                  </button>
+                  </div>
+                  </div>
+                  ) : (
+                  <FileManager 
                   user={user} 
                   viewType={activeView === 'desktop' ? 'desktop' : activeView}
-                />
-              )}
-            </div>
-          </motion.div>
-        </>
-      )}
-      </AnimatePresence>
-    </>
-  );
-}
+                  />
+                  )}
+                  </div>
+                  </motion.div>
+                  </>
+                  )}
+                  </AnimatePresence>
+
+                  <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                  <AlertDialogContent>
+                  <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-600">Delete Account</AlertDialogTitle>
+                  <AlertDialogDescription>
+                  This action cannot be undone. Your account, all conversations, files, and memories will be permanently deleted. Are you absolutely sure?
+                  </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 mb-4">
+                  This will immediately remove all your data from our systems.
+                  </div>
+                  <div className="flex gap-3 justify-end">
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
+                  </AlertDialogAction>
+                  </div>
+                  </AlertDialogContent>
+                  </AlertDialog>
+                  </>
+                  );
+                  }
