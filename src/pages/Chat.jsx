@@ -909,8 +909,8 @@ export default function Chat() {
 
         </div>
 
-      <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
-        {(isDeveloperMode || isGameMode) ? (
+      <div className={`relative flex-1 z-20 overflow-hidden ${(isDeveloperMode || isGameMode) && !isMobile ? 'flex' : 'flex flex-col'}`} style={{ minHeight: 0 }}>
+        {(isDeveloperMode || isGameMode) && !isMobile ? (
           <ResizablePanelGroup direction="horizontal" className="flex-1">
             {/* Chat Section */}
             <ResizablePanel defaultSize={50} minSize={30} className="relative flex flex-col" style={{ minHeight: 0 }}>
