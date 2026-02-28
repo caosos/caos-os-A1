@@ -485,7 +485,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setGenerationProgress(100);
       setIsGenerating(false);
 
-      // response.data may be ArrayBuffer, Blob, or already a typed array
+      // response.data may be ArrayBuffer, Blob, or typed array
       let audioData = response.data;
       let audioBlob;
       if (audioData instanceof Blob) {
@@ -493,8 +493,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       } else if (audioData instanceof ArrayBuffer || ArrayBuffer.isView(audioData)) {
         audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
       } else {
-        // Axios may return the binary as a string — convert via fetch workaround
-        throw new Error('Unexpected audio response format');
+        throw new Error(`Unexpected TTS response format: ${typeof audioData}`);
       }
       const audioUrl = URL.createObjectURL(audioBlob);
       audioCache.set(cacheKey, audioUrl);
@@ -503,8 +502,38 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       clearInterval(genInterval);
       setIsGenerating(false);
       setGenerationProgress(0);
-      toast.error('TTS failed — check OpenAI key or try again');
-      console.error('[TTS_ERROR]', err);
+
+      // Log TTS failure to ErrorLog (non-blocking, modular — never affects playback path)
+      try {
+        await base44.entities.ErrorLog.create({
+          user_email: 'client',
+          error_type: 'unknown',
+          error_message: `TTS_FAILURE: ${err.message}`,
+          stage: 'TTS_INVOKE',
+          error_code: 'TTS_CALL_FAILED',
+          model_used: voice,
+          stack_trace: err.stack || '',
+          request_payload: { voice, speed, text_length: cleanText.length },
+        });
+      } catch (_) { /* never block on log failure */ }
+
+      // Graceful fallback: browser speech synthesis
+      toast.warning('OpenAI TTS unavailable — falling back to browser voice');
+      console.error('[TTS_ERROR]', err.message);
+      try {
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = speed;
+        const voices = window.speechSynthesis.getVoices();
+        const enVoice = voices.find(v => v.lang.startsWith('en'));
+        if (enVoice) utterance.voice = enVoice;
+        utterance.onend = () => { setIsSpeaking(false); setSpeechProgress(0); };
+        utterance.onerror = () => { setIsSpeaking(false); setSpeechProgress(0); };
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+      } catch (fbErr) {
+        setIsSpeaking(false);
+        toast.error('Read aloud unavailable');
+      }
     }
   };
 
