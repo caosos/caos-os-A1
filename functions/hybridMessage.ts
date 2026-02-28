@@ -377,7 +377,7 @@ ${conversationExcerpt}
 Output ONLY new facts, one per line, format: "[DATE if known]: [fact]"
 If nothing new: output exactly: NONE`;
 
-    const result = await openAICall(openaiKey, [{ role: 'user', content: prompt }], 'gpt-4o-mini', 500);
+    const result = await openAICall(openaiKey, [{ role: 'user', content: prompt }], ACTIVE_MODEL, 500);
     return result.trim() === 'NONE' ? [] : result.split('\n').filter(l => l.trim().length > 0);
 }
 
