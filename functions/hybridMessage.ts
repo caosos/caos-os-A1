@@ -786,7 +786,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
         // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS ============
         (async () => {
             try {
-                if (rawHistory.length % 5 === 0 || rawHistory.length === 0) {
+                if (rawHistory.length > 0 && rawHistory.length % 5 === 0) {
                     const recentExcerpt = [...rawHistory.slice(-6),
                         { role: 'user', content: input },
                         { role: 'assistant', content: reply }
