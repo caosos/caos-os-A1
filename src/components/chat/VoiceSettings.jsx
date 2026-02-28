@@ -186,12 +186,10 @@ export default function VoiceSettings({ isOpen, onClose }) {
           <Button 
             onClick={async () => {
               try {
-                const response = await fetch('https://caos-chat-9c5683d8.base44.app/api/functions/textToSpeech', {
+                const response = await fetch('/api/functions/textToSpeech', {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('base44_access_token')}`
-                  },
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
                   body: JSON.stringify({
                     text: "This is a test of the selected voice and speed settings.",
                     voice: selectedVoice,
