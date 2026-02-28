@@ -1,4 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { setStage, getStage, STAGES } from './core/observability/stageTracker.js';
+import { buildDeterministicErrorEnvelope, derivePublicMessage } from './core/observability/errorEnvelope.js';
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
