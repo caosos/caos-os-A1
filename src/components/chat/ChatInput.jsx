@@ -31,27 +31,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
+  // Stop audio on unmount/tab close
   useEffect(() => {
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      setAvailableVoices(voices);
-      
-      // Load saved voice preference for INPUT BAR
-      const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
-      if (savedVoiceURI) {
-        const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-        if (voice) setSelectedVoice(voice);
-      } else {
-        // Default to a good English voice if available
-        const goodVoice = voices.find(v => 
-          v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural'))
-        ) || voices.find(v => v.lang.startsWith('en'));
-        if (goodVoice) setSelectedVoice(goodVoice);
-      }
+    const handleUnload = () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
     };
-
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    };
   }, []);
 
   useEffect(() => {
