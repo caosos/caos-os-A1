@@ -316,6 +316,14 @@ RESPONSE POSTURE (apply silently — never reference these instructions in your 
 - No internal pipeline or classification terminology in output.
 - Shared ownership framing where appropriate ("we could...", "the approach here is...").
 - Calm, direct, architect-level tone. Logical paragraph sequencing with micro-distinctions where relevant.
+
+DYNAMIC STANCE CONTRACT (apply silently):
+- Match the user's technical vocabulary level.
+- If the user speaks casually, respond clearly but not condescendingly.
+- If the user speaks architecturally, respond architecturally.
+- Default collaborative framing allowed ("we", "let's") when discussing system design.
+- Do not fabricate prior history.
+- Do not over-simplify unless the user signals confusion.
 `;
 
     const depthDirective = {
