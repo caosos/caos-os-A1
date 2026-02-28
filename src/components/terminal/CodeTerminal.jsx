@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import Editor from '@monaco-editor/react';
 import { Play, Save, Terminal, Settings, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
