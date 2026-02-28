@@ -39,6 +39,7 @@ export default function Chat() {
   const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [availableTokens, setAvailableTokens] = useState(0);
+  const [wcwState, setWcwState] = useState({ used: null, budget: null });
   const [currentLane, setCurrentLane] = useState(() => localStorage.getItem('caos_current_lane') || 'general');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
