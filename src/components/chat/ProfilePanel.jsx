@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake, Gamepad2, Lock, Unlock, Folder, FileText, Image as ImageIcon, HardDrive } from 'lucide-react';
+import { X, Mail, Calendar, Shield, Brain, Terminal, Activity, Cake, Gamepad2, Lock, Unlock, Folder, FileText, Image as ImageIcon, HardDrive, AlertTriangle } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
