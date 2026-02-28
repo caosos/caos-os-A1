@@ -400,6 +400,13 @@ Deno.serve(async (req) => {
 
         body = await req.json();
         const { input, session_id, file_urls = [] } = body;
+
+        // Guard: SESSION_RESUME sentinel — acknowledge silently, no AI call, no message saved
+        if (input === '__SESSION_RESUME__') {
+            console.log('🔄 [SESSION_RESUME_NOOP]', { session_id });
+            return Response.json({ reply: null, mode: 'SESSION_RESUME_NOOP', request_id });
+        }
+
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
         console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id, model: ACTIVE_MODEL });
