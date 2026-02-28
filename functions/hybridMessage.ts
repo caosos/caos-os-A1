@@ -397,7 +397,7 @@ Deno.serve(async (req) => {
         const { input, session_id, file_urls = [] } = body;
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
-        console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id });
+        console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id, model: ACTIVE_MODEL });
 
         // ============ LOAD USER PROFILE ============
         let userProfile = null;
