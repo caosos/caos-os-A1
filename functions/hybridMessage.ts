@@ -801,6 +801,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             reply,
             mode: 'GEN',
             request_id,
+            correlation_id,
             response_time_ms: responseTime,
             tool_calls: [],
             wcw_budget: wcwBudget,
@@ -808,6 +809,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             wcw_remaining: wcwRemaining,
             execution_receipt: {
                 request_id,
+                correlation_id,
                 session_id,
                 history_messages: rawHistory.length,
                 recall_executed: matchedMemories.length > 0,
