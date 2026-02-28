@@ -88,6 +88,22 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
     if (!dob) return null;
     return moment().diff(moment(dob), 'years');
   };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      // Delete user account through auth
+      await base44.auth.deleteAccount();
+      // If successful, clear storage and redirect
+      localStorage.clear();
+      window.location.href = createPageUrl('Welcome');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Failed to delete account. Please try again or contact support.');
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
   return (
    <>
      {showMemoryPanel && <MemoryPanel onClose={() => setShowMemoryPanel(false)} />}
