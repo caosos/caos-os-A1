@@ -460,6 +460,106 @@ Backend check:
             </div>
           </Section>
 
+          {/* TSB — Troubleshooting Bulletins */}
+          <Section title="TSB — Troubleshooting Bulletins (Known Issues & Fixes)" color="red">
+            <p className="text-gray-300 text-xs mb-4">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. Each entry is a permanent record.</p>
+
+            <div className="space-y-4">
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-001 — Read Aloud Using Browser Voices Instead of OpenAI TTS</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: components/chat/ChatBubble.jsx — handleReadAloud()
+Symptom:   The speaker icon on AI responses was using browser SpeechSynthesis
+           (Google/system voices), not the OpenAI TTS backend.
+           The progress bar would animate but not reflect real audio playback.
+Root Cause: handleReadAloud() was calling window.speechSynthesis.speak()
+           directly instead of invoking the textToSpeech backend function.
+           The textToSpeech function (functions/textToSpeech.js) existed and
+           worked correctly — it just wasn't being called from ChatBubble.
+Fix:       Replaced browser speech synthesis with:
+             1. base44.functions.invoke('textToSpeech', { text, voice, speed })
+             2. Convert returned ArrayBuffer → Blob → ObjectURL → Audio()
+             3. Real progress bar tied to audio.currentTime / audio.duration
+             4. Caching: audioCache Map keyed on messageId + voice + speed
+             5. Global audio manager: only one audio plays at a time
+Voice pref: Uses localStorage key caos_voice_preference_message (default: nova)
+Speed pref: Uses localStorage key caos_speech_rate (default: 1.0)`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-002 — catch Block Had No Access to body or user Variables</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — catch block / ODEL v1 integration
+Symptom:   After adding buildDeterministicErrorEnvelope(), the catch block
+           referenced body?.session_id and user?.email — but both variables
+           were declared INSIDE the try{} block, making them inaccessible
+           in catch.
+Root Cause: JavaScript scoping — variables declared with const/let inside
+           try{} are not visible in catch{}.
+Fix:       Hoisted both declarations above the try{} block:
+             let body = null;
+             let user = null;
+           Then assigned them inside try{} without re-declaring.
+           catch{} can now safely read body?.session_id and user?.email.
+Impact:    ODEL error envelopes now carry full context (session_id,
+           user_email) even for errors that happen after parsing the body.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-003 — Generic 200 Error Masking (Silent Failures)</span>
+                  <Tag label="IDENTIFIED — PHASE 1 PENDING" color="yellow" />
+                </div>
+                <Code>{`Date:      Feb 2026 (ongoing)
+Component: Frontend chat send flow / hybridMessage
+Symptom:   Errors were being caught, swallowed, and returned as 200 OK
+           with a generic fallback message. Users saw no indication
+           something failed. Errors were invisible in logs.
+Root Cause: try/catch blocks returning Response.json({reply: "..."}, {status:200})
+           instead of non-200 status codes. Frontend interpreted all 200s
+           as success.
+Fix (partial): ODEL v1 now returns status 500 with structured envelope.
+               Frontend Chat.jsx was already checking for response.status !== 200.
+Remaining:  Phase 1 item 1.4 — remove remaining legacy masking paths.
+            Admin console (Phase 1 item 1.3) — render ErrorLog envelopes.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-004 — Memory Auto-Extraction Creating Noise (Legacy Anchors)</span>
+                  <Tag label="MONITORED" color="yellow" />
+                </div>
+                <Code>{`Date:      Feb 2026 (ongoing)
+Component: functions/hybridMessage — background extractMemoryAnchors()
+Symptom:   Auto-extracted legacy memory_anchors accumulate inferred facts
+           that may be imprecise or duplicate structured_memory entries.
+           Aria may reference stale or incorrect inferred context.
+Root Cause: Background anchor extraction runs every 5 turns, using LLM
+           to extract "facts" from conversation. These are probabilistic,
+           not user-confirmed, and are not deduplicated against
+           structured_memory.
+Current Mitigation:
+           - Anchors labeled as "INFERRED" in system prompt
+           - filtered against structured_memory before injection
+           - Aria told to use "It sounds like..." language for inferred facts
+Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
+             Memory write receipt. Idempotency protection.`}</Code>
+              </div>
+
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4">
+              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
+            </div>
+          </Section>
+
           {/* BUILD SEQUENCE */}
           <Section title="CAOS_BUILD_SEQUENCE_v1 — Controlled Build Phases" color="cyan">
             <p className="text-cyan-200 font-semibold">This is the locked execution sequence. Phases are executed in order. No phase is started until the previous one meets its exit condition.</p>

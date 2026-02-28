@@ -56,6 +56,7 @@ import News from './pages/News';
 import SystemBlueprint from './pages/SystemBlueprint';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
+import Logs from './pages/Logs';
 
 
 export const PAGES = {
@@ -68,6 +69,7 @@ export const PAGES = {
     "SystemBlueprint": SystemBlueprint,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
+    "Logs": Logs,
 }
 
 export const pagesConfig = {
