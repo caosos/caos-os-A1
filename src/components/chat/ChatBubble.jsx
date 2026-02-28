@@ -554,8 +554,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       if (globalAudioCleanup) globalAudioCleanup();
     }
 
-    const audio = new Audio(url);
+    // Revoke old blob URL if it was cached differently
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    const audio = new Audio();
+    audio.src = url;
     audio.preload = 'auto';
+    audio.volume = 1.0;
     audioRef.current = audio;
     globalAudioInstance = audio;
 
@@ -598,7 +606,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
 
-    // Must await play() — it returns a Promise in modern browsers
+    audio.load();
     audio.play().catch((err) => {
       console.error('[AUDIO_PLAY_REJECTED]', err.message);
       setIsSpeaking(false);
