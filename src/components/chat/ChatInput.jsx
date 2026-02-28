@@ -15,6 +15,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingGoogle, setIsPlayingGoogle] = useState(false);
+  const [isPausedGoogle, setIsPausedGoogle] = useState(false);
+  const [googleSpeechProgress, setGoogleSpeechProgress] = useState(0);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
 
   const [selectedAgents, setSelectedAgents] = useState(['all']);
@@ -22,10 +24,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef(null);
-  const audioRef = useRef(null);
   const voiceMenuRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const googleUtteranceRef = useRef(null);
+  const voiceButtonRef = useRef(null);
 
   // Stop audio on unmount/tab close
   useEffect(() => {
