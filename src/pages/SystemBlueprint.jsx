@@ -555,10 +555,77 @@ Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
 
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4">
-              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
+            <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-red-300 font-bold text-sm">TSB-005 — Token Meter Showing 0 / 2M (No Count)</span>
+                <Tag label="FIXED ✅" color="green" />
+              </div>
+              <Code>{`Date:      Feb 28, 2026
+            Component: components/chat/TokenMeter.jsx
+            Symptom:   Token meter bar was empty and showed "0 / 2.0M". Context window
+            appeared unused even in active conversations.
+            Root Cause: TokenMeter relied entirely on msg.token_count field. That field
+            is only populated if the backend explicitly returns a token count.
+            Most messages don't have it set, so the sum was always 0.
+            Additionally, the maxTokens was set to 2,000,000 (2M) which made
+            any realistic token count visually indistinguishable from zero.
+            Fix:       1. Added estimateTokens() fallback: text.length / 4 (chars → tokens).
+            Used when token_count is 0 or absent.
+            2. Reduced default maxTokens from 2,000,000 → 128,000
+            (gpt-4o context window — more accurate reference).
+            3. Compact display: shows "12.3K / 128K" instead of raw numbers.`}</Code>
             </div>
-          </Section>
+
+            <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-red-300 font-bold text-sm">TSB-006 — Logs Page Expanded Row Collapses on Screenshot Attempt</span>
+                <Tag label="FIXED ✅" color="green" />
+              </div>
+              <Code>{`Date:      Feb 28, 2026
+            Component: pages/Logs.jsx — ErrorRow component
+            Symptom:   Clicking to expand a log entry row then trying to take a
+            screenshot caused the row to collapse immediately, preventing
+            capture of the expanded detail view.
+            Root Cause: The row used a <button> element. Browsers dismiss focus from
+            buttons on click, and some screenshot tools trigger a blur/click
+            event on the window that caused the button to re-fire its
+            onClick, collapsing the just-expanded row.
+            Fix:       Replaced <button> wrapper with <div role="div"> with cursor-pointer.
+            Divs don't receive synthetic click events from screenshot tools,
+            so expanded rows stay open.
+            Also added select-text to the outer container so text is
+            copyable from expanded detail view.`}</Code>
+            </div>
+
+            <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-red-300 font-bold text-sm">TSB-007 — OpenAI TTS Silent Failure (No Error, No Playback)</span>
+                <Tag label="FIXED ✅" color="green" />
+              </div>
+              <Code>{`Date:      Feb 28, 2026
+            Component: components/chat/ChatBubble.jsx — handleReadAloud() / TTS invoke
+            Symptom:   Clicking the speaker icon would show the spinner indefinitely,
+            then silently stop with no audio and no error message.
+            Previous fix (TSB-001) wired TTS correctly but Axios returned
+            audio in an unexpected format, causing .match() crash.
+            After that fix, a NotSupportedError (no audio source found)
+            appeared — the Blob was malformed or empty.
+            Root Cause: base44.functions.invoke() returns Axios response. For binary
+            endpoints (audio/mpeg), Axios may not auto-detect ArrayBuffer.
+            The Blob was being created from an incompatible data type.
+            Fix:       1. Explicit type guards: instanceof Blob | ArrayBuffer | ArrayBufferView.
+            2. On any failure: logs to ErrorLog entity (non-blocking).
+            3. Graceful fallback to browser SpeechSynthesis with toast warning.
+            4. Error is never silent: either toast or fallback always fires.
+            5. TTS is now modular — failure cannot affect chat message flow.
+            ODEL:      TTS failures create an ErrorLog record with stage=TTS_INVOKE,
+            error_code=TTS_CALL_FAILED, visible in /Logs page.`}</Code>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4">
+            <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
+            </div>
+            </Section>
 
           {/* BUILD SEQUENCE */}
           <Section title="CAOS_BUILD_SEQUENCE_v1 — Controlled Build Phases" color="cyan">
