@@ -537,10 +537,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
         <button
            type="button"
+           onContextMenu={(e) => {
+             e.preventDefault();
+             setShowVoiceMenu(!showVoiceMenu);
+           }}
            onClick={toggleReadAloud}
            disabled={!lastAssistantMessage || isGenerating}
            className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read AI response (Google Voice)'}
+           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read AI response (Right-click for voice settings)'}
          >
            {isGenerating ? (
              <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin" />
@@ -548,6 +552,44 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
              <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-green-600' : 'text-gray-700'}`} />
            )}
          </button>
+
+         {showVoiceMenu && (
+           <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[180px] z-50" ref={voiceMenuRef}>
+             <div className="px-3 py-2 text-xs font-semibold text-gray-700">Voice</div>
+             {['nova', 'alloy', 'echo', 'fable', 'onyx', 'shimmer'].map((voice) => (
+               <button
+                 key={voice}
+                 type="button"
+                 onClick={() => {
+                   setPreferredVoice(voice);
+                   localStorage.setItem('caos_voice_preference_message', voice);
+                   setShowVoiceMenu(false);
+                   toast.success(`Voice changed to ${voice}`);
+                 }}
+                 className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
+                   preferredVoice === voice ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+                 }`}
+               >
+                 {voice.charAt(0).toUpperCase() + voice.slice(1)}
+               </button>
+             ))}
+             <div className="border-t border-gray-200 my-1 px-3 py-2">
+               <label className="text-xs text-gray-600 block mb-1">Speed: {speechRate.toFixed(1)}x</label>
+               <input
+                 type="range"
+                 min="0.5"
+                 max="2"
+                 step="0.25"
+                 value={speechRate}
+                 onChange={(e) => {
+                   setSpeechRate(parseFloat(e.target.value));
+                   localStorage.setItem('caos_speech_rate', e.target.value);
+                 }}
+                 className="w-full"
+               />
+             </div>
+           </div>
+         )}
 
         <textarea
           ref={textareaRef}
