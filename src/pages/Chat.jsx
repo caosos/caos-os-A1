@@ -845,11 +845,30 @@ export default function Chat() {
 
 
 
+  const isMobile = window.innerWidth < 768;
+
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col" style={{ height: '100vh', height: '100dvh' }}>
       <div className="fixed inset-0 z-0">
         <StarfieldBackground />
       </div>
+
+      {/* Pull-to-refresh handler for mobile */}
+      {isMobile && (
+        <div
+          onTouchStart={(e) => {
+            const startY = e.touches[0].clientY;
+            const handleTouchMove = (e) => {
+              const currentY = e.touches[0].clientY;
+              if (currentY > startY + 100 && chatContainerRef.current?.scrollTop === 0) {
+                setTimeout(() => window.location.reload(), 500);
+              }
+            };
+            window.addEventListener('touchmove', handleTouchMove);
+            return () => window.removeEventListener('touchmove', handleTouchMove);
+          }}
+        />
+      )}
 
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0" style={{ isolation: 'auto' }}>
           <div className="flex items-center justify-between gap-2 px-2 sm:px-4 py-1 sm:py-2">
