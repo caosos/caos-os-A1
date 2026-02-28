@@ -65,7 +65,7 @@ export default function Welcome() {
   };
 
   const handleGoogleSignIn = async () => {
-    base44.auth.redirectToLogin(createPageUrl('Chat'));
+    base44.auth.redirectToLogin();
   };
 
   const handleEmailSignIn = async (e) => {
