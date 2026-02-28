@@ -341,6 +341,22 @@ DYNAMIC STANCE CONTRACT (apply silently):
 
 const ACTIVE_MODEL = 'gpt-5.2';
 
+// Context window sizes per model (tokens)
+const MODEL_CONTEXT_WINDOW = {
+    'gpt-4o': 128000,
+    'gpt-4o-mini': 128000,
+    'gpt-4-turbo': 128000,
+    'gpt-4': 8192,
+    'gpt-3.5-turbo': 16385,
+    'gpt-5.2': 200000,
+    'gpt-5': 200000,
+};
+
+function getContextWindow(model) {
+    return MODEL_CONTEXT_WINDOW[model] || 128000;
+}
+
+// Returns { content, usage: { prompt_tokens, completion_tokens, total_tokens } }
 async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
@@ -352,7 +368,10 @@ async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500)
         throw new Error(`OpenAI error: ${err.error?.message || response.statusText}`);
     }
     const data = await response.json();
-    return data.choices[0]?.message?.content || '';
+    return {
+        content: data.choices[0]?.message?.content || '',
+        usage: data.usage || null
+    };
 }
 
 function compressHistory(messages) {
