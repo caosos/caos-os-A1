@@ -300,8 +300,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   const skipReadAloud = (seconds) => {
-    if (!audioRef.current || !audioRef.current.duration) return;
-    audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration, audioRef.current.currentTime + seconds));
+    // Skipping not supported with Web Speech API
+    // Would need workaround with server-side audio generation
   };
 
   const startRecording = async () => {
