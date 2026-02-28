@@ -410,6 +410,7 @@ Deno.serve(async (req) => {
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
         // ─── PHASE A: ATOMIC MEMORY SAVE ──────────────────────────────────────────
+        setStage(STAGES.MEMORY_WRITE);
         const memorySaveSignal = detectMemorySave(input);
 
         if (memorySaveSignal === '__VAGUE__') {
