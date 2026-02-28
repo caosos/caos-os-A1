@@ -474,26 +474,29 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }, 150);
 
     try {
-      const response = await base44.functions.invoke('textToSpeech', {
-        text: cleanText,
-        voice,
-        speed
+      // Use fetch directly to get proper binary response — Axios mangles ArrayBuffers
+      const session = await base44.auth.me();
+      const fetchResponse = await fetch(`/api/functions/textToSpeech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, voice, speed }),
+        credentials: 'include',
       });
 
       clearInterval(genInterval);
       setGenerationProgress(100);
       setIsGenerating(false);
 
-      // response.data may be ArrayBuffer, Blob, or typed array
-      let audioData = response.data;
-      let audioBlob;
-      if (audioData instanceof Blob) {
-        audioBlob = audioData;
-      } else if (audioData instanceof ArrayBuffer || ArrayBuffer.isView(audioData)) {
-        audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-      } else {
-        throw new Error(`Unexpected TTS response format: ${typeof audioData}`);
+      if (!fetchResponse.ok) {
+        const errText = await fetchResponse.text();
+        throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
       }
+
+      const audioArrayBuffer = await fetchResponse.arrayBuffer();
+      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
+        throw new Error('TTS returned empty audio');
+      }
+      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       audioCache.set(cacheKey, audioUrl);
       playAudioUrl(audioUrl);
