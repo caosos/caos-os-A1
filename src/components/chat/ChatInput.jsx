@@ -228,9 +228,23 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     const slicedText = text.slice(startCharIndex);
     if (!slicedText) return;
 
+    // Ensure voices are loaded — re-query synchronously at call time
+    const voices = window.speechSynthesis.getVoices();
+    const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
+    let voiceToUse = selectedVoice;
+    if (!voiceToUse && voices.length > 0) {
+      voiceToUse = (savedVoiceURI && voices.find(v => v.voiceURI === savedVoiceURI))
+        || voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha')))
+        || voices.find(v => v.lang.startsWith('en'))
+        || voices[0];
+      if (voiceToUse) setSelectedVoice(voiceToUse);
+    }
+
     const utterance = new SpeechSynthesisUtterance(slicedText);
     utterance.rate = speechRate;
-    if (selectedVoice) utterance.voice = selectedVoice;
+    if (voiceToUse) utterance.voice = voiceToUse;
+    utterance.volume = 1;
+    utterance.pitch = 1;
 
     utteranceTotalChars.current = text.length;
     utteranceStartTime.current = Date.now();
@@ -250,23 +264,21 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     };
 
     utterance.onerror = (e) => {
-      if (e.error === 'interrupted') return; // normal on seek/stop
+      if (e.error === 'interrupted') return;
+      console.error('[SpeechSynthesis error]', e.error);
       setIsSpeaking(false);
       setIsPaused(false);
       if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
     };
 
     utteranceRef.current = utterance;
-    // Store full text and current start for skip logic
     utteranceRef.current._fullText = text;
     utteranceRef.current._startCharIndex = startCharIndex;
     utteranceRef.current._charProgress = startCharIndex;
 
-    // Fallback progress via interval (for browsers that don't fire onboundary)
     if (progressInterval.current) clearInterval(progressInterval.current);
     progressInterval.current = setInterval(() => {
       const elapsed = (Date.now() - utteranceStartTime.current) / 1000;
-      // Rough: chars/sec ≈ rate * 15
       const estChars = startCharIndex + elapsed * speechRate * 15;
       setSpeechProgress(Math.min((estChars / text.length) * 100, 99));
       utteranceRef.current._charProgress = Math.min(estChars, text.length - 1);
