@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, RotateCcw, Check, Play, SkipBack, SkipForward } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
+import { toggleGoogleReadAloud } from './ChatInputReadAloud';
 
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
   const [message, setMessage] = useState(messageValue);
@@ -14,18 +16,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   }, [messageValue]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPlayingGoogle, setIsPlayingGoogle] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
 
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('caos_speech_rate') || '1.0'));
-  const [preferredVoice, setPreferredVoice] = useState(() => localStorage.getItem('caos_voice_preference_message') || 'nova');
-  const [speechProgress, setSpeechProgress] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef(null);
   const audioRef = useRef(null);
@@ -189,129 +185,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const getCleanText = (text) => text
-    .replace(/#{1,6}\s/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/^[-*+]\s/gm, '')
-    .replace(/^\d+\.\s/gm, '')
-    .replace(/>/g, '')
-    .replace(/\|/g, '')
-    .replace(/---+/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .substring(0, 4096);
-
-  const formatSpeechTime = () => {
-    if (!audioRef.current) return '';
-    const cur = audioRef.current.currentTime || 0;
-    const dur = audioRef.current.duration || 0;
-    const fmt = (s) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-    return dur > 0 ? `${fmt(cur)} / ${fmt(dur)}` : '';
-  };
-
-  const stopReadAloud = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    setIsSpeaking(false);
-    setIsPaused(false);
-    setSpeechProgress(0);
-    setAudioDuration(0);
-  };
-
-  const toggleReadAloud = async () => {
-    if (!lastAssistantMessage) return;
-
-    // Toggle pause/resume if already loaded
-    if (audioRef.current && audioRef.current.src) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
-        setIsPaused(false);
-        setIsSpeaking(true);
-      } else {
-        audioRef.current.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
-
-    const cleanText = getCleanText(lastAssistantMessage);
-
-    setIsGenerating(true);
-    setSpeechProgress(0);
-
-    try {
-      const appBase = window.location.origin;
-      const fetchResponse = await fetch(`${appBase}/api/functions/textToSpeech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, voice: preferredVoice, speed: speechRate }),
-        credentials: 'include',
-      });
-
-      if (!fetchResponse.ok) {
-        const errText = await fetchResponse.text();
-        throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
-      }
-
-      const contentType = fetchResponse.headers.get('content-type') || '';
-      if (!contentType.includes('audio')) {
-        const errJson = await fetchResponse.json();
-        throw new Error(errJson.error || 'TTS did not return audio');
-      }
-
-      const audioArrayBuffer = await fetchResponse.arrayBuffer();
-      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
-        throw new Error('TTS returned empty audio');
-      }
-
-      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const audio = new Audio();
-      audio.src = audioUrl;
-      audio.volume = 1.0;
-      audioRef.current = audio;
-
-      audio.addEventListener('loadedmetadata', () => setAudioDuration(audio.duration));
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setSpeechProgress((audio.currentTime / audio.duration) * 100);
-      });
-      audio.addEventListener('ended', () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        setAudioDuration(0);
-      });
-      audio.addEventListener('error', () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        console.error('[AUDIO_PLAYBACK_ERROR]');
-        toast.error('Audio playback failed');
-      });
-
-      setIsGenerating(false);
-      setIsSpeaking(true);
-      setIsPaused(false);
-      audio.play().catch((err) => {
-        console.error('[AUDIO_PLAY_REJECTED]', err.message);
-        setIsSpeaking(false);
-        toast.error(`Playback blocked: ${err.message}`);
-      });
-    } catch (err) {
-      setIsGenerating(false);
-      setIsSpeaking(false);
-      console.error('[TTS_ERROR]', err.message);
-      toast.error(`Read aloud failed: ${err.message}`);
-    }
-  };
-
-  const skipReadAloud = (seconds) => {
-    // Skipping not supported with Web Speech API
-    // Would need workaround with server-side audio generation
+  const handleGoogleVoiceToggle = () => {
+    toggleGoogleReadAloud(lastAssistantMessage, isPlayingGoogle, setIsPlayingGoogle);
   };
 
   const startRecording = async () => {
@@ -536,60 +411,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
         <button
-           type="button"
-           onContextMenu={(e) => {
-             e.preventDefault();
-             setShowVoiceMenu(!showVoiceMenu);
-           }}
-           onClick={toggleReadAloud}
-           disabled={!lastAssistantMessage || isGenerating}
-           className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read AI response (Right-click for voice settings)'}
-         >
-           {isGenerating ? (
-             <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin" />
-           ) : (
-             <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-green-600' : 'text-gray-700'}`} />
-           )}
-         </button>
-
-         {showVoiceMenu && (
-           <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[180px] z-50" ref={voiceMenuRef}>
-             <div className="px-3 py-2 text-xs font-semibold text-gray-700">Voice</div>
-             {['nova', 'alloy', 'echo', 'fable', 'onyx', 'shimmer'].map((voice) => (
-               <button
-                 key={voice}
-                 type="button"
-                 onClick={() => {
-                   setPreferredVoice(voice);
-                   localStorage.setItem('caos_voice_preference_message', voice);
-                   setShowVoiceMenu(false);
-                   toast.success(`Voice changed to ${voice}`);
-                 }}
-                 className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
-                   preferredVoice === voice ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                 }`}
-               >
-                 {voice.charAt(0).toUpperCase() + voice.slice(1)}
-               </button>
-             ))}
-             <div className="border-t border-gray-200 my-1 px-3 py-2">
-               <label className="text-xs text-gray-600 block mb-1">Speed: {speechRate.toFixed(1)}x</label>
-               <input
-                 type="range"
-                 min="0.5"
-                 max="2"
-                 step="0.25"
-                 value={speechRate}
-                 onChange={(e) => {
-                   setSpeechRate(parseFloat(e.target.value));
-                   localStorage.setItem('caos_speech_rate', e.target.value);
-                 }}
-                 className="w-full"
-               />
-             </div>
-           </div>
-         )}
+             type="button"
+             onClick={handleGoogleVoiceToggle}
+             disabled={!lastAssistantMessage}
+             className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isPlayingGoogle ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+             title={isPlayingGoogle ? 'Stop reading' : 'Read AI response with Google Voice'}
+           >
+             <Volume2 className={`w-4 h-4 ${isPlayingGoogle ? 'text-green-600' : 'text-gray-700'}`} />
+           </button>
 
         <textarea
           ref={textareaRef}
@@ -745,36 +574,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </button>
       </div>
-      {/* Inline speech player bar — shows below input when speaking */}
-      {isSpeaking && (
-        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md space-y-1.5">
-          {/* Progress bar */}
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all duration-200"
-              style={{ width: `${speechProgress}%` }}
-            />
-          </div>
-          {/* Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => skipReadAloud(-10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Back 10s">
-                <SkipBack className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-              <button type="button" onClick={toggleReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title={isPaused ? "Resume" : "Pause"}>
-                {isPaused ? <Play className="w-3.5 h-3.5 text-blue-600" /> : <Pause className="w-3.5 h-3.5 text-blue-600" />}
-              </button>
-              <button type="button" onClick={() => skipReadAloud(10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Forward 10s">
-                <SkipForward className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-              <button type="button" onClick={stopReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Stop">
-                <X className="w-3.5 h-3.5 text-red-500" />
-              </button>
-            </div>
-            <span className="text-[10px] text-gray-400 tabular-nums">{formatSpeechTime()}</span>
-          </div>
-        </div>
-      )}
+
     </form>
   );
 }
