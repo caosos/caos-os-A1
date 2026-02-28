@@ -1073,15 +1073,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'text-blue-400' : 'text-white/60 hover:text-white/90'}`} />
                   )}
                 </button>
-                {isSpeaking && (
-                  <button
-                    onClick={handleStopReading}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                    title="Stop"
-                  >
-                    <X className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
-                  </button>
-                )}
+
                 {!isUser && (
                   <>
                     <button
