@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 
-export function toggleGoogleReadAloud(lastAssistantMessage, isPlaying, setIsPlaying) {
-  if (!lastAssistantMessage) return;
+export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
+  if (!lastAIMessage || !lastAIMessage.trim()) return;
 
   if (window.speechSynthesis.speaking) {
     window.speechSynthesis.cancel();
@@ -10,7 +10,7 @@ export function toggleGoogleReadAloud(lastAssistantMessage, isPlaying, setIsPlay
   }
 
   try {
-    const cleanText = lastAssistantMessage
+    const cleanText = lastAIMessage
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
