@@ -608,6 +608,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length, historyMessages: conversationHistory.length });
 
         // ============ SAVE MESSAGES TO DB ============
+        setStage(STAGES.MESSAGE_SAVE);
         if (session_id) {
             try {
                 await base44.entities.Message.create({
