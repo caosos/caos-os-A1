@@ -545,12 +545,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
 
     const audio = new Audio(url);
+    audio.preload = 'auto';
     audioRef.current = audio;
     globalAudioInstance = audio;
+
+    audio.addEventListener('loadedmetadata', () => {
+      setAudioDuration(audio.duration);
+    });
 
     audio.addEventListener('timeupdate', () => {
       if (audio.duration) {
         setSpeechProgress((audio.currentTime / audio.duration) * 100);
+        setAudioDuration(audio.duration);
       }
     });
 
@@ -558,13 +564,16 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
+      setAudioDuration(0);
       globalAudioInstance = null;
     });
 
-    audio.addEventListener('error', () => {
+    audio.addEventListener('error', (e) => {
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
+      setAudioDuration(0);
+      console.error('[AUDIO_PLAYBACK_ERROR]', e);
       toast.error('Audio playback failed');
     });
 
@@ -572,11 +581,19 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
+      setAudioDuration(0);
     };
 
     setIsSpeaking(true);
+    setIsPausedBySpeech(false);
     setSpeechProgress(0);
-    audio.play();
+
+    // Must await play() — it returns a Promise in modern browsers
+    audio.play().catch((err) => {
+      console.error('[AUDIO_PLAY_REJECTED]', err.message);
+      setIsSpeaking(false);
+      toast.error(`Playback blocked: ${err.message}`);
+    });
   };
 
   const handleStopReading = () => {
