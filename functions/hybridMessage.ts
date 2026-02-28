@@ -1,6 +1,40 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { setStage, getStage, STAGES } from './core/observability/stageTracker.js';
-import { buildDeterministicErrorEnvelope, derivePublicMessage } from './core/observability/errorEnvelope.js';
+
+// --- TEMP STABILIZATION LAYER (INLINE) ---
+
+const STAGES = {
+  PROFILE_LOAD: 'PROFILE_LOAD',
+  MEMORY_WRITE: 'MEMORY_WRITE',
+  HISTORY_LOAD: 'HISTORY_LOAD',
+  HEURISTICS: 'HEURISTICS',
+  OPENAI_CALL: 'OPENAI_CALL',
+  MESSAGE_SAVE: 'MESSAGE_SAVE',
+  RESPONSE_BUILD: 'RESPONSE_BUILD'
+};
+
+let CURRENT_STAGE = null;
+
+function setStage(stage) {
+  CURRENT_STAGE = stage;
+}
+
+function getStage() {
+  return CURRENT_STAGE;
+}
+
+function buildDeterministicErrorEnvelope(error, ctx) {
+  return {
+    error_id: crypto.randomUUID(),
+    error_code: 'SERVER_ERROR',
+    stage: ctx.stage || null,
+    message: error.message || 'Unknown error',
+    created_at: new Date().toISOString(),
+  };
+}
+
+function derivePublicMessage() {
+  return "Something went wrong. Please try again.";
+}
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
