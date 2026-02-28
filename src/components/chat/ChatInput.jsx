@@ -187,10 +187,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  // Track utterance progress via boundary events + estimated duration
-  const utteranceStartTime = useRef(null);
-  const utteranceTotalChars = useRef(0);
-
   const getCleanText = (text) => text
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -204,121 +200,112 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     .replace(/\|/g, '')
     .replace(/---+/g, '')
     .replace(/\n{3,}/g, '\n\n')
-    .trim();
+    .trim()
+    .substring(0, 4096);
 
-  const speakText = (text, startCharIndex = 0) => {
-    window.speechSynthesis.cancel();
-    const slicedText = text.slice(startCharIndex);
-    if (!slicedText) return;
-
-    // Ensure voices are loaded — re-query synchronously at call time
-    const voices = window.speechSynthesis.getVoices();
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference_input');
-    let voiceToUse = selectedVoice;
-    if (!voiceToUse && voices.length > 0) {
-      voiceToUse = (savedVoiceURI && voices.find(v => v.voiceURI === savedVoiceURI))
-        || voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha')))
-        || voices.find(v => v.lang.startsWith('en'))
-        || voices[0];
-      if (voiceToUse) setSelectedVoice(voiceToUse);
-    }
-
-    const utterance = new SpeechSynthesisUtterance(slicedText);
-    utterance.rate = speechRate;
-    if (voiceToUse) utterance.voice = voiceToUse;
-    utterance.volume = 1;
-    utterance.pitch = 1;
-
-    utteranceTotalChars.current = text.length;
-    utteranceStartTime.current = Date.now();
-
-    utterance.onboundary = (e) => {
-      if (e.name === 'word') {
-        const charsDone = startCharIndex + e.charIndex;
-        setSpeechProgress((charsDone / text.length) * 100);
-      }
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-      setSpeechProgress(100);
-      if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
-    };
-
-    utterance.onerror = (e) => {
-      if (e.error === 'interrupted') return;
-      console.error('[SpeechSynthesis error]', e.error);
-      setIsSpeaking(false);
-      setIsPaused(false);
-      if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
-    };
-
-    utteranceRef.current = utterance;
-    utteranceRef.current._fullText = text;
-    utteranceRef.current._startCharIndex = startCharIndex;
-    utteranceRef.current._charProgress = startCharIndex;
-
-    if (progressInterval.current) clearInterval(progressInterval.current);
-    progressInterval.current = setInterval(() => {
-      const elapsed = (Date.now() - utteranceStartTime.current) / 1000;
-      const estChars = startCharIndex + elapsed * speechRate * 15;
-      setSpeechProgress(Math.min((estChars / text.length) * 100, 99));
-      utteranceRef.current._charProgress = Math.min(estChars, text.length - 1);
-    }, 200);
-
-    setIsSpeaking(true);
-    setIsPaused(false);
-    window.speechSynthesis.speak(utterance);
+  const formatSpeechTime = () => {
+    if (!audioRef.current) return '';
+    const cur = audioRef.current.currentTime || 0;
+    const dur = audioRef.current.duration || 0;
+    const fmt = (s) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+    return dur > 0 ? `${fmt(cur)} / ${fmt(dur)}` : '';
   };
 
-  const toggleReadAloud = () => {
+  const stopReadAloud = () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    setIsSpeaking(false);
+    setIsPaused(false);
+    setSpeechProgress(0);
+    setAudioDuration(0);
+  };
+
+  const toggleReadAloud = async () => {
     if (!lastAssistantMessage) return;
 
-    if (isSpeaking) {
-      if (window.speechSynthesis.paused || isPaused) {
-        window.speechSynthesis.resume();
+    // Toggle pause/resume if already loaded
+    if (audioRef.current && audioRef.current.src) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(() => {});
         setIsPaused(false);
-        utteranceStartTime.current = Date.now() - ((utteranceRef.current?._charProgress || 0) / (speechRate * 15)) * 1000;
+        setIsSpeaking(true);
       } else {
-        window.speechSynthesis.pause();
+        audioRef.current.pause();
         setIsPaused(true);
-        if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
       }
       return;
     }
 
     const cleanText = getCleanText(lastAssistantMessage);
-    speakText(cleanText, 0);
-  };
+    const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
+    const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-  const stopReadAloud = () => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-    setIsPaused(false);
+    setIsGenerating(true);
     setSpeechProgress(0);
-    if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
+
+    try {
+      const fetchResponse = await fetch(`${window.location.origin}/api/functions/textToSpeech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, voice, speed }),
+        credentials: 'include',
+      });
+
+      setIsGenerating(false);
+
+      if (!fetchResponse.ok) {
+        const errText = await fetchResponse.text();
+        throw new Error(`TTS ${fetchResponse.status}: ${errText}`);
+      }
+
+      const contentType = fetchResponse.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        const errJson = await fetchResponse.json();
+        throw new Error(errJson.error || 'TTS did not return audio');
+      }
+
+      const buf = await fetchResponse.arrayBuffer();
+      if (!buf || buf.byteLength === 0) throw new Error('TTS returned empty audio');
+
+      const blob = new Blob([buf], { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio();
+      audio.src = url;
+      audioRef.current = audio;
+
+      audio.addEventListener('loadedmetadata', () => setAudioDuration(audio.duration));
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration) setSpeechProgress((audio.currentTime / audio.duration) * 100);
+      });
+      audio.addEventListener('ended', () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        setSpeechProgress(0);
+        setAudioDuration(0);
+      });
+      audio.addEventListener('error', () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+        setSpeechProgress(0);
+        toast.error('Audio playback failed');
+      });
+
+      setIsSpeaking(true);
+      setIsPaused(false);
+      audio.play().catch((err) => {
+        setIsSpeaking(false);
+        toast.error(`Playback blocked: ${err.message}`);
+      });
+    } catch (err) {
+      setIsGenerating(false);
+      console.error('[TTS_INPUT_ERROR]', err.message);
+      toast.error(`Read aloud failed: ${err.message}`);
+    }
   };
 
   const skipReadAloud = (seconds) => {
-    if (!utteranceRef.current?._fullText) return;
-    const fullText = utteranceRef.current._fullText;
-    // chars/sec estimate
-    const charsPerSec = speechRate * 15;
-    const currentChar = Math.round(utteranceRef.current._charProgress || 0);
-    const newChar = Math.max(0, Math.min(fullText.length - 1, currentChar + seconds * charsPerSec));
-    speakText(fullText, Math.round(newChar));
-  };
-
-  const formatSpeechTime = () => {
-    if (!utteranceRef.current?._fullText) return '';
-    const fullText = utteranceRef.current._fullText;
-    const charsPerSec = speechRate * 15;
-    const currentChar = utteranceRef.current._charProgress || 0;
-    const totalSecs = Math.ceil(fullText.length / charsPerSec);
-    const currentSecs = Math.floor(currentChar / charsPerSec);
-    const fmt = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-    return `${fmt(currentSecs)} / ${fmt(totalSecs)}`;
+    if (!audioRef.current || !audioRef.current.duration) return;
+    audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.duration, audioRef.current.currentTime + seconds));
   };
 
   const startRecording = async () => {
