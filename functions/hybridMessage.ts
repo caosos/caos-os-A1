@@ -405,6 +405,7 @@ If nothing new: output exactly: NONE`;
 Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
+    const correlation_id = request_id; // I1: single join key across all receipts, errors, response metadata
 
     let body = null;
     let user = null;
