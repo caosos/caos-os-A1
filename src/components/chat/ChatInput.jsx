@@ -526,18 +526,18 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
         <button
-          type="button"
-          onClick={toggleReadAloud}
-          disabled={!lastAssistantMessage || isGenerating}
-          className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-          title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read aloud'}
-        >
-          {isGenerating ? (
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-          ) : (
-            <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-blue-600' : 'text-gray-700'}`} />
-          )}
-        </button>
+           type="button"
+           onClick={toggleReadAloud}
+           disabled={!message.trim() || isGenerating}
+           className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read my message (Google Voice)'}
+         >
+           {isGenerating ? (
+             <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin" />
+           ) : (
+             <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-green-600' : 'text-gray-700'}`} />
+           )}
+         </button>
 
         <textarea
           ref={textareaRef}
