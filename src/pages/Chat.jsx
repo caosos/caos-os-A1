@@ -574,6 +574,13 @@ export default function Chat() {
         throw new Error('No response data from server');
       }
 
+      // SESSION_RESUME_NOOP: backend acknowledged silently — nothing to display
+      if (data.mode === 'SESSION_RESUME_NOOP') {
+        clearTimeout(timeoutId);
+        setIsLoading(false);
+        return;
+      }
+
       // AUDIT LOG 5: Frontend receives response
       console.log('🔍 [AUDIT_5_FRONTEND_RECEIVES]', JSON.stringify({
         response_keys: Object.keys(data),
