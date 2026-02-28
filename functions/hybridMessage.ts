@@ -678,13 +678,40 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
         });
 
     } catch (error) {
-        console.error('🔥 [PIPELINE_ERROR]', { request_id, error: error.message });
-        return Response.json({
-            reply: "I encountered an error. Please try again.",
-            error: error.message,
+        const latency_ms = Date.now() - startTime;
+        const envelope = buildDeterministicErrorEnvelope(error, {
+            stage:           getStage(),
             request_id,
-            mode: 'ERROR',
-            response_time_ms: Date.now() - startTime
-        }, { status: 200 });
+            session_id:      body?.session_id || null,
+            user_email:      user?.email      || null,
+            model_used:      ACTIVE_MODEL,
+            latency_ms,
+            retry_attempted: false,
+        });
+
+        console.error('🔥 [PIPELINE_ERROR]', {
+            error_id:   envelope.error_id,
+            stage:      envelope.stage,
+            error_code: envelope.error_code,
+            message:    error.message,
+            latency_ms,
+        });
+
+        // Persist to ErrorLog — non-blocking
+        try {
+            await base44.asServiceRole.entities.ErrorLog.create(envelope);
+        } catch (persistErr) {
+            console.error('⚠️ [ODEL_PERSIST_FAILED]', persistErr.message);
+        }
+
+        return Response.json({
+            reply:             derivePublicMessage(envelope.error_code),
+            error_id:          envelope.error_id,
+            error_code:        envelope.error_code,
+            stage:             envelope.stage,
+            request_id,
+            mode:              'ERROR',
+            response_time_ms:  latency_ms,
+        }, { status: 500 });
     }
 });
