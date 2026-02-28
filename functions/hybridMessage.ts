@@ -253,20 +253,50 @@ function classifyIntent(input) {
     return 'GENERAL_QUERY';
 }
 
+// ─── DCS: DYNAMIC COGNITIVE SCALING v1 ──────────────────────────────────────
+// Presentation-layer only. No memory writes. No schema changes. Pure function.
+
 /**
- * Step 2: Depth calibration.
+ * DCS Step 1: Detect cognitive complexity level of user input (1–10 scale).
+ * Deterministic heuristic — same input always produces same score.
+ */
+function detectCognitiveLevel(input) {
+    const lengthScore = Math.min(input.length / 300, 3);
+    const abstractTerms = (input.match(/\b(system|architecture|deterministic|governance|modular|inference|boundary|schema|contract|latency|scaling|invariant|substrate|canonical|decoupled|coherent|orthogonal|abstraction|isolation)\b/gi) || []).length;
+    const metaSignals = (input.match(/\b(blueprint|spec|control law|failure mode|audit|pass.?fail|pipeline|heuristic|phase|layer|protocol|invariant|receipt|validation)\b/gi) || []).length;
+    const base = 3;
+    return Math.min(10, base + lengthScore + abstractTerms * 0.5 + metaSignals * 0.75);
+}
+
+/**
+ * DCS Step 2: Map cognitive level to depth tier.
+ */
+function mapToDepth(level) {
+    if (level <= 3) return 'COMPACT';
+    if (level <= 7) return 'STANDARD';
+    return 'LAYERED';
+}
+
+/**
+ * Step 2: Depth calibration — DCS-governed.
  * Returns: 'COMPACT' | 'STANDARD' | 'LAYERED'
  */
 function calibrateDepth(input, intent) {
+    // SUMMARY_COMPACT is explicit user intent — honor it
     if (intent === 'SUMMARY_COMPACT') return 'COMPACT';
-    if (intent === 'EXECUTION_DIRECTIVE' && input.length < 80) return 'COMPACT';
 
-    const clauseCount = (input.match(/[,;]|\band\b|\bbut\b|\bhowever\b|\bwhereas\b|\balthough\b/gi) || []).length;
-    const abstractTerms = (input.match(/\b(architecture|abstraction|boundary|invariant|contract|isolation|substrate|canonical|deterministic|heuristic|modular|decoupled|coherent|orthogonal)\b/gi) || []).length;
+    // DCS: compute cognitive level + apply elevation delta of 0.75
+    const cognitiveLevel = detectCognitiveLevel(input);
+    const elevatedLevel = Math.min(10, cognitiveLevel + 0.75);
+    let depth = mapToDepth(elevatedLevel);
 
-    if (intent === 'TECHNICAL_DESIGN' || abstractTerms >= 2 || clauseCount >= 4) return 'LAYERED';
-    if (input.length < 60 && clauseCount <= 1) return 'COMPACT';
-    return 'STANDARD';
+    // DCS rule: never default to COMPACT unless explicitly requested
+    // (removes old "short input = short output" behavior)
+    if (depth === 'COMPACT' && intent !== 'SUMMARY_COMPACT') {
+        depth = 'STANDARD';
+    }
+
+    return depth;
 }
 
 /**
