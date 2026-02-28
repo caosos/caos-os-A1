@@ -595,6 +595,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
         }
 
         // ============ CALL OPENAI ============
+        setStage(STAGES.OPENAI_CALL);
         const messages = [
             { role: 'system', content: systemPrompt },
             ...conversationHistory,
