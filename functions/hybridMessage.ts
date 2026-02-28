@@ -595,7 +595,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             { role: 'user', content: input }
         ];
 
-        const reply = await openAICall(openaiKey, messages, 'gpt-4o', 2000);
+        const reply = await openAICall(openaiKey, messages, ACTIVE_MODEL, 2000);
         if (!reply) throw new Error('No response from OpenAI');
 
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length, historyMessages: conversationHistory.length });
