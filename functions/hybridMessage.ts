@@ -387,15 +387,18 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
 
+    let body = null;
+    let user = null;
+
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        user = await base44.auth.me();
 
         if (!user || !user.email) {
             return Response.json({ reply: "Authentication required.", error: 'UNAUTHORIZED' }, { status: 401 });
         }
 
-        const body = await req.json();
+        body = await req.json();
         const { input, session_id, file_urls = [] } = body;
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
 
