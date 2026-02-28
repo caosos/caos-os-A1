@@ -1193,6 +1193,9 @@ export default function Chat() {
         )}
       </div>
 
+      {/* Bottom Navigation for Mobile */}
+      {isMobile && <BottomNavBar currentPage="Chat" user={user} />}
+
       <ThreadList
         isOpen={showThreads}
         onClose={() => setShowThreads(false)}
