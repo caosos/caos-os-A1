@@ -147,18 +147,6 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             <span>Session Token</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
-          <div className="px-2.5 py-1.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Code className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-sm">Execution</span>
-            </div>
-            <Switch
-              checked={showExecution}
-              onCheckedChange={toggleExecution}
-              className="data-[state=checked]:bg-blue-500"
-            />
-          </div>
-          <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={handleLogout}
             className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
