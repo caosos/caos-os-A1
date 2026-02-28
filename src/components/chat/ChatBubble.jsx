@@ -636,9 +636,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setAudioDuration(0);
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount + stop on tab close
   React.useEffect(() => {
+    const handleUnload = () => {
+      window.speechSynthesis?.cancel();
+      if (globalAudioInstance) {
+        globalAudioInstance.pause();
+        globalAudioInstance.src = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
     return () => {
+      window.removeEventListener('beforeunload', handleUnload);
       if (audioRef.current === globalAudioInstance) {
         stopAllAudio();
       }
