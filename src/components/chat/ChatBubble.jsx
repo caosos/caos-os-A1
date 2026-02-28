@@ -517,37 +517,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsGenerating(false);
       setGenerationProgress(0);
 
-      // Log TTS failure to ErrorLog (non-blocking, modular — never affects playback path)
-      try {
-        await base44.entities.ErrorLog.create({
-          user_email: 'client',
-          error_type: 'unknown',
-          error_message: `TTS_FAILURE: ${err.message}`,
-          stage: 'TTS_INVOKE',
-          error_code: 'TTS_CALL_FAILED',
-          model_used: voice,
-          stack_trace: err.stack || '',
-          request_payload: { voice, speed, text_length: cleanText.length },
-        });
-      } catch (_) { /* never block on log failure */ }
-
-      // Graceful fallback: browser speech synthesis
-      toast.warning('OpenAI TTS unavailable — falling back to browser voice');
       console.error('[TTS_ERROR]', err.message);
-      try {
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = speed;
-        const voices = window.speechSynthesis.getVoices();
-        const enVoice = voices.find(v => v.lang.startsWith('en'));
-        if (enVoice) utterance.voice = enVoice;
-        utterance.onend = () => { setIsSpeaking(false); setSpeechProgress(0); };
-        utterance.onerror = () => { setIsSpeaking(false); setSpeechProgress(0); };
-        setIsSpeaking(true);
-        window.speechSynthesis.speak(utterance);
-      } catch (fbErr) {
-        setIsSpeaking(false);
-        toast.error('Read aloud unavailable');
-      }
+      toast.error(`Read aloud failed: ${err.message}`);
     }
   };
 
