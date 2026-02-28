@@ -238,62 +238,73 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
 
     const cleanText = getCleanText(lastAssistantMessage);
-    const speed = googleSpeechRate;
 
     setIsGenerating(true);
     setSpeechProgress(0);
 
     try {
-      // Use browser's native Web Speech API to read AI's response with Google Voice
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      const appBase = window.location.origin;
+      const fetchResponse = await fetch(`${appBase}/api/functions/textToSpeech`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, voice: preferredVoice, speed: speechRate }),
+        credentials: 'include',
+      });
 
-      // Set voice based on Google voice preference
-      const voices = window.speechSynthesis.getVoices();
-      const voiceMap = {
-        'Google US English': 'en-US',
-        'Google UK English': 'en-GB',
-        'Google US Spanish': 'es-ES',
-        'Google French': 'fr-FR',
-        'Google German': 'de-DE',
-        'Google Italian': 'it-IT',
-        'Google Japanese': 'ja-JP',
-        'Google Mandarin': 'zh-CN',
-        'Google Korean': 'ko-KR',
-      };
+      if (!fetchResponse.ok) {
+        const errText = await fetchResponse.text();
+        throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
+      }
 
-      const langCode = voiceMap[googleVoice] || 'en-US';
-      const matchedVoice = voices.find(v => v.lang.startsWith(langCode));
-      if (matchedVoice) utterance.voice = matchedVoice;
+      const contentType = fetchResponse.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        const errJson = await fetchResponse.json();
+        throw new Error(errJson.error || 'TTS did not return audio');
+      }
 
-      setIsGenerating(false);
+      const audioArrayBuffer = await fetchResponse.arrayBuffer();
+      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
+        throw new Error('TTS returned empty audio');
+      }
 
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setIsPaused(false);
-      };
+      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
 
-      utterance.onend = () => {
+      const audio = new Audio();
+      audio.src = audioUrl;
+      audio.volume = 1.0;
+      audioRef.current = audio;
+
+      audio.addEventListener('loadedmetadata', () => setAudioDuration(audio.duration));
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration) setSpeechProgress((audio.currentTime / audio.duration) * 100);
+      });
+      audio.addEventListener('ended', () => {
         setIsSpeaking(false);
         setIsPaused(false);
         setSpeechProgress(0);
         setAudioDuration(0);
-      };
-
-      utterance.onerror = (e) => {
+      });
+      audio.addEventListener('error', () => {
         setIsSpeaking(false);
         setIsPaused(false);
-        console.error('Speech synthesis error:', e);
-        toast.error('Read aloud failed');
-      };
+        setSpeechProgress(0);
+        console.error('[AUDIO_PLAYBACK_ERROR]');
+        toast.error('Audio playback failed');
+      });
 
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      setIsGenerating(false);
+      setIsSpeaking(true);
+      setIsPaused(false);
+      audio.play().catch((err) => {
+        console.error('[AUDIO_PLAY_REJECTED]', err.message);
+        setIsSpeaking(false);
+        toast.error(`Playback blocked: ${err.message}`);
+      });
     } catch (err) {
       setIsGenerating(false);
-      console.error('[GOOGLE_SPEECH_ERROR]', err.message);
+      setIsSpeaking(false);
+      console.error('[TTS_ERROR]', err.message);
       toast.error(`Read aloud failed: ${err.message}`);
     }
   };
