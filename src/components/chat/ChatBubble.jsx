@@ -426,15 +426,24 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = async () => {
-    // Use browser speech synthesis (Google voices) for instant, reliable playback
+    // If already playing, toggle pause/resume on the audio element
     if (isSpeaking) {
-      if (window.speechSynthesis.paused || isPausedBySpeech) {
-        window.speechSynthesis.resume();
-        setIsPausedBySpeech(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPausedBySpeech(true);
+      if (audioRef.current) {
+        if (audioRef.current.paused) {
+          audioRef.current.play();
+          setIsPausedBySpeech(false);
+        } else {
+          audioRef.current.pause();
+          setIsPausedBySpeech(true);
+        }
       }
+      return;
+    }
+
+    // Check cache
+    if (audioCache.has(cacheKey)) {
+      const cachedUrl = audioCache.get(cacheKey);
+      playAudioUrl(cachedUrl);
       return;
     }
 
@@ -451,66 +460,96 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/\|/g, '')
       .replace(/---+/g, '')
       .replace(/\n{3,}/g, '\n\n')
-      .trim();
+      .trim()
+      .substring(0, 4096); // OpenAI TTS limit
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    const savedRate = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
-    utterance.rate = savedRate;
+    const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
+    const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
-    // Try to use saved voice preference
-    const savedVoiceURI = localStorage.getItem('caos_voice_preference_message');
-    const voices = window.speechSynthesis.getVoices();
-    if (savedVoiceURI) {
-      const voice = voices.find(v => v.voiceURI === savedVoiceURI);
-      if (voice) utterance.voice = voice;
-    } else {
-      // Default to Google English voice if available
-      const googleVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
-      if (googleVoice) utterance.voice = googleVoice;
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    // Animate generation progress
+    const genInterval = setInterval(() => {
+      setGenerationProgress(prev => Math.min(prev + 4, 90));
+    }, 150);
+
+    try {
+      const response = await base44.functions.invoke('textToSpeech', {
+        text: cleanText,
+        voice,
+        speed
+      });
+
+      clearInterval(genInterval);
+      setGenerationProgress(100);
+      setIsGenerating(false);
+
+      // response.data is an ArrayBuffer (audio/mpeg)
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioCache.set(cacheKey, audioUrl);
+      playAudioUrl(audioUrl);
+    } catch (err) {
+      clearInterval(genInterval);
+      setIsGenerating(false);
+      setGenerationProgress(0);
+      toast.error('Failed to generate speech');
+    }
+  };
+
+  const playAudioUrl = (url) => {
+    // Stop any other playing audio
+    if (globalAudioInstance && globalAudioInstance !== audioRef.current) {
+      globalAudioInstance.pause();
+      if (globalAudioCleanup) globalAudioCleanup();
     }
 
-    utterance.onend = () => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    globalAudioInstance = audio;
+
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) {
+        setSpeechProgress((audio.currentTime / audio.duration) * 100);
+      }
+    });
+
+    audio.addEventListener('ended', () => {
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-    };
+      globalAudioInstance = null;
+    });
 
-    utterance.onerror = () => {
+    audio.addEventListener('error', () => {
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-      toast.error('Speech failed');
+      toast.error('Audio playback failed');
+    });
+
+    globalAudioCleanup = () => {
+      setIsSpeaking(false);
+      setIsPausedBySpeech(false);
+      setSpeechProgress(0);
     };
 
-    utteranceRef.current = utterance;
     setIsSpeaking(true);
     setSpeechProgress(0);
-
-    // Simulate progress
-    progressInterval.current = setInterval(() => {
-      setSpeechProgress(prev => Math.min(prev + 1, 95));
-    }, 100);
-
-    window.speechSynthesis.speak(utterance);
+    audio.play();
   };
 
   const handleStopReading = () => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    globalAudioInstance = null;
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
-    }
   };
 
   // Cleanup on unmount
