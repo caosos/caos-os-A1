@@ -685,7 +685,56 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
 
-        // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS (unchanged) ============
+        // ============ BACKGROUND: DIAGNOSTIC RECEIPT + SESSION CONTEXT ============
+        const responseTime = Date.now() - startTime;
+        (async () => {
+            try {
+                await base44.asServiceRole.entities.DiagnosticReceipt.create({
+                    request_id,
+                    session_id: session_id || null,
+                    model_used: ACTIVE_MODEL,
+                    token_breakdown: tokenBreakdown,
+                    wcw_budget: wcwBudget,
+                    wcw_used: promptTokens,
+                    wcw_remaining: wcwRemaining,
+                    heuristics_intent: hIntent,
+                    heuristics_depth: hDepth,
+                    history_messages: rawHistory.length,
+                    recall_executed: matchedMemories.length > 0,
+                    matched_memories: matchedMemories.length,
+                    latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
+                    created_at: new Date().toISOString()
+                });
+
+                if (session_id) {
+                    const existing = await base44.asServiceRole.entities.SessionContext.filter({ session_id }, '-last_activity_ts', 1);
+                    const now = Date.now();
+                    if (existing && existing.length > 0) {
+                        await base44.asServiceRole.entities.SessionContext.update(existing[0].id, {
+                            wcw_budget: wcwBudget,
+                            wcw_used: promptTokens,
+                            last_request_ts: now,
+                            last_activity_ts: now,
+                            last_seq: (existing[0].last_seq || 0) + 1
+                        });
+                    } else {
+                        await base44.asServiceRole.entities.SessionContext.create({
+                            session_id,
+                            wcw_budget: wcwBudget,
+                            wcw_used: promptTokens,
+                            last_request_ts: now,
+                            last_activity_ts: now,
+                            last_seq: 1
+                        });
+                    }
+                }
+                console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
+            } catch (e) {
+                console.warn('⚠️ [RECEIPT_PERSIST_FAILED]', e.message);
+            }
+        })();
+
+        // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS ============
         (async () => {
             try {
                 if (rawHistory.length % 5 === 0 || rawHistory.length === 0) {
