@@ -685,54 +685,89 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
 
-        // ============ BACKGROUND: DIAGNOSTIC RECEIPT + SESSION CONTEXT ============
+        // ============ IN-BAND: DIAGNOSTIC RECEIPT + SESSION CONTEXT ============
+        // Per I2: receipt write MUST be awaited before returning response.
+        // Background async drops are forbidden until proven durable.
+        setStage(STAGES.RESPONSE_BUILD);
         const responseTime = Date.now() - startTime;
-        (async () => {
-            try {
-                await base44.asServiceRole.entities.DiagnosticReceipt.create({
-                    request_id,
-                    session_id: session_id || null,
-                    model_used: ACTIVE_MODEL,
-                    token_breakdown: tokenBreakdown,
-                    wcw_budget: wcwBudget,
-                    wcw_used: promptTokens,
-                    wcw_remaining: wcwRemaining,
-                    heuristics_intent: hIntent,
-                    heuristics_depth: hDepth,
-                    history_messages: rawHistory.length,
-                    recall_executed: matchedMemories.length > 0,
-                    matched_memories: matchedMemories.length,
-                    latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
-                    created_at: new Date().toISOString()
-                });
 
-                if (session_id) {
-                    const existing = await base44.asServiceRole.entities.SessionContext.filter({ session_id }, '-last_activity_ts', 1);
-                    const now = Date.now();
-                    if (existing && existing.length > 0) {
-                        await base44.asServiceRole.entities.SessionContext.update(existing[0].id, {
-                            wcw_budget: wcwBudget,
-                            wcw_used: promptTokens,
-                            last_request_ts: now,
-                            last_activity_ts: now,
-                            last_seq: (existing[0].last_seq || 0) + 1
-                        });
-                    } else {
-                        await base44.asServiceRole.entities.SessionContext.create({
-                            session_id,
-                            wcw_budget: wcwBudget,
-                            wcw_used: promptTokens,
-                            last_request_ts: now,
-                            last_activity_ts: now,
-                            last_seq: 1
-                        });
-                    }
+        try {
+            await base44.asServiceRole.entities.DiagnosticReceipt.create({
+                request_id,
+                session_id: session_id || null,
+                model_used: ACTIVE_MODEL,
+                token_breakdown: tokenBreakdown,
+                wcw_budget: wcwBudget,
+                wcw_used: promptTokens,
+                wcw_remaining: wcwRemaining,
+                heuristics_intent: hIntent,
+                heuristics_depth: hDepth,
+                history_messages: rawHistory.length,
+                recall_executed: matchedMemories.length > 0,
+                matched_memories: matchedMemories.length,
+                selector_decision: { stage_last: STAGES.RESPONSE_BUILD },
+                latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
+                created_at: new Date().toISOString()
+            });
+            console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
+        } catch (receiptErr) {
+            console.error('🔥 [RECEIPT_WRITE_FAILED]', receiptErr.message);
+            // Fail loud: log a RECEIPT_WRITE_FAILED ErrorLog entry so admin can correlate
+            try {
+                await base44.asServiceRole.entities.ErrorLog.create({
+                    user_email: user?.email || 'unknown',
+                    conversation_id: session_id || 'none',
+                    error_type: 'server_error',
+                    error_message: `RECEIPT_WRITE_FAILED: ${receiptErr.message}`,
+                    error_code: 'RECEIPT_WRITE_FAILED',
+                    stage: STAGES.RESPONSE_BUILD,
+                    model_used: ACTIVE_MODEL,
+                    latency_ms: responseTime,
+                    request_payload: { request_id, session_id }
+                });
+            } catch (_) { /* ignore secondary log failure */ }
+        }
+
+        // SessionContext upsert — also in-band
+        if (session_id) {
+            try {
+                const existing = await base44.asServiceRole.entities.SessionContext.filter({ session_id }, '-last_activity_ts', 1);
+                const now = Date.now();
+                if (existing && existing.length > 0) {
+                    await base44.asServiceRole.entities.SessionContext.update(existing[0].id, {
+                        wcw_budget: wcwBudget,
+                        wcw_used: promptTokens,
+                        last_request_ts: now,
+                        last_activity_ts: now,
+                        last_seq: (existing[0].last_seq || 0) + 1
+                    });
+                } else {
+                    await base44.asServiceRole.entities.SessionContext.create({
+                        session_id,
+                        wcw_budget: wcwBudget,
+                        wcw_used: promptTokens,
+                        last_request_ts: now,
+                        last_activity_ts: now,
+                        last_seq: 1
+                    });
                 }
-                console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
-            } catch (e) {
-                console.warn('⚠️ [RECEIPT_PERSIST_FAILED]', e.message);
+            } catch (scErr) {
+                console.error('🔥 [SESSIONCONTEXT_UPSERT_FAILED]', scErr.message);
+                try {
+                    await base44.asServiceRole.entities.ErrorLog.create({
+                        user_email: user?.email || 'unknown',
+                        conversation_id: session_id || 'none',
+                        error_type: 'server_error',
+                        error_message: `SESSIONCONTEXT_UPSERT_FAILED: ${scErr.message}`,
+                        error_code: 'SESSIONCONTEXT_UPSERT_FAILED',
+                        stage: STAGES.RESPONSE_BUILD,
+                        model_used: ACTIVE_MODEL,
+                        latency_ms: responseTime,
+                        request_payload: { request_id, session_id }
+                    });
+                } catch (_) { /* ignore */ }
             }
-        })();
+        }
 
         // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS ============
         (async () => {
