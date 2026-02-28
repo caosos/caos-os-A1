@@ -337,7 +337,9 @@ DYNAMIC STANCE CONTRACT (apply silently):
 
 // ─── EXISTING HELPERS ─────────────────────────────────────────────────────
 
-async function openAICall(key, messages, model = 'gpt-4o', maxTokens = 1500) {
+const ACTIVE_MODEL = 'gpt-5.2';
+
+async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
