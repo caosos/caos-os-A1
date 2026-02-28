@@ -17,6 +17,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
+
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
