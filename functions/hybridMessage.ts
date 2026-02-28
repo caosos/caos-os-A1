@@ -759,7 +759,6 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             } catch (e) { console.warn('⚠️ [ANCHOR_UPDATE_FAILED]', e.message); }
         })();
 
-        const responseTime = Date.now() - startTime;
         console.log('🎯 [PIPELINE_COMPLETE]', { request_id, duration: responseTime, totalHistory: rawHistory.length });
 
         return Response.json({
