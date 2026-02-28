@@ -599,12 +599,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      audioRef.current = null;
+      // Keep audioRef so re-clicking play doesn't re-fetch — it'll resume from start
     }
-    globalAudioInstance = null;
+    if (globalAudioInstance === audioRef.current) {
+      globalAudioInstance = null;
+    }
     setIsSpeaking(false);
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
+    setAudioDuration(0);
   };
 
   // Cleanup on unmount
