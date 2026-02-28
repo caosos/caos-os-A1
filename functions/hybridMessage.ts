@@ -660,6 +660,8 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
                 matched_memories: matchedMemories.length,
                 heuristics_intent: hIntent,
                 heuristics_depth: hDepth,
+                cognitive_level: cogLevel,
+                elevation_delta: 0.75,
                 latency_ms: responseTime
             }
         });
