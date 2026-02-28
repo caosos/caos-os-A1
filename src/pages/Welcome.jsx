@@ -15,37 +15,42 @@ export default function Welcome() {
   const [email, setEmail] = useState('');
   const [checking, setChecking] = useState(true);
 
-  // Check authentication status on mount
+  // Check authentication status on mount — LOCKED AGAINST INFINITE LOOP
   React.useEffect(() => {
     let mounted = true;
     
+    // Prevent auth check from running more than once per session
+    if (sessionStorage.getItem('welcome_auth_checked')) {
+      setChecking(false);
+      return;
+    }
+    sessionStorage.setItem('welcome_auth_checked', 'true');
+    
     const checkAuth = async () => {
+      if (!mounted) return;
       try {
         const isAuth = await base44.auth.isAuthenticated();
         if (isAuth && mounted) {
           navigate(createPageUrl('Chat'), { replace: true });
-        } else {
-          if (mounted) setChecking(false);
+          return;
         }
       } catch (error) {
-        if (mounted) {
-          setChecking(false);
-        }
+        // Silent fail
       }
+      if (mounted) setChecking(false);
     };
     
-    const timer = setTimeout(checkAuth, 100);
-    // Force exit loading state after 3 seconds max to prevent infinite loop
+    checkAuth();
+    // Hard timeout: force load state exit after 2 seconds
     const safetyTimer = setTimeout(() => {
       if (mounted) setChecking(false);
-    }, 3000);
+    }, 2000);
     
     return () => {
       mounted = false;
-      clearTimeout(timer);
       clearTimeout(safetyTimer);
     };
-  }, []);
+  }, [navigate]);
 
   const handleGuestContinue = () => {
     const user = {
