@@ -426,15 +426,19 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = async () => {
-    // If already has audio loaded, toggle pause/resume
-    if (audioRef.current) {
+    // If audio is already loaded, toggle pause/resume
+    if (audioRef.current && audioRef.current.src) {
       if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
-        setIsSpeaking(true);
-        setIsPausedBySpeech(false);
+        audioRef.current.play().then(() => {
+          setIsSpeaking(true);
+          setIsPausedBySpeech(false);
+        }).catch((err) => {
+          console.error('[AUDIO_RESUME_REJECTED]', err.message);
+        });
       } else {
         audioRef.current.pause();
         setIsPausedBySpeech(true);
+        setIsSpeaking(true); // keep player visible
       }
       return;
     }
