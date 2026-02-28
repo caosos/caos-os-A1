@@ -1155,14 +1155,80 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 </div>
               )}
 
-              {/* Speech Progress Bar */}
-              {isSpeaking && speechProgress > 0 && (
-                <div className="mt-2">
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              {/* Audio Player Bar */}
+              {isSpeaking && (
+                <div className="mt-3 bg-white/5 border border-white/10 rounded-xl px-3 py-2 space-y-2">
+                  {/* Progress bar — clickable to seek */}
+                  <div
+                    className="h-1.5 bg-white/10 rounded-full overflow-hidden cursor-pointer"
+                    onClick={(e) => {
+                      if (!audioRef.current || !audioRef.current.duration) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = (e.clientX - rect.left) / rect.width;
+                      audioRef.current.currentTime = ratio * audioRef.current.duration;
+                    }}
+                  >
                     <div
                       className="h-full bg-blue-400 transition-all duration-200"
                       style={{ width: `${speechProgress}%` }}
                     />
+                  </div>
+                  {/* Controls row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      {/* Rewind 10s */}
+                      <button
+                        onClick={() => {
+                          if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+                        }}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        title="Back 10s"
+                      >
+                        <SkipBack className="w-3.5 h-3.5 text-white/60" />
+                      </button>
+                      {/* Play / Pause */}
+                      <button
+                        onClick={() => {
+                          if (!audioRef.current) return;
+                          if (audioRef.current.paused) {
+                            audioRef.current.play().catch(() => {});
+                            setIsPausedBySpeech(false);
+                          } else {
+                            audioRef.current.pause();
+                            setIsPausedBySpeech(true);
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        title={isPausedBySpeech ? "Play" : "Pause"}
+                      >
+                        {isPausedBySpeech
+                          ? <Play className="w-3.5 h-3.5 text-blue-400" />
+                          : <Pause className="w-3.5 h-3.5 text-blue-400" />}
+                      </button>
+                      {/* Forward 10s */}
+                      <button
+                        onClick={() => {
+                          if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.duration || 0, audioRef.current.currentTime + 10);
+                        }}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        title="Forward 10s"
+                      >
+                        <SkipForward className="w-3.5 h-3.5 text-white/60" />
+                      </button>
+                      {/* Stop */}
+                      <button
+                        onClick={handleStopReading}
+                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        title="Stop"
+                      >
+                        <X className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    </div>
+                    {/* Time display */}
+                    <span className="text-[10px] text-white/40 tabular-nums">
+                      {formatTime(audioRef.current?.currentTime || 0)}
+                      {audioDuration > 0 && ` / ${formatTime(audioDuration)}`}
+                    </span>
                   </div>
                 </div>
               )}
