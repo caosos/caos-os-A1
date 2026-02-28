@@ -275,6 +275,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setShowVoiceMenu(!showVoiceMenu);
   };
 
+  // ========== GOOGLE VOICE READ-ALOUD LOCKED ==========
+  // This section is LOCKED as of 2026-02-28
+  // Do not modify without explicit user approval
+  // Features: Play/Pause/Stop, voice selection, speed control, progress bar
+  // ====================================================
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
