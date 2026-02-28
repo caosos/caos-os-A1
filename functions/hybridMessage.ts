@@ -845,11 +845,25 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             latency_ms,
         });
 
-        // Persist to ErrorLog — non-blocking
+        // Persist to ErrorLog — in-band (awaited), includes correlation_id
         try {
-            await base44.asServiceRole.entities.ErrorLog.create(envelope);
+            await base44.asServiceRole.entities.ErrorLog.create({ ...envelope, error_id: envelope.error_id || correlation_id });
         } catch (persistErr) {
             console.error('⚠️ [ODEL_PERSIST_FAILED]', persistErr.message);
+        }
+
+        // Attempt failure receipt — fail loud per I4
+        try {
+            await base44.asServiceRole.entities.DiagnosticReceipt.create({
+                request_id: correlation_id,
+                session_id: body?.session_id || null,
+                model_used: ACTIVE_MODEL,
+                selector_decision: { stage_last: envelope.stage, error_code: envelope.error_code },
+                latency_breakdown: { total_ms: latency_ms },
+                created_at: new Date().toISOString()
+            });
+        } catch (receiptErr) {
+            console.error('🔥 [FAILURE_RECEIPT_WRITE_FAILED]', receiptErr.message);
         }
 
         return Response.json({
@@ -858,6 +872,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             error_code:        envelope.error_code,
             stage:             envelope.stage,
             request_id,
+            correlation_id,
             mode:              'ERROR',
             response_time_ms:  latency_ms,
         }, { status: 500 });
