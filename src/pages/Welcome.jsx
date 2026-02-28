@@ -35,10 +35,15 @@ export default function Welcome() {
     };
     
     const timer = setTimeout(checkAuth, 100);
+    // Force exit loading state after 3 seconds max to prevent infinite loop
+    const safetyTimer = setTimeout(() => {
+      if (mounted) setChecking(false);
+    }, 3000);
     
     return () => {
       mounted = false;
       clearTimeout(timer);
+      clearTimeout(safetyTimer);
     };
   }, []);
 
