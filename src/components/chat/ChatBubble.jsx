@@ -474,9 +474,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }, 150);
 
     try {
-      // Use fetch directly to get proper binary response — Axios mangles ArrayBuffers
-      const session = await base44.auth.me();
-      const fetchResponse = await fetch(`/api/functions/textToSpeech`, {
+      // Use fetch directly — base44.functions.invoke() uses Axios which mangles binary ArrayBuffers
+      // Get current page URL to derive the function endpoint
+      const appBase = window.location.origin;
+      const fetchResponse = await fetch(`${appBase}/api/functions/textToSpeech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, voice, speed }),
@@ -490,6 +491,13 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       if (!fetchResponse.ok) {
         const errText = await fetchResponse.text();
         throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
+      }
+
+      const contentType = fetchResponse.headers.get('content-type') || '';
+      if (!contentType.includes('audio')) {
+        // Not audio — probably an error JSON
+        const errJson = await fetchResponse.json();
+        throw new Error(errJson.error || 'TTS did not return audio');
       }
 
       const audioArrayBuffer = await fetchResponse.arrayBuffer();
