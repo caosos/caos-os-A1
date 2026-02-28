@@ -693,9 +693,10 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
         const responseTime = Date.now() - startTime;
 
         try {
-            await base44.asServiceRole.entities.DiagnosticReceipt.create({
+            const receiptPayload = {
                 request_id,
-                session_id: session_id || null,
+                correlation_id,
+                session_id: session_id || 'none',
                 model_used: ACTIVE_MODEL,
                 token_breakdown: tokenBreakdown,
                 wcw_budget: wcwBudget,
@@ -706,13 +707,25 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
                 history_messages: rawHistory.length,
                 recall_executed: matchedMemories.length > 0,
                 matched_memories: matchedMemories.length,
+                stage_last: STAGES.RESPONSE_BUILD,
                 selector_decision: { stage_last: STAGES.RESPONSE_BUILD },
                 latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
                 created_at: new Date().toISOString()
-            });
-            console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
+            };
+            console.log('📝 [RECEIPT_WRITE_ATTEMPT]', { request_id, session_id });
+            // Try service role first, fall back to user context
+            let receiptWritten = false;
+            try {
+                await base44.asServiceRole.entities.DiagnosticReceipt.create(receiptPayload);
+                receiptWritten = true;
+            } catch (srErr) {
+                console.warn('⚠️ [RECEIPT_SR_FAILED] Trying user context', srErr.message);
+                await base44.entities.DiagnosticReceipt.create(receiptPayload);
+                receiptWritten = true;
+            }
+            console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining, receiptWritten });
         } catch (receiptErr) {
-            console.error('🔥 [RECEIPT_WRITE_FAILED]', receiptErr.message);
+            console.error('🔥 [RECEIPT_WRITE_FAILED]', receiptErr.message, receiptErr.stack?.substring(0, 200));
             // Fail loud: log a RECEIPT_WRITE_FAILED ErrorLog entry so admin can correlate
             try {
                 await base44.asServiceRole.entities.ErrorLog.create({
