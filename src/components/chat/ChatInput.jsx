@@ -222,30 +222,29 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   const toggleReadAloud = async () => {
-    if (!message.trim()) return;
+    if (!lastAssistantMessage) return;
 
     // Toggle pause/resume if already loaded
-    if (audioRef.current && audioRef.current.paused) {
-      audioRef.current.play().catch(() => {});
-      setIsPaused(false);
-      setIsSpeaking(true);
-      return;
-    }
-    if (audioRef.current && !audioRef.current.paused) {
-      audioRef.current.pause();
-      setIsPaused(true);
+    if (audioRef.current && audioRef.current.src) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(() => {});
+        setIsPaused(false);
+        setIsSpeaking(true);
+      } else {
+        audioRef.current.pause();
+        setIsPaused(true);
+      }
       return;
     }
 
-    const cleanText = getCleanText(message);
-    const voice = googleVoice;
+    const cleanText = getCleanText(lastAssistantMessage);
     const speed = googleSpeechRate;
 
     setIsGenerating(true);
     setSpeechProgress(0);
 
     try {
-      // Use browser's native Web Speech API with SpeechSynthesisUtterance
+      // Use browser's native Web Speech API to read AI's response with Google Voice
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
       utterance.pitch = 1.0;
@@ -265,7 +264,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         'Google Korean': 'ko-KR',
       };
 
-      const langCode = voiceMap[voice] || 'en-US';
+      const langCode = voiceMap[googleVoice] || 'en-US';
       const matchedVoice = voices.find(v => v.lang.startsWith(langCode));
       if (matchedVoice) utterance.voice = matchedVoice;
 
@@ -528,9 +527,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <button
            type="button"
            onClick={toggleReadAloud}
-           disabled={!message.trim() || isGenerating}
+           disabled={!lastAssistantMessage || isGenerating}
            className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read my message (Google Voice)'}
+           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read AI response (Google Voice)'}
          >
            {isGenerating ? (
              <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin" />
