@@ -127,25 +127,12 @@ export default function CodeTerminal({ onClose }) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 min-h-0">
-        <Editor
-          height="100%"
-          language={language}
+      <div className="flex-1 min-h-0 bg-[#1e1e1e] overflow-hidden">
+        <textarea
           value={code}
-          onChange={setCode}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            contextmenu: true,
-            quickSuggestions: true,
-            acceptSuggestionOnCommitCharacter: true,
-            acceptSuggestionOnEnter: 'on',
-            tabCompletion: 'on',
-          }}
+          onChange={(e) => setCode(e.target.value)}
+          className="w-full h-full bg-[#1e1e1e] text-green-400 font-mono text-sm p-3 resize-none border-none outline-none"
+          style={{ fontFamily: 'monospace' }}
         />
       </div>
 
