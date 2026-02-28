@@ -19,21 +19,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
-  const [availableVoices, setAvailableVoices] = useState([]);
-  const [selectedVoice, setSelectedVoice] = useState(null);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const [speechRate, setSpeechRate] = useState(() => {
-    const saved = localStorage.getItem('caos_speech_rate');
-    return saved ? parseFloat(saved) : 1.0;
-  });
+  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('caos_speech_rate') || '1.0'));
   const [speechProgress, setSpeechProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef(null);
-  const utteranceRef = useRef(null);
   const audioRef = useRef(null);
   const voiceMenuRef = useRef(null);
-  const progressInterval = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
