@@ -3,7 +3,58 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+
+const CHECK_DESCRIPTIONS = {
+    database: {
+        label: 'Database Connection',
+        description: 'Verifies that the Base44 entity database is reachable and responding. If this fails, no messages can be saved or retrieved — all chat history and memory operations will fail.',
+        passing: 'Database is reachable and responding normally.',
+        failing: 'Database connection is down. Message persistence and memory operations are unavailable.'
+    },
+    openai_api: {
+        label: 'OpenAI API',
+        description: 'Confirms the OPENAI_API_KEY secret is configured and reachable. This is required for Aria to generate responses, TTS audio, and Whisper transcription.',
+        passing: 'API key is configured. OpenAI inference is available.',
+        failing: 'API key is missing or unreachable. Aria cannot generate responses.'
+    }
+};
+
+function HealthCheck({ label, status, checkKey }) {
+    const [expanded, setExpanded] = useState(false);
+    const isPass = status === 'pass' || status === 'configured';
+    const info = CHECK_DESCRIPTIONS[checkKey] || {};
+
+    return (
+        <div className="border rounded-lg overflow-hidden">
+            <div
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="flex items-center gap-2">
+                    {isPass
+                        ? <CheckCircle className="h-4 w-4 text-green-600" />
+                        : <XCircle className="h-4 w-4 text-red-600" />}
+                    <span className="font-medium text-sm">{info.label || label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Badge variant={isPass ? 'default' : 'destructive'}>{status}</Badge>
+                    {expanded
+                        ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                </div>
+            </div>
+            {expanded && info.description && (
+                <div className="border-t bg-muted/30 px-4 py-3 space-y-2 text-sm">
+                    <p className="text-muted-foreground">{info.description}</p>
+                    <p className={isPass ? 'text-green-700' : 'text-red-700'}>
+                        {isPass ? `✓ ${info.passing}` : `✗ ${info.failing}`}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function SystemHealth() {
     const [health, setHealth] = useState(null);
@@ -15,7 +66,6 @@ export default function SystemHealth() {
             const response = await base44.functions.invoke('systemHealth', {});
             setHealth(response.data);
         } catch (error) {
-            console.error('Failed to fetch health:', error);
             setHealth({ status: 'error', error: error.message });
         } finally {
             setLoading(false);
@@ -24,24 +74,23 @@ export default function SystemHealth() {
 
     useEffect(() => {
         fetchHealth();
-        const interval = setInterval(fetchHealth, 30000); // Refresh every 30s
+        const interval = setInterval(fetchHealth, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'healthy': return <CheckCircle className="h-5 w-5 text-green-600" />;
+            case 'degraded': return <AlertCircle className="h-5 w-5 text-yellow-600" />;
+            default: return <XCircle className="h-5 w-5 text-red-600" />;
+        }
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
             case 'healthy': return 'bg-green-600';
             case 'degraded': return 'bg-yellow-600';
-            case 'unhealthy': return 'bg-red-600';
-            default: return 'bg-gray-600';
-        }
-    };
-
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'healthy': return <CheckCircle className="h-5 w-5" />;
-            case 'degraded': return <AlertCircle className="h-5 w-5" />;
-            default: return <XCircle className="h-5 w-5" />;
+            default: return 'bg-red-600';
         }
     };
 
@@ -71,12 +120,7 @@ export default function SystemHealth() {
                             </p>
                         </div>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={fetchHealth}
-                        disabled={loading}
-                    >
+                    <Button variant="outline" size="sm" onClick={fetchHealth} disabled={loading}>
                         <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
@@ -92,41 +136,18 @@ export default function SystemHealth() {
 
                         {health?.checks && (
                             <div className="space-y-2">
-                                <h3 className="font-semibold mb-3">Health Checks</h3>
-                                
-                                <div className="flex items-center justify-between p-3 border rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        {health.checks.database === 'pass' ? (
-                                            <CheckCircle className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                            <XCircle className="h-4 w-4 text-red-600" />
-                                        )}
-                                        <span>Database Connection</span>
-                                    </div>
-                                    <Badge variant={health.checks.database === 'pass' ? 'default' : 'destructive'}>
-                                        {health.checks.database}
-                                    </Badge>
-                                </div>
-
-                                <div className="flex items-center justify-between p-3 border rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        {health.checks.openai_api === 'configured' ? (
-                                            <CheckCircle className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                            <XCircle className="h-4 w-4 text-red-600" />
-                                        )}
-                                        <span>OpenAI API</span>
-                                    </div>
-                                    <Badge variant={health.checks.openai_api === 'configured' ? 'default' : 'destructive'}>
-                                        {health.checks.openai_api}
-                                    </Badge>
-                                </div>
+                                <h3 className="font-semibold mb-3 text-sm">Health Checks — click to expand</h3>
+                                <HealthCheck label="Database Connection" status={health.checks.database} checkKey="database" />
+                                <HealthCheck label="OpenAI API" status={health.checks.openai_api} checkKey="openai_api" />
                             </div>
                         )}
 
                         {health?.latency_ms && (
                             <div className="flex items-center justify-between p-3 border rounded-lg">
-                                <span>Health Check Latency</span>
+                                <div>
+                                    <span className="font-medium text-sm">Health Check Latency</span>
+                                    <p className="text-xs text-muted-foreground mt-0.5">Round-trip time for this health check to complete</p>
+                                </div>
                                 <Badge variant="outline">{health.latency_ms}ms</Badge>
                             </div>
                         )}
