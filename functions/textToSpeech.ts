@@ -53,7 +53,9 @@ Deno.serve(async (req) => {
             status: 200,
             headers: {
                 'Content-Type': 'audio/mpeg',
-                'Content-Length': audioData.byteLength.toString()
+                'Content-Length': audioData.byteLength.toString(),
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'no-cache'
             }
         });
 
