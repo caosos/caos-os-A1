@@ -599,6 +599,11 @@ export default function Chat() {
         throw new Error('Empty response from server');
       }
 
+      // Update WCW meter with real data from backend
+      if (data.wcw_budget && data.wcw_used !== undefined) {
+        setWcwState({ used: data.wcw_used, budget: data.wcw_budget });
+      }
+
       // Check for duplicate responses
       const lastAiMessage = currentMessages.filter(m => m.role === 'assistant').slice(-1)[0];
       if (lastAiMessage && lastAiMessage.content === reply) {
