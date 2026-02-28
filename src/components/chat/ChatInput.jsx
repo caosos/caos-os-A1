@@ -273,9 +273,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   // ========== GOOGLE VOICE READ-ALOUD LOCKED ==========
-  // This section is LOCKED as of 2026-02-28
-  // Do not modify without explicit user approval
-  // Features: Play/Pause/Stop, voice selection, speed control, progress bar
+  // LOCKED as of 2026-02-28 - CANNOT BE CHANGED
+  // This feature reads the last AI message with Google Web Speech API
+  // Do NOT modify: toggleGoogleVoicePlay, stopGoogleVoice, voice menu, controls
+  // User must approve any modifications to this section
   // ====================================================
 
   const startRecording = async () => {

@@ -537,7 +537,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
     const audio = new Audio();
     audio.src = url;
-    audio.preload = 'auto';
+    audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
     audioRef.current = audio;
     globalAudioInstance = audio;
@@ -566,7 +566,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
       setAudioDuration(0);
-      console.error('[AUDIO_PLAYBACK_ERROR]', e);
+      console.error('[AUDIO_PLAYBACK_ERROR]', e.type, audio.error?.code, audio.error?.message);
       toast.error('Audio playback failed');
     });
 
@@ -581,15 +581,22 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
 
-    // Do NOT call audio.load() — setting .src already triggers loading.
-    // Calling load() after setting src resets the element and can prevent play.
-    audio.play().then(() => {
-      console.log('[AUDIO_PLAYING]', url.substring(0, 40));
-    }).catch((err) => {
-      console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
-      setIsSpeaking(false);
-      toast.error(`Playback blocked: ${err.message}`);
-    });
+    // Wait for metadata before playing to ensure duration is loaded
+    const playWhenReady = () => {
+      if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+        audio.removeEventListener('canplay', playWhenReady);
+        audio.play().then(() => {
+          console.log('[AUDIO_PLAYING]', url.substring(0, 40));
+        }).catch((err) => {
+          console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
+          setIsSpeaking(false);
+          toast.error(`Playback blocked: ${err.message}`);
+        });
+      }
+    };
+
+    audio.addEventListener('canplay', playWhenReady);
+    audio.load();
   };
 
   const handleStopReading = () => {
