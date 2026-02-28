@@ -1,780 +1,149 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, RotateCcw, Check, Play, SkipBack, SkipForward } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { base44 } from '@/api/base44Client';
-import html2canvas from 'html2canvas';
+import { Send, Plus, Volume2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { toggleGoogleReadAloud } from './ChatInputReadAloud';
 
-export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
-  const [message, setMessage] = useState(messageValue);
-  const [attachedFiles, setAttachedFiles] = useState([]);
-  
-  useEffect(() => {
-    setMessage(messageValue);
-  }, [messageValue]);
-  const [uploading, setUploading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showCaptureMenu, setShowCaptureMenu] = useState(false);
-
-  const [selectedAgents, setSelectedAgents] = useState(['all']);
-  const [showAgentMenu, setShowAgentMenu] = useState(false);
-  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
-  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('caos_speech_rate') || '1.0'));
-  const [preferredVoice, setPreferredVoice] = useState(() => localStorage.getItem('caos_voice_preference_message') || 'nova');
-  const [speechProgress, setSpeechProgress] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const fileInputRef = useRef(null);
-  const audioRef = useRef(null);
-  const voiceMenuRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-
-  // Stop audio on unmount/tab close
-  useEffect(() => {
-    const handleUnload = () => {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (captureMenuRef.current && !captureMenuRef.current.contains(event.target)) {
-        setShowCaptureMenu(false);
-      }
-      if (voiceMenuRef.current && !voiceMenuRef.current.contains(event.target)) {
-        setShowVoiceMenu(false);
-      }
-    };
-
-    if (showCaptureMenu || showVoiceMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showCaptureMenu, showVoiceMenu]);
+export default function ChatInput({ 
+  onSend, 
+  isLoading, 
+  lastAssistantMessage, 
+  onTypingStart,
+  messageValue = '',
+  onMessageChange = () => {}
+}) {
+  const [files, setFiles] = useState([]);
+  const [isReadingAloud, setIsReadingAloud] = useState(false);
   const textareaRef = useRef(null);
-  const cameraInputRef = useRef(null);
-  const captureMenuRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const handleFileSelect = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    // Check if adding these files would exceed the limit
-    const totalFiles = attachedFiles.length + files.length;
-    if (totalFiles > 5) {
-      alert(`You can only attach up to 5 files. You currently have ${attachedFiles.length} file(s) attached.`);
-      e.target.value = '';
-      return;
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 168) + 'px';
     }
+  }, [messageValue]);
 
-    setUploading(true);
-    try {
-      const uploadedFiles = [];
-      for (const file of files) {
-        const result = await base44.integrations.Core.UploadFile({ file });
-        const isImage = file.type.startsWith('image/');
-        
-        uploadedFiles.push({
-          name: file.name,
-          url: result.file_url,
-          type: file.type,
-        });
-        
-        // Save to UserFile entity - organize by conversation
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Uploads';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: isImage ? 'photo' : 'file',
-          folder_path: folderPath,
-          mime_type: file.type,
-          size: file.size
-        });
-      }
-      setAttachedFiles([...attachedFiles, ...uploadedFiles]);
-    } catch (error) {
-      console.error('Error uploading files:', error);
-    }
-    setUploading(false);
-    e.target.value = '';
-  };
+  const handleSend = async () => {
+    if (!messageValue.trim() && files.length === 0) return;
 
-  const captureScreen = async () => {
-    setShowCaptureMenu(false);
-    setUploading(true);
-    try {
-      const canvas = await html2canvas(document.body, {
-        allowTaint: true,
-        useCORS: true,
-        scrollY: -window.scrollY,
-        scrollX: -window.scrollX,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight
-      });
-      
-      canvas.toBlob(async (blob) => {
-        const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
-        const result = await base44.integrations.Core.UploadFile({ file });
-        
-        // Save to UserFile entity - organize by conversation
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Screenshots';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: 'photo',
-          folder_path: folderPath,
-          mime_type: 'image/png',
-          size: blob.size
-        });
-        
-        setAttachedFiles([...attachedFiles, {
-          name: file.name,
-          url: result.file_url,
-          type: 'image/png',
-        }]);
-        setUploading(false);
-      });
-    } catch (error) {
-      console.error('Error capturing screen:', error);
-      setUploading(false);
-    }
-  };
-
-  const captureCamera = () => {
-    setShowCaptureMenu(false);
-    cameraInputRef.current?.click();
-  };
-
-  const handleCameraCapture = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const result = await base44.integrations.Core.UploadFile({ file });
-      
-      // Save to UserFile entity - organize by conversation
-      const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Photos';
-      await base44.entities.UserFile.create({
-        name: file.name,
-        url: result.file_url,
-        type: 'photo',
-        folder_path: folderPath,
-        mime_type: file.type,
-        size: file.size
-      });
-      
-      setAttachedFiles([...attachedFiles, {
-        name: file.name,
-        url: result.file_url,
-        type: file.type,
-      }]);
-    } catch (error) {
-      console.error('Error uploading camera photo:', error);
-    }
-    setUploading(false);
-    e.target.value = '';
-  };
-
-  const removeFile = (index) => {
-    setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
-  };
-
-  const getCleanText = (text) => text
-    .replace(/#{1,6}\s/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/^[-*+]\s/gm, '')
-    .replace(/^\d+\.\s/gm, '')
-    .replace(/>/g, '')
-    .replace(/\|/g, '')
-    .replace(/---+/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .substring(0, 4096);
-
-  const formatSpeechTime = () => {
-    if (!audioRef.current) return '';
-    const cur = audioRef.current.currentTime || 0;
-    const dur = audioRef.current.duration || 0;
-    const fmt = (s) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-    return dur > 0 ? `${fmt(cur)} / ${fmt(dur)}` : '';
-  };
-
-  const stopReadAloud = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    setIsSpeaking(false);
-    setIsPaused(false);
-    setSpeechProgress(0);
-    setAudioDuration(0);
-  };
-
-  const toggleReadAloud = async () => {
-    if (!lastAssistantMessage) return;
-
-    // Toggle pause/resume if already loaded
-    if (audioRef.current && audioRef.current.src) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
-        setIsPaused(false);
-        setIsSpeaking(true);
-      } else {
-        audioRef.current.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
-
-    const cleanText = getCleanText(lastAssistantMessage);
-
-    setIsGenerating(true);
-    setSpeechProgress(0);
-
-    try {
-      const appBase = window.location.origin;
-      const fetchResponse = await fetch(`${appBase}/api/functions/textToSpeech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, voice: preferredVoice, speed: speechRate }),
-        credentials: 'include',
-      });
-
-      if (!fetchResponse.ok) {
-        const errText = await fetchResponse.text();
-        throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
-      }
-
-      const contentType = fetchResponse.headers.get('content-type') || '';
-      if (!contentType.includes('audio')) {
-        const errJson = await fetchResponse.json();
-        throw new Error(errJson.error || 'TTS did not return audio');
-      }
-
-      const audioArrayBuffer = await fetchResponse.arrayBuffer();
-      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
-        throw new Error('TTS returned empty audio');
-      }
-
-      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const audio = new Audio();
-      audio.src = audioUrl;
-      audio.volume = 1.0;
-      audioRef.current = audio;
-
-      audio.addEventListener('loadedmetadata', () => setAudioDuration(audio.duration));
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setSpeechProgress((audio.currentTime / audio.duration) * 100);
-      });
-      audio.addEventListener('ended', () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        setAudioDuration(0);
-      });
-      audio.addEventListener('error', () => {
-        setIsSpeaking(false);
-        setIsPaused(false);
-        setSpeechProgress(0);
-        console.error('[AUDIO_PLAYBACK_ERROR]');
-        toast.error('Audio playback failed');
-      });
-
-      setIsGenerating(false);
-      setIsSpeaking(true);
-      setIsPaused(false);
-      audio.play().catch((err) => {
-        console.error('[AUDIO_PLAY_REJECTED]', err.message);
-        setIsSpeaking(false);
-        toast.error(`Playback blocked: ${err.message}`);
-      });
-    } catch (err) {
-      setIsGenerating(false);
-      setIsSpeaking(false);
-      console.error('[TTS_ERROR]', err.message);
-      toast.error(`Read aloud failed: ${err.message}`);
-    }
-  };
-
-  const skipReadAloud = (seconds) => {
-    // Skipping not supported with Web Speech API
-    // Would need workaround with server-side audio generation
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
-
-        setIsTranscribing(true);
-        try {
-          // Convert blob to File for proper handling
-          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
-          const { data } = await base44.functions.invoke('transcribeAudio', { audio: audioFile });
-          if (data.success && data.text) {
-            const updatedMessage = message + (message ? ' ' : '') + data.text;
-            setMessage(updatedMessage);
-            onMessageChange?.(updatedMessage);
-
-            if (textareaRef.current) {
-              textareaRef.current.style.height = 'auto';
-              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
-            }
-          }
-        } catch (error) {
-          console.error('Transcription error:', error);
-          alert(`Transcription failed: ${error.message}`);
-        } finally {
-          setIsTranscribing(false);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Microphone error:', error);
-      alert('Could not access microphone');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const toggleVoiceRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e?.preventDefault();
+    const fileUrls = files.map(f => f.url);
     
-    if (isTranscribing) return;
+    onTypingStart?.();
+    onSend(messageValue, fileUrls);
+    onMessageChange('');
+    setFiles([]);
     
-    if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-      if (isRecording) {
-        stopRecording();
-        return;
-      }
-
-      const messageToSend = message.trim();
-      const filesToSend = attachedFiles.map(f => f.url);
-      
-      setMessage('');
-      setAttachedFiles([]);
-      onMessageChange?.('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = '24px';
-      }
-      
-      onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
     }
   };
 
-  const [customAgents, setCustomAgents] = useState(() => {
-    const saved = localStorage.getItem('caos_custom_agents');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const handleFileChange = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
 
-  const agents = [
-    { id: 'all', name: 'All', color: 'bg-white/20' },
-    { id: 'architect', name: 'Architect', color: 'bg-blue-500/20' },
-    { id: 'security', name: 'Security', color: 'bg-red-500/20' },
-    { id: 'engineer', name: 'Engineer', color: 'bg-green-500/20' },
-    { id: 'qa', name: 'QA', color: 'bg-yellow-500/20' },
-    { id: 'docs', name: 'Docs', color: 'bg-purple-500/20' },
-    ...customAgents
-  ];
-
-  const handleAddAgent = () => {
-    const name = prompt('Enter agent name:');
-    if (name && name.trim()) {
-      const newAgent = {
-        id: name.toLowerCase().replace(/\s+/g, '_'),
-        name: name.trim(),
-        color: 'bg-cyan-500/20',
-        isCustom: true
-      };
-      const updated = [...customAgents, newAgent];
-      setCustomAgents(updated);
-      localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
+    const uploadedFiles = [];
+    for (const file of selectedFiles) {
+      try {
+        const { data } = await (async () => {
+          const formData = new FormData();
+          formData.append('file', file);
+          const response = await fetch('/api/files/upload', { method: 'POST', body: formData });
+          return response.json();
+        })();
+        
+        uploadedFiles.push({ name: file.name, url: data.url });
+      } catch (error) {
+        toast.error(`Failed to upload ${file.name}`);
+      }
     }
+
+    setFiles([...files, ...uploadedFiles]);
   };
 
-  const handleDeleteAgent = (agentId) => {
-    const updated = customAgents.filter(a => a.id !== agentId);
-    setCustomAgents(updated);
-    localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
-    setSelectedAgents(selectedAgents.filter(id => id !== agentId));
-  };
-
-  const toggleAgent = (agentId) => {
-    if (agentId === 'all') {
-      setSelectedAgents(['all']);
-    } else {
-      let newSelection = selectedAgents.filter(id => id !== 'all');
-      if (newSelection.includes(agentId)) {
-        newSelection = newSelection.filter(id => id !== agentId);
-      } else {
-        newSelection.push(agentId);
-      }
-      setSelectedAgents(newSelection.length === 0 ? ['all'] : newSelection);
-    }
-  };
-
-  const handleAgentRightClick = (e, agentId) => {
-    e.preventDefault();
-    if (agentId === 'all') return;
-    
-    const agent = agents.find(a => a.id === agentId);
-    
-    if (agent?.isCustom) {
-      // Custom agents: show delete option
-      if (confirm(`Delete agent "${agent.name}"?`)) {
-        handleDeleteAgent(agentId);
-      }
-    } else {
-      // Built-in agents: show role edit
-      const newRole = prompt('Enter role for this agent:');
-      if (newRole && newRole.trim()) {
-        const roles = JSON.parse(localStorage.getItem('caos_agent_roles') || '{}');
-        roles[agentId] = newRole.trim();
-        localStorage.setItem('caos_agent_roles', JSON.stringify(roles));
-        alert(`Role updated for ${agentId}: ${newRole.trim()}`);
-      }
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
-      {/* Attached Files Display */}
-      {attachedFiles.length > 0 && (
-        <div className="mb-2 px-3 flex flex-wrap gap-2">
-          {attachedFiles.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
-            >
-              {file.type.startsWith('image/') ? (
-                <ImageIcon className="w-4 h-4 text-blue-400" />
-              ) : (
-                <FileText className="w-4 h-4 text-blue-400" />
-              )}
-              <span className="max-w-[150px] truncate">{file.name}</span>
+    <div className="w-full px-2 sm:px-4">
+      {files.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {files.map((file, idx) => (
+            <div key={idx} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-xs text-white/80 flex items-center gap-2">
+              📎 {file.name}
               <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                onClick={() => setFiles(files.filter((_, i) => i !== idx))}
+                className="ml-1 hover:text-white"
               >
-                <X className="w-3.5 h-3.5 text-white/70" />
+                <X className="w-3 h-3" />
               </button>
             </div>
           ))}
         </div>
       )}
-      
-      {/* Agent Chips - Above Input Bar */}
-      {multiAgentMode && (
-        <div className="mb-2 flex justify-center">
-          <div className="flex flex-row flex-wrap gap-2 justify-center">
-            {agents.map(agent => (
-              <button
-                key={agent.id}
-                type="button"
-                onClick={() => toggleAgent(agent.id)}
-                onContextMenu={(e) => handleAgentRightClick(e, agent.id)}
-                className={`px-3 py-1.5 rounded text-xs text-white/80 transition-all whitespace-nowrap ${
-                  selectedAgents.includes(agent.id) || (selectedAgents.includes('all') && agent.id === 'all')
-                    ? agent.color + ' border border-white/30'
-                    : 'bg-white/5 border border-white/10 opacity-50'
-                }`}
-              >
-                {agent.name}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={handleAddAgent}
-              className="px-3 py-1.5 rounded text-xs text-white/80 bg-white/5 border border-white/20 hover:bg-white/10 transition-all whitespace-nowrap"
-            >
-              + Add
-            </button>
-          </div>
-        </div>
-      )}
-      
-      <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
-        <button
-           type="button"
-           onContextMenu={(e) => {
-             e.preventDefault();
-             setShowVoiceMenu(!showVoiceMenu);
-           }}
-           onClick={toggleReadAloud}
-           disabled={!lastAssistantMessage || isGenerating}
-           className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isSpeaking && !isPaused ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-           title={isGenerating ? 'Generating speech...' : isSpeaking ? 'Pause/Resume' : 'Read AI response (Right-click for voice settings)'}
-         >
-           {isGenerating ? (
-             <div className="w-4 h-4 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin" />
-           ) : (
-             <Volume2 className={`w-4 h-4 ${isSpeaking ? 'text-green-600' : 'text-gray-700'}`} />
-           )}
-         </button>
 
-         {showVoiceMenu && (
-           <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[180px] z-50" ref={voiceMenuRef}>
-             <div className="px-3 py-2 text-xs font-semibold text-gray-700">Voice</div>
-             {['nova', 'alloy', 'echo', 'fable', 'onyx', 'shimmer'].map((voice) => (
-               <button
-                 key={voice}
-                 type="button"
-                 onClick={() => {
-                   setPreferredVoice(voice);
-                   localStorage.setItem('caos_voice_preference_message', voice);
-                   setShowVoiceMenu(false);
-                   toast.success(`Voice changed to ${voice}`);
-                 }}
-                 className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
-                   preferredVoice === voice ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                 }`}
-               >
-                 {voice.charAt(0).toUpperCase() + voice.slice(1)}
-               </button>
-             ))}
-             <div className="border-t border-gray-200 my-1 px-3 py-2">
-               <label className="text-xs text-gray-600 block mb-1">Speed: {speechRate.toFixed(1)}x</label>
-               <input
-                 type="range"
-                 min="0.5"
-                 max="2"
-                 step="0.25"
-                 value={speechRate}
-                 onChange={(e) => {
-                   setSpeechRate(parseFloat(e.target.value));
-                   localStorage.setItem('caos_speech_rate', e.target.value);
-                 }}
-                 className="w-full"
-               />
-             </div>
-           </div>
-         )}
-
+      <div className="flex gap-2 items-end">
         <textarea
           ref={textareaRef}
-          value={message}
-          maxLength={1000000}
-          onChange={(e) => {
-            setMessage(e.target.value);
-            onMessageChange?.(e.target.value);
-            e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-          }}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              e.stopPropagation();
-
-              if (isTranscribing) return false;
-
-              if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-                if (isRecording) {
-                  stopRecording();
-                  return false;
-                }
-
-                const messageToSend = message.trim();
-                const filesToSend = attachedFiles.map(f => f.url);
-
-                setMessage('');
-                setAttachedFiles([]);
-                onMessageChange?.('');
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = '24px';
-                }
-
-                onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
-              }
-              return false;
-            }
-          }}
-          onPaste={(e) => {
-            // CAOS-A1 Turn Handling: Multi-line paste = ONE turn (default)
-            // No automatic turn segmentation
-          }}
-          onFocus={() => onTypingStart?.()}
+          value={messageValue}
+          onChange={(e) => onMessageChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 text-sm px-2 resize-none overflow-y-auto"
-          style={{ minHeight: '24px', height: '24px', maxHeight: '200px' }}
+          className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:border-white/40 resize-none max-h-[168px]"
+          rows={1}
           disabled={isLoading}
         />
-        
-        <div className="relative" ref={captureMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowCaptureMenu(!showCaptureMenu)}
-            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
-            disabled={uploading}
-          >
-            {uploading ? (
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4 text-gray-700" />
-            )}
-          </button>
 
-          {showCaptureMenu && (
-            <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[160px] z-50">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCaptureMenu(false);
-                  fileInputRef.current?.click();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                disabled={attachedFiles.length >= 5}
-              >
-                <FileText className="w-4 h-4" />
-                Upload Files {attachedFiles.length >= 5 ? '(Max 5)' : `(${5 - attachedFiles.length} left)`}
-              </button>
-              <button
-                type="button"
-                onClick={captureScreen}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
-              >
-                <Monitor className="w-4 h-4" />
-                Capture Screen
-              </button>
-              <button
-                type="button"
-                onClick={captureCamera}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded transition-colors"
-              >
-                <Camera className="w-4 h-4" />
-                Take Photo
-              </button>
-            </div>
+        <div className="flex gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+            title="Attach file"
+          >
+            <Plus className="w-5 h-5" />
+          </Button>
+
+          {lastAssistantMessage && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => toggleGoogleReadAloud(lastAssistantMessage, isReadingAloud, setIsReadingAloud)}
+              disabled={isLoading}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              title="Read last message with Google Voice"
+            >
+              <Volume2 className={`w-5 h-5 ${isReadingAloud ? 'animate-pulse' : ''}`} />
+            </Button>
           )}
+
+          <Button
+            size="icon"
+            onClick={handleSend}
+            disabled={isLoading || (!messageValue.trim() && files.length === 0)}
+            className="bg-white/20 hover:bg-white/30 text-white"
+            title="Send message"
+          >
+            <Send className="w-5 h-5" />
+          </Button>
         </div>
-
-        {!isRecording ? (
-          <button
-            type="button"
-            onClick={startRecording}
-            disabled={isTranscribing}
-            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
-              isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
-            }`}
-            title={isTranscribing ? 'Transcribing...' : 'Start recording'}
-          >
-            {isTranscribing ? (
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Mic className="w-4 h-4 text-gray-700" />
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={stopRecording}
-            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
-            title="Finish recording"
-          >
-            <Check className="w-4 h-4 text-white" />
-          </button>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          max="5"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleCameraCapture}
-          className="hidden"
-        />
-
-        <button
-          type="submit"
-          disabled={(!message.trim() && attachedFiles.length === 0) || isLoading || uploading}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 sm:px-4 py-1.5 h-auto text-sm font-medium disabled:opacity-50 flex-shrink-0 shadow-sm"
-        >
-          {isLoading ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            'Send'
-          )}
-        </button>
       </div>
-      {/* Inline speech player bar — shows below input when speaking */}
-      {isSpeaking && (
-        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md space-y-1.5">
-          {/* Progress bar */}
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all duration-200"
-              style={{ width: `${speechProgress}%` }}
-            />
-          </div>
-          {/* Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => skipReadAloud(-10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Back 10s">
-                <SkipBack className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-              <button type="button" onClick={toggleReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title={isPaused ? "Resume" : "Pause"}>
-                {isPaused ? <Play className="w-3.5 h-3.5 text-blue-600" /> : <Pause className="w-3.5 h-3.5 text-blue-600" />}
-              </button>
-              <button type="button" onClick={() => skipReadAloud(10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Forward 10s">
-                <SkipForward className="w-3.5 h-3.5 text-gray-600" />
-              </button>
-              <button type="button" onClick={stopReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Stop">
-                <X className="w-3.5 h-3.5 text-red-500" />
-              </button>
-            </div>
-            <span className="text-[10px] text-gray-400 tabular-nums">{formatSpeechTime()}</span>
-          </div>
-        </div>
-      )}
-    </form>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+        accept="*"
+      />
+    </div>
   );
 }
