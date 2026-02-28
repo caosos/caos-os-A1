@@ -40,22 +40,22 @@ export async function handleReadAloud(message, messageId, onPlaybackStart, onPla
       .substring(0, 4096);
 
     // Fetch audio from OpenAI TTS
-    const { data: audioBase64 } = await base44.functions.invoke('textToSpeech', {
-      text: cleanText,
-      voice: localStorage.getItem('caos_voice_preference') || 'nova',
-      speed: parseFloat(localStorage.getItem('caos_speech_rate') || '1.0')
+    const response = await fetch(`/api/functions/textToSpeech`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ 
+        text: cleanText, 
+        voice: localStorage.getItem('caos_voice_preference') || 'nova',
+        speed: parseFloat(localStorage.getItem('caos_speech_rate') || '1.0')
+      })
     });
 
-    if (!audioBase64) {
-      throw new Error('No audio data returned');
+    if (!response.ok) {
+      throw new Error(`TTS failed: ${response.status}`);
     }
 
-    const binaryString = atob(audioBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+    const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     
     const audio = new Audio();
