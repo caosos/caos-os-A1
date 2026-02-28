@@ -71,12 +71,13 @@ export default function SystemBlueprint() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Feb 27, 2026 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Feb 28, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="hybridMessage: ACTIVE" color="green" />
               <Tag label="Phase A Memory: LOCKED" color="green" />
               <Tag label="Heuristics Engine v1: LOCKED" color="green" />
-              <Tag label="Phase B/C: RESERVED" color="yellow" />
+              <Tag label="PHASE 1 — Observability: IN PROGRESS" color="yellow" />
+              <Tag label="PHASE 2–6: RESERVED" color="purple" />
             </div>
           </div>
 
