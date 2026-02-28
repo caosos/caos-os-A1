@@ -477,6 +477,7 @@ Deno.serve(async (req) => {
         }
 
         // ============ LOAD FULL SESSION HISTORY ============
+        setStage(STAGES.HISTORY_LOAD);
         let rawHistory = [];
         if (session_id) {
             try {
