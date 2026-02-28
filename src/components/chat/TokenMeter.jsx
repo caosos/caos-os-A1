@@ -6,7 +6,7 @@ function estimateTokens(text) {
   return Math.ceil(text.length / 4);
 }
 
-export default function TokenMeter({ messages = [], maxTokens = 128000 }) {
+export default function TokenMeter({ messages = [], maxTokens = 2000000 }) {
   // Use stored token_count if available, otherwise estimate from content length
   const tokens = messages.reduce((sum, msg) => {
     if (msg.token_count && msg.token_count > 0) return sum + msg.token_count;
