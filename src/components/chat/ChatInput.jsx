@@ -705,6 +705,41 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </button>
       </div>
 
+      {/* Inline Google Voice Player Bar */}
+      {isPlayingGoogle && (
+        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleGoogleVoicePlay}
+                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                title={isPausedGoogle ? 'Resume' : 'Pause'}
+              >
+                {isPausedGoogle ? (
+                  <Play className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <Pause className="w-4 h-4 text-blue-600" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={stopGoogleVoice}
+                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                title="Stop"
+              >
+                <X className="w-4 h-4 text-red-500" />
+              </button>
+            </div>
+            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 transition-all duration-200"
+                style={{ width: `${googleSpeechProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
