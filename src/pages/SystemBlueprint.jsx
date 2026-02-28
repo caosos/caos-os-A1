@@ -622,8 +622,30 @@ Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
             error_code=TTS_CALL_FAILED, visible in /Logs page.`}</Code>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4">
-            <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
+            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4 space-y-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-orange-300 font-bold text-sm">TSB-008 — Welcome Page Infinite Loading Cycle</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: pages/Welcome.jsx — useEffect auth check
+Symptom:   App stuck on Welcome page with "Preview is still loading" message,
+           cycling indefinitely regardless of login state or page navigation.
+           Spinner loops without ever progressing to Chat or auth UI.
+Root Cause: Duplicate React import (import { useState } declared twice in
+           pages/SystemBlueprint.jsx from prior context). While this didn't
+           directly affect Welcome, it created a build/module error that
+           cascaded into Welcome's rendering pipeline, causing the auth
+           check to never complete properly.
+Fix:       Removed duplicate useState import from SystemBlueprint.jsx.
+           This cleared the module resolution error and allowed Welcome's
+           useEffect auth check to execute cleanly.
+           Auth flow now completes: isAuthenticated() → redirect to Chat
+           OR render welcome UI.
+Testing:   App now loads Welcome → transitions to Chat on auth success.`}</Code>
+              </div>
+              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
             </Section>
 
