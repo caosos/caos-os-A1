@@ -17,6 +17,7 @@ import CodeTerminal from '@/components/terminal/CodeTerminal';
 import GameView from '@/components/game/GameView';
 import TokenMeter from '@/components/chat/TokenMeter';
 import LaneSelector from '@/components/chat/LaneSelector';
+import BottomNavBar from '@/components/mobile/BottomNavBar';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
