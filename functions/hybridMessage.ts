@@ -504,6 +504,7 @@ Deno.serve(async (req) => {
         }
 
         // ─── HEURISTICS ENGINE + DCS: CLASSIFY & CALIBRATE (internal) ───────────
+        setStage(STAGES.HEURISTICS);
         const hIntent = HEURISTICS_ENABLED ? classifyIntent(input) : 'GENERAL_QUERY';
         const cogLevel = detectCognitiveLevel(input);
         const hDepth   = HEURISTICS_ENABLED ? calibrateDepth(input, hIntent) : 'STANDARD';
