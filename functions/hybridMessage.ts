@@ -767,6 +767,9 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             request_id,
             response_time_ms: responseTime,
             tool_calls: [],
+            wcw_budget: wcwBudget,
+            wcw_used: promptTokens,
+            wcw_remaining: wcwRemaining,
             execution_receipt: {
                 request_id,
                 session_id,
@@ -778,7 +781,11 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
                 cognitive_level: cogLevel,
                 elevation_delta: 0.75,
                 model_used: ACTIVE_MODEL,
-                latency_ms: responseTime
+                latency_ms: responseTime,
+                token_breakdown: tokenBreakdown,
+                wcw_budget: wcwBudget,
+                wcw_used: promptTokens,
+                wcw_remaining: wcwRemaining
             }
         });
 
