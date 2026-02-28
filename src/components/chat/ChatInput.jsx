@@ -252,18 +252,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setIsPausedGoogle(false);
     };
     utterance.onend = () => {
-      setIsPlayingGoogle(false);
-      setIsPausedGoogle(false);
-      setGoogleSpeechProgress(0);
+      stopGoogleVoice();
     };
     utterance.onerror = () => {
-      setIsPlayingGoogle(false);
-      setIsPausedGoogle(false);
+      stopGoogleVoice();
       toast.error('Google Voice read-aloud failed');
     };
     utterance.onboundary = () => {
       // Estimate progress (Web Speech API doesn't provide exact progress)
-      setGoogleSpeechProgress(Math.min(googleSpeechProgress + 2, 90));
+      setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
     };
 
     window.speechSynthesis.cancel();
@@ -714,8 +711,28 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       {/* Inline Google Voice Player Bar */}
       {isPlayingGoogle && (
         <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md">
+          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden mb-2">
+            <div
+              className="h-full bg-blue-500 transition-all duration-200"
+              style={{ width: `${googleSpeechProgress}%` }}
+            />
+          </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  // Rewind by cancelling and replaying from start (Web Speech API limitation)
+                  window.speechSynthesis.cancel();
+                  setGoogleSpeechProgress(0);
+                  setIsPausedGoogle(false);
+                  toggleGoogleVoicePlay();
+                }}
+                className="p-1 rounded hover:bg-gray-100 transition-colors"
+                title="Restart"
+              >
+                <SkipBack className="w-4 h-4 text-blue-600" />
+              </button>
               <button
                 type="button"
                 onClick={toggleGoogleVoicePlay}
@@ -736,12 +753,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               >
                 <X className="w-4 h-4 text-red-500" />
               </button>
-            </div>
-            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 transition-all duration-200"
-                style={{ width: `${googleSpeechProgress}%` }}
-              />
             </div>
           </div>
         </div>
