@@ -664,6 +664,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
                 heuristics_depth: hDepth,
                 cognitive_level: cogLevel,
                 elevation_delta: 0.75,
+                model_used: ACTIVE_MODEL,
                 latency_ms: responseTime
             }
         });
