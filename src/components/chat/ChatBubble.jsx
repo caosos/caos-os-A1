@@ -426,16 +426,15 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const handleReadAloud = async () => {
-    // If already playing, toggle pause/resume on the audio element
-    if (isSpeaking) {
-      if (audioRef.current) {
-        if (audioRef.current.paused) {
-          audioRef.current.play();
-          setIsPausedBySpeech(false);
-        } else {
-          audioRef.current.pause();
-          setIsPausedBySpeech(true);
-        }
+    // If already has audio loaded, toggle pause/resume
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(() => {});
+        setIsSpeaking(true);
+        setIsPausedBySpeech(false);
+      } else {
+        audioRef.current.pause();
+        setIsPausedBySpeech(true);
       }
       return;
     }
