@@ -766,6 +766,36 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           )}
         </button>
       </div>
+      {/* Inline speech player bar — shows below input when speaking */}
+      {isSpeaking && (
+        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md space-y-1.5">
+          {/* Progress bar */}
+          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 transition-all duration-200"
+              style={{ width: `${speechProgress}%` }}
+            />
+          </div>
+          {/* Controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => skipReadAloud(-10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Back 10s">
+                <SkipBack className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <button type="button" onClick={toggleReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title={isPaused ? "Resume" : "Pause"}>
+                {isPaused ? <Play className="w-3.5 h-3.5 text-blue-600" /> : <Pause className="w-3.5 h-3.5 text-blue-600" />}
+              </button>
+              <button type="button" onClick={() => skipReadAloud(10)} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Forward 10s">
+                <SkipForward className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <button type="button" onClick={stopReadAloud} className="p-1 rounded hover:bg-gray-100 transition-colors" title="Stop">
+                <X className="w-3.5 h-3.5 text-red-500" />
+              </button>
+            </div>
+            <span className="text-[10px] text-gray-400 tabular-nums">{formatSpeechTime()}</span>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
