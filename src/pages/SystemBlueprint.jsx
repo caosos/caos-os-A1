@@ -460,6 +460,141 @@ Backend check:
             </div>
           </Section>
 
+          {/* BUILD SEQUENCE */}
+          <Section title="CAOS_BUILD_SEQUENCE_v1 — Controlled Build Phases" color="cyan">
+            <p className="text-cyan-200 font-semibold">This is the locked execution sequence. Phases are executed in order. No phase is started until the previous one meets its exit condition.</p>
+
+            <div className="space-y-5 mt-4">
+
+              {/* PHASE 1 */}
+              <div className="bg-yellow-950/40 border border-yellow-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-yellow-300 font-bold text-sm">PHASE 1 — Observability & Deterministic Error Control</span>
+                  <Tag label="IN PROGRESS 🔧" color="yellow" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> No silent failure. No masked error. Full admin visibility into pipeline stage at point of failure.</p>
+                <Code>{`1.1 Stage Tracker (COMPLETE ✅)
+     — setStage()/getStage() in hybridMessage
+     — Tracks: AUTH | PROFILE_LOAD | MEMORY_WRITE | HISTORY_LOAD |
+               HEURISTICS | PROMPT_BUILD | OPENAI_CALL | MESSAGE_SAVE | RESPONSE_BUILD
+
+1.2 Deterministic Error Envelope — ODEL v1 (COMPLETE ✅)
+     — buildDeterministicErrorEnvelope(err, ctx) replaces generic catch
+     — Persists structured ErrorLog: error_id, stage, error_code,
+       model_used, latency_ms, retry_attempted, system_version
+     — Returns non-200 with: { reply (public-safe), error_id, error_code, stage }
+     — body/user hoisted above try{} so catch has full context
+
+1.3 Admin Error Console Rendering (PENDING)
+     — Console renders structured ErrorLog envelopes
+     — Expandable JSON, filter by stage + error_code
+     — Query error by error_id
+
+1.4 Remove UI Generic Masking (PENDING)
+     — No more 200-status masking of real errors
+     — No auto-retry without explicit policy
+
+EXIT CONDITION:
+  Forced failure → structured envelope → visible in ErrorLog → queryable by error_id`}</Code>
+              </div>
+
+              {/* PHASE 2 */}
+              <div className="bg-purple-950/40 border border-purple-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-purple-300 font-bold text-sm">PHASE 2 — Model Awareness & Self-Diagnostic Mode</span>
+                  <Tag label="RESERVED" color="purple" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Model can reason about its own failures when ADMIN_MODE is enabled.</p>
+                <Code>{`2.1 Diagnostic Context Injection
+     — Inject last_error_envelope into system prompt when ADMIN_MODE = true
+
+2.2 Structured Self-Diagnostic Output
+     — Model returns: probable_cause, reproduction_vector, confidence_score
+
+2.3 Version Metadata Exposure
+     — hybridMessage_version, DCS_version, system_version, model_used
+       returned in every execution_receipt
+
+EXIT CONDITION:
+  Simulated rate-limit → correct self-diagnostic reasoning from Aria`}</Code>
+              </div>
+
+              {/* PHASE 3 */}
+              <div className="bg-green-950/40 border border-green-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-300 font-bold text-sm">PHASE 3 — Memory Stabilization & Mutation Control</span>
+                  <Tag label="RESERVED" color="purple" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Memory becomes fully auditable and deterministic. No surprise writes.</p>
+                <Code>{`3.1 Disable Auto Anchor Extraction (if still active)
+3.2 Enforce Explicit Save Triggers — no silent writes
+3.3 Memory Write Receipt: memory_write_success, memory_entity, anchor_count_delta
+3.4 Idempotency Protection — repeated request = identical memory state
+
+EXIT CONDITION:
+  Repeated identical request → memory state unchanged (idempotent)`}</Code>
+              </div>
+
+              {/* PHASE 4 */}
+              <div className="bg-indigo-950/40 border border-indigo-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">PHASE 4 — Cognitive Scaling Governance</span>
+                  <Tag label="RESERVED" color="purple" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> DCS becomes predictable and measurable across all prompt types.</p>
+                <Code>{`4.1 Log cognitive_level in execution_receipt (currently present ✅)
+4.2 Log depth_mode in execution_receipt (currently present ✅)
+4.3 Admin-only cognitive telemetry dashboard
+4.4 Confirm no COMPACT clipping on short prompts
+
+EXIT CONDITION:
+  Complex architectural prompt reliably yields LAYERED depth`}</Code>
+              </div>
+
+              {/* PHASE 5 */}
+              <div className="bg-blue-950/40 border border-blue-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-blue-300 font-bold text-sm">PHASE 5 — Cross-Thread Deterministic Recall</span>
+                  <Tag label="RESERVED" color="purple" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Scoped recall across sessions without context bleed.</p>
+                <Code>{`5.1 Lane-Scoped Recall — wire Lane entity into hybridMessage recall
+5.2 Profile-Global Anchor View — single query across all sessions
+5.3 Bounded Rolling Context Window — enforce WCW budget (SessionContext entity)
+5.4 Explicit Recall Labeling — every recalled fact labeled with source + tier
+
+EXIT CONDITION:
+  Thread isolation intact under cross-thread recall query`}</Code>
+              </div>
+
+              {/* PHASE 6 */}
+              <div className="bg-gray-950/40 border border-gray-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-gray-300 font-bold text-sm">PHASE 6 — Admin Command Surface Expansion</span>
+                  <Tag label="FUTURE" color="yellow" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Full operational visibility from Admin dashboard.</p>
+                <Code>{`TPM / RPM usage metrics
+Error rate % by stage
+Model switch verification
+Memory growth rate tracking
+Session health heatmap`}</Code>
+              </div>
+
+            </div>
+
+            {/* NOT DOING YET */}
+            <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4 mt-4">
+              <p className="text-red-300 font-semibold text-xs mb-2">NOT IN SCOPE (future architectural layers — do not touch):</p>
+              <Code>{`- Python memory server replatform (FastAPI + SQLite)
+- External logging services (Datadog, Sentry, etc.)
+- Audio layer (blueprint complete, not implementing yet)
+- Multi-agent orchestration backend
+- SDK mutation guard rails
+- Presentation geometry refactor`}</Code>
+            </div>
+          </Section>
+
           {/* 12. ARIA ACCESS NOTE */}
           <Section title="12. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
