@@ -402,6 +402,7 @@ Deno.serve(async (req) => {
         console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id, model: ACTIVE_MODEL });
 
         // ============ LOAD USER PROFILE ============
+        setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
         try {
             const profiles = await base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1);
