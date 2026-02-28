@@ -808,7 +808,7 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             } catch (e) { console.warn('⚠️ [ANCHOR_UPDATE_FAILED]', e.message); }
         })();
 
-        console.log('🎯 [PIPELINE_COMPLETE]', { request_id, duration: responseTime, totalHistory: rawHistory.length });
+        console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime, totalHistory: rawHistory.length, receipt_attempted: true });
 
         return Response.json({
             reply,
