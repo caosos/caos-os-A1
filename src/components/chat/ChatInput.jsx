@@ -204,76 +204,97 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
   };
 
-  const toggleReadAloud = () => {
-    if (!lastAssistantMessage) return;
+  // Track utterance progress via boundary events + estimated duration
+  const utteranceStartTime = useRef(null);
+  const utteranceTotalChars = useRef(0);
 
-    // If already speaking, toggle pause/resume
-    if (isSpeaking) {
-      if (window.speechSynthesis.paused || isPaused) {
-        window.speechSynthesis.resume();
-        setIsPaused(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
+  const getCleanText = (text) => text
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/_(.+?)_/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/^[-*+]\s/gm, '')
+    .replace(/^\d+\.\s/gm, '')
+    .replace(/>/g, '')
+    .replace(/\|/g, '')
+    .replace(/---+/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
-    // Clean the text
-    const cleanText = lastAssistantMessage
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/\*(.+?)\*/g, '$1')
-      .replace(/_(.+?)_/g, '$1')
-      .replace(/`(.+?)`/g, '$1')
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-      .replace(/^[-*+]\s/gm, '')
-      .replace(/^\d+\.\s/gm, '')
-      .replace(/>/g, '')
-      .replace(/\|/g, '')
-      .replace(/---+/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+  const speakText = (text, startCharIndex = 0) => {
+    window.speechSynthesis.cancel();
+    const slicedText = text.slice(startCharIndex);
+    if (!slicedText) return;
 
-    // Use browser's Google voices for instant playback
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const utterance = new SpeechSynthesisUtterance(slicedText);
     utterance.rate = speechRate;
-    
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
+    if (selectedVoice) utterance.voice = selectedVoice;
+
+    utteranceTotalChars.current = text.length;
+    utteranceStartTime.current = Date.now();
+
+    utterance.onboundary = (e) => {
+      if (e.name === 'word') {
+        const charsDone = startCharIndex + e.charIndex;
+        setSpeechProgress((charsDone / text.length) * 100);
+      }
+    };
 
     utterance.onend = () => {
       setIsSpeaking(false);
       setIsPaused(false);
-      setSpeechProgress(0);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
+      setSpeechProgress(100);
+      if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      if (e.error === 'interrupted') return; // normal on seek/stop
       setIsSpeaking(false);
       setIsPaused(false);
-      setSpeechProgress(0);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-      toast.error('Speech failed');
+      if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
     };
 
     utteranceRef.current = utterance;
-    setIsSpeaking(true);
-    setSpeechProgress(0);
+    // Store full text and current start for skip logic
+    utteranceRef.current._fullText = text;
+    utteranceRef.current._startCharIndex = startCharIndex;
+    utteranceRef.current._charProgress = startCharIndex;
 
-    // Simulate progress
+    // Fallback progress via interval (for browsers that don't fire onboundary)
+    if (progressInterval.current) clearInterval(progressInterval.current);
     progressInterval.current = setInterval(() => {
-      setSpeechProgress(prev => Math.min(prev + 1, 95));
-    }, 100);
+      const elapsed = (Date.now() - utteranceStartTime.current) / 1000;
+      // Rough: chars/sec ≈ rate * 15
+      const estChars = startCharIndex + elapsed * speechRate * 15;
+      setSpeechProgress(Math.min((estChars / text.length) * 100, 99));
+      utteranceRef.current._charProgress = Math.min(estChars, text.length - 1);
+    }, 200);
 
+    setIsSpeaking(true);
+    setIsPaused(false);
     window.speechSynthesis.speak(utterance);
+  };
+
+  const toggleReadAloud = () => {
+    if (!lastAssistantMessage) return;
+
+    if (isSpeaking) {
+      if (window.speechSynthesis.paused || isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+        utteranceStartTime.current = Date.now() - ((utteranceRef.current?._charProgress || 0) / (speechRate * 15)) * 1000;
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+        if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
+      }
+      return;
+    }
+
+    const cleanText = getCleanText(lastAssistantMessage);
+    speakText(cleanText, 0);
   };
 
   const stopReadAloud = () => {
@@ -281,10 +302,28 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeechProgress(0);
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
-    }
+    if (progressInterval.current) { clearInterval(progressInterval.current); progressInterval.current = null; }
+  };
+
+  const skipReadAloud = (seconds) => {
+    if (!utteranceRef.current?._fullText) return;
+    const fullText = utteranceRef.current._fullText;
+    // chars/sec estimate
+    const charsPerSec = speechRate * 15;
+    const currentChar = Math.round(utteranceRef.current._charProgress || 0);
+    const newChar = Math.max(0, Math.min(fullText.length - 1, currentChar + seconds * charsPerSec));
+    speakText(fullText, Math.round(newChar));
+  };
+
+  const formatSpeechTime = () => {
+    if (!utteranceRef.current?._fullText) return '';
+    const fullText = utteranceRef.current._fullText;
+    const charsPerSec = speechRate * 15;
+    const currentChar = utteranceRef.current._charProgress || 0;
+    const totalSecs = Math.ceil(fullText.length / charsPerSec);
+    const currentSecs = Math.floor(currentChar / charsPerSec);
+    const fmt = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+    return `${fmt(currentSecs)} / ${fmt(totalSecs)}`;
   };
 
   const startRecording = async () => {
