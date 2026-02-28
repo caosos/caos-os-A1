@@ -606,9 +606,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
 
-    audio.load();
-    audio.play().catch((err) => {
-      console.error('[AUDIO_PLAY_REJECTED]', err.message);
+    // Do NOT call audio.load() — setting .src already triggers loading.
+    // Calling load() after setting src resets the element and can prevent play.
+    audio.play().then(() => {
+      console.log('[AUDIO_PLAYING]', url.substring(0, 40));
+    }).catch((err) => {
+      console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
       setIsSpeaking(false);
       toast.error(`Playback blocked: ${err.message}`);
     });
