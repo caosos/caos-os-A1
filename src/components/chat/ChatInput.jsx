@@ -30,15 +30,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const googleUtteranceRef = useRef(null);
   const voiceButtonRef = useRef(null);
 
-  // Stop audio on unmount/tab close
+  // Stop speech synthesis on unmount
   useEffect(() => {
     const handleUnload = () => {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+      window.speechSynthesis.cancel();
     };
     window.addEventListener('beforeunload', handleUnload);
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      window.speechSynthesis.cancel();
     };
   }, []);
 
