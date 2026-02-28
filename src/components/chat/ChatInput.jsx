@@ -222,85 +222,79 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   const toggleReadAloud = async () => {
-    if (!lastAssistantMessage) return;
+    if (!message.trim()) return;
 
     // Toggle pause/resume if already loaded
-    if (audioRef.current && audioRef.current.src) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
-        setIsPaused(false);
-        setIsSpeaking(true);
-      } else {
-        audioRef.current.pause();
-        setIsPaused(true);
-      }
+    if (audioRef.current && audioRef.current.paused) {
+      audioRef.current.play().catch(() => {});
+      setIsPaused(false);
+      setIsSpeaking(true);
+      return;
+    }
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      setIsPaused(true);
       return;
     }
 
-    const cleanText = getCleanText(lastAssistantMessage);
-    const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
-    const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
+    const cleanText = getCleanText(message);
+    const voice = googleVoice;
+    const speed = googleSpeechRate;
 
     setIsGenerating(true);
     setSpeechProgress(0);
 
     try {
-      const fetchResponse = await fetch(`${window.location.origin}/api/functions/textToSpeech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, voice, speed }),
-        credentials: 'include',
-      });
+      // Use browser's native Web Speech API with SpeechSynthesisUtterance
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Set voice based on Google voice preference
+      const voices = window.speechSynthesis.getVoices();
+      const voiceMap = {
+        'Google US English': 'en-US',
+        'Google UK English': 'en-GB',
+        'Google US Spanish': 'es-ES',
+        'Google French': 'fr-FR',
+        'Google German': 'de-DE',
+        'Google Italian': 'it-IT',
+        'Google Japanese': 'ja-JP',
+        'Google Mandarin': 'zh-CN',
+        'Google Korean': 'ko-KR',
+      };
+
+      const langCode = voiceMap[voice] || 'en-US';
+      const matchedVoice = voices.find(v => v.lang.startsWith(langCode));
+      if (matchedVoice) utterance.voice = matchedVoice;
 
       setIsGenerating(false);
 
-      if (!fetchResponse.ok) {
-        const errText = await fetchResponse.text();
-        throw new Error(`TTS ${fetchResponse.status}: ${errText}`);
-      }
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        setIsPaused(false);
+      };
 
-      const contentType = fetchResponse.headers.get('content-type') || '';
-      if (!contentType.includes('audio')) {
-        const errJson = await fetchResponse.json();
-        throw new Error(errJson.error || 'TTS did not return audio');
-      }
-
-      const buf = await fetchResponse.arrayBuffer();
-      if (!buf || buf.byteLength === 0) throw new Error('TTS returned empty audio');
-
-      const blob = new Blob([buf], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-
-      const audio = new Audio();
-      audio.src = url;
-      audioRef.current = audio;
-
-      audio.addEventListener('loadedmetadata', () => setAudioDuration(audio.duration));
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setSpeechProgress((audio.currentTime / audio.duration) * 100);
-      });
-      audio.addEventListener('ended', () => {
+      utterance.onend = () => {
         setIsSpeaking(false);
         setIsPaused(false);
         setSpeechProgress(0);
         setAudioDuration(0);
-      });
-      audio.addEventListener('error', () => {
+      };
+
+      utterance.onerror = (e) => {
         setIsSpeaking(false);
         setIsPaused(false);
-        setSpeechProgress(0);
-        toast.error('Audio playback failed');
-      });
+        console.error('Speech synthesis error:', e);
+        toast.error('Read aloud failed');
+      };
 
-      setIsSpeaking(true);
-      setIsPaused(false);
-      audio.play().catch((err) => {
-        setIsSpeaking(false);
-        toast.error(`Playback blocked: ${err.message}`);
-      });
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
     } catch (err) {
       setIsGenerating(false);
-      console.error('[TTS_INPUT_ERROR]', err.message);
+      console.error('[GOOGLE_SPEECH_ERROR]', err.message);
       toast.error(`Read aloud failed: ${err.message}`);
     }
   };
