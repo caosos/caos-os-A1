@@ -43,10 +43,10 @@ function ErrorRow({ error }) {
   const isOdel = !!error.error_id;
 
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden">
-      <button
+    <div className="border border-white/10 rounded-lg overflow-hidden select-text">
+      <div
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/5 transition-colors"
+        className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/5 transition-colors cursor-pointer"
       >
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -74,7 +74,7 @@ function ErrorRow({ error }) {
             ? <ChevronDown className="w-4 h-4 text-white/40" />
             : <ChevronRight className="w-4 h-4 text-white/40" />}
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="border-t border-white/10 bg-black/20 p-4 space-y-3 text-xs">
