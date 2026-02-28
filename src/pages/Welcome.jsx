@@ -14,17 +14,19 @@ export default function Welcome() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [checking, setChecking] = useState(true);
+  const authCheckRef = React.useRef(false);
 
   // Check authentication status on mount — LOCKED AGAINST INFINITE LOOP
   React.useEffect(() => {
-    let mounted = true;
-    
-    // Prevent auth check from running more than once per session
-    if (sessionStorage.getItem('welcome_auth_checked')) {
+    // Triple-lock: if already checked, never check again
+    if (authCheckRef.current || sessionStorage.getItem('welcome_auth_checked')) {
       setChecking(false);
       return;
     }
+    authCheckRef.current = true;
     sessionStorage.setItem('welcome_auth_checked', 'true');
+    
+    let mounted = true;
     
     const checkAuth = async () => {
       if (!mounted) return;
@@ -41,16 +43,16 @@ export default function Welcome() {
     };
     
     checkAuth();
-    // Hard timeout: force load state exit after 2 seconds
+    // Hard timeout: force load state exit after 1.5 seconds
     const safetyTimer = setTimeout(() => {
       if (mounted) setChecking(false);
-    }, 2000);
+    }, 1500);
     
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
     };
-  }, [navigate]);
+  }, []);
 
   const handleGuestContinue = () => {
     const user = {
