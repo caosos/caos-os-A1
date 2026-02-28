@@ -18,6 +18,8 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   const [gameModeEnabled, setGameModeEnabled] = useState(false);
   const [activeView, setActiveView] = useState('profile'); // 'profile', 'desktop', 'files', 'folders', 'photos', 'memory'
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('caos_remember_conversations');
