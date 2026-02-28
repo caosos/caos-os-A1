@@ -485,8 +485,17 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setGenerationProgress(100);
       setIsGenerating(false);
 
-      // response.data is an ArrayBuffer (audio/mpeg)
-      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      // response.data may be ArrayBuffer, Blob, or already a typed array
+      let audioData = response.data;
+      let audioBlob;
+      if (audioData instanceof Blob) {
+        audioBlob = audioData;
+      } else if (audioData instanceof ArrayBuffer || ArrayBuffer.isView(audioData)) {
+        audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+      } else {
+        // Axios may return the binary as a string — convert via fetch workaround
+        throw new Error('Unexpected audio response format');
+      }
       const audioUrl = URL.createObjectURL(audioBlob);
       audioCache.set(cacheKey, audioUrl);
       playAudioUrl(audioUrl);
@@ -494,7 +503,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       clearInterval(genInterval);
       setIsGenerating(false);
       setGenerationProgress(0);
-      toast.error('Failed to generate speech');
+      toast.error('TTS failed — check OpenAI key or try again');
+      console.error('[TTS_ERROR]', err);
     }
   };
 
