@@ -420,21 +420,8 @@ function compressHistory(messages) {
     return [...head, summaryBlock, ...tail];
 }
 
-async function extractMemoryAnchors(openaiKey, conversationExcerpt, existingAnchors) {
-    const prompt = `You are a memory extraction system. Extract any NEW facts worth remembering long-term about the user. Focus on: names, dates, decisions, preferences, life events.
-
-EXISTING (do not duplicate):
-${existingAnchors || 'None yet'}
-
-CONVERSATION:
-${conversationExcerpt}
-
-Output ONLY new facts, one per line, format: "[DATE if known]: [fact]"
-If nothing new: output exactly: NONE`;
-
-    const result = await openAICall(openaiKey, [{ role: 'user', content: prompt }], ACTIVE_MODEL, 500);
-    return result.trim() === 'NONE' ? [] : result.split('\n').filter(l => l.trim().length > 0);
-}
+// 3.1: extractMemoryAnchors REMOVED — background auto-extraction disabled.
+// Only explicit Phase A saves (detectMemorySave triggers) are permitted.
 
 Deno.serve(async (req) => {
     const startTime = Date.now();

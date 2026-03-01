@@ -564,10 +564,41 @@ export default function Chat() {
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
 
-      // Check for errors in response
+      // 1.4: Handle ODEL structured error response — no masking, no auto-retry
       if (!response || response.status !== 200) {
-        console.error('❌ BACKEND ERROR - Invalid response:', response);
-        throw new Error(response?.data?.error || 'Backend returned error status');
+        const errData = response?.data || {};
+        const errReply = errData.reply || 'Something went wrong.';
+        const errId = errData.error_id || null;
+        const errCode = errData.error_code || 'SERVER_ERROR';
+        const errStage = errData.stage || null;
+
+        console.error('❌ [ODEL_ERROR]', { error_id: errId, error_code: errCode, stage: errStage });
+
+        // Render the public reply as a failed assistant message
+        const errMsg = {
+          id: 'err_' + Date.now(),
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: errReply,
+          failed: true,
+          error_id: errId,
+          error_code: errCode,
+          stage: errStage,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), errMsg]
+        }));
+
+        toast.error(
+          errId
+            ? `Error [${errCode}] — ID: ${errId}`
+            : `Error: ${errCode}`,
+          { duration: 8000 }
+        );
+
+        return; // no throw, no retry
       }
 
       const { data } = response;
