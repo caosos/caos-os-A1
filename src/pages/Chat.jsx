@@ -28,10 +28,19 @@ export default function Chat() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState({});
-  const [showThreads, setShowThreads] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [fileView, setFileView] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showToken, setShowToken] = useState(false);
+
+  // Derive panel state from URL search params — enables hardware back button to close panels
+  const showThreads = searchParams.get('panel') === 'threads';
+  const showProfile = searchParams.get('panel') === 'profile';
+  const fileView = searchParams.get('fileView') || null;
+
+  const openPanel = (panel, extra = {}) => {
+    const params = { panel, ...extra };
+    setSearchParams(params, { replace: false });
+  };
+  const closePanel = () => setSearchParams({}, { replace: false });
   const [isLoading, setIsLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
