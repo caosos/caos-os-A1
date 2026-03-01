@@ -476,9 +476,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const toggleVoiceRecording = () => {
     if (isRecording) {
-      stopRecording();
+      STT_CHUNKING_ENABLED ? stopChunkingRecording() : stopRecording();
     } else {
-      startRecording();
+      STT_CHUNKING_ENABLED ? startChunkingRecording() : startRecording();
     }
   };
 
