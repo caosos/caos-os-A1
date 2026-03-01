@@ -1243,6 +1243,7 @@ export default function Chat() {
           setCurrentConversationId(id);
           localStorage.setItem('caos_last_conversation', id);
           handleSessionResume(id);
+          closePanel();
         }}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
