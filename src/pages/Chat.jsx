@@ -916,12 +916,9 @@ export default function Chat() {
               <ChatHeader 
                 user={user}
                 onNewThread={handleNewThread}
-                onShowThreads={() => setShowThreads(true)}
-                onShowProfile={() => setShowProfile(true)}
-                onShowFiles={(view) => {
-                  setFileView(view);
-                  setShowProfile(true);
-                }}
+                onShowThreads={() => openPanel('threads')}
+                onShowProfile={() => openPanel('profile')}
+                onShowFiles={(view) => openPanel('profile', { fileView: view })}
                 currentConversation={conversations.find(c => c.id === currentConversationId)}
                 sessionFilesCount={generatedFiles.length}
               />
