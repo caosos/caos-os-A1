@@ -80,6 +80,7 @@ export default function SystemBlueprint() {
               <Tag label="Google Web Speech TTS: LOCKED" color="green" />
               <Tag label="WCW Meter: LIVE DATA" color="green" />
               <Tag label="PHASE 1 — Observability: IN PROGRESS" color="yellow" />
+              <Tag label="Module Catalogue: Section 15" color="indigo" />
               <Tag label="PHASE 2–6: RESERVED" color="purple" />
             </div>
           </div>
