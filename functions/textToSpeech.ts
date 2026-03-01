@@ -45,18 +45,13 @@ Deno.serve(async (req) => {
             }, { status: response.status });
         }
 
-        // Get audio data
+        // Get audio data as base64 for reliable JSON transport
         const audioData = await response.arrayBuffer();
+        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
 
-        // Return audio file
-        return new Response(audioData, {
-            status: 200,
-            headers: {
-                'Content-Type': 'audio/mpeg',
-                'Content-Length': audioData.byteLength.toString(),
-                'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'no-cache'
-            }
+        return Response.json({
+            audio_base64: base64Audio,
+            content_type: 'audio/mpeg'
         });
 
     } catch (error) {
