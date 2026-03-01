@@ -1040,6 +1040,132 @@ Session health heatmap`}</Code>
             </div>
           </Section>
 
+          {/* 14. BASE44 PLATFORM CONSTRAINTS */}
+          <Section title="14. Base44 Platform Constraints (Deno Serverless)" color="red">
+            <p className="text-gray-300">These are hard platform facts, not preferences. Every architectural decision involving backend functions must be designed around them. Verified Mar 1, 2026.</p>
+
+            <h4 className="text-white font-semibold mt-3">1. No Cross-Function Local Imports</h4>
+            <Code>{`CONSTRAINT: Functions CANNOT import local code from other function files.
+Each function is deployed and sandboxed independently.
+
+CORRECT pattern (inter-function calls):
+  await base44.functions.invoke('core/memoryEngine', { action: 'save', ... })
+
+WRONG pattern (will fail at deploy):
+  import { saveAtomicMemory } from './core/memoryEngine.js'  // ← MODULE NOT FOUND
+
+IMPLICATION: All shared logic must be either:
+  a) Inlined into the calling function (pure functions, no I/O — safe), OR
+  b) Extracted into a separately invokable function and called via SDK.
+  
+hybridMessage CONTRACT COMPLIANCE:
+  Pure functions (no I/O): inlined — detectMemorySave, compressHistory, openAICall, etc.
+  I/O operations: extracted — core/memoryEngine, core/heuristicsEngine,
+                              core/receiptWriter, core/errorEnvelopeWriter`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">2. Full Message History is Readable from Entity Storage</h4>
+            <Code>{`CONFIRMED: Functions can read full thread history directly from Message entity,
+independent of LLM context window.
+
+API pattern:
+  const msgs = await base44.entities.Message.filter(
+    { conversation_id: session_id },
+    '-created_date',
+    1000   // max per call
+  );
+
+Limits:
+  - Max 1000 records per filter() call
+  - Pagination via skip= for threads exceeding 1000 messages
+  - Total response payload limit: ~6 MB (all records combined)
+  - Very long threads with rich message content may approach payload cap
+
+Current hybridMessage usage:
+  MAX_HISTORY_MESSAGES = 100 (well within limits)
+  compressHistory(): HOT_HEAD=15 + HOT_TAIL=40 shown in full, middle summarized`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">3. Hard Execution Limits</h4>
+            <Code>{`Max function runtime:      300 seconds (5 minutes)
+Max response payload:      6 MB
+Max request payload:       6 MB
+Entity rate limits:        Dynamic (not published). Sustained high-volume ops
+                           (thousands/sec) may throttle. Design for batching.
+
+DESIGN RULES:
+  - hybridMessage pipeline must complete well under 300s (target <10s)
+  - Message payloads with embedded base64 (e.g. audio) must stay under 6 MB
+  - Bulk entity ops should be batched, not rapid individual calls`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">4. Scheduled Tasks — YES (via Automations)</h4>
+            <Code>{`SUPPORTED: Scheduled backend function triggers via Base44 Automations.
+Min interval: 5 minutes.
+
+Pattern for external sync (e.g., polling and pushing to Python server):
+  create_automation(
+    automation_type="scheduled",
+    name="Sync Messages to Plane B",
+    function_name="syncToPlaneBPoller",
+    repeat_interval=5,
+    repeat_unit="minutes"
+  )
+
+Use case: periodic poller queries new Message records, pushes to external service.
+Trade-off: up to 5-minute lag vs. real-time event-driven sync (see item 5).`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">5. Entity Event Triggers — YES (on Message created/updated/deleted)</h4>
+            <Code>{`SUPPORTED: Entity automations fire a backend function on entity changes.
+
+Pattern for real-time Plane B mirroring:
+  create_automation(
+    automation_type="entity",
+    name="Mirror Message to Plane B",
+    function_name="planeBMessageMirror",
+    entity_name="Message",
+    event_types=["create"]
+  )
+
+Function payload received:
+  {
+    event: { type: "create", entity_name: "Message", entity_id: "<id>" },
+    data: { ... full message record ... },    // null if payload_too_large
+    payload_too_large: false                  // if true: fetch via entity API
+  }
+
+IMPLICATION FOR PLANE B:
+  - Entity automation on Message.create is the preferred sync path.
+  - No need to poll. No lag. Fires on every message save.
+  - Alternatively: mirror inside hybridMessage MESSAGE_SAVE stage (inline, no automation needed).
+  - Inline mirror is simpler but couples Plane B latency to the main pipeline.
+  - Automation is decoupled but adds one async hop.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">6. Outbound HTTP — YES (no egress restrictions)</h4>
+            <Code>{`CONFIRMED: Functions can make outbound HTTP calls to any external service
+using Deno's built-in fetch(). No IP allowlists, no domain restrictions.
+
+RECOMMENDED PATTERN for external service calls (e.g., Plane B Python server):
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  while (attempt < MAX_RETRIES) {
+    try {
+      const res = await fetch(PLANE_B_URL, { method: 'POST', body: JSON.stringify(payload), ... });
+      if (res.ok) break;
+      throw new Error(\`HTTP \${res.status}\`);
+    } catch (err) {
+      attempt++;
+      if (attempt >= MAX_RETRIES) throw err;
+      await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt))); // exponential backoff
+    }
+  }
+
+Base44 does NOT provide built-in retry or dead-letter queue for outbound calls.
+Implement retry/backoff inside the function itself.
+For mission-critical calls: log failures to ErrorLog entity for auditability.`}</Code>
+
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-3">
+              <p className="text-yellow-300 text-xs font-semibold">ARCHITECTURAL DECISION RECORD — Mar 1, 2026: Based on these constraints, the recommended Plane B sync strategy is an entity automation on Message.create → planeBMessageMirror function → outbound fetch to Python server with exponential backoff. This keeps hybridMessage clean (spine only) and makes Plane B sync decoupled and independently observable.</p>
+            </div>
+          </Section>
+
           {/* 13. ARIA ACCESS NOTE */}
           <Section title="13. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
