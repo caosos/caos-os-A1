@@ -8,13 +8,43 @@ import { base44 } from '@/api/base44Client';
 // ██████████████████████████████████████████████████████████████████
 // ██  FORT KNOX LOCK — DO NOT TOUCH — OPENAI TTS VOICE SETTINGS    ██
 // ██  LOCKED: 2026-03-01 — WORKING AND CONFIRMED                   ██
-// ██  Uses base44.functions.invoke('textToSpeech') + base64 decode  ██
-// ██  Voice pref: localStorage caos_voice_preference_message        ██
-// ██  Speed pref: localStorage caos_speech_rate                     ██
+// ██  LOCK_SIGNATURE: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01           ██
+// ██                                                                ██
+// ██  INVARIANT BEHAVIOR (must not change):                         ██
+// ██    - Uses base44.functions.invoke('textToSpeech', {...})        ██
+// ██    - Expects response: { audio_base64: string }                ██
+// ██    - Decodes via chunked atob loop (NOT spread — stack safe)   ██
+// ██    - Model: tts-1-hd (NOT tts-1, NOT gpt-5.2, NOT any other)  ██
+// ██    - Voice pref: localStorage caos_voice_preference_message    ██
+// ██    - Speed pref: localStorage caos_speech_rate                 ██
+// ██                                                                ██
+// ██  KNOWN FALSE PREMISE (do not reintroduce):                     ██
+// ██    - "TTS 5.2" / "gpt-5.2 TTS" DOES NOT EXIST (Mar 2026)     ██
+// ██    - OpenAI TTS models are: tts-1, tts-1-hd ONLY               ██
+// ██    - Do not attempt to upgrade TTS model without verifying     ██
+// ██      the model name against OpenAI's live model list first     ██
+// ██                                                                ██
+// ██  DEPENDENCY BOUNDARY:                                          ██
+// ██    - Requires functions/textToSpeech backend to return JSON    ██
+// ██    - Breaking change if backend returns binary instead of JSON ██
+// ██                                                                ██
+// ██  BREAKING CHANGE = any of:                                     ██
+// ██    - Switching from base64 JSON to raw binary response         ██
+// ██    - Changing localStorage key names                           ██
+// ██    - Replacing chunked atob with spread (stack overflow risk)  ██
+// ██    - Changing the TTS model without verifying it exists        ██
+// ██    - Removing playBase64Audio shared helper                    ██
+// ██                                                                ██
+// ██  UNLOCK PROTOCOL:                                              ██
+// ██    1. Explicit user intent stated in chat                      ██
+// ██    2. Acceptance criteria defined before any edit              ██
+// ██    3. Rollback plan: revert to this locked version             ██
+// ██    4. TSB entry written BEFORE deploying change                ██
+// ██                                                                ██
 // ██  DO NOT MODIFY: playBase64Audio, testVoice, saveSettings,      ██
 // ██  voice list, or localStorage keys                              ██
-// ██  ANY CHANGE REQUIRES EXPLICIT USER APPROVAL                    ██
 // ██████████████████████████████████████████████████████████████████
+// CAOS_OPENAI_TTS_LOCK_v1_2026-03-01 (grep anchor — do not remove)
 export default function VoiceSettings({ isOpen, onClose }) {
   // OpenAI TTS voices - high quality, natural sounding
   const voices = [

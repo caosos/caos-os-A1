@@ -275,13 +275,34 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   // ██████████████████████████████████████████████████████████████████
   // ██  FORT KNOX LOCK — DO NOT TOUCH — GOOGLE WEB SPEECH TTS       ██
   // ██  LOCKED: 2026-03-01 — WORKING AND CONFIRMED                  ██
-  // ██  Reads last AI message via browser Web Speech API             ██
-  // ██  Voice pref: localStorage caos_google_voice                   ██
-  // ██  Speed pref: localStorage caos_google_speech_rate             ██
+  // ██  LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01          ██
+  // ██                                                               ██
+  // ██  INVARIANT BEHAVIOR (must not change):                        ██
+  // ██    - Uses window.speechSynthesis (Web Speech API only)        ██
+  // ██    - Voice selected from localStorage caos_google_voice       ██
+  // ██    - Speed from localStorage caos_google_speech_rate          ██
+  // ██    - Reads lastAssistantMessage passed as prop                 ██
+  // ██                                                               ██
+  // ██  DEPENDENCY BOUNDARY:                                         ██
+  // ██    - No external API calls. No base44.functions.invoke().     ██
+  // ██    - Pure browser Web Speech API. No network dependency.      ██
+  // ██                                                               ██
+  // ██  BREAKING CHANGE = any of:                                    ██
+  // ██    - Replacing speechSynthesis with fetch/invoke              ██
+  // ██    - Changing localStorage key names                          ██
+  // ██    - Removing pause/resume/stop controls                      ██
+  // ██    - Changing voice selection logic in toggleGoogleVoicePlay  ██
+  // ██                                                               ██
+  // ██  UNLOCK PROTOCOL:                                             ██
+  // ██    1. Explicit user intent stated in chat                     ██
+  // ██    2. Acceptance criteria defined before any edit             ██
+  // ██    3. Rollback plan: revert to this locked version            ██
+  // ██    4. TSB entry written BEFORE deploying change               ██
+  // ██                                                               ██
   // ██  DO NOT MODIFY: toggleGoogleVoicePlay, stopGoogleVoice,       ██
   // ██  voice menu, controls, getCleanText, or voice preference keys ██
-  // ██  ANY CHANGE REQUIRES EXPLICIT USER APPROVAL                   ██
   // ██████████████████████████████████████████████████████████████████
+  // CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (grep anchor — do not remove)
 
   const startRecording = async () => {
     try {
