@@ -697,6 +697,34 @@ Lock:      Both voice systems (Google Web Speech + OpenAI TTS) now LOCKED.
            See Fort Knox comments in ChatInput.jsx and VoiceSettings.jsx.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-011 — False Premise: "TTS 5.2" / GPT-5.2 TTS Does Not Exist</span>
+                  <Tag label="PERMANENT RECORD ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: functions/textToSpeech — model selection
+Symptom:   Attempted to use "tts-5.2" or "gpt-5.2" as the TTS model name
+           when upgrading to "the highest quality voice model."
+           OpenAI returned an error — model not found.
+Root Cause: FALSE PREMISE. As of March 2026, OpenAI's TTS models are:
+             - tts-1        (standard quality)
+             - tts-1-hd     (highest quality — THIS IS THE CORRECT MODEL)
+           There is no "tts-5.2", "gpt-5.2 TTS", or numeric version
+           TTS model in OpenAI's API. The gpt-5.x namespace is for
+           chat/completion models ONLY, not audio generation.
+Fix:       Model set to tts-1-hd. Confirmed working. Locked.
+Lock Constraint (do not violate):
+           - Never change TTS model without verifying the exact model ID
+             against OpenAI's live model list: GET /v1/models
+           - Do not assume chat model version numbers map to TTS models
+           - tts-1-hd is the ceiling until OpenAI releases a named successor
+Future:    If OpenAI releases a new TTS model, verify via /v1/models first,
+           write a new TSB entry, update the lock comment, then deploy.
+           Do not assume — always verify the model name exists before use.
+GREP ANCHOR: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
             </Section>
