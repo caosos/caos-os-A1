@@ -1,6 +1,39 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// --- TEMP STABILIZATION LAYER (INLINE) ---
+// ████████████████████████████████████████████████████████████████████████████
+// ██  LOCKED_SPINE_V1 — hybridMessage — DO NOT EXPAND                       ██
+// ██                                                                         ██
+// ██  FROZEN: 2026-03-01                                                     ██
+// ██  CONTRACT: CAOS_HYBRID_MESSAGE_SPINE_v1                                 ██
+// ██                                                                         ██
+// ██  THIS FILE IS THE ORCHESTRATION SPINE. IT DOES NOT GROW.               ██
+// ██                                                                         ██
+// ██  PERMITTED IN THIS FILE:                                                ██
+// ██    - Orchestration logic (call sequence, routing, response assembly)    ██
+// ██    - Pure stateless helpers (no I/O, no DB, no network)                ██
+// ██    - Bug fixes to existing logic (with TSB entry)                       ██
+// ██                                                                         ██
+// ██  FORBIDDEN IN THIS FILE:                                                ██
+// ██    - New I/O operations (DB reads/writes, external API calls)           ██
+// ██    - New feature logic of any kind                                      ██
+// ██    - New memory operations                                              ██
+// ██    - New tool invocations                                               ██
+// ██    - Any block that increases file length by more than ~20 lines        ██
+// ██                                                                         ██
+// ██  NEW I/O MUST GO IN A SEPARATE FUNCTION:                                ██
+// ██    base44.functions.invoke("newModule", payload)                        ██
+// ██                                                                         ██
+// ██  UNLOCK PROTOCOL:                                                       ██
+// ██    1. Explicit user intent stated in chat                               ██
+// ██    2. TSB entry written BEFORE any edit                                 ██
+// ██    3. Responsibility Map updated                                        ██
+// ██    4. Rollback plan defined                                             ██
+// ██                                                                         ██
+// ██  RESPONSIBILITY MAP → pages/SystemBlueprint § "hybridMessage Spine"    ██
+// ██  GREP ANCHOR: CAOS_HYBRID_MESSAGE_SPINE_v1_2026-03-01                  ██
+// ████████████████████████████████████████████████████████████████████████████
+
+// --- STABILIZATION LAYER (INLINE PURE FUNCTIONS — NO I/O) ---
 
 const STAGES = {
   PROFILE_LOAD: 'PROFILE_LOAD',
