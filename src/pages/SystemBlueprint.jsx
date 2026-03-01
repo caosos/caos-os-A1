@@ -376,7 +376,10 @@ latencyTracking, memoryAnchors, memoryUpdate, normalize, persistentSearch,
 presentationSilence, receiptLogger, routeRegistry, sanitizer, selectorEngine,
 tieredRecall, tokenizer, toolExecutor, unifiedGovernanceGate, wcwBudget,
 wcwSelfRegulation
-(BUILT — modular governors. Not all are active in hybridMessage v2)`}</Code>
+(BUILT — modular governors. Not all are active in hybridMessage v2)
+(See Section 15 for detailed catalogue of: laneIsolation, indexedSearch,
+continuousLearning, contextLoader, contextBuilder, memoryUpdate, toolExecutor
+— purpose, design notes, and intended wiring path for each)`}</Code>
           </Section>
 
           {/* 8. TRUTH DISCIPLINE */}
