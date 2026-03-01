@@ -1173,6 +1173,268 @@ For mission-critical calls: log failures to ErrorLog entity for auditability.`}<
             </div>
           </Section>
 
+          {/* 15. FOUNDATIONAL MODULES — BUILT, NOT WIRED */}
+          <Section title="15. Foundational Modules — Built, Not Wired (Catalogue)" color="indigo">
+            <p className="text-gray-300 text-xs mb-3">These modules exist in <code>functions/core/</code> and were purpose-built for future memory and tool expansion. Each is documented here so we can wire them in deliberately, one at a time. None are active in the current hybridMessage pipeline.</p>
+
+            <div className="space-y-5">
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">laneIsolation — Topic Context Partitioning</span>
+                  <Tag label="CANDIDATE: Phase 5" color="purple" />
+                </div>
+                <Code>{`File:     functions/core/laneIsolation
+Purpose:  Enforce strict lane (topic) boundaries on memory recall.
+          Prevents cross-lane information leakage between unrelated contexts.
+
+Key functions:
+  validateLaneAccess(request_lane_id, active_lane_id, allowed_cross_lane)
+    → { allowed: boolean, deny_reason? }
+  filterRecordsByLane(records, active_lane_id, allowed_cross_lane)
+    → filtered records (fail-closed: no lane tag = deny)
+  filterAnchorsByLane(anchors, active_lane_id, allowed_cross_lane)
+    → GLOBAL anchor_type anchors pass through any lane filter
+  getDefaultCrossLanePolicy(profile_id, active_lane_id)
+    → [] (no cross-lane access by default)
+
+Design note:
+  GLOBAL anchors are accessible from any lane.
+  LANE anchors are scoped to their lane_id.
+  Currently no lanes are set on structured_memory entries
+  — wiring this requires tagging each memory entry with a lane_id.
+
+Intended activation path:
+  1. Tag new structured_memory entries with active lane (e.g. "general", "caos-build", "immigration")
+  2. On recall, pass active lane through filterRecordsByLane() before injecting into prompt
+  3. Wire Lane entity to track per-session lane context`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">indexedSearch — Token-Based Thread Search Engine</span>
+                  <Tag label="CANDIDATE: Phase 5" color="purple" />
+                </div>
+                <Code>{`File:     functions/core/indexedSearch
+Purpose:  Fast, deterministic thread/conversation search by title tokens.
+          Zero LLM. Pure AND-intersection token matching.
+          Backed by ThreadToken + ThreadTokenMeta entities (already built).
+
+Key class: IndexedThreadSearchEngine
+  .buildIndexFromThreads(threads[])    — builds in-memory token → thread ID index
+  .search(query)                       — AND intersection of normalized tokens
+    → { queryTerms, normalizedTerms, tokenHits, matchedThreadIds, matchCount, confidence }
+  .formatSearchReport(operation)       → human-readable search report
+  .updateThread(thread)                → incremental index update (on rename)
+  .getIndexHealth()                    → distinct_tokens, total_threads, etc.
+
+Match types: "exact" (1 match) | "partial" (multiple) | "none"
+Confidence:  HIGH (≥1 match) | MED (searched, 0 results) | LOW (empty query)
+
+Current limitation: TypeScript interfaces — uses .ts imports (tokenizer.ts).
+  Must be verified compatible with Deno deploy before wiring.
+
+Intended activation path:
+  1. On conversation load: build index from user's Conversation list
+  2. When user types in ConversationSearch, invoke search() instead of naive filter
+  3. On thread rename: call updateThread() to keep index current
+  4. Store persistent index in ThreadToken/ThreadTokenMeta entities (already exist)`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">continuousLearning — Automatic Fact Extraction from Conversations</span>
+                  <Tag label="CANDIDATE: Phase 3 / Post Phase B" color="purple" />
+                  <Tag label="⚠️ REVIEW BEFORE WIRING" color="yellow" />
+                </div>
+                <Code>{`File:     functions/core/continuousLearning
+Purpose:  After each conversation turn, uses gpt-4o-mini to extract personal facts
+          about the user and persist them to the LearnedFact entity.
+          Also provides recall: recallRelevantFacts() scores facts against current query.
+
+Key functions:
+  extractAndPersistFacts({ base44, userId, threadId, userMessage, assistantMessage })
+    → uses OpenAI (gpt-4o-mini) to extract: personal, work, relationship, preference, goal, decision facts
+    → persists to LearnedFact entity (fact_type, category, subject, fact_content, confidence, tags)
+    → returns { ok, facts_learned, facts }
+
+  recallRelevantFacts({ base44, userId, userMessage })
+    → loads all LearnedFact records for user
+    → scores by keyword match, subject match, recency, reference_count
+    → returns top 15 matching facts
+    → updates reference_count on recalled facts
+
+  formatFactsForContext(facts)
+    → formats fact list into system prompt block grouped by category
+
+Design note / CAUTION:
+  This is PASSIVE extraction — facts are saved WITHOUT user confirmation.
+  This is the same approach that Phase A was designed to replace (memory_anchors auto-extraction).
+  Phase A saves ONLY user-triggered facts. continuousLearning saves INFERRED facts.
+  These are different philosophies. Do not wire continuousLearning silently without
+  a clear policy on: confidence thresholds, user visibility, edit/delete capability.
+
+  LearnedFact entity exists and is ready. Uses a separate entity from structured_memory.
+  Could complement Phase A (explicit) with a passive background layer IF properly gated.
+
+Intended activation path (if adopted):
+  1. Enable as an opt-in background job (entity automation on Message.create)
+  2. Set minimum confidence threshold (recommend ≥ 0.8 only)
+  3. Surface LearnedFact entries in MemoryPanel so user can review/delete
+  4. Add a toggle in UserProfile: continuous_learning_enabled: true/false`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">contextLoader — Structured Context Journal Boot Sequence</span>
+                  <Tag label="CANDIDATE: Future Pipeline Refactor" color="purple" />
+                </div>
+                <Code>{`File:     functions/core/contextLoader
+Purpose:  Loads context in a strict ordered sequence before any inference:
+          1. Kernel context (system identity — Aria/CAOS)
+          2. Bootloader context (policy/mode config)
+          3. Profile context (UserProfile — REQUIRED)
+          4. Project context (optional)
+          5. Runtime context (session state from Conversation entity)
+          Fail-closed: if kernel, bootloader, or profile missing → throws, no inference.
+
+Key functions:
+  loadContextJournal(session_id, user_email, base44)
+    → returns loaded_contexts object keyed by /context/<scope>/<path>
+  validateContextJournal(context_journal)
+    → checks required scopes: kernel, bootloader, profile
+
+Current hybridMessage behavior:
+  Profile is loaded inline (PROFILE_LOAD stage). Kernel/bootloader are embedded
+  directly in the system prompt as hardcoded strings. Runtime is loaded ad hoc.
+  contextLoader would formalize and order this into a single governed boot sequence.
+
+Intended activation path:
+  Replace hybridMessage PROFILE_LOAD stage with loadContextJournal() call.
+  The returned loaded_contexts then feeds into contextBuilder (below).
+  This makes context loading observable, logged, and fail-closed by contract.`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">contextBuilder — Prompt Block Assembly from Context Journal</span>
+                  <Tag label="CANDIDATE: Future Pipeline Refactor" color="purple" />
+                </div>
+                <Code>{`File:     functions/core/contextBuilder
+Purpose:  Takes context loaded by contextLoader and assembles the system prompt blocks:
+          - identityBlock (Aria/CAOS identity hard rules)
+          - threadBlock (ThreadMemory: short summary, tags, open loops, emotional context)
+          - userBlock (UserProfileMemory: profile summary, recent state, hard rules)
+          - environmentBlock (EnvironmentState: current environment awareness)
+
+Key function:
+  buildGenContext({ base44, userId, threadId })
+    → loads ThreadMemory + UserProfileMemory + EnvironmentState entities
+    → assembles structured system prompt blocks
+    → returns { identityBlock, threadBlock, userBlock, environmentBlock }
+
+Dependency note:
+  Reads from ThreadMemory and UserProfileMemory entities (separate from structured_memory).
+  These are the "evolving summary" entities populated by memoryUpdate (see below).
+  contextBuilder is the READ side; memoryUpdate is the WRITE side.
+  Both must be activated together to form a complete cycle.
+
+Intended activation path:
+  Replace hybridMessage inline system prompt construction with buildGenContext().
+  Pair with contextLoader for a full boot → build → inject sequence.`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">memoryUpdate — Post-Turn Evolving Summary Writer</span>
+                  <Tag label="CANDIDATE: Phase 3 / High Value" color="purple" />
+                  <Tag label="⭐ HIGH PRIORITY" color="green" />
+                </div>
+                <Code>{`File:     functions/core/memoryUpdate
+Purpose:  After each AI turn completes, calls gpt-4o-mini to update two rolling summaries:
+          - ThreadMemory: thread-level evolving context (summary_short, summary_context,
+            open_loops, topic_tags, key_decisions, artifacts_created, emotional_context)
+          - UserProfileMemory: user-level profile (profile_summary, recent_state,
+            active_projects, interaction_style, hard_rules)
+
+Key function:
+  postTurnMemoryUpdate({ base44, userId, threadId, userMessage, assistantMessage, traceId })
+    → builds LLM prompt with previous summaries + new turn
+    → calls gpt-4o-mini (cheap, temperature 0.3)
+    → validates and persists updated ThreadMemory + UserProfileMemory
+    → also updates EnvironmentState (via environmentLoader)
+    → returns { ok, traceId }
+
+Why this is high priority:
+  Current hybridMessage injects raw conversation history (up to 100 messages).
+  memoryUpdate would replace that with a compact, evolving summary that:
+  - Tracks open loops (unresolved questions/tasks)
+  - Records key decisions
+  - Notes emotional context (urgency, mood, collaboration style)
+  - Maintains profile continuity across threads
+  This is the core of "Aria remembers what we've been working on" even across sessions.
+
+Dependency:
+  Requires ThreadMemory + UserProfileMemory entities (already exist in schema).
+  contextBuilder reads what memoryUpdate writes.
+
+Intended activation path:
+  1. Wire as post-turn call in hybridMessage MESSAGE_SAVE stage (or entity automation)
+  2. Run async / best-effort (does not block the reply to user)
+  3. On next session load, contextBuilder reads the summaries
+  4. Replace raw history injection with summaries + last N messages (hot context only)`}</Code>
+              </div>
+
+              <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-indigo-300 font-bold text-sm">toolExecutor — Selector-Gated Tool Router</span>
+                  <Tag label="CANDIDATE: Future — Tools Phase" color="purple" />
+                </div>
+                <Code>{`File:     functions/core/toolExecutor
+Purpose:  Routes tool requests to the correct executor based on what the
+          Selector has authorized in selector_decision.tools_allowed.
+          Enforces: no tool runs without selector authorization.
+
+Key function:
+  executeTool({ user_input, selector_decision }, base44)
+    → checks selector_decision.tools_allowed
+    → priority order: IMAGE → WEB_SEARCH → FILE_SEARCH
+    → delegates to: imageGeneratorExecutor, webSearchExecutor
+    → FILE_SEARCH: stub only, not yet implemented
+
+Current executors (functions/executors/):
+  imageGenerator      — generates images via CAOS integration
+  webSearchExecutor   — web search (implementation TBD)
+  youtubeSearch       — YouTube search (implementation TBD)
+  analyzeThreads      — thread analysis (implementation TBD)
+
+Why this matters:
+  This is the gateway for giving Aria real tools: web search, image gen,
+  file search, code execution, etc. The architecture is already here.
+  The selector gate ensures tools only run when explicitly authorized per-turn.
+
+Intended activation path:
+  1. Define which tools are available (update SessionManifest)
+  2. Wire selectorEngine to authorize tools based on user intent
+  3. hybridMessage: after heuristics, if tools_allowed → call executeTool()
+  4. Tool result injected into system prompt before OpenAI call
+  5. Implement remaining executors (webSearch, fileSearch) one at a time`}</Code>
+              </div>
+
+            </div>
+
+            <div className="bg-green-950/30 border border-green-500/20 rounded-lg p-3 mt-4">
+              <p className="text-green-300 text-xs font-semibold">RECOMMENDED WIRING ORDER (based on value and readiness):</p>
+              <Code>{`1. memoryUpdate         → highest value, relatively self-contained (Phase 3)
+2. contextBuilder       → pairs with memoryUpdate (must do together)
+3. contextLoader        → formalizes what hybridMessage already does
+4. laneIsolation        → unlocks topic isolation (Phase 5)
+5. continuousLearning   → passive learning (careful — review policy first)
+6. indexedSearch        → better thread search (Phase 5)
+7. toolExecutor         → gates future tool expansion (Tools Phase)`}</Code>
+            </div>
+          </Section>
+
           {/* 13. ARIA ACCESS NOTE */}
           <Section title="13. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
