@@ -39,25 +39,26 @@ export async function handleReadAloud(message, messageId, onPlaybackStart, onPla
       .trim()
       .substring(0, 4096);
 
-    // Fetch audio from OpenAI TTS
-    const response = await fetch(`/api/functions/textToSpeech`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ 
-        text: cleanText, 
-        voice: localStorage.getItem('caos_voice_preference') || 'nova',
-        speed: parseFloat(localStorage.getItem('caos_speech_rate') || '1.0')
-      })
+    // Fetch audio from OpenAI TTS via SDK
+    const { data } = await base44.functions.invoke('textToSpeech', {
+      text: cleanText,
+      voice: localStorage.getItem('caos_voice_preference') || 'nova',
+      speed: parseFloat(localStorage.getItem('caos_speech_rate') || '1.0')
     });
 
-    if (!response.ok) {
-      throw new Error(`TTS failed: ${response.status}`);
+    if (!data?.audio_base64) {
+      throw new Error('No audio returned from TTS');
     }
 
-    const audioBlob = await response.blob();
+    // Decode base64 to blob
+    const byteChars = atob(data.audio_base64);
+    const byteArray = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+      byteArray[i] = byteChars.charCodeAt(i);
+    }
+    const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
     const audioUrl = URL.createObjectURL(audioBlob);
-    
+
     const audio = new Audio();
     audio.src = audioUrl;
     audio.volume = 1.0;
