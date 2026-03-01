@@ -1,16 +1,7 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 Deno.serve(async (req) => {
     try {
-        const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         if (!OPENAI_API_KEY) {
             return Response.json({ error: 'OpenAI API key not configured' }, { status: 500 });
         }
@@ -21,7 +12,6 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Text is required' }, { status: 400 });
         }
 
-        // Call OpenAI TTS API
         const response = await fetch('https://api.openai.com/v1/audio/speech', {
             method: 'POST',
             headers: {
@@ -38,26 +28,23 @@ Deno.serve(async (req) => {
 
         if (!response.ok) {
             const error = await response.text();
-            console.error('OpenAI API Response:', response.status, error);
-            return Response.json({ 
-                error: `OpenAI API error (${response.status}): ${error}`,
-                status_code: response.status 
-            }, { status: response.status });
+            console.error('OpenAI TTS error:', response.status, error);
+            return Response.json({ error: `OpenAI error (${response.status}): ${error}` }, { status: response.status });
         }
 
-        // Get audio data as base64 for reliable JSON transport
-        const audioData = await response.arrayBuffer();
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
+        // Safe base64 encoding — avoids stack overflow on large buffers
+        const audioData = new Uint8Array(await response.arrayBuffer());
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < audioData.length; i += chunkSize) {
+            binary += String.fromCharCode(...audioData.subarray(i, i + chunkSize));
+        }
+        const audio_base64 = btoa(binary);
 
-        return Response.json({
-            audio_base64: base64Audio,
-            content_type: 'audio/mpeg'
-        });
+        return Response.json({ audio_base64, content_type: 'audio/mpeg' });
 
     } catch (error) {
         console.error('TTS error:', error);
-        return Response.json({ 
-            error: error.message || 'Failed to generate speech'
-        }, { status: 500 });
+        return Response.json({ error: error.message || 'Failed to generate speech' }, { status: 500 });
     }
 });
