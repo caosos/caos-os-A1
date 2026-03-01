@@ -169,6 +169,16 @@ export default function Chat() {
   const isGuestMode = !!localStorage.getItem('caos_guest_user');
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
+  // Reset WCW meter when switching threads (prevent stale state bleeding across threads)
+  // Real data will be restored from DiagnosticReceipt or updated after next message
+  const prevConversationIdRef = React.useRef(null);
+  useEffect(() => {
+    if (prevConversationIdRef.current !== currentConversationId) {
+      prevConversationIdRef.current = currentConversationId;
+      setWcwState({ used: null, budget: null });
+    }
+  }, [currentConversationId]);
+
   // Lazy-load messages when conversation is selected
   useEffect(() => {
     if (!currentConversationId || isGuestMode) return;
