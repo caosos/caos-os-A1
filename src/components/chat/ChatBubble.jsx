@@ -478,37 +478,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }, 150);
 
     try {
-      // Use fetch directly — base44.functions.invoke() uses Axios which mangles binary ArrayBuffers
-      // Get current page URL to derive the function endpoint
-      const appBase = window.location.origin;
-      const fetchResponse = await fetch(`${appBase}/api/functions/textToSpeech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, voice, speed }),
-        credentials: 'include',
-      });
+      const { data } = await base44.functions.invoke('textToSpeech', { text: cleanText, voice, speed });
 
       clearInterval(genInterval);
       setGenerationProgress(100);
       setIsGenerating(false);
 
-      if (!fetchResponse.ok) {
-        const errText = await fetchResponse.text();
-        throw new Error(`TTS API error ${fetchResponse.status}: ${errText}`);
+      if (!data?.audio_base64) {
+        throw new Error(data?.error || 'TTS returned no audio');
       }
 
-      const contentType = fetchResponse.headers.get('content-type') || '';
-      if (!contentType.includes('audio')) {
-        // Not audio — probably an error JSON
-        const errJson = await fetchResponse.json();
-        throw new Error(errJson.error || 'TTS did not return audio');
-      }
-
-      const audioArrayBuffer = await fetchResponse.arrayBuffer();
-      if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
-        throw new Error('TTS returned empty audio');
-      }
-      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mpeg' });
+      // Decode base64 → Blob → Object URL
+      const byteChars = atob(data.audio_base64);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+      const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       audioCache.set(cacheKey, audioUrl);
       playAudioUrl(audioUrl);
