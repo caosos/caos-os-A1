@@ -147,23 +147,7 @@ export default function VoiceSettings({ isOpen, onClose }) {
           <Button 
             onClick={async () => {
               try {
-                const response = await fetch('/api/functions/textToSpeech', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    text: "This is a test of the selected voice and speed settings.",
-                    voice: selectedVoice,
-                    speed: rate
-                  })
-                });
-
-                if (!response.ok) throw new Error('Failed');
-
-                const audioBlob = await response.blob();
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                audio.play();
+                await playBase64Audio(selectedVoice, "This is a test of the selected voice and speed settings.");
                 toast.success('Playing with current settings');
               } catch (error) {
                 toast.error('Failed to play');
