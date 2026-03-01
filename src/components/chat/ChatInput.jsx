@@ -794,7 +794,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         {!isRecording ? (
           <button
             type="button"
-            onClick={startRecording}
+            onClick={toggleVoiceRecording}
             disabled={isTranscribing}
             className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
               isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
@@ -810,7 +810,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         ) : (
           <button
             type="button"
-            onClick={stopRecording}
+            onClick={toggleVoiceRecording}
             className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
             title="Finish recording"
           >
