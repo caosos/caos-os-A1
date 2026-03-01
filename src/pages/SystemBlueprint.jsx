@@ -1091,6 +1091,41 @@ GREP ANCHOR: CAOS_WCW_METER_FIX_v1_2026-03-01`}</Code>
 
             <div className="space-y-5 mt-4">
 
+              {/* PHASE B */}
+              <div className="bg-red-950/40 border border-red-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">PHASE B — Authority Domain Separation (Governance Invariant)</span>
+                  <Tag label="LOCKED ✅" color="green" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Formally codify the separation between Aria (AI persona) and CAOS (platform). No agent or module may blur this boundary.</p>
+                <Code>{`B.1 Authority Domain Separation — documented in Section 0.8 (COMPLETE ✅)
+     — Aria speaks. CAOS routes. Separate authority domains.
+     — No self-modification. No unsanctioned writes. No identity conflation.
+     — Enforcement: TSB entry + owner sign-off required for any boundary violation.
+
+EXIT CONDITION:
+  Section 0.8 present and LOCK_SIGNATURE confirmed. ✅ DONE — Mar 1, 2026`}</Code>
+              </div>
+
+              {/* PHASE C */}
+              <div className="bg-red-950/40 border border-red-500/40 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">PHASE C — Pull-Only Awareness Rule (Governance Invariant)</span>
+                  <Tag label="LOCKED ✅" color="green" />
+                </div>
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Formally codify that all system awareness must be pull-based. No push-based state injection. No unsolicited API chatter.</p>
+                <Code>{`C.1 Pull-Only Awareness Rule — documented in Section 0.9 (COMPLETE ✅)
+     — Modules wait to be invoked. They do not self-activate or poll.
+     — No background writes. No passive watchers. No proactive context injection.
+     — Enforcement: Any push-based pattern is a Rule 5 (No Silent Writes) violation.
+
+EXIT CONDITION:
+  Section 0.9 present and LOCK_SIGNATURE confirmed. ✅ DONE — Mar 1, 2026
+
+NOTE: Audio work (STT chunking) is deferred until B and C are locked.
+      B ✅ → C ✅ → A (STT chunking — next phase)`}</Code>
+              </div>
+
               {/* PHASE 1 */}
               <div className="bg-yellow-950/40 border border-yellow-500/40 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -1628,7 +1663,11 @@ Intended activation path:
 - File size limits: 200 preferred / 400 hard max
 - Build → Test → Lock discipline
 - API minimalism rules
-- selfInspect Layer 2 (allowlist of 52 files, source via manual paste)`}</Code>
+- selfInspect Layer 2 (allowlist of 52 files, source via manual paste)
+- Section 0.8: Authority Domain Separation (LOCKED — Aria ≠ CAOS, no boundary blur)
+- Section 0.9: Pull-Only Awareness Rule (LOCKED — pull-based only, no push/polling)
+- Active model is gpt-5.2 (not gpt-4o — Section 1 updated Mar 1, 2026)
+- PHASE B and PHASE C are governance invariants, locked before audio work begins`}</Code>
           </Section>
 
         </div>
