@@ -32,74 +32,35 @@ export default function VoiceSettings({ isOpen, onClose }) {
     if (savedRate) setRate(parseFloat(savedRate));
   }, []);
 
-  const testVoice = async (voiceId) => {
-    if (testingVoice === voiceId) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      setTestingVoice(null);
-      return;
-    }
-
+  const playBase64Audio = async (voiceId, text) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
+    const { data } = await base44.functions.invoke('textToSpeech', { text, voice: voiceId, speed: rate });
+    if (!data?.audio_base64) throw new Error('No audio returned');
+    const byteChars = atob(data.audio_base64);
+    const byteArray = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+    const audioUrl = URL.createObjectURL(new Blob([byteArray], { type: 'audio/mpeg' }));
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.onended = () => { URL.revokeObjectURL(audioUrl); audioRef.current = null; };
+    await audio.play();
+    return audio;
+  };
 
+  const testVoice = async (voiceId) => {
+    if (testingVoice === voiceId) {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      setTestingVoice(null);
+      return;
+    }
     setTestingVoice(voiceId);
-    console.log('Testing voice:', voiceId);
-
     try {
-      const response = await fetch('/api/functions/textToSpeech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          text: "Hey, I'm Aria. How does this voice sound?",
-          voice: voiceId,
-          speed: rate
-        })
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response content type:', response.headers.get('content-type'));
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error('TTS error response:', error);
-        throw new Error(`Failed: ${response.status}`);
-      }
-
-      const audioBlob = await response.blob();
-      console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-      
-      const audioUrl = URL.createObjectURL(audioBlob);
-      console.log('Audio URL created:', audioUrl);
-      
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        console.log('Audio ended');
-        setTestingVoice(null);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-      };
-      
-      audio.onerror = (e) => {
-        console.error('Audio error:', e);
-        setTestingVoice(null);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
-        toast.error('Playback failed');
-      };
-
-      console.log('Starting playback...');
-      await audio.play();
-      console.log('Audio playing');
+      const audio = await playBase64Audio(voiceId, "Hey, I'm Aria. How does this voice sound?");
+      audio.onended = () => { setTestingVoice(null); audioRef.current = null; };
     } catch (error) {
-      console.error('Test voice error:', error);
       setTestingVoice(null);
       toast.error(`Error: ${error.message}`);
     }
