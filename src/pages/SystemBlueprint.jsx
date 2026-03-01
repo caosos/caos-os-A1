@@ -398,7 +398,9 @@ wcwSelfRegulation
 
           {/* 9. WHAT IS NOT YET ACTIVE */}
           <Section title="9. Built But Not Yet Active" color="yellow">
+            <p className="text-gray-300 text-xs">See Section 15 for detailed catalogue of foundational modules that are built and ready to wire in. The items below are higher-level architectural layers not yet connected.</p>
             <Code>{`Lane-based context isolation    — entities exist, not wired into hybridMessage
+                                   (see Section 15: laneIsolation module — ready to wire)
 Plane B (Record entity)         — schema built, not the primary message store
 Anchor hash-chain               — entity schema built, not active
 ThreadSnapshot / rotation       — built, not triggered (no 90K limit in current pipeline)
@@ -407,7 +409,12 @@ Drift detection (DriftEvent)    — entity built, detection not active
 SessionManifest capability gate — built, not enforced
 Multi-agent blackboard          — UI placeholder only, no backend
 CAOS-A1 Python backend          — full FastAPI+SQLite blueprint documented in /Implementation
-                                   but not deployed (no external Python server running)`}</Code>
+                                   but not deployed (no external Python server running)
+
+LEGACY / ORPHANED (do not use):
+pinMemory                       — old approach: saved to flat markdown file (permanent_memory.md)
+                                   as a UserFile. SUPERSEDED by Phase A structured_memory.
+                                   Not wired into recall. Not injected into prompt. Dead function.`}</Code>
           </Section>
 
           {/* 10. KNOWN ISSUES / NEXT WORK */}
