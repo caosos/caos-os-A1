@@ -1,430 +1,59 @@
+/**
+ * hybridMessage — CAOS Primary Pipeline
+ * CONTRACT v2 — 2026-03-01
+ * LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01
+ *
+ * THIS FILE IS THE SPINE. IT ORCHESTRATES. IT DOES NOT IMPLEMENT.
+ * All logic lives in contracted modules:
+ *   - functions/core/memoryEngine     (Phase A: save/recall)
+ *   - functions/core/heuristicsEngine (intent, DCS, directive)
+ *   - functions/core/receiptWriter    (DiagnosticReceipt + SessionContext)
+ *   - functions/core/errorEnvelopeWriter (ODEL v1 error persistence)
+ *
+ * PIPELINE STAGES (in order):
+ *   AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_LOAD →
+ *   HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
+ *
+ * INVARIANTS (do not change without TSB + new lock):
+ *   - SESSION_RESUME sentinel → noop, no AI call, no message saved
+ *   - Memory save → returns immediately, bypasses inference
+ *   - Receipt write is AWAITED (I2) — no fire-and-forget
+ *   - body and user hoisted above try{} so catch block has full context
+ *   - Active model: gpt-5.2
+ *   - compressHistory: HOT_HEAD=15, HOT_TAIL=40
+ */
+
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// ████████████████████████████████████████████████████████████████████████████
-// ██  LOCKED_SPINE_V1 — hybridMessage — DO NOT EXPAND                       ██
-// ██                                                                         ██
-// ██  FROZEN: 2026-03-01                                                     ██
-// ██  CONTRACT: CAOS_HYBRID_MESSAGE_SPINE_v1                                 ██
-// ██                                                                         ██
-// ██  THIS FILE IS THE ORCHESTRATION SPINE. IT DOES NOT GROW.               ██
-// ██                                                                         ██
-// ██  PERMITTED IN THIS FILE:                                                ██
-// ██    - Orchestration logic (call sequence, routing, response assembly)    ██
-// ██    - Pure stateless helpers (no I/O, no DB, no network)                ██
-// ██    - Bug fixes to existing logic (with TSB entry)                       ██
-// ██                                                                         ██
-// ██  FORBIDDEN IN THIS FILE:                                                ██
-// ██    - New I/O operations (DB reads/writes, external API calls)           ██
-// ██    - New feature logic of any kind                                      ██
-// ██    - New memory operations                                              ██
-// ██    - New tool invocations                                               ██
-// ██    - Any block that increases file length by more than ~20 lines        ██
-// ██                                                                         ██
-// ██  NEW I/O MUST GO IN A SEPARATE FUNCTION:                                ██
-// ██    base44.functions.invoke("newModule", payload)                        ██
-// ██                                                                         ██
-// ██  UNLOCK PROTOCOL:                                                       ██
-// ██    1. Explicit user intent stated in chat                               ██
-// ██    2. TSB entry written BEFORE any edit                                 ██
-// ██    3. Responsibility Map updated                                        ██
-// ██    4. Rollback plan defined                                             ██
-// ██                                                                         ██
-// ██  RESPONSIBILITY MAP → pages/SystemBlueprint § "hybridMessage Spine"    ██
-// ██  GREP ANCHOR: CAOS_HYBRID_MESSAGE_SPINE_v1_2026-03-01                  ██
-// ████████████████████████████████████████████████████████████████████████████
-
-// --- STABILIZATION LAYER (INLINE PURE FUNCTIONS — NO I/O) ---
-
-const STAGES = {
-  PROFILE_LOAD: 'PROFILE_LOAD',
-  MEMORY_WRITE: 'MEMORY_WRITE',
-  HISTORY_LOAD: 'HISTORY_LOAD',
-  HEURISTICS: 'HEURISTICS',
-  OPENAI_CALL: 'OPENAI_CALL',
-  MESSAGE_SAVE: 'MESSAGE_SAVE',
-  RESPONSE_BUILD: 'RESPONSE_BUILD'
-};
-
-let CURRENT_STAGE = null;
-
-function setStage(stage) {
-  CURRENT_STAGE = stage;
-}
-
-function getStage() {
-  return CURRENT_STAGE;
-}
-
-function buildDeterministicErrorEnvelope(error, ctx) {
-  return {
-    error_id: crypto.randomUUID(),
-    error_code: 'SERVER_ERROR',
-    stage: ctx.stage || null,
-    message: error.message || 'Unknown error',
-    created_at: new Date().toISOString(),
-  };
-}
-
-function derivePublicMessage() {
-  return "Something went wrong. Please try again.";
-}
-
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const ACTIVE_MODEL = 'gpt-5.2';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
-
-// Token budget constants
 const MAX_HISTORY_MESSAGES = 100;
 const HOT_TAIL = 40;
 const HOT_HEAD = 15;
 const MAX_ANCHOR_LENGTH = 3000;
-
-// ─── PHASE A: ATOMIC MEMORY FOUNDATION ───────────────────────────────────
-// Explicit save triggers — user must use one of these phrases
-const MEMORY_SAVE_TRIGGERS = [
-    /^i want you to remember\b(.*)/i,
-    /^please remember\b(.*)/i,
-    /^remember\s+(?:this|these|that)\b[:\s]*(.*)/i,
-    /^remember\s+that\b(.*)/i,
-    /^remember\b[:\s]+(.*)/i,
-    /^can you remember\b(.*)/i,
-    /^save(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
-    /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
-    /^note\s+(?:this|that)[:\s]*(.*)/i,
-    /^store\s+(?:this|that)[:\s]*(.*)/i,
-];
-
-// Explicit retrieval triggers
-const MEMORY_RECALL_TRIGGERS = [
-    /\b(?:what do you remember about|do you remember|recall|you told me|you mentioned|what did I tell you about)\b/i,
-    /\b(?:what do you know about me|what have I told you)\b/i,
-];
-
-// Pronouns that require entity clarification before saving
-const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
-
-const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
-
-/**
- * Phase A: Detect memory save trigger and extract raw content string.
- * Returns: content string | '__VAGUE__' | '__PRONOUN__' | null
- */
-function detectMemorySave(input) {
-    const trimmed = input.trim();
-    for (const pattern of MEMORY_SAVE_TRIGGERS) {
-        const match = trimmed.match(pattern);
-        if (match) {
-            const captured = (match[1] || '').trim();
-
-            // Strip trailing filler
-            const cleaned = captured
-                .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
-                .replace(/[?.]$/, '')
-                .replace(/^[\s,?:.]+/, '')
-                .trim();
-
-            if (!cleaned || cleaned.length < 3) return '__VAGUE__';
-
-            // Check if content is pure vague pronouns/fillers with no substance
-            const meaningfulWords = cleaned.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1 && !VAGUE_WORDS.has(w));
-            if (meaningfulWords.length === 0) return '__VAGUE__';
-
-            // Check for unresolved pronouns (no entity graph yet — must clarify)
-            if (PRONOUN_PATTERN.test(cleaned)) return '__PRONOUN__';
-
-            return cleaned;
-        }
-    }
-    return null;
-}
-
-/**
- * Phase A: Split a content string into atomic fact clauses.
- * Strategy: split on " and " when it connects two independent fact phrases.
- * Conservative — only splits when both sides look like noun phrases (not compound adjectives).
- */
-function splitAtomicFacts(content) {
-    // Split on " and " boundaries — simple and reliable
-    // Each resulting clause must have subject-like content (min 4 chars, has alphanumeric)
-    const parts = content.split(/\s+and\s+/i).map(p => p.trim()).filter(p => p.length >= 4);
-
-    if (parts.length <= 1) return [content];
-
-    // Rebuild: if a part doesn't look like a standalone fact (no verb-like word), merge it back
-    const facts = [];
-    let buffer = '';
-    for (const part of parts) {
-        const candidate = buffer ? `${buffer} and ${part}` : part;
-        // A standalone fact should have at least one "predicate word" (is/was/are/have/prefer/like/own/prefer/named/called)
-        const looksLikeFact = /\b(is|was|are|were|have|has|prefer|like|own|named|called|born|died|work|live|drive|use|my|the)\b/i.test(part);
-        if (looksLikeFact || facts.length === 0) {
-            if (buffer) facts.push(buffer);
-            buffer = part;
-        } else {
-            buffer = candidate;
-        }
-    }
-    if (buffer) facts.push(buffer);
-
-    return facts.length > 1 ? facts : [content];
-}
-
-/**
- * Detect if input is a memory recall query.
- */
-function detectMemoryRecall(input) {
-    return MEMORY_RECALL_TRIGGERS.some(p => p.test(input));
-}
-
-/**
- * Extract simple keyword tags from a content string.
- * Normalizes: lowercase, strip punctuation, remove stopwords.
- * Does NOT stem proper nouns (capitalized words preserved as-is after lower).
- */
-function extractTags(content) {
-    const stopwords = new Set(['a','an','the','is','it','to','of','and','or','in','on','at','for','with','that','this','was','are','do','you','what','how','why','when','who','did','have','has','had','my','me','i','we','he','she','they','be','been','am','not','no','if','so']);
-    const words = content
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, '')
-        .split(/\s+/)
-        .filter(w => w.length > 2 && !stopwords.has(w));
-    // Only de-plural common words (skip short words where stemming causes loss like "atlas" -> "atla")
-    return words
-        .map(w => w.endsWith('s') && w.length >= 6 ? w.slice(0, -1) : w)
-        .slice(0, 8);
-}
-
-/**
- * Check if content is meaningful enough to save.
- * Rejects empty, pure-punctuation, or whitespace-only content.
- */
-function isValidMemoryContent(content) {
-    if (!content || content.trim().length < 3) return false;
-    const stripped = content.replace(/[^a-z0-9\s]/gi, '').trim();
-    return stripped.length >= 2; // must have at least some alphanumeric chars
-}
-
-/**
- * Phase A: Save a single atomic fact entry.
- * Entry schema includes Phase B/C reserved fields (nullable) for future upgrade.
- * Returns: { entry, status: 'saved'|'dedup'|'rejected' }
- */
-async function saveOneAtomicEntry(existing, content) {
-    const trimmed = content.trim();
-
-    if (!isValidMemoryContent(trimmed)) {
-        console.warn('⚠️ [MEMORY_REJECTED]', trimmed);
-        return { entry: null, status: 'rejected' };
-    }
-
-    const duplicate = existing.find(e => e.content.toLowerCase() === trimmed.toLowerCase());
-    if (duplicate) {
-        console.log('🔁 [MEMORY_DEDUP]', duplicate.id);
-        return { entry: duplicate, status: 'dedup' };
-    }
-
-    const entry = {
-        id: crypto.randomUUID(),
-        content: trimmed,
-        created_at: new Date().toISOString(),
-        // Legacy compat
-        timestamp: new Date().toISOString(),
-        scope: 'profile',
-        tags: extractTags(trimmed),
-        source: 'user_trigger',
-        // Phase B reserved — typed schema normalization (not yet implemented)
-        normalized_fields: null,
-        // Phase C reserved — entity graph references (not yet implemented)
-        entity_refs: null
-    };
-
-    return { entry, status: 'saved' };
-}
-
-/**
- * Phase A: Save one or more atomic facts to UserProfile.structured_memory.
- * Handles atomic splitting, dedup, validation, and DB persistence in one write.
- * Returns: { saved: [...], deduped: [...], rejected: [...] }
- */
-async function saveAtomicMemory(base44, userProfile, content, userEmail) {
-    const clauses = splitAtomicFacts(content);
-    const existing = userProfile?.structured_memory || [];
-    const newEntries = [];
-    const deduped = [];
-    const rejected = [];
-
-    for (const clause of clauses) {
-        const { entry, status } = await saveOneAtomicEntry(existing, clause);
-        if (status === 'saved') {
-            newEntries.push(entry);
-            existing.push(entry); // prevent within-batch duplication
-        } else if (status === 'dedup') {
-            deduped.push(entry);
-        } else {
-            rejected.push(clause);
-        }
-    }
-
-    if (newEntries.length > 0) {
-        if (userProfile) {
-            await base44.entities.UserProfile.update(userProfile.id, { structured_memory: existing });
-        } else {
-            await base44.entities.UserProfile.create({ user_email: userEmail, structured_memory: newEntries });
-        }
-        console.log('🧠 [ATOMIC_MEMORY_SAVED]', { count: newEntries.length, ids: newEntries.map(e => e.id) });
-    }
-
-    return { saved: newEntries, deduped, rejected };
-}
-
-/**
- * Deterministic recall: keyword-match against structured_memory.
- * Returns only matched entries — no full dump.
- */
-function recallStructuredMemory(structuredMemory, query) {
-    if (!structuredMemory || structuredMemory.length === 0) return [];
-    const queryTokens = extractTags(query);
-    if (queryTokens.length === 0) return structuredMemory.slice(-5); // fallback: last 5
-
-    const scored = structuredMemory.map(entry => {
-    // Re-extract tags at query time so de-plural logic is consistent
-    const entryTokens = new Set([
-        ...(entry.tags || []),
-        ...extractTags(entry.content)
-    ]);
-    const hits = queryTokens.filter(t => entryTokens.has(t)).length;
-    return { entry, hits };
-    });
-
-    // If no token hits, fall back to most recent 5 entries for recall queries
-    const matched = scored.filter(s => s.hits > 0);
-    if (matched.length === 0) return structuredMemory.slice(-5);
-
-    return matched
-    .sort((a, b) => b.hits - a.hits)
-    .slice(0, 10)
-    .map(s => s.entry);
-}
-
-// ─── HEURISTICS ENGINE v1 ─────────────────────────────────────────────────
-
-const HEURISTICS_ENABLED = true; // master switch — set false to revert to neutral GEN
-
-/**
- * Step 1: Intent classification (internal only — never surfaced to user).
- */
-function classifyIntent(input) {
-    const t = input.toLowerCase();
-    if (/\b(remember|save to memory|add to memory|note that|store that)\b/i.test(input)) return 'MEMORY_ACTION';
-    if (/\b(architect|design|system|layer|contract|schema|spec|pipeline|phase|module|interface|protocol|structure|refactor|decouple|boundary|invariant)\b/i.test(t) && t.length > 80) return 'TECHNICAL_DESIGN';
-    if (/\b(review|thoughts on|assess|evaluate|what do you think|critique|feedback on|opinion on)\b/i.test(t)) return 'PARTNER_REVIEW';
-    if (/\b(run|execute|do|apply|implement|build|create|write|generate|deploy|fix|update)\b/i.test(t) && t.length < 120) return 'EXECUTION_DIRECTIVE';
-    if (/\b(summarize|tldr|brief|short version|in a sentence|quick summary)\b/i.test(t)) return 'SUMMARY_COMPACT';
-    if (/\b(search|find|look up|google|news|weather|calculate|translate|convert)\b/i.test(t)) return 'TOOL_INVOCATION';
-    return 'GENERAL_QUERY';
-}
-
-// ─── DCS: DYNAMIC COGNITIVE SCALING v1 ──────────────────────────────────────
-// Presentation-layer only. No memory writes. No schema changes. Pure function.
-
-/**
- * DCS Step 1: Detect cognitive complexity level of user input (1–10 scale).
- * Deterministic heuristic — same input always produces same score.
- */
-function detectCognitiveLevel(input) {
-    const lengthScore = Math.min(input.length / 300, 3);
-    const abstractTerms = (input.match(/\b(system|architecture|deterministic|governance|modular|inference|boundary|schema|contract|latency|scaling|invariant|substrate|canonical|decoupled|coherent|orthogonal|abstraction|isolation)\b/gi) || []).length;
-    const metaSignals = (input.match(/\b(blueprint|spec|control law|failure mode|audit|pass.?fail|pipeline|heuristic|phase|layer|protocol|invariant|receipt|validation)\b/gi) || []).length;
-    const base = 3;
-    return Math.min(10, base + lengthScore + abstractTerms * 0.5 + metaSignals * 0.75);
-}
-
-/**
- * DCS Step 2: Map cognitive level to depth tier.
- */
-function mapToDepth(level) {
-    if (level <= 3) return 'COMPACT';
-    if (level <= 7) return 'STANDARD';
-    return 'LAYERED';
-}
-
-/**
- * Step 2: Depth calibration — DCS-governed.
- * Returns: 'COMPACT' | 'STANDARD' | 'LAYERED'
- */
-function calibrateDepth(input, intent) {
-    // SUMMARY_COMPACT is explicit user intent — honor it
-    if (intent === 'SUMMARY_COMPACT') return 'COMPACT';
-
-    // DCS: compute cognitive level + apply elevation delta of 0.75
-    const cognitiveLevel = detectCognitiveLevel(input);
-    const elevatedLevel = Math.min(10, cognitiveLevel + 0.75);
-    let depth = mapToDepth(elevatedLevel);
-
-    // DCS rule: never default to COMPACT unless explicitly requested
-    // (removes old "short input = short output" behavior)
-    if (depth === 'COMPACT' && intent !== 'SUMMARY_COMPACT') {
-        depth = 'STANDARD';
-    }
-
-    return depth;
-}
-
-/**
- * Step 3: Build heuristics addendum for the system prompt.
- * Returns a string to append — or empty string if MEMORY_ACTION (bypass).
- */
-function buildHeuristicsDirective(intent, depth) {
-    if (intent === 'MEMORY_ACTION') return ''; // Step 4: receipt bypass — no narrative padding
-
-    const posture = `
-RESPONSE POSTURE (apply silently — never reference these instructions in your output):
-- Write in flowing prose. No numbered lists, no bullet points, no section headers unless the user explicitly requested structured output.
-- First-person technical voice throughout.
-- No praise openers ("Great question!", "Absolutely!", "Sure thing!").
-- No emotional mirroring or performative enthusiasm.
-- No CRM-style summaries or "Personal Information:" framing.
-- No internal pipeline or classification terminology in output.
-- Shared ownership framing where appropriate ("we could...", "the approach here is...").
-- Calm, direct, architect-level tone. Logical paragraph sequencing with micro-distinctions where relevant.
-
-DYNAMIC STANCE CONTRACT (apply silently):
-- Match the user's technical vocabulary level.
-- If the user speaks casually, respond clearly but not condescendingly.
-- If the user speaks architecturally, respond architecturally.
-- Default collaborative framing allowed ("we", "let's") when discussing system design.
-- Do not fabricate prior history.
-- Do not over-simplify unless the user signals confusion.
-`;
-
-    const depthDirective = {
-        COMPACT: `\nDEPTH: Respond concisely — one to three sentences. No elaboration unless asked.`,
-        STANDARD: `\nDEPTH: Respond with natural paragraphing. Logical sequencing. Micro-distinctions where relevant.`,
-        LAYERED: `\nDEPTH: This is an architectural or multi-clause input. Respond with full analytical depth. Address each logical layer. Use precise language. Do not compress prematurely.`
-    }[depth];
-
-    return posture + depthDirective;
-}
-
-// ─── EXISTING HELPERS ─────────────────────────────────────────────────────
-
-const ACTIVE_MODEL = 'gpt-5.2';
-
-// Context window sizes per model (tokens)
 const MODEL_CONTEXT_WINDOW = {
-    'gpt-4o': 128000,
-    'gpt-4o-mini': 128000,
-    'gpt-4-turbo': 128000,
-    'gpt-4': 8192,
-    'gpt-3.5-turbo': 16385,
-    'gpt-5.2': 200000,
-    'gpt-5': 200000,
+    'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
+    'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
 };
 
-function getContextWindow(model) {
-    return MODEL_CONTEXT_WINDOW[model] || 128000;
+// ─── STAGE TRACKER ────────────────────────────────────────────────────────────
+const STAGES = { AUTH: 'AUTH', PROFILE_LOAD: 'PROFILE_LOAD', MEMORY_WRITE: 'MEMORY_WRITE', HISTORY_LOAD: 'HISTORY_LOAD', HEURISTICS: 'HEURISTICS', OPENAI_CALL: 'OPENAI_CALL', MESSAGE_SAVE: 'MESSAGE_SAVE', RESPONSE_BUILD: 'RESPONSE_BUILD' };
+let CURRENT_STAGE = null;
+const setStage = (s) => { CURRENT_STAGE = s; };
+const getStage = () => CURRENT_STAGE;
+
+// ─── HISTORY COMPRESSION (pure — stays inline, no network) ───────────────────
+function compressHistory(messages) {
+    if (messages.length <= HOT_HEAD + HOT_TAIL) return messages;
+    const head = messages.slice(0, HOT_HEAD);
+    const tail = messages.slice(-HOT_TAIL);
+    const middleCount = messages.length - HOT_HEAD - HOT_TAIL;
+    return [...head, { role: 'system', content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]` }, ...tail];
 }
 
-// Returns { content, usage: { prompt_tokens, completion_tokens, total_tokens } }
-async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500) {
+// ─── OPENAI CALL (pure HTTP — stays inline) ───────────────────────────────────
+async function openAICall(key, messages, model, maxTokens = 2000) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -435,39 +64,26 @@ async function openAICall(key, messages, model = ACTIVE_MODEL, maxTokens = 1500)
         throw new Error(`OpenAI error: ${err.error?.message || response.statusText}`);
     }
     const data = await response.json();
-    return {
-        content: data.choices[0]?.message?.content || '',
-        usage: data.usage || null
-    };
+    return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
 }
 
-function compressHistory(messages) {
-    if (messages.length <= HOT_HEAD + HOT_TAIL) return messages;
-    const head = messages.slice(0, HOT_HEAD);
-    const tail = messages.slice(-HOT_TAIL);
-    const middleCount = messages.length - HOT_HEAD - HOT_TAIL;
-    const summaryBlock = {
-        role: 'system',
-        content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]`
-    };
-    return [...head, summaryBlock, ...tail];
-}
+// ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
+const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
-// 3.1: extractMemoryAnchors REMOVED — background auto-extraction disabled.
-// Only explicit Phase A saves (detectMemorySave triggers) are permitted.
-
+// ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
-    const correlation_id = request_id; // I1: single join key across all receipts, errors, response metadata
+    const correlation_id = request_id;
 
     let body = null;
     let user = null;
 
     try {
         const base44 = createClientFromRequest(req);
-        user = await base44.auth.me();
 
+        setStage(STAGES.AUTH);
+        user = await base44.auth.me();
         if (!user || !user.email) {
             return Response.json({ reply: "Authentication required.", error: 'UNAUTHORIZED' }, { status: 401 });
         }
@@ -475,17 +91,16 @@ Deno.serve(async (req) => {
         body = await req.json();
         const { input, session_id, file_urls = [] } = body;
 
-        // Guard: SESSION_RESUME sentinel — acknowledge silently, no AI call, no message saved
+        // SESSION_RESUME sentinel — noop
         if (input === '__SESSION_RESUME__') {
             console.log('🔄 [SESSION_RESUME_NOOP]', { session_id });
             return Response.json({ reply: null, mode: 'SESSION_RESUME_NOOP', request_id });
         }
 
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
-
         console.log('🚀 [PIPELINE_START]', { request_id, user: user.email, session_id, model: ACTIVE_MODEL });
 
-        // ============ LOAD USER PROFILE ============
+        // ── STAGE: PROFILE_LOAD ───────────────────────────────────────────────
         setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
         try {
@@ -493,24 +108,24 @@ Deno.serve(async (req) => {
             userProfile = profiles?.[0] || null;
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
-        // ─── PHASE A: ATOMIC MEMORY SAVE ──────────────────────────────────────────
+        // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
         setStage(STAGES.MEMORY_WRITE);
-        const memorySaveSignal = detectMemorySave(input);
 
+        // Invoke memoryEngine module for detection
+        const detectRes = await base44.functions.invoke('core/memoryEngine', { action: 'detect_save', input });
+        const memorySaveSignal = detectRes?.data?.result ?? null;
+
+        // VAGUE clarify
         if (memorySaveSignal === '__VAGUE__') {
             const clarifyReply = `Sure — what specifically would you like me to remember? Please share the facts and I'll save them.`;
             if (session_id) {
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: clarifyReply, timestamp: new Date().toISOString() });
             }
-            return Response.json({
-                reply: clarifyReply, mode: 'MEMORY_CLARIFY', memory_saved: false,
-                entries_created: 0, entry_ids: [], request_id,
-                response_time_ms: Date.now() - startTime, tool_calls: [],
-                execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime }
-            });
+            return Response.json({ reply: clarifyReply, mode: 'MEMORY_CLARIFY', memory_saved: false, entries_created: 0, entry_ids: [], request_id, response_time_ms: Date.now() - startTime, tool_calls: [], execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime } });
         }
 
+        // PRONOUN clarify
         if (memorySaveSignal === '__PRONOUN__') {
             const pronoun = (input.match(PRONOUN_PATTERN) || ['they'])[0];
             const clarifyReply = `Who is "${pronoun}" referring to? I need a name before I can save this.`;
@@ -518,16 +133,13 @@ Deno.serve(async (req) => {
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: clarifyReply, timestamp: new Date().toISOString() });
             }
-            return Response.json({
-                reply: clarifyReply, mode: 'MEMORY_CLARIFY_PRONOUN', memory_saved: false,
-                entries_created: 0, entry_ids: [], request_id,
-                response_time_ms: Date.now() - startTime, tool_calls: [],
-                execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime }
-            });
+            return Response.json({ reply: clarifyReply, mode: 'MEMORY_CLARIFY_PRONOUN', memory_saved: false, entries_created: 0, entry_ids: [], request_id, response_time_ms: Date.now() - startTime, tool_calls: [], execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime } });
         }
 
+        // SAVE path
         if (memorySaveSignal) {
-            const { saved, deduped, rejected } = await saveAtomicMemory(base44, userProfile, memorySaveSignal, user.email);
+            const saveRes = await base44.functions.invoke('core/memoryEngine', { action: 'save', content: memorySaveSignal });
+            const { saved = [], deduped = [], rejected = [] } = saveRes?.data || {};
             const memory_saved = saved.length > 0;
             const entry_ids = saved.map(e => e.id);
 
@@ -535,8 +147,7 @@ Deno.serve(async (req) => {
             if (!memory_saved && deduped.length === 0) {
                 confirmReply = `I couldn't save that — it doesn't contain enough information to store.`;
             } else if (!memory_saved && deduped.length > 0) {
-                const items = deduped.map(e => `"${e.content}"`).join(', ');
-                confirmReply = `Already in memory: ${items}`;
+                confirmReply = `Already in memory: ${deduped.map(e => `"${e.content}"`).join(', ')}`;
             } else if (saved.length === 1 && deduped.length === 0) {
                 confirmReply = `Memory saved. I'll remember: "${saved[0].content}"\n\nMEMORY_SAVED: TRUE | entries: 1 | id: ${saved[0].id}`;
             } else {
@@ -550,51 +161,39 @@ Deno.serve(async (req) => {
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
                 await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: confirmReply, timestamp: new Date().toISOString() });
             }
-
-            return Response.json({
-                reply: confirmReply, mode: 'MEMORY_SAVE', memory_saved,
-                entries_created: saved.length, entry_ids,
-                dedup_ids: deduped.map(e => e.id), rejected_entries: rejected,
-                request_id, response_time_ms: Date.now() - startTime, tool_calls: [],
-                execution_receipt: { request_id, session_id, memory_saved, entries_created: saved.length, latency_ms: Date.now() - startTime }
-            });
+            return Response.json({ reply: confirmReply, mode: 'MEMORY_SAVE', memory_saved, entries_created: saved.length, entry_ids, dedup_ids: deduped.map(e => e.id), rejected_entries: rejected, request_id, response_time_ms: Date.now() - startTime, tool_calls: [], execution_receipt: { request_id, session_id, memory_saved, entries_created: saved.length, latency_ms: Date.now() - startTime } });
         }
 
-        // ============ LOAD FULL SESSION HISTORY ============
+        // ── STAGE: HISTORY_LOAD ───────────────────────────────────────────────
         setStage(STAGES.HISTORY_LOAD);
         let rawHistory = [];
         if (session_id) {
             try {
-                const msgs = await base44.entities.Message.filter(
-                    { conversation_id: session_id },
-                    '-timestamp',
-                    MAX_HISTORY_MESSAGES
-                );
+                const msgs = await base44.entities.Message.filter({ conversation_id: session_id }, '-timestamp', MAX_HISTORY_MESSAGES);
                 rawHistory = msgs.reverse().map(m => ({ role: m.role, content: m.content }));
                 console.log('✅ [HISTORY_LOADED]', { count: rawHistory.length });
             } catch (e) { console.warn('⚠️ [HISTORY_FAILED]', e.message); }
         }
-
         const conversationHistory = compressHistory(rawHistory);
 
-        // ─── PHASE 1: DETERMINISTIC MEMORY RECALL ─────────────────────────────────
-        const isRecallQuery = detectMemoryRecall(input);
+        // ── MEMORY RECALL ─────────────────────────────────────────────────────
+        const recallRes = await base44.functions.invoke('core/memoryEngine', { action: 'detect_recall', input });
+        const isRecallQuery = recallRes?.data?.result ?? false;
         const structuredMemory = userProfile?.structured_memory || [];
         let matchedMemories = [];
-
         if (isRecallQuery && structuredMemory.length > 0) {
-            matchedMemories = recallStructuredMemory(structuredMemory, input);
-            console.log('🔍 [MEMORY_RECALL]', { query: input.substring(0, 60), matched: matchedMemories.length });
+            const recallData = await base44.functions.invoke('core/memoryEngine', { action: 'recall', structuredMemory, query: input });
+            matchedMemories = recallData?.data?.matches || [];
+            console.log('🔍 [MEMORY_RECALL]', { matched: matchedMemories.length });
         }
 
-        // ─── HEURISTICS ENGINE + DCS: CLASSIFY & CALIBRATE (internal) ───────────
+        // ── STAGE: HEURISTICS ─────────────────────────────────────────────────
         setStage(STAGES.HEURISTICS);
-        const hIntent = HEURISTICS_ENABLED ? classifyIntent(input) : 'GENERAL_QUERY';
-        const cogLevel = detectCognitiveLevel(input);
-        const hDepth   = HEURISTICS_ENABLED ? calibrateDepth(input, hIntent) : 'STANDARD';
-        console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel.toFixed(2) });
+        const hRes = await base44.functions.invoke('core/heuristicsEngine', { input });
+        const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
+        console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
-        // ============ BUILD SYSTEM PROMPT ============
+        // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
 
@@ -620,42 +219,30 @@ TRUTH DISCIPLINE — MANDATORY RULES:
 
 `;
 
-
-        // Inject ONLY matched structured memories (deterministic — no full dump)
         if (matchedMemories.length > 0) {
             systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
             for (const m of matchedMemories) {
-                systemPrompt += `- [${m.timestamp.split('T')[0]}] ${m.content}\n`;
+                systemPrompt += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
             }
             systemPrompt += '\n';
         }
 
-        // Legacy memory_anchors: inject only if content does NOT overlap with structured memory
-        // and mark clearly as INFERRED (not explicit user statements)
         const anchors = userProfile?.memory_anchors;
         if (anchors && anchors.length > 0) {
             const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
             const filteredAnchors = (Array.isArray(anchors) ? anchors : [anchors])
                 .filter(a => {
                     const lower = a.toLowerCase();
-                    // Skip if this anchor is essentially covered by structured memory
                     return !structuredContents.some(sc => lower.includes(sc.substring(0, 20)) || sc.includes(lower.substring(0, 20)));
                 });
             if (filteredAnchors.length > 0) {
-                const anchorText = filteredAnchors.join('\n');
-                systemPrompt += `INFERRED CONTEXT (auto-extracted, treat as possible inference — DO NOT assert as definitive fact, use "It sounds like..." language):\n${anchorText.substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
+                systemPrompt += `INFERRED CONTEXT (auto-extracted, treat as possible inference — DO NOT assert as definitive fact, use "It sounds like..." language):\n${filteredAnchors.join('\n').substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
             }
         }
 
-        if (userProfile?.tone?.style) {
-            systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
-        }
-        if (userProfile?.project?.name) {
-            systemPrompt += `Current project: ${userProfile.project.name}\n`;
-        }
+        if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
+        if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
-        // ─── CAOS SYSTEM KNOWLEDGE (admin profile context) ───────────────────────
-        // Injected for all requests — Aria knows the system she runs on.
         systemPrompt += `
 CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
 - CAOS is the platform. You are Aria. hybridMessage is the active pipeline.
@@ -671,258 +258,98 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
-        // ─── HEURISTICS + DCS LAYER: inject formatting directive ─────────────────
-        const hDirective = buildHeuristicsDirective(hIntent, hDepth);
         if (hDirective) {
             systemPrompt += hDirective;
-            systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed(1)} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
+            systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
         }
 
-        // ============ CALL OPENAI ============
+        // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
         const inferenceStart = Date.now();
-        const messages = [
-            { role: 'system', content: systemPrompt },
-            ...conversationHistory,
-            { role: 'user', content: input }
-        ];
-
-        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, messages, ACTIVE_MODEL, 2000);
+        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }], ACTIVE_MODEL, 2000);
         const inferenceMs = Date.now() - inferenceStart;
         if (!reply) throw new Error('No response from OpenAI');
 
-        // ─── WCW INSTRUMENTATION ──────────────────────────────────────────────────
-        // Use OpenAI's actual usage data — not estimates
-        const wcwBudget = getContextWindow(ACTIVE_MODEL);
+        // WCW instrumentation
+        const wcwBudget = MODEL_CONTEXT_WINDOW[ACTIVE_MODEL] || 128000;
         const promptTokens = openaiUsage?.prompt_tokens || 0;
         const completionTokens = openaiUsage?.completion_tokens || 0;
         const totalTokens = openaiUsage?.total_tokens || 0;
         const wcwRemaining = wcwBudget - promptTokens;
+        const tokenBreakdown = { system_prompt_tokens: null, history_tokens: null, user_input_tokens: null, total_prompt_tokens: promptTokens, completion_tokens: completionTokens, total_tokens: totalTokens };
 
-        const tokenBreakdown = {
-            system_prompt_tokens: null, // OpenAI doesn't break this down — total prompt is accurate
-            history_tokens: null,
-            user_input_tokens: null,
-            total_prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            total_tokens: totalTokens
-        };
+        console.log('📊 [WCW]', { wcw_budget: wcwBudget, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
+        console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length });
 
-        console.log('📊 [WCW_INSTRUMENTATION]', {
-            request_id,
-            model: ACTIVE_MODEL,
-            wcw_budget: wcwBudget,
-            prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            wcw_remaining: wcwRemaining
-        });
-
-        console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length, historyMessages: conversationHistory.length });
-
-        // ============ SAVE MESSAGES TO DB ============
+        // ── STAGE: MESSAGE_SAVE ───────────────────────────────────────────────
         setStage(STAGES.MESSAGE_SAVE);
         if (session_id) {
             try {
-                await base44.entities.Message.create({
-                    conversation_id: session_id,
-                    role: 'user',
-                    content: input,
-                    file_urls: file_urls.length > 0 ? file_urls : undefined,
-                    timestamp: new Date().toISOString()
-                });
-                await base44.entities.Message.create({
-                    conversation_id: session_id,
-                    role: 'assistant',
-                    content: reply,
-                    timestamp: new Date().toISOString()
-                });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: file_urls.length > 0 ? file_urls : undefined, timestamp: new Date().toISOString() });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() });
                 console.log('✅ [MESSAGES_SAVED]');
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
 
-        // ============ IN-BAND: DIAGNOSTIC RECEIPT + SESSION CONTEXT ============
-        // Per I2: receipt write MUST be awaited before returning response.
-        // Background async drops are forbidden until proven durable.
+        // ── STAGE: RESPONSE_BUILD (receipt + session context — AWAITED per I2) ─
         setStage(STAGES.RESPONSE_BUILD);
         const responseTime = Date.now() - startTime;
 
-        try {
-            const receiptPayload = {
-                request_id,
-                correlation_id,
-                session_id: session_id || 'none',
-                model_used: ACTIVE_MODEL,
-                token_breakdown: tokenBreakdown,
-                wcw_budget: wcwBudget,
-                wcw_used: promptTokens,
-                wcw_remaining: wcwRemaining,
-                heuristics_intent: hIntent,
-                heuristics_depth: hDepth,
-                history_messages: rawHistory.length,
-                recall_executed: matchedMemories.length > 0,
-                matched_memories: matchedMemories.length,
-                stage_last: STAGES.RESPONSE_BUILD,
-                selector_decision: { stage_last: STAGES.RESPONSE_BUILD },
-                latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
-                created_at: new Date().toISOString()
-            };
-            console.log('📝 [RECEIPT_WRITE_ATTEMPT]', { request_id, session_id });
-            // Try service role first, fall back to user context
-            let receiptWritten = false;
-            try {
-                await base44.asServiceRole.entities.DiagnosticReceipt.create(receiptPayload);
-                receiptWritten = true;
-            } catch (srErr) {
-                console.warn('⚠️ [RECEIPT_SR_FAILED] Trying user context', srErr.message);
-                await base44.entities.DiagnosticReceipt.create(receiptPayload);
-                receiptWritten = true;
-            }
-            console.log('✅ [RECEIPT_SAVED]', { request_id, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining, receiptWritten });
-        } catch (receiptErr) {
-            console.error('🔥 [RECEIPT_WRITE_FAILED]', receiptErr.message, receiptErr.stack?.substring(0, 200));
-            // Fail loud: log a RECEIPT_WRITE_FAILED ErrorLog entry so admin can correlate
-            try {
-                await base44.asServiceRole.entities.ErrorLog.create({
-                    user_email: user?.email || 'unknown',
-                    conversation_id: session_id || 'none',
-                    error_type: 'server_error',
-                    error_message: `RECEIPT_WRITE_FAILED: ${receiptErr.message}`,
-                    error_code: 'RECEIPT_WRITE_FAILED',
-                    stage: STAGES.RESPONSE_BUILD,
-                    model_used: ACTIVE_MODEL,
-                    latency_ms: responseTime,
-                    request_payload: { request_id, session_id }
-                });
-            } catch (_) { /* ignore secondary log failure */ }
-        }
-
-        // SessionContext upsert — also in-band
-        if (session_id) {
-            try {
-                const existing = await base44.asServiceRole.entities.SessionContext.filter({ session_id }, '-last_activity_ts', 1);
-                const now = Date.now();
-                if (existing && existing.length > 0) {
-                    await base44.asServiceRole.entities.SessionContext.update(existing[0].id, {
-                        wcw_budget: wcwBudget,
-                        wcw_used: promptTokens,
-                        last_request_ts: now,
-                        last_activity_ts: now,
-                        last_seq: (existing[0].last_seq || 0) + 1
-                    });
-                } else {
-                    await base44.asServiceRole.entities.SessionContext.create({
-                        session_id,
-                        wcw_budget: wcwBudget,
-                        wcw_used: promptTokens,
-                        last_request_ts: now,
-                        last_activity_ts: now,
-                        last_seq: 1
-                    });
-                }
-            } catch (scErr) {
-                console.error('🔥 [SESSIONCONTEXT_UPSERT_FAILED]', scErr.message);
-                try {
-                    await base44.asServiceRole.entities.ErrorLog.create({
-                        user_email: user?.email || 'unknown',
-                        conversation_id: session_id || 'none',
-                        error_type: 'server_error',
-                        error_message: `SESSIONCONTEXT_UPSERT_FAILED: ${scErr.message}`,
-                        error_code: 'SESSIONCONTEXT_UPSERT_FAILED',
-                        stage: STAGES.RESPONSE_BUILD,
-                        model_used: ACTIVE_MODEL,
-                        latency_ms: responseTime,
-                        request_payload: { request_id, session_id }
-                    });
-                } catch (_) { /* ignore */ }
-            }
-        }
+        // Invoke receiptWriter module (awaited)
+        await base44.functions.invoke('core/receiptWriter', {
+            request_id, correlation_id, session_id, model_used: ACTIVE_MODEL,
+            wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+            heuristics_intent: hIntent, heuristics_depth: hDepth, cognitive_level: cogLevel,
+            history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
+            matched_memories: matchedMemories.length,
+            latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
+            token_breakdown: tokenBreakdown,
+            user_email: user.email
+        });
 
         // 3.1: Background anchor auto-extraction DISABLED.
-        // No writes to memory_anchors or structured_memory outside explicit Phase A save triggers.
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
-
-        console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime, totalHistory: rawHistory.length, receipt_attempted: true });
+        console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
         return Response.json({
-            reply,
-            mode: 'GEN',
-            request_id,
-            correlation_id,
-            response_time_ms: responseTime,
-            tool_calls: [],
-            wcw_budget: wcwBudget,
-            wcw_used: promptTokens,
-            wcw_remaining: wcwRemaining,
+            reply, mode: 'GEN', request_id, correlation_id,
+            response_time_ms: responseTime, tool_calls: [],
+            wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
             execution_receipt: {
-                request_id,
-                correlation_id,
-                session_id,
-                history_messages: rawHistory.length,
-                recall_executed: matchedMemories.length > 0,
-                matched_memories: matchedMemories.length,
-                heuristics_intent: hIntent,
-                heuristics_depth: hDepth,
-                cognitive_level: cogLevel,
-                elevation_delta: 0.75,
-                model_used: ACTIVE_MODEL,
-                latency_ms: responseTime,
-                token_breakdown: tokenBreakdown,
-                wcw_budget: wcwBudget,
-                wcw_used: promptTokens,
-                wcw_remaining: wcwRemaining
+                request_id, correlation_id, session_id,
+                history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
+                matched_memories: matchedMemories.length, heuristics_intent: hIntent,
+                heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
+                model_used: ACTIVE_MODEL, latency_ms: responseTime,
+                token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
+                wcw_used: promptTokens, wcw_remaining: wcwRemaining
             }
         });
 
     } catch (error) {
         const latency_ms = Date.now() - startTime;
-        const envelope = buildDeterministicErrorEnvelope(error, {
-            stage:           getStage(),
-            request_id,
-            session_id:      body?.session_id || null,
-            user_email:      user?.email      || null,
-            model_used:      ACTIVE_MODEL,
-            latency_ms,
-            retry_attempted: false,
-        });
 
-        console.error('🔥 [PIPELINE_ERROR]', {
-            error_id:   envelope.error_id,
-            stage:      envelope.stage,
-            error_code: envelope.error_code,
-            message:    error.message,
-            latency_ms,
-        });
-
-        // Persist to ErrorLog — in-band (awaited), includes correlation_id
+        // Invoke errorEnvelopeWriter module (best effort — no await on failure)
         try {
-            await base44.asServiceRole.entities.ErrorLog.create({ ...envelope, error_id: envelope.error_id || correlation_id });
-        } catch (persistErr) {
-            console.error('⚠️ [ODEL_PERSIST_FAILED]', persistErr.message);
-        }
-
-        // Attempt failure receipt — fail loud per I4
-        try {
-            await base44.asServiceRole.entities.DiagnosticReceipt.create({
-                request_id: correlation_id,
+            const base44 = createClientFromRequest(req);
+            await base44.functions.invoke('core/errorEnvelopeWriter', {
+                error_message: error.message, stage: getStage(),
+                request_id, correlation_id,
                 session_id: body?.session_id || null,
-                model_used: ACTIVE_MODEL,
-                selector_decision: { stage_last: envelope.stage, error_code: envelope.error_code },
-                latency_breakdown: { total_ms: latency_ms },
-                created_at: new Date().toISOString()
+                user_email: user?.email || null,
+                model_used: ACTIVE_MODEL, latency_ms
             });
-        } catch (receiptErr) {
-            console.error('🔥 [FAILURE_RECEIPT_WRITE_FAILED]', receiptErr.message);
-        }
+        } catch (_) { /* envelope write failed — already logged inside module */ }
+
+        console.error('🔥 [PIPELINE_ERROR]', { stage: getStage(), message: error.message, latency_ms });
 
         return Response.json({
-            reply:             derivePublicMessage(envelope.error_code),
-            error_id:          envelope.error_id,
-            error_code:        envelope.error_code,
-            stage:             envelope.stage,
-            request_id,
-            correlation_id,
-            mode:              'ERROR',
-            response_time_ms:  latency_ms,
+            reply: "Something went wrong. Please try again.",
+            error_code: 'SERVER_ERROR',
+            stage: getStage(),
+            request_id, correlation_id,
+            mode: 'ERROR',
+            response_time_ms: latency_ms,
         }, { status: 500 });
     }
 });
