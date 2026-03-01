@@ -804,30 +804,9 @@ CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
             }
         }
 
-        // ============ BACKGROUND: AUTO-EXTRACT LEGACY ANCHORS ============
-        (async () => {
-            try {
-                if (rawHistory.length > 0 && rawHistory.length % 5 === 0) {
-                    const recentExcerpt = [...rawHistory.slice(-6),
-                        { role: 'user', content: input },
-                        { role: 'assistant', content: reply }
-                    ].map(m => `${m.role}: ${m.content}`).join('\n');
-
-                    const existingAnchors = Array.isArray(anchors) ? anchors.join('\n') : (anchors || '');
-                    const newFacts = await extractMemoryAnchors(openaiKey, recentExcerpt, existingAnchors);
-
-                    if (newFacts.length > 0) {
-                        const updatedAnchors = Array.isArray(anchors) ? [...anchors, ...newFacts] : newFacts;
-                        if (userProfile) {
-                            await base44.entities.UserProfile.update(userProfile.id, { memory_anchors: updatedAnchors });
-                        } else {
-                            await base44.entities.UserProfile.create({ user_email: user.email, memory_anchors: newFacts });
-                        }
-                        console.log('🧠 [ANCHORS_UPDATED]', { newFacts: newFacts.length });
-                    }
-                }
-            } catch (e) { console.warn('⚠️ [ANCHOR_UPDATE_FAILED]', e.message); }
-        })();
+        // 3.1: Background anchor auto-extraction DISABLED.
+        // No writes to memory_anchors or structured_memory outside explicit Phase A save triggers.
+        console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
 
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime, totalHistory: rawHistory.length, receipt_attempted: true });
 
