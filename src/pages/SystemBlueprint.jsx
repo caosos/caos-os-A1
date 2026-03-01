@@ -71,10 +71,10 @@ export default function SystemBlueprint() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 1, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 1, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅ · Authority Domain Separation: LOCKED ✅ · Pull-Only Awareness Rule: LOCKED ✅ · Active Model: gpt-5.2 ✅</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
-              <Tag label="Agent Contract: Section 0" color="red" />
-              <Tag label="hybridMessage: ACTIVE" color="green" />
+              <Tag label="Agent Onboarding Contract: Section 0" color="red" />
+              <Tag label="hybridMessage: LOCKED" color="green" />
               <Tag label="Phase A Memory: LOCKED" color="green" />
               <Tag label="Heuristics Engine v1: LOCKED" color="green" />
               <Tag label="OpenAI TTS: LOCKED" color="green" />
@@ -192,6 +192,62 @@ RULE: selfInspect is the ONLY sanctioned path for Aria to reason about source co
   □ Confirm their change has a test path before implementing
   □ Ask the owner if any of the above is unclear — do not assume`}</Code>
 
+            <h4 className="text-white font-semibold mt-3">8. Authority Domain Separation</h4>
+            <Code>{`LOCK_SIGNATURE: CAOS_AUTHORITY_DOMAIN_SEPARATION_v1_2026-03-01
+
+Aria (the AI persona) and CAOS (the platform) are separate authority domains.
+They must never be conflated in code, prompts, or documentation.
+
+RULES:
+  - Aria speaks. CAOS routes. They do not share identity.
+  - Aria must never introduce herself as "CAOS."
+  - The system prompt must always establish Aria as the persona, CAOS as the platform.
+  - No module may grant Aria platform-level authority (e.g., self-modification,
+    direct entity writes without pipeline stage, or direct function invocation
+    outside the governed hybridMessage pipeline).
+  - selfInspect is READ-ONLY. Aria may audit. Aria may never act on source directly.
+  - Governance decisions (lock/unlock, TSB entries, phase advancement) belong
+    to the system owner — not to Aria, not to any agent.
+
+VIOLATION EXAMPLES:
+  ❌ Aria writes directly to UserProfile without a MEMORY_WRITE stage receipt
+  ❌ An agent modifies hybridMessage without a TSB entry
+  ❌ A module grants Aria ability to invoke other functions without selector gate
+  ❌ Blueprint is updated by an agent without owner confirmation in the session
+
+ENFORCEMENT:
+  Any change that blurs the Aria/CAOS boundary requires explicit TSB entry
+  and owner sign-off before implementation.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">9. Pull-Only Awareness Rule</h4>
+            <Code>{`LOCK_SIGNATURE: CAOS_PULL_ONLY_AWARENESS_v1_2026-03-01
+
+Awareness in CAOS must be pull-based, not push-based.
+
+RULES:
+  - Do NOT introduce unnecessary API chatter.
+  - Do NOT inject state into the system unless explicitly requested by the pipeline.
+  - Do NOT push context, memory, or environmental state proactively into prompts
+    unless a deterministic trigger has authorized it (recall trigger, session boot, etc.).
+  - Modules must WAIT to be invoked. They must NOT self-activate or poll.
+  - No background threads, no passive watchers, no unsolicited writes.
+
+PULL-BASED PATTERN (correct):
+  User sends message → pipeline invokes memoryEngine.detect_recall(input)
+  → only if recall detected → memoryEngine.recall() → inject into prompt
+
+PUSH-BASED ANTI-PATTERN (forbidden):
+  Module detects "interesting" context → auto-injects into next prompt
+  Module polls entity store → updates system state unprompted
+  Module writes to UserProfile on every turn "just in case"
+
+RATIONALE:
+  Push-based awareness creates: unpredictable state, silent writes, higher API cost,
+  harder debugging, and violates the "No Silent Writes" invariant (Rule 5).
+  Pull-based awareness is deterministic, auditable, and cheap.
+
+ESTABLISHED: Mar 1, 2026. Directive from system owner.`}</Code>
+
             <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-3">
               <p className="text-yellow-300 text-xs font-semibold">ESTABLISHED: Mar 1, 2026 by system owner. These principles emerged from real build experience on this codebase — they are not theoretical. Each one exists because a violation caused a real problem. Respect them.</p>
             </div>
@@ -200,9 +256,10 @@ RULE: selfInspect is the ONLY sanctioned path for Aria to reason about source co
           {/* 1. WHAT CAOS IS */}
           <Section title="1. What CAOS Is" color="blue" defaultOpen={true}>
             <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
-            <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with OpenAI gpt-4o as the inference engine. It has a deterministic memory system, a heuristics formatting layer, and a chat UI with thread management, file support, and developer tools.</p>
+            <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with OpenAI gpt-5.2 as the active inference engine. It has a deterministic memory system, a heuristics formatting layer, and a chat UI with thread management, file support, and developer tools.</p>
             <Code>{`Platform:   Base44 (React + Deno serverless functions)
-AI:         OpenAI gpt-4o (primary), gpt-4o-mini (utility tasks)
+AI:         OpenAI gpt-5.2 (primary — ACTIVE_MODEL in hybridMessage)
+            Note: TTS uses tts-1-hd (separate model namespace — see TSB-011)
 Storage:    Base44 entities (database)
 Auth:       Base44 built-in auth + guest mode
 Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
@@ -246,7 +303,7 @@ Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
   │      └─ Tone/project context from UserProfile
   │      └─ Heuristics directive (depth + posture)
   │
-  ├─ 8. OPENAI CALL: gpt-4o, max_tokens=2000
+  ├─ 8. OPENAI CALL: gpt-5.2, max_tokens=2000
   │
   ├─ 9. SAVE MESSAGES: Message entity (user + assistant)
   │
