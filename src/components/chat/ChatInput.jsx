@@ -849,6 +849,31 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </button>
       </div>
 
+      {/* STT Chunking Progress Bar — visible during chunked recording */}
+      {isChunking && (
+        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
+              Recording — transcribing in chunks
+            </span>
+            <span className="text-xs text-gray-400">
+              {chunkProgress.processed}/{chunkProgress.recorded} chunks
+            </span>
+          </div>
+          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 transition-all duration-300"
+              style={{
+                width: chunkProgress.recorded > 0
+                  ? `${Math.round((chunkProgress.processed / chunkProgress.recorded) * 100)}%`
+                  : '0%'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Inline Google Voice Player Bar */}
       {isPlayingGoogle && (
         <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md">
