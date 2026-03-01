@@ -85,6 +85,117 @@ export default function SystemBlueprint() {
             </div>
           </div>
 
+          {/* 0. AGENT ONBOARDING CONTRACT */}
+          <Section title="0. Agent Onboarding Contract — Strict Development Principles" color="red" defaultOpen={true}>
+            <div className="bg-red-950/50 border border-red-500/40 rounded-lg p-4 mb-4">
+              <p className="text-red-300 font-bold text-sm mb-1">⚠️ READ THIS FIRST — applies to every agent, every session, every change.</p>
+              <p className="text-gray-300 text-xs">These are standing requirements established by the system owner. They are not suggestions. Any new agent inheriting this codebase must treat these as invariants. Do not deviate without explicit written instruction from the owner in the current session.</p>
+            </div>
+
+            <h4 className="text-white font-semibold mt-3">1. Modularity is Non-Negotiable</h4>
+            <Code>{`Every function, component, and module must do ONE thing.
+No monolithic files. No "utility dump" files.
+If a file is doing more than one job, it needs to be split.
+
+RULE: A new agent must never consolidate separate modules into a single file
+      just for convenience. Separation is intentional and load-bearing.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">2. File Size Hard Limits</h4>
+            <Code>{`PREFERRED maximum:  200 lines per file
+HARD maximum:       400 lines per file
+
+If a file exceeds 400 lines, it MUST be refactored before new features are added.
+No exceptions. No "I'll clean it up later." Clean it up now.
+
+ENFORCEMENT:
+  - hybridMessage is currently ~620 lines — flagged for refactor (see Section 10)
+  - New files must be created focused from the start
+  - Components > 200 lines should be broken into sub-components immediately`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">3. Phased Development — Build → Test → Lock</h4>
+            <Code>{`Nothing is shipped to production without passing through all three gates:
+
+  BUILD:  Implement the feature in isolation. No side effects on locked modules.
+  TEST:   Verify the feature works. Use test_backend_function. Confirm receipts.
+          Do not move to LOCK without a confirmed working test result.
+  LOCK:   Once tested and confirmed, mark the feature as LOCKED in this blueprint.
+          Add a LOCK_SIGNATURE comment in the source file.
+          Locked features are OFF LIMITS. Do not touch them without TSB entry.
+
+RULE: Never modify a LOCKED feature without:
+  a) Creating a TSB entry explaining why
+  b) Getting explicit approval from the owner in the current session
+  c) Re-testing and re-locking after the change`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">4. API Call Minimalism — Minimal Data, Maximum Integrity</h4>
+            <Code>{`Every API call — to OpenAI, to Base44 entities, to any external service —
+must send the MINIMUM data required to accomplish the task.
+
+RULES:
+  - Do not send fields that are not needed for the operation
+  - Do not fetch more records than required (use limits, filters, sorts)
+  - Do not inject large payloads into system prompts when a summary will do
+  - Do not make multiple sequential API calls when one will suffice
+  - Do not send conversation history you don't need — compress it first
+
+RATIONALE: Every byte sent is a cost. Every unnecessary field is a liability.
+  Bloated API calls cause: higher latency, higher cost, higher error surface,
+  harder debugging. Keep calls surgical.
+
+APPLIED EXAMPLE (hybridMessage):
+  ✅ CORRECT: filter({ conversation_id }, '-created_date', 100)
+  ❌ WRONG:   list() then filter in memory (fetches everything)`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">5. No Silent Writes. No Surprise State Changes.</h4>
+            <Code>{`Every write to any entity must be:
+  a) Explicitly triggered by a user action or a deterministic pipeline stage
+  b) Logged with a receipt (what was written, when, by which stage)
+  c) Traceable back to an error log if it fails
+
+RULE: Background writes (auto-extraction, passive learning) are BANNED
+      unless gated behind an explicit user-facing toggle AND reviewed in this blueprint.
+      See TSB-004 for what happens when this rule is violated.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">6. selfInspect — Source Code Audit Layer</h4>
+            <Code>{`Module:   functions/core/selfInspect  (LAYER 2 — READ-ONLY)
+Purpose:  Allows Aria to inspect CAOS source code for auditing and suggestions.
+Contract: READ-ONLY. PULL-ONLY. No side effects. No writes. No execution.
+
+PLATFORM CONSTRAINT (confirmed Mar 1, 2026):
+  The Base44 Deno sandbox does NOT expose a self-read API for deployed function source.
+  selfInspect provides an ALLOWLIST of 52 inspectable files and their metadata.
+  Actual source content requires a manual paste from the dashboard or editor.
+
+WORKFLOW for code audit:
+  1. Aria asks: "Can you share the source for functions/hybridMessage?"
+  2. User invokes: core/selfInspect with { file: "hybridMessage" }
+     → confirms file is in inspectable registry
+  3. User pastes source into chat
+  4. Aria audits, identifies issues, suggests changes
+  5. User decides whether to apply — Aria never self-modifies
+
+RULE: selfInspect is the ONLY sanctioned path for Aria to reason about source code.
+      Aria must never assume source code content. Always ask for it to be shared.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">7. New Agent Checklist</h4>
+            <Code>{`Before making ANY change to this codebase, a new agent must:
+
+  □ Read Section 0 (this section) — understand the standing contracts
+  □ Read Section 2 — understand the hybridMessage pipeline
+  □ Read Section 3 — understand Phase A memory (LOCKED — do not touch)
+  □ Check Section 9 — confirm what is NOT yet active (don't accidentally activate it)
+  □ Check the TSB log — understand what has broken before and why
+  □ Confirm the file they're editing is NOT locked (LOCK_SIGNATURE present = stop)
+  □ Confirm their change stays within the 200/400 line limit
+  □ Confirm their change sends minimal data in any API calls added
+  □ Confirm their change has a test path before implementing
+  □ Ask the owner if any of the above is unclear — do not assume`}</Code>
+
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-3">
+              <p className="text-yellow-300 text-xs font-semibold">ESTABLISHED: Mar 1, 2026 by system owner. These principles emerged from real build experience on this codebase — they are not theoretical. Each one exists because a violation caused a real problem. Respect them.</p>
+            </div>
+          </Section>
+
           {/* 1. WHAT CAOS IS */}
           <Section title="1. What CAOS Is" color="blue" defaultOpen={true}>
             <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
