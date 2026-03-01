@@ -364,7 +364,81 @@ CANDIDATE NEXT:
 - Thread auto-summary on conversation close`}</Code>
           </Section>
 
-          {/* 11. AUDIO BLUEPRINT */}
+          {/* 11. TTS — LIVE LOCKED FEATURES */}
+          <Section title="11. Read-Aloud / TTS Layer (LOCKED)" color="green">
+            <p><strong className="text-green-300">Both TTS systems are confirmed working and locked as of Mar 1, 2026.</strong> There are two independent voice read-aloud paths serving different UI surfaces.</p>
+
+            <h4 className="text-white font-semibold mt-3">Path A — OpenAI TTS (ChatBubble speaker icon + VoiceSettings)</h4>
+            <Code>{`LOCK_SIGNATURE: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01
+Files locked:  components/chat/VoiceSettings.jsx
+               components/chat/ChatBubbleReadAloud.jsx
+Backend:       functions/textToSpeech (Deno)
+Model:         tts-1-hd (ONLY valid model as of Mar 2026 — see TSB-011)
+Flow:
+  1. User clicks speaker icon on AI message in ChatBubble
+  2. handleReadAloud(content) called → strips markdown → invokes:
+       base44.functions.invoke('textToSpeech', { text, voice, speed })
+  3. Backend fetches from OpenAI /v1/audio/speech (tts-1-hd)
+  4. Response: JSON { audio_base64: string, content_type: "audio/mpeg" }
+  5. Frontend: chunked atob() → Uint8Array → Blob → ObjectURL → Audio()
+     NOTE: chunked loop required — spread causes stack overflow on large buffers
+  6. Audio plays. Pause/stop controls active. Global audio manager prevents overlap.
+Voice pref:  localStorage caos_voice_preference_message (default: nova)
+Speed pref:  localStorage caos_speech_rate (default: 1.0)
+Voices:      alloy | echo | fable | onyx | nova | shimmer
+VoiceSettings modal: preview + save voice selection → same invoke path`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Path B — Google Web Speech API (ChatInput mic bar)</h4>
+            <Code>{`LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01
+File locked:   components/chat/ChatInput.jsx
+               components/chat/ChatInputReadAloud.jsx
+Backend:       functions/googleTextToSpeech (returns voice config only — no API call)
+Engine:        window.speechSynthesis (browser Web Speech API — NO network)
+Flow:
+  1. User clicks speaker icon in ChatInput toolbar (bottom of chat)
+  2. toggleGoogleVoicePlay() → reads lastAssistantMessage prop
+  3. Cleans text (strip markdown)
+  4. window.speechSynthesis.speak(utterance)
+  5. Voice selected from localStorage caos_google_voice
+  6. Speed from localStorage caos_google_speech_rate
+  7. Pause/resume/stop wired to speechSynthesis controls
+Voice pref:  localStorage caos_google_voice
+Speed pref:  localStorage caos_google_speech_rate
+Dependency:  PURE BROWSER API. No external network calls. No base44.functions.invoke().`}</Code>
+
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-3">
+              <p className="text-yellow-300 text-xs font-semibold">INVARIANT: These two paths must remain independent. Do not merge them. Do not swap their backends. Each is locked to its own dependency surface. See TSB-009, TSB-010, TSB-011.</p>
+            </div>
+          </Section>
+
+          {/* 11b. WCW TOKEN METER */}
+          <Section title="11b. WCW Token Meter — Working Context Window Display (FIXED)" color="cyan">
+            <p>The token meter in the chat header shows real backend WCW data, not a client-side estimate. Fixed Mar 1, 2026 (see TSB-012).</p>
+            <Code>{`File:     components/chat/TokenMeter.jsx
+Location: Chat header (top right, visible when a thread has messages)
+Display:  "[used] / [budget]" with color bar (green → blue → yellow → red)
+
+DATA PRIORITY:
+  1. REAL DATA (preferred): wcwUsed + wcwBudget props — from backend DiagnosticReceipt
+  2. FALLBACK (estimate): character-count estimate from messages array (~4 chars/token)
+     Shown with "~" suffix. Tooltip says "Estimated token usage".
+
+HOW REAL DATA FLOWS:
+  a. After each message: hybridMessage returns wcw_used + wcw_budget in response.
+     Chat.jsx: setWcwState({ used: data.wcw_used, budget: data.wcw_budget })
+  b. On thread load: Chat.jsx fetches last DiagnosticReceipt for session_id.
+     If found: setWcwState({ used: receipt.wcw_used, budget: receipt.wcw_budget })
+  c. On thread switch: wcwState resets to { used: null, budget: null } immediately.
+     Prevents stale WCW from a previous thread bleeding into the new thread display.
+
+STATE MANAGED IN: pages/Chat.jsx → wcwState { used, budget }
+PASSED TO: <TokenMeter wcwUsed={wcwState.used} wcwBudget={wcwState.budget} />`}</Code>
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-2">
+              <p className="text-yellow-300 text-xs font-semibold">Root of iframe vs published discrepancy (TSB-012): DiagnosticReceipt was not being fetched on thread load, so published version always showed "estimated" while iframe showed live data from an active session. Both now use the same data path.</p>
+            </div>
+          </Section>
+
+          {/* 12. AUDIO BLUEPRINT */}
           <Section title="11. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
             <p><strong className="text-orange-300">Status: Blueprint complete. Not yet implemented. Modular — isolated from cognitive core.</strong></p>
             <p className="mt-2">Goal: enable Aria to process raw audio with multi-speaker separation, prosody/emotion detection, and natural conversational flow preservation. All invocation is permission-gated.</p>
