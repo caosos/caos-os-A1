@@ -802,6 +802,39 @@ Future:    If OpenAI releases a new TTS model, verify via /v1/models first,
 GREP ANCHOR: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-012 — Token Meter Shows "Estimated" in Published App, "Live" in iframe</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: components/chat/TokenMeter.jsx + pages/Chat.jsx — wcwState management
+Symptom:   Inside the Base44 editor iframe, the token meter correctly showed
+           "Working Context Window (live)" — real token counts from the backend.
+           In the published app (after deployment), it showed "Estimated token usage"
+           with a "~" suffix — falling back to character-count estimation.
+Root Cause (1): On thread selection (conversation switch), Chat.jsx was not fetching
+           the last DiagnosticReceipt for that session_id. Since wcwState was only
+           updated AFTER a new message was sent, a freshly loaded thread (or a
+           thread opened in a new browser session) had no wcwState and fell back
+           to the estimate path.
+Root Cause (2): wcwState was never reset on thread switch. Stale WCW numbers from a
+           previous thread would persist into the next thread's display until a new
+           message was sent — showing wrong values, not just estimated ones.
+In the iframe: Because the developer session was active and a message had already
+           been sent, wcwState was populated from the last response. The published
+           user opened a thread cold (no recent message), so the fallback triggered.
+Fix (1):   On thread load (currentConversationId useEffect), fetch the last
+           DiagnosticReceipt for that session:
+             base44.entities.DiagnosticReceipt.filter({ session_id }, '-created_date', 1)
+           If found: setWcwState({ used: receipt.wcw_used, budget: receipt.wcw_budget })
+           This restores live data immediately on thread open without sending a message.
+Fix (2):   Added reset effect: when currentConversationId changes, immediately
+           setWcwState({ used: null, budget: null }) before the receipt load completes.
+           Prevents cross-thread stale WCW bleed.
+GREP ANCHOR: CAOS_WCW_METER_FIX_v1_2026-03-01`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
             </Section>
