@@ -174,14 +174,29 @@ export default function Chat() {
     if (!currentConversationId || isGuestMode) return;
     if (messages[currentConversationId]) return; // already loaded
     let mounted = true;
-    base44.entities.Message.filter(
-      { conversation_id: currentConversationId },
-      'timestamp',
-      500
-    ).then(msgs => {
+
+    // Load messages AND last WCW state for this session in parallel
+    Promise.all([
+      base44.entities.Message.filter(
+        { conversation_id: currentConversationId },
+        'timestamp',
+        500
+      ),
+      base44.entities.DiagnosticReceipt.filter(
+        { session_id: currentConversationId },
+        '-created_date',
+        1
+      ).catch(() => [])
+    ]).then(([msgs, receipts]) => {
       if (!mounted) return;
       setMessages(prev => ({ ...prev, [currentConversationId]: msgs || [] }));
+      // Restore real WCW state from last receipt so meter shows live data, not estimate
+      const lastReceipt = receipts?.[0];
+      if (lastReceipt?.wcw_budget && lastReceipt?.wcw_used !== undefined) {
+        setWcwState({ used: lastReceipt.wcw_used, budget: lastReceipt.wcw_budget });
+      }
     }).catch(console.error);
+
     return () => { mounted = false; };
   }, [currentConversationId, isGuestMode]);
 
