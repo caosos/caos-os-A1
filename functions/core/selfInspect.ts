@@ -13,8 +13,15 @@
  *   - No ambient injection
  *   - No background calls
  *
+ * HOW IT WORKS:
+ *   The Base44 platform stores deployed function source accessible via asServiceRole.
+ *   This module reads from the FunctionSource entity (if available) or returns
+ *   the allowlist + metadata so Aria knows what files exist and can reason about them.
+ *   Aria can always request a specific file's source to be pasted by the user for audit.
+ *
  * Input:
- *   { file: string }  — the function name to inspect (e.g. "hybridMessage", "core/memoryEngine")
+ *   { file: string }  — function name (e.g. "hybridMessage", "core/memoryEngine")
+ *   { list: true }    — return allowlist only, no source fetch
  *
  * Output:
  *   { ok, file, content, line_count, char_count, read_at }
@@ -22,9 +29,8 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// ─── ALLOWLIST — only these files may be read ─────────────────────────────────
-// Explicit whitelist. No glob. No dynamic path traversal.
-const ALLOWED_FILES = new Set([
+// ─── ALLOWLIST — only these files may be inspected ───────────────────────────
+const ALLOWED_FILES = [
     'hybridMessage',
     'core/memoryEngine',
     'core/heuristicsEngine',
@@ -60,7 +66,6 @@ const ALLOWED_FILES = new Set([
     'core/memoryAnchors',
     'core/presentationSilence',
     'core/unifiedGovernanceGate',
-    'core/capabilityAwareness',
     'textToSpeech',
     'transcribeAudio',
     'generateThreadSummary',
@@ -78,7 +83,9 @@ const ALLOWED_FILES = new Set([
     'checkGrokModels',
     'testAnchors',
     'runHybridPipeline',
-]);
+];
+
+const ALLOWED_SET = new Set(ALLOWED_FILES);
 
 // ─── HANDLER ──────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
@@ -91,65 +98,64 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
+
+        // LIST mode — return allowlist only
+        if (body.list === true) {
+            return Response.json({
+                ok: true,
+                mode: 'LIST',
+                allowed_files: ALLOWED_FILES,
+                total: ALLOWED_FILES.length,
+                note: 'To read a file, invoke with { file: "<name>" } and paste the source into chat for Aria to audit.',
+                layer: 'LAYER_2_SELF_INSPECT',
+                read_at: new Date().toISOString(),
+            });
+        }
+
         const { file } = body;
 
         if (!file || typeof file !== 'string') {
-            return Response.json({ error: 'Missing required field: file' }, { status: 400 });
+            return Response.json({ error: 'Missing required field: file (or pass list: true)' }, { status: 400 });
         }
 
-        // Sanitize: strip leading slashes, normalize
+        // Sanitize
         const normalized = file.replace(/^\/+/, '').replace(/\.js$/, '');
 
-        if (!ALLOWED_FILES.has(normalized)) {
+        if (!ALLOWED_SET.has(normalized)) {
             return Response.json({
-                error: `File "${normalized}" is not in the inspection allowlist.`,
-                allowed_files: [...ALLOWED_FILES].sort(),
+                ok: false,
+                error: `"${normalized}" is not in the inspection allowlist.`,
+                hint: 'Invoke with { list: true } to see all inspectable files.',
             }, { status: 403 });
         }
 
-        // Fetch the raw source via the Base44 functions API
-        // Each function is accessible as a named endpoint — we read its deployed source
-        // by fetching the raw file content from the platform's function registry.
-        const functionUrl = `https://api.base44.com/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/${normalized}`;
+        // Attempt to read from UserFile entity (source files stored as uploads)
+        // This works if source has been stored as a UserFile named by function path.
+        let content = null;
+        let source_method = null;
 
-        const response = await fetch(functionUrl, {
-            headers: {
-                'Authorization': `Bearer ${Deno.env.get('BASE44_API_KEY') || ''}`,
-                'Accept': 'application/json',
+        try {
+            const files = await base44.asServiceRole.entities.UserFile.filter(
+                { name: normalized },
+                '-created_date',
+                1
+            );
+
+            if (files?.[0]?.url) {
+                const res = await fetch(files[0].url);
+                if (res.ok) {
+                    content = await res.text();
+                    source_method = 'UserFile';
+                }
             }
-        });
-
-        if (!response.ok) {
-            // Fallback: return metadata only — source fetch not available in this environment
-            console.warn('⚠️ [SELF_INSPECT_SOURCE_UNAVAILABLE]', { file: normalized, status: response.status });
-            return Response.json({
-                ok: true,
-                file: normalized,
-                content: null,
-                note: 'Source fetch not available via this path. File is in allowlist. Use dashboard Code view for full source.',
-                read_at: new Date().toISOString(),
-                layer: 'LAYER_2_SELF_INSPECT',
-            });
+        } catch (_) {
+            // Not available via UserFile — that's fine
         }
 
-        const data = await response.json();
-        const content = data?.code || data?.content || data?.source || null;
+        const line_count = content ? content.split('\n').length : null;
+        const char_count = content ? content.length : null;
 
-        if (!content) {
-            return Response.json({
-                ok: true,
-                file: normalized,
-                content: null,
-                note: 'Source returned empty from registry.',
-                read_at: new Date().toISOString(),
-                layer: 'LAYER_2_SELF_INSPECT',
-            });
-        }
-
-        const line_count = content.split('\n').length;
-        const char_count = content.length;
-
-        console.log('✅ [SELF_INSPECT]', { user: user.email, file: normalized, line_count, char_count });
+        console.log('✅ [SELF_INSPECT]', { user: user.email, file: normalized, source_method, line_count });
 
         return Response.json({
             ok: true,
@@ -157,6 +163,11 @@ Deno.serve(async (req) => {
             content,
             line_count,
             char_count,
+            source_method,
+            in_allowlist: true,
+            note: content
+                ? null
+                : 'Source not available via automated fetch. Paste the file content into chat and Aria can audit it directly.',
             read_at: new Date().toISOString(),
             layer: 'LAYER_2_SELF_INSPECT',
         });
