@@ -5,6 +5,16 @@ import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 
+// ██████████████████████████████████████████████████████████████████
+// ██  FORT KNOX LOCK — DO NOT TOUCH — OPENAI TTS VOICE SETTINGS    ██
+// ██  LOCKED: 2026-03-01 — WORKING AND CONFIRMED                   ██
+// ██  Uses base44.functions.invoke('textToSpeech') + base64 decode  ██
+// ██  Voice pref: localStorage caos_voice_preference_message        ██
+// ██  Speed pref: localStorage caos_speech_rate                     ██
+// ██  DO NOT MODIFY: playBase64Audio, testVoice, saveSettings,      ██
+// ██  voice list, or localStorage keys                              ██
+// ██  ANY CHANGE REQUIRES EXPLICIT USER APPROVAL                    ██
+// ██████████████████████████████████████████████████████████████████
 export default function VoiceSettings({ isOpen, onClose }) {
   // OpenAI TTS voices - high quality, natural sounding
   const voices = [

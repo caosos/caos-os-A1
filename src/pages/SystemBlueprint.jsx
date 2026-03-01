@@ -645,6 +645,58 @@ Fix:       Removed duplicate useState import from SystemBlueprint.jsx.
            OR render welcome UI.
 Testing:   App now loads Welcome → transitions to Chat on auth success.`}</Code>
               </div>
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-009 — TTS Auth Failure + Stack Overflow on Large Audio Buffers</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb–Mar 2026
+Component: functions/textToSpeech — backend handler
+Symptom:   After fixing TSB-007, TTS still failed: prolonged spinner,
+           then 500 error. No audio produced.
+Root Cause (1): base44.auth.me() was being called inside the function
+           but SDK-invoked functions don't carry a user session token the
+           same way. Auth check threw 401, blocking all TTS calls.
+Root Cause (2): Large audio ArrayBuffer was being encoded to base64 using
+           String.fromCharCode(...new Uint8Array(buffer)) — spread syntax
+           on large buffers causes a stack overflow (too many arguments).
+Fix:       1. Removed base44.auth.me() auth check from textToSpeech.
+              Auth is handled by the calling context (ChatBubble).
+           2. Replaced spread-based base64 with chunked loop:
+                let binary = '';
+                for (let i = 0; i < bytes.length; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+           3. Model upgraded: tts-1-hd (highest quality OpenAI TTS).
+Status:    Confirmed working. Feature locked (Fort Knox).`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-010 — VoiceSettings Modal Using Raw fetch() Instead of SDK</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: components/chat/VoiceSettings.jsx — testVoice(), preview button
+Symptom:   Voice selection in VoiceSettings modal appeared to work (toast
+           confirmed selection) but voice did not actually change — all
+           playback defaulted to robotic US English or failed silently.
+Root Cause: VoiceSettings was still using raw fetch('/api/functions/textToSpeech')
+           instead of base44.functions.invoke(). The raw fetch path expected
+           a binary audio/mpeg response (Blob), but textToSpeech now returns
+           JSON with base64-encoded audio (audio_base64 field). The Blob was
+           therefore malformed — it contained JSON text, not audio bytes.
+Fix:       Replaced all fetch() calls in VoiceSettings with:
+             base44.functions.invoke('textToSpeech', { text, voice, speed })
+           Added shared playBase64Audio() helper:
+             atob(data.audio_base64) → Uint8Array → Blob → ObjectURL → Audio()
+           Both testVoice() and the preview button now use this path.
+           Voice selection now correctly passes chosen voice ID to OpenAI.
+Lock:      Both voice systems (Google Web Speech + OpenAI TTS) now LOCKED.
+           See Fort Knox comments in ChatInput.jsx and VoiceSettings.jsx.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
             </Section>

@@ -272,12 +272,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setShowVoiceMenu(!showVoiceMenu);
   };
 
-  // ========== GOOGLE VOICE READ-ALOUD LOCKED ==========
-  // LOCKED as of 2026-02-28 - CANNOT BE CHANGED
-  // This feature reads the last AI message with Google Web Speech API
-  // Do NOT modify: toggleGoogleVoicePlay, stopGoogleVoice, voice menu, controls
-  // User must approve any modifications to this section
-  // ====================================================
+  // ██████████████████████████████████████████████████████████████████
+  // ██  FORT KNOX LOCK — DO NOT TOUCH — GOOGLE WEB SPEECH TTS       ██
+  // ██  LOCKED: 2026-03-01 — WORKING AND CONFIRMED                  ██
+  // ██  Reads last AI message via browser Web Speech API             ██
+  // ██  Voice pref: localStorage caos_google_voice                   ██
+  // ██  Speed pref: localStorage caos_google_speech_rate             ██
+  // ██  DO NOT MODIFY: toggleGoogleVoicePlay, stopGoogleVoice,       ██
+  // ██  voice menu, controls, getCleanText, or voice preference keys ██
+  // ██  ANY CHANGE REQUIRES EXPLICIT USER APPROVAL                   ██
+  // ██████████████████████████████████████████████████████████████████
 
   const startRecording = async () => {
     try {
