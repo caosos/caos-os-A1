@@ -1566,7 +1566,12 @@ Intended activation path:
 - The Python backend blueprint exists but is not deployed
 - TSB-001 through TSB-012 (permanent failure/fix records)
 - All localStorage mode flags
-- All active backend functions and their purposes`}</Code>
+- All active backend functions and their purposes
+- Section 0: Agent Onboarding Contract (standing development principles)
+- File size limits: 200 preferred / 400 hard max
+- Build → Test → Lock discipline
+- API minimalism rules
+- selfInspect Layer 2 (allowlist of 52 files, source via manual paste)`}</Code>
           </Section>
 
         </div>
