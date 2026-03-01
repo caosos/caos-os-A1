@@ -272,6 +272,121 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setShowVoiceMenu(!showVoiceMenu);
   };
 
+  // ─────────────────────────────────────────────────────────────────────
+  // PHASE A — STT CHUNKING
+  // LOCK_SIGNATURE: CAOS_STT_CHUNKING_v1_2026-03-01
+  // Feature flag: set to false to revert to single-upload path instantly.
+  // No backend changes. No hybridMessage changes. No memory writes.
+  // ─────────────────────────────────────────────────────────────────────
+  const STT_CHUNKING_ENABLED = true;
+  const CHUNK_INTERVAL_MS = 4000;   // timeslice: 4 seconds per chunk
+  const MIN_CHUNK_BYTES = 5000;     // ignore chunks smaller than ~5KB (~2s of audio)
+  const CHUNK_FAIL_THRESHOLD = 3;   // fallback after N consecutive failures
+
+  // Chunking state refs (not useState — no re-renders needed for these)
+  const chunkIndexRef = useRef(0);
+  const transcriptSegmentsRef = useRef({});
+  const chunkStreamRef = useRef(null); // separate stream for chunking MediaRecorder
+  const consecutiveFailsRef = useRef(0);
+  const [chunkProgress, setChunkProgress] = useState({ recorded: 0, processed: 0 });
+  const [isChunking, setIsChunking] = useState(false);
+
+  const appendTranscriptSegment = (index, text) => {
+    transcriptSegmentsRef.current[index] = text;
+    const assembled = Object.keys(transcriptSegmentsRef.current)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(k => transcriptSegmentsRef.current[k])
+      .join(' ')
+      .trim();
+    setMessage(assembled);
+    onMessageChange?.(assembled);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+    }
+  };
+
+  const sendChunk = async (blob, index) => {
+    if (blob.size < MIN_CHUNK_BYTES) {
+      console.warn(`[STT_CHUNK] Chunk ${index} too small (${blob.size}B), skipping`);
+      return;
+    }
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const { data } = await base44.functions.invoke('transcribeAudio', arrayBuffer);
+      if (data?.success && data?.text?.trim()) {
+        consecutiveFailsRef.current = 0;
+        appendTranscriptSegment(index, data.text.trim());
+        setChunkProgress(p => ({ ...p, processed: p.processed + 1 }));
+      } else {
+        consecutiveFailsRef.current++;
+        console.warn(`[STT_CHUNK] Empty result for chunk ${index}`);
+      }
+    } catch (err) {
+      consecutiveFailsRef.current++;
+      console.warn(`[STT_CHUNK] Chunk ${index} failed:`, err.message);
+    }
+
+    // Fallback: too many consecutive failures → stop chunking mode
+    if (consecutiveFailsRef.current >= CHUNK_FAIL_THRESHOLD) {
+      console.warn('[STT_CHUNK] Consecutive fail threshold hit — falling back to single upload');
+      toast.warning('Voice chunking degraded — will use single upload on stop.');
+      stopChunkingRecording();
+    }
+  };
+
+  const startChunkingRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunkStreamRef.current = stream;
+
+      // Reset chunking state
+      chunkIndexRef.current = 0;
+      transcriptSegmentsRef.current = {};
+      consecutiveFailsRef.current = 0;
+      setChunkProgress({ recorded: 0, processed: 0 });
+      setIsChunking(true);
+      setIsRecording(true);
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          const index = chunkIndexRef.current++;
+          setChunkProgress(p => ({ ...p, recorded: p.recorded + 1 }));
+          // Send sequentially — no parallel sends
+          sendChunk(event.data, index);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        setIsChunking(false);
+        setIsRecording(false);
+        // Final textarea height adjust
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+        }
+      };
+
+      mediaRecorder.start(CHUNK_INTERVAL_MS);
+    } catch (err) {
+      console.error('[STT_CHUNK] Failed to start chunking recorder:', err);
+      setIsChunking(false);
+      setIsRecording(false);
+      // Fallback: try single-upload path
+      startRecording();
+    }
+  };
+
+  const stopChunkingRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
   // ██████████████████████████████████████████████████████████████████
   // ██  FORT KNOX LOCK — DO NOT TOUCH — GOOGLE WEB SPEECH TTS       ██
   // ██  LOCKED: 2026-03-01 — WORKING AND CONFIRMED                  ██
