@@ -268,48 +268,114 @@ News            — news feed page`}</Code>
 
             <h4 className="text-white font-semibold mt-3">Key Components:</h4>
             <Code>{`components/chat/
-  ChatBubble       — message rendering (markdown, code, reactions, replies, receipts)
-  ChatHeader       — header (thread controls, search, token meter)
-  ChatInput        — input (file upload, voice, screen capture, camera, TTS)
-  ThreadList       — conversation sidebar
-  ProfilePanel     — user profile + file manager + memory panel
-  TokenMeter       — WCW usage visualization
-  ConversationSearch — in-thread search with jump-to
-  StarfieldBackground — animated canvas backdrop
-  WelcomeGreeting  — randomized greeting on empty thread
+            ChatBubble          — message rendering (markdown, code, reactions, thread replies,
+                         execution receipts, file attachments, inline link preview)
+            ChatBubbleReadAloud — OpenAI TTS read-aloud handler (LOCKED)
+            ChatHeader          — header (thread controls, search trigger, token meter)
+            ChatInput           — input bar (file upload, voice recording, screen capture,
+                         camera photo, Google Web Speech TTS, multi-agent toggle)
+            ChatInputReadAloud  — Google Web Speech read-aloud handler (LOCKED)
+            VoiceSettings       — OpenAI TTS voice/speed config modal (LOCKED)
+            ThreadList          — conversation sidebar with rename/delete
+            ProfilePanel        — user profile, file manager, memory panel, mode switches
+            TokenMeter          — WCW usage bar (live from DiagnosticReceipt or estimated)
+            WCWStatusBadge      — WCW regulated/nominal status pill
+            ConversationSearch  — in-thread message search with jump-to highlight
+            StarfieldBackground — animated WebGL canvas starfield backdrop
+            WelcomeGreeting     — randomized greeting on empty thread
+            ExecutionReceipt    — expandable pipeline debug receipt on AI messages
+            LatencyIndicator    — response time display on AI messages
+            LaneSelector        — lane/topic context selector (built, UI wired)
+            ContinuityToken     — session context export dialog
+            TextSelectionMenu   — floating action menu on selected message text
+            CopyBlock           — code block copy-to-clipboard helper
+            LinkPreview         — auto-fetch URL preview cards in messages
+            ThreadSummary       — thread summary display component
+            QuickActionBar      — quick action shortcuts below chat
+            DegradationNotice   — shows when fallback/degraded mode is active
 
-components/game/   — embedded game viewer (iframe)
-components/terminal/ — code terminal panel (developer mode)
-components/admin/  — admin widgets (StatsViewer, RecentErrors, etc.)
-components/profile/MemoryPanel — structured_memory viewer
-components/docs/   — architecture doc components`}</Code>
+            components/game/
+            GameView            — embedded game iframe viewer (token-gated)
+
+            components/terminal/
+            CodeTerminal        — in-app code terminal panel (developer mode)
+
+            components/mobile/
+            BottomNavBar        — mobile bottom navigation bar
+
+            components/admin/
+            StatsViewer         — message/conversation stats
+            RecentErrors        — ErrorLog viewer with ODEL envelope rendering
+            PipelineVisualizer  — hybridMessage stage visualization
+            WCWMonitor          — working context window budget monitor
+            SystemHealth        — systemHealth function display
+            SessionSelector     — session picker for admin views
+            RoutesViewer        — function routing audit
+
+            components/profile/
+            MemoryPanel         — structured_memory viewer + legacy anchors
+
+            components/docs/       — architecture doc snapshot components (read-only views)`}</Code>
 
             <h4 className="text-white font-semibold mt-3">Modes (localStorage flags):</h4>
-            <Code>{`caos_developer_mode   — shows resizable code terminal panel
-caos_game_mode        — shows embedded game viewer
-caos_multi_agent_mode — shows blackboard panel (placeholder)
-caos_guest_user       — guest session data`}</Code>
+            <Code>{`caos_developer_mode        — shows resizable code terminal panel (right panel)
+caos_game_mode             — shows embedded game viewer (right panel)
+caos_multi_agent_mode      — shows blackboard panel below chat (UI placeholder)
+caos_guest_user            — guest session data (JSON blob — no DB writes)
+caos_last_conversation     — last active conversation ID (auto-restore)
+caos_current_lane          — active lane name (default: "general")
+caos_voice_preference_message — OpenAI TTS voice (default: nova)
+caos_speech_rate           — OpenAI TTS speed (default: 1.0)
+caos_google_voice          — Google Web Speech voice name
+caos_google_speech_rate    — Google Web Speech speed`}</Code>
           </Section>
 
           {/* 7. BACKEND FUNCTIONS */}
           <Section title="7. Backend Functions" color="green">
-            <Code>{`hybridMessage          ← MAIN FUNCTION. All chat goes through here.
-simpleMessage          — lightweight fallback (no memory)
-textToSpeech           — TTS using OpenAI audio
-transcribeAudio        — Whisper transcription
-generateThreadSummary  — summarize a thread
-systemHealth           — admin health check
-diagnosticSnapshot     — session state snapshot
-diagnosticRecall       — memory recall diagnostic
-inspectPipeline        — pipeline inspection
-inspectRouting         — routing trace
-quickInspect           — fast inspection
-postPatchAudit         — post-deploy audit
+            <Code>{`MAIN PIPELINE:
+hybridMessage          ← ALL chat flows through here. Auth, memory, history,
+                          heuristics, OpenAI call, message save, receipt write.
+
+VOICE / AUDIO:
+textToSpeech           — OpenAI TTS (tts-1-hd). Returns JSON { audio_base64 }.
+                          LOCKED. Called via base44.functions.invoke() only.
+transcribeAudio        — Whisper transcription (voice input → text)
+googleTextToSpeech     — Returns browser Web Speech config (no API call). LOCKED.
+
+THREAD MANAGEMENT:
+generateThreadSummary  — summarize a conversation thread (OpenAI call)
+
+DIAGNOSTICS / ADMIN:
+systemHealth           — admin health check (auth required)
+diagnosticSnapshot     — full session state snapshot
+diagnosticRecall       — memory recall trace diagnostic
+inspectPipeline        — hybridMessage pipeline step trace
+inspectRouting         — function routing audit
+quickInspect           — fast session state check
+postPatchAudit         — post-deploy verification
+probeReceiptWrite      — test DiagnosticReceipt write path
+runHybridPipeline      — test harness for hybridMessage stages
+generateSystemsReport  — full system state report
+
+MEMORY / ANCHOR:
 testAnchors            — anchor system test
-extractUserPreference  — preference extraction
-pinMemory              — pin a memory entry
-grokProvider           — Grok/xAI API integration (built, not primary)
-checkGrokModels        — list Grok models`}</Code>
+extractUserPreference  — preference extraction utility
+pinMemory              — pin a memory entry to structured_memory
+diagnosticRecall       — recall path trace
+
+INTEGRATIONS:
+grokProvider           — Grok/xAI API (built, not the primary model)
+checkGrokModels        — list available Grok models
+
+CORE MODULES (functions/core/):
+contextBuilder, contextLoader, continuousLearning, deterministicExecutor,
+diagnosticMode, environmentLoader, errorRecovery, executorContract,
+globalBinGovernance, indexPersistence, indexedSearch, laneIsolation,
+latencyTracking, memoryAnchors, memoryUpdate, normalize, persistentSearch,
+presentationSilence, receiptLogger, routeRegistry, sanitizer, selectorEngine,
+tieredRecall, tokenizer, toolExecutor, unifiedGovernanceGate, wcwBudget,
+wcwSelfRegulation
+(BUILT — modular governors. Not all are active in hybridMessage v2)`}</Code>
           </Section>
 
           {/* 8. TRUTH DISCIPLINE */}
@@ -439,7 +505,7 @@ PASSED TO: <TokenMeter wcwUsed={wcwState.used} wcwBudget={wcwState.budget} />`}<
           </Section>
 
           {/* 12. AUDIO BLUEPRINT */}
-          <Section title="11. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
+          <Section title="12. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
             <p><strong className="text-orange-300">Status: Blueprint complete. Not yet implemented. Modular — isolated from cognitive core.</strong></p>
             <p className="mt-2">Goal: enable Aria to process raw audio with multi-speaker separation, prosody/emotion detection, and natural conversational flow preservation. All invocation is permission-gated.</p>
 
@@ -974,17 +1040,22 @@ Session health heatmap`}</Code>
             </div>
           </Section>
 
-          {/* 12. ARIA ACCESS NOTE */}
-          <Section title="12. How Aria Reads This Blueprint" color="cyan">
+          {/* 13. ARIA ACCESS NOTE */}
+          <Section title="13. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
             <p className="mt-2">To ask Aria about the system state, use recall-trigger phrases like: <em>"what do you know about CAOS architecture"</em>, <em>"what have we built"</em>, or <em>"what's the current state of the memory system"</em>.</p>
             <Code>{`Aria knows:
-- The active pipeline (hybridMessage stages)
+- The active pipeline (hybridMessage stages 1–10)
 - Phase A memory is locked, Phase B/C reserved
-- Heuristics Engine v1 is locked
-- Truth discipline rules
-- What is built vs not yet active
-- The Python backend blueprint exists but is not deployed`}</Code>
+- Heuristics Engine v1 + DCS locked
+- Truth discipline rules (5 invariants)
+- What is built vs not yet active (Section 9)
+- TTS: two locked paths — OpenAI (ChatBubble) + Google (ChatInput)
+- WCW meter: live data from DiagnosticReceipt (TSB-012 fixed)
+- The Python backend blueprint exists but is not deployed
+- TSB-001 through TSB-012 (permanent failure/fix records)
+- All localStorage mode flags
+- All active backend functions and their purposes`}</Code>
           </Section>
 
         </div>
