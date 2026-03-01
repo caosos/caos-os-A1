@@ -1,20 +1,19 @@
 import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
-import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-// ─── Mobile detection ──────────────────────────────────────────────────────────
-const isMobileDevice = () =>
-  typeof window !== 'undefined' && window.innerWidth < 768;
-
-// ─── Standard Radix Dropdown (desktop) ────────────────────────────────────────
 const DropdownMenu = DropdownMenuPrimitive.Root
+
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+
 const DropdownMenuGroup = DropdownMenuPrimitive.Group
+
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal
+
 const DropdownMenuSub = DropdownMenuPrimitive.Sub
+
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
 
 const DropdownMenuSubTrigger = React.forwardRef(({ className, inset, children, ...props }, ref) => (
@@ -30,7 +29,8 @@ const DropdownMenuSubTrigger = React.forwardRef(({ className, inset, children, .
     <ChevronRight className="ml-auto" />
   </DropdownMenuPrimitive.SubTrigger>
 ))
-DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName
+DropdownMenuSubTrigger.displayName =
+  DropdownMenuPrimitive.SubTrigger.displayName
 
 const DropdownMenuSubContent = React.forwardRef(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.SubContent
@@ -41,7 +41,8 @@ const DropdownMenuSubContent = React.forwardRef(({ className, ...props }, ref) =
     )}
     {...props} />
 ))
-DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
+DropdownMenuSubContent.displayName =
+  DropdownMenuPrimitive.SubContent.displayName
 
 const DropdownMenuContent = React.forwardRef(({ className, sideOffset = 4, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
@@ -87,7 +88,8 @@ const DropdownMenuCheckboxItem = React.forwardRef(({ className, children, checke
     {children}
   </DropdownMenuPrimitive.CheckboxItem>
 ))
-DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName
+DropdownMenuCheckboxItem.displayName =
+  DropdownMenuPrimitive.CheckboxItem.displayName
 
 const DropdownMenuRadioItem = React.forwardRef(({ className, children, ...props }, ref) => (
   <DropdownMenuPrimitive.RadioItem
@@ -123,82 +125,20 @@ const DropdownMenuSeparator = React.forwardRef(({ className, ...props }, ref) =>
 ))
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
 
-const DropdownMenuShortcut = ({ className, ...props }) => (
-  <span className={cn("ml-auto text-xs tracking-widest opacity-60", className)} {...props} />
-)
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut"
-
-
-// ─── Mobile Dropdown: Vaul bottom drawer ──────────────────────────────────────
-// Usage: replace <DropdownMenu> with <MobileDropdownMenu> in components
-// that need the native drawer feel on mobile. Falls back to Radix on desktop.
-
-function MobileDropdownMenu({ trigger, children, label, open: controlledOpen, onOpenChange }) {
-  const [internalOpen, setInternalOpen] = React.useState(false);
-  const [mobile, setMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    setMobile(isMobileDevice());
-  }, []);
-
-  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setOpen = onOpenChange || setInternalOpen;
-
-  if (!mobile) {
-    // Desktop: standard Radix dropdown
-    return (
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {label && <DropdownMenuLabel>{label}</DropdownMenuLabel>}
-          {children}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
-  // Mobile: Vaul drawer from bottom
+const DropdownMenuShortcut = ({
+  className,
+  ...props
+}) => {
   return (
-    <DrawerPrimitive.Root open={open} onOpenChange={setOpen}>
-      <DrawerPrimitive.Trigger asChild>{trigger}</DrawerPrimitive.Trigger>
-      <DrawerPrimitive.Portal>
-        <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DrawerPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border bg-background pb-safe">
-          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted mb-1" />
-          {label && (
-            <div className="px-4 py-2 text-sm font-semibold text-muted-foreground border-b">
-              {label}
-            </div>
-          )}
-          <div className="overflow-y-auto max-h-[70vh] p-2">
-            {/* Wrap children to auto-close drawer on item click */}
-            {React.Children.map(children, child => {
-              if (!React.isValidElement(child)) return child;
-              if (child.type === DropdownMenuItem || child.type === DropdownMenuCheckboxItem || child.type === DropdownMenuRadioItem) {
-                return React.cloneElement(child, {
-                  className: cn("py-3 px-4 text-base rounded-lg cursor-pointer", child.props.className),
-                  onSelect: (e) => {
-                    child.props.onSelect?.(e);
-                    setOpen(false);
-                  },
-                  onClick: (e) => {
-                    child.props.onClick?.(e);
-                    setOpen(false);
-                  }
-                });
-              }
-              return child;
-            })}
-          </div>
-        </DrawerPrimitive.Content>
-      </DrawerPrimitive.Portal>
-    </DrawerPrimitive.Root>
+    (<span
+      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      {...props} />)
   );
 }
+DropdownMenuShortcut.displayName = "DropdownMenuShortcut"
 
 export {
   DropdownMenu,
-  MobileDropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,

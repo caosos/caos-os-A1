@@ -3,17 +3,13 @@
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
-import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-// ─── Mobile detection ──────────────────────────────────────────────────────────
-const isMobileDevice = () =>
-  typeof window !== 'undefined' && window.innerWidth < 768;
-
-// ─── Radix-based Select (desktop) ─────────────────────────────────────────────
 const Select = SelectPrimitive.Root
+
 const SelectGroup = SelectPrimitive.Group
+
 const SelectValue = SelectPrimitive.Value
 
 const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
@@ -50,7 +46,8 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
     <ChevronDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
 ))
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+SelectScrollDownButton.displayName =
+  SelectPrimitive.ScrollDownButton.displayName
 
 const SelectContent = React.forwardRef(({ className, children, position = "popper", ...props }, ref) => (
   <SelectPrimitive.Portal>
@@ -110,133 +107,14 @@ const SelectSeparator = React.forwardRef(({ className, ...props }, ref) => (
 ))
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
-
-// ─── Mobile Select: Vaul bottom drawer ────────────────────────────────────────
-// Collects MobileSelectItem children to render in a drawer on mobile.
-const MobileSelectContext = React.createContext(null);
-
-function MobileSelect({ value, onValueChange, children }) {
-  const [open, setOpen] = React.useState(false);
-
-  // Collect items from children tree
-  const items = [];
-  React.Children.forEach(children, child => {
-    collectItems(child, items);
-  });
-
-  function collectItems(node, acc) {
-    if (!React.isValidElement(node)) return;
-    if (node.type === MobileSelectItem || node.props?.['data-mobile-item']) {
-      acc.push(node);
-    }
-    React.Children.forEach(node.props?.children, c => collectItems(c, acc));
-  }
-
-  // Find label for current value
-  let currentLabel = value;
-  items.forEach(item => {
-    if (item.props.value === value) {
-      currentLabel = item.props.children;
-    }
-  });
-
-  return (
-    <MobileSelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
-      {/* Trigger — render the SelectTrigger child as-is but intercept click */}
-      {React.Children.map(children, child => {
-        if (React.isValidElement(child) && (child.type === SelectTrigger || child.props?.className?.includes('trigger'))) {
-          return React.cloneElement(child, {
-            onClick: (e) => { e.preventDefault(); setOpen(true); },
-            // Override the Radix trigger with a plain button
-            asChild: false,
-          });
-        }
-        return null; // drawer handles the content; skip SelectContent etc.
-      })}
-
-      {/* Fallback trigger if no SelectTrigger found */}
-      <DrawerPrimitive.Root open={open} onOpenChange={setOpen}>
-        <DrawerPrimitive.Portal>
-          <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-          <DrawerPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border bg-background pb-safe">
-            <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted mb-2" />
-            <div className="overflow-y-auto max-h-[70vh] p-2">
-              {items.map((item, idx) => {
-                const isSelected = item.props.value === value;
-                return (
-                  <button
-                    key={idx}
-                    className={cn(
-                      "w-full flex items-center justify-between px-4 py-3 text-sm rounded-lg transition-colors",
-                      isSelected ? "bg-accent font-medium" : "hover:bg-accent/50"
-                    )}
-                    onClick={() => {
-                      onValueChange?.(item.props.value);
-                      setOpen(false);
-                    }}
-                  >
-                    {item.props.children}
-                    {isSelected && <Check className="h-4 w-4 ml-2 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </DrawerPrimitive.Content>
-        </DrawerPrimitive.Portal>
-      </DrawerPrimitive.Root>
-    </MobileSelectContext.Provider>
-  );
-}
-
-// Marker component — used both on desktop (as SelectItem) and mobile (item collector)
-const MobileSelectItem = React.forwardRef(({ value, children, className, ...props }, ref) => {
-  const ctx = React.useContext(MobileSelectContext);
-  if (ctx) {
-    // Inside MobileSelect — items are rendered by the drawer, not here
-    return null;
-  }
-  // Desktop fallback — render as normal SelectItem
-  return (
-    <SelectItem ref={ref} value={value} className={className} {...props}>
-      {children}
-    </SelectItem>
-  );
-});
-MobileSelectItem.displayName = "MobileSelectItem";
-
-
-// ─── Smart wrappers: auto-switch on mobile ─────────────────────────────────────
-function SmartSelect({ value, onValueChange, children, ...props }) {
-  const [mobile, setMobile] = React.useState(false);
-  React.useEffect(() => {
-    setMobile(isMobileDevice());
-  }, []);
-
-  if (mobile) {
-    return (
-      <MobileSelect value={value} onValueChange={onValueChange}>
-        {children}
-      </MobileSelect>
-    );
-  }
-  return (
-    <Select value={value} onValueChange={onValueChange} {...props}>
-      {children}
-    </Select>
-  );
-}
-
-
 export {
   Select,
-  SmartSelect,
   SelectGroup,
   SelectValue,
   SelectTrigger,
   SelectContent,
   SelectLabel,
   SelectItem,
-  MobileSelectItem,
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
