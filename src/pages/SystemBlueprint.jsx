@@ -895,7 +895,7 @@ Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
             Fix:       1. Added estimateTokens() fallback: text.length / 4 (chars → tokens).
             Used when token_count is 0 or absent.
             2. Reduced default maxTokens from 2,000,000 → 128,000
-            (gpt-4o context window — more accurate reference).
+            (gpt-4o context window at time of fix — LEGACY REFERENCE. Active model is now gpt-5.2 with 200K context).
             3. Compact display: shows "12.3K / 128K" instead of raw numbers.`}</Code>
             </div>
 
