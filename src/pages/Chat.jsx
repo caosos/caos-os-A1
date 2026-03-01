@@ -1251,10 +1251,7 @@ export default function Chat() {
 
       <ProfilePanel
         isOpen={showProfile}
-        onClose={() => {
-          setShowProfile(false);
-          setFileView(null);
-        }}
+        onClose={closePanel}
         user={user}
         multiAgentMode={multiAgentMode}
         onMultiAgentModeChange={(enabled) => {
