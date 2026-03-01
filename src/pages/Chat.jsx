@@ -1235,7 +1235,7 @@ export default function Chat() {
 
       <ThreadList
         isOpen={showThreads}
-        onClose={() => setShowThreads(false)}
+        onClose={closePanel}
         conversations={conversations}
         currentConversationId={currentConversationId}
         messages={messages}
