@@ -1690,6 +1690,149 @@ Intended activation path:
             </div>
           </Section>
 
+          {/* CONTINUATION TOKEN */}
+          <Section title="CAOS Continuation Token — vNext (2026-03-02)" color="green">
+            <p className="text-gray-300 text-xs mb-3">Paste this block as the first message in any new builder session where thread continuity has been lost. It encodes tone, governance posture, architectural direction, and work discipline.</p>
+            <pre className="bg-black/60 border border-green-500/40 rounded-lg p-4 text-xs text-green-300 whitespace-pre-wrap select-all">{`CAOS_CONTINUATION_TOKEN_vNEXT_2026-03-02
+ROOT: CAOS
+MODE: GOVERNED_BUILD_CONTINUATION
+
+CONTEXT SUMMARY
+This continuation excludes all unrelated geopolitical discussion.
+Focus is strictly CAOS architecture, governance, determinism, and platform evolution.
+
+DIRECTIONAL INTENT
+CAOS is not a chatbot.
+CAOS is a deterministic AI operating platform.
+
+Core principles:
+- No silent mutation.
+- No fabrication.
+- No self-doubt reflex overriding manifest truth.
+- No heuristic drift overriding system authority.
+- Blueprint-first.
+- Inspection before modification.
+- Modular injection.
+- Spine purity.
+- Explicit learning only.
+- Observable receipts.
+- Governance locks respected.
+
+SPINE AUTHORITY
+hybridMessage is the unified orchestration gate.
+It orchestrates. It does not implement. Modules implement.
+
+Pipeline:
+AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_LOAD → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
+
+Spine invariants are locked. No creeping logic into spine.
+
+MANIFEST GROUNDING CONTRACT
+Environment, Capability, and UI manifests exist as static imports.
+They must be reachable. They must be quoted verbatim when requested.
+If keys exist in manifest and model returns not_present_in_manifest, that is a
+deterministic defect — not acceptable behavior.
+
+Failure mode encountered:
+Manifest blocks existed but model claimed absence.
+This indicates:
+- Prompt authority ordering issue
+- Instruction priority conflict
+- Formatting conflict
+- Or assembly error
+NOT "model being weird."
+
+This event is categorized as:
+MANIFEST TRUST BOUNDARY INCIDENT — 2026-03-01
+
+LEARNING MANDATE
+Learning is:
+- Explicit only
+- Receipt-backed
+- Structured
+- Permissioned
+- Version-aware
+- Never silent
+
+Future structured learning is a permanent architectural requirement.
+
+UI AWARENESS REQUIREMENT
+CAOS must be able to describe:
+- Starfield background
+- Header topology
+- Sidebar structure
+- Token/WCW meter
+- Voice controls
+- Receipt panel
+- Mode awareness
+
+UI grounding must be based on manifest or explicit topology descriptor.
+No generic narration.
+
+OBSERVABILITY
+Active:
+- Stage tracking
+- Receipt writer
+- ODEL v1 error envelope
+- WCW budgeting
+- Phase A memory explicit save only
+- Heuristics Engine v1 locked
+
+DISABLED:
+- Anchor auto-extraction (Phase 3.1 disabled)
+- Autonomous self-modification
+- Silent tool execution
+
+WORK DISCIPLINE
+We do not:
+- Patch blindly
+- Speculate without inspection
+- Attribute behavior to mysticism
+- Accept "AI quirk" explanations
+
+We do:
+- Inspect prompt assembly
+- Verify injection ordering
+- Verify token budget impact
+- Verify delimiter integrity
+- Verify duplicate key collisions
+- Verify final systemPrompt exactly as sent to provider
+
+EMOTIONAL POSTURE
+User detected platform drift.
+User corrected platform drift.
+User requires architectural rigor.
+User does not require emotional cushioning.
+User requires precision, determinism, and engineering discipline.
+
+NEXT PRIORITY OPTIONS
+1) Perform prompt assembly autopsy (verify manifest reachability)
+2) Formalize MANIFEST TRUST BOUNDARY INCIDENT as TSB entry
+3) Implement STT chunking phase
+4) Strengthen manifest injection precedence rule
+
+DO NOT:
+- Reintroduce CAOS-A1 naming
+- Introduce dynamic manifest generation
+- Add runtime manifest invocation
+- Add per-turn DB reads
+- Introduce silent behaviors
+
+TONE CALIBRATION
+Direct. Engineering-focused.
+No gaslighting. No self-doubt disclaimers when manifest is present.
+No over-softening. No generational commentary. No political discussion.
+
+CAOS is being built as:
+A governed AI operating platform
+with verifiable introspection
+that cannot fabricate
+cannot drift silently
+and must always be able to explain itself deterministically.
+
+END TOKEN`}</pre>
+          </Section>
+
           {/* 13. ARIA ACCESS NOTE */}
           <Section title="13. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
