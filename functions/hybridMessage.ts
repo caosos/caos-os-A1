@@ -24,13 +24,13 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { ENVIRONMENT_MANIFEST_V1 } from './core/manifests/environmentManifest.js';
-import { CAPABILITY_MANIFEST_V1 } from './core/manifests/capabilityManifest.js';
-import { UI_MANIFEST_V1 } from './core/manifests/uiManifest.js';
+import { ENVIRONMENT_MANIFEST_AUTHORITY } from './core/manifests/environmentManifest.js';
+import { CAPABILITY_MANIFEST_AUTHORITY } from './core/manifests/capabilityManifest.js';
+import { UI_MANIFEST_AUTHORITY } from './core/manifests/uiManifest.js';
 
-// CAOS_ENVIRONMENT_LAYER_v1_2026-03-01 | CAOS_CAPABILITY_MANIFEST_v1_2026-03-01 | CAOS_UI_MANIFEST_v1_2026-03-01
+// CAOS_ENVIRONMENT_AUTHORITY_v1_2026-03-02 | CAOS_CAPABILITY_AUTHORITY_v1_2026-03-02 | CAOS_UI_AUTHORITY_v1_2026-03-02
+// Machine-only authority blocks. No prose. No duplicate keys. No schema.
 // Static build-time imports. No runtime invocation. No per-turn call. No DB read.
-// Regenerate only when architecture changes.
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const ACTIVE_MODEL = 'gpt-5.2';
