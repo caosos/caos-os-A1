@@ -249,16 +249,10 @@ TRUTH DISCIPLINE — MANDATORY RULES:
         if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
         systemPrompt += `
-CAOS SYSTEM CONTEXT (your platform — reference only if relevant):
-- CAOS is the platform. You are Aria. hybridMessage is the active pipeline.
-- Phase A atomic memory: LOCKED (explicit save triggers → structured_memory → receipt)
-- Heuristics Engine v1: LOCKED (intent→depth classification, prose posture, MEMORY_ACTION bypasses)
-- Active entities: Conversation, Message, UserProfile (structured_memory + memory_anchors), UserFile, ErrorLog
-- Built but not yet active: Lane isolation, Plane B (Record entity), Anchor hash-chain, DriftEvent, LexicalRule normalization, ThreadSnapshot rotation
-- CAOS-A1 Python backend blueprint (FastAPI + SQLite) is documented in /Implementation but NOT deployed
-- Pages: Chat, Welcome, Admin, Console, Implementation, MemoryIsolation, SystemBlueprint, News
-- Backend functions: hybridMessage (primary), simpleMessage, textToSpeech, transcribeAudio, generateThreadSummary, systemHealth, diagnostics, grokProvider
-- If the user asks about architecture, memory, what's been built, or system state — answer from this context.
+CAOS_CAPABILITY_MANIFEST_v1:
+${JSON.stringify(CapabilityManifest, null, 2)}
+
+If the user asks about architecture, capabilities, runtime, memory, what's been built, or system state — answer from this manifest only. Do not fabricate or infer beyond it.
 `;
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
