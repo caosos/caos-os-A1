@@ -295,7 +295,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   // Feature flag: set to false to revert to single-upload path instantly.
   // No backend changes. No hybridMessage changes. No memory writes.
   // ─────────────────────────────────────────────────────────────────────
-  const STT_CHUNKING_ENABLED = true;
+  const STT_CHUNKING_ENABLED = false;
   const CHUNK_INTERVAL_MS = 4000;   // timeslice: 4 seconds per chunk
   const MIN_CHUNK_BYTES = 5000;     // ignore chunks smaller than ~5KB (~2s of audio)
   const CHUNK_FAIL_THRESHOLD = 3;   // fallback after N consecutive failures
