@@ -24,9 +24,7 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { ENVIRONMENT_MANIFEST_AUTHORITY } from './core/manifests/environmentManifest.js';
-import { CAPABILITY_MANIFEST_AUTHORITY } from './core/manifests/capabilityManifest.js';
-import { UI_MANIFEST_AUTHORITY } from './core/manifests/uiManifest.js';
+// Manifest imports removed — runtime facts now sourced from core/selfDescribe module
 
 // CAOS_ENVIRONMENT_AUTHORITY_v1_2026-03-02 | CAOS_CAPABILITY_AUTHORITY_v1_2026-03-02 | CAOS_UI_AUTHORITY_v1_2026-03-02
 // Machine-only authority blocks. No prose. No duplicate keys. No schema.
