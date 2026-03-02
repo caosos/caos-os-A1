@@ -24,6 +24,11 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import CapabilityManifest from './manifests/CapabilityManifest_v1.json' assert { type: 'json' };
+
+// CAOS_CAPABILITY_MANIFEST_v1_2026-03-01_LOCK
+// Static build-time import. No runtime invocation. No per-turn call. No DB read.
+// Regenerate only when architecture changes.
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const ACTIVE_MODEL = 'gpt-5.2';
