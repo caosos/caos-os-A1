@@ -227,7 +227,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
     // Start new speech
     const cleanText = getCleanText(lastAssistantMessage);
-    const voices = window.speechSynthesis.getVoices();
     const voicePref = localStorage.getItem('caos_google_voice') || 'Google US English';
     const voiceMap = {
       'Google US English': 'en-US',
@@ -237,14 +236,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       'Google German': 'de-DE',
     };
     const langCode = voiceMap[voicePref] || 'en-US';
-    const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     const speed = parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0');
     utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
-    if (selectedVoice) utterance.voice = selectedVoice;
 
     utterance.onstart = () => {
       googleUtteranceRef.current = utterance;
@@ -259,12 +256,32 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       toast.error('Google Voice read-aloud failed');
     };
     utterance.onboundary = () => {
-      // Estimate progress (Web Speech API doesn't provide exact progress)
       setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
     };
 
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    // Voices load async — wait for them if not yet available
+    const speakWithVoice = (voices) => {
+      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+      if (selectedVoice) utterance.voice = selectedVoice;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      speakWithVoice(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        speakWithVoice(window.speechSynthesis.getVoices());
+      };
+      setTimeout(() => {
+        if (!window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 300);
+    }
   };
 
   const handleVoiceButtonContextMenu = (e) => {
