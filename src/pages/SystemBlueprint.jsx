@@ -57,16 +57,19 @@ export default function SystemBlueprint() {
 
   return (
     <div className="min-h-screen bg-[#0a1628] text-white p-6">
-      <button
-        onClick={() => navigate(createPageUrl('Chat'))}
-        className="mb-6 flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Chat
-      </button>
+      <div className="mb-6 flex items-center justify-between">
+        <button
+          onClick={() => navigate(createPageUrl('Chat'))}
+          className="flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Chat
+        </button>
+        <BlueprintCopyButton />
+      </div>
 
       <ScrollArea className="h-[calc(100vh-6rem)]">
-        <div className="max-w-4xl mx-auto space-y-4 pb-8">
+        <div id="blueprint-content" className="max-w-4xl mx-auto space-y-4 pb-8">
 
           {/* START HERE — NEW AGENT ONBOARDING */}
           <div className="bg-red-950 border-2 border-red-400 rounded-xl p-6 mb-6">
