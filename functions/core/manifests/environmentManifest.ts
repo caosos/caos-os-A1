@@ -7,6 +7,15 @@ export const ENVIRONMENT_MANIFEST_V1 = `
 CAOS_ENVIRONMENT_MANIFEST_v1_2026-03-01
 ROOT: CAOS
 
+MACHINE_READABLE:
+model_name=gpt-5.2
+token_limit=200000
+platform=Base44
+backend_runtime=Deno
+frontend_framework=React
+frontend_build_tool=Vite
+inference_provider=OpenAI
+
 RUNTIME:
 - Platform: Base44
 - Backend Runtime: Deno

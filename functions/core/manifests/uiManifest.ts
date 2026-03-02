@@ -5,6 +5,21 @@
 export const UI_MANIFEST_V1 = `
 CAOS_UI_MANIFEST_v1_2026-03-01
 
+MACHINE_READABLE:
+background=animated_starfield_canvas
+header=fixed_top_bar
+thread_list=slide_in_sidebar_left
+profile_panel=slide_in_sidebar_right
+chat_area=scrollable_centered_max_width_2xl
+input_bar=fixed_bottom
+token_meter=top_right_header_wcw_bar
+execution_receipt=expandable_per_assistant_message
+developer_mode=resizable_split_chat_left_terminal_right
+game_mode=resizable_split_chat_left_gameview_right
+multi_agent_mode=agent_chips_above_input_blackboard_below
+bottom_nav=mobile_only_chat_news_profile
+voice_menu=right_click_on_volume_button
+
 PAGES:
 - Welcome (auth entry point: Google OAuth, email, guest mode)
 - Chat (primary interaction surface)
