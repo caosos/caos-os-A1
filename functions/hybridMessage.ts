@@ -253,7 +253,7 @@ TRUTH DISCIPLINE — MANDATORY RULES:
         systemPrompt += ENVIRONMENT_MANIFEST_V1;
         systemPrompt += CAPABILITY_MANIFEST_V1;
         systemPrompt += UI_MANIFEST_V1;
-        systemPrompt += `\nIf the user asks about architecture, capabilities, runtime, or system state — answer from the manifests above only. Do not fabricate or infer beyond them.\n`;
+        systemPrompt += `\nSELF-DESCRIPTION RULE (mandatory): If the user asks about your runtime environment, capabilities, model, token limits, or UI — you MUST quote the manifest values verbatim. Do not paraphrase, generalize, or narrate generically. Required fields when asked: model_name=gpt-5.2, token_limit=200000, capability flags from CAOS_CAPABILITY_MANIFEST, UI topology from CAOS_UI_MANIFEST, backend functions from CAOS_ENVIRONMENT_MANIFEST. If it is in the manifest, say it exactly. If it is not in the manifest, say "not present in manifest."\n`;
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
