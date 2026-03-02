@@ -632,6 +632,30 @@ export default function Chat() {
         throw new Error('No response data from server');
       }
 
+      // Auto-save images from messages to UserFile storage
+      const saveImageToPhotos = async (imageUrl, fileName) => {
+        try {
+          if (!isGuestMode) {
+            const exists = await base44.entities.UserFile.filter({
+              created_by: user.email,
+              url: imageUrl,
+              type: 'photo'
+            }, '-created_date', 1);
+            if (exists.length === 0) {
+              await base44.entities.UserFile.create({
+                name: fileName || imageUrl.split('/').pop() || 'image.jpg',
+                url: imageUrl,
+                type: 'photo',
+                folder_path: '/',
+                mime_type: 'image/jpeg'
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Could not auto-save image:', e.message);
+        }
+      };
+
       // SESSION_RESUME_NOOP: backend acknowledged silently — nothing to display
       if (data.mode === 'SESSION_RESUME_NOOP') {
         clearTimeout(timeoutId);
