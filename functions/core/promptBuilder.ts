@@ -95,14 +95,23 @@ No other output.
 
 `;
 
-        // ── 4. RECALLED MEMORY ────────────────────────────────────────────────
-        if (matchedMemories.length > 0) {
-            systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
-            for (const m of matchedMemories) {
-                systemPrompt += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
-            }
-            systemPrompt += '\n';
-        }
+        // ── 4. WEB SEARCH RESULTS ────────────────────────────────────────────────
+         if (webSearchEnabled && webSearchResults.length > 0) {
+             systemPrompt += `WEB SEARCH RESULTS (from Bing, citation recommended):\n`;
+             for (const r of webSearchResults) {
+                 systemPrompt += `- **${r.title}** (${r.url})\n  Snippet: ${r.snippet}\n`;
+             }
+             systemPrompt += '\n';
+         }
+
+         // ── 5. RECALLED MEMORY ────────────────────────────────────────────────
+         if (matchedMemories.length > 0) {
+             systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
+             for (const m of matchedMemories) {
+                 systemPrompt += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
+             }
+             systemPrompt += '\n';
+         }
 
         // ── 5. INFERRED ANCHORS ───────────────────────────────────────────────
         const anchors = userProfile?.memory_anchors;
