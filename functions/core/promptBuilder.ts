@@ -133,9 +133,14 @@ No other output.
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
-        // ── 8. WEB SEARCH CAPABILITY ──────────────────────────────────────────
+        // ── 8. WEB SEARCH & VISION CAPABILITY ──────────────────────────────────
+        const capabilityLines = [];
         if (webSearchEnabled) {
-            systemPrompt += `\nCAPABILITY: You can run web searches automatically for time-sensitive queries. Results are included above if found. Always cite sources from web results.`;
+            capabilityLines.push('You can run web searches automatically for time-sensitive queries. Results are included above if found. Always cite sources from web results.');
+        }
+        capabilityLines.push('You can view and analyze images (photos, screenshots, diagrams) that users attach. Use vision to extract text, analyze content, and describe what you see.');
+        if (capabilityLines.length > 0) {
+            systemPrompt += `\nCAPABILITY: ${capabilityLines.join(' ')}`;
         }
 
         // ── 9. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
