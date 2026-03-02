@@ -680,6 +680,16 @@ export default function Chat() {
         throw new Error('Empty response from server');
       }
 
+      // Extract and save any images from user's message
+      if (!isGuestMode && fileUrls) {
+        for (const fileUrl of fileUrls) {
+          if (fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+            const fileName = fileUrl.split('/').pop();
+            await saveImageToPhotos(fileUrl, fileName);
+          }
+        }
+      }
+
       // Update WCW meter with real data from backend
       if (data.wcw_budget && data.wcw_used !== undefined) {
         setWcwState({ used: data.wcw_used, budget: data.wcw_budget });
