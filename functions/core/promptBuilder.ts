@@ -113,7 +113,7 @@ No other output.
              systemPrompt += '\n';
          }
 
-        // ── 5. INFERRED ANCHORS ───────────────────────────────────────────────
+        // ── 6. INFERRED ANCHORS ───────────────────────────────────────────────
         const anchors = userProfile?.memory_anchors;
         if (anchors && anchors.length > 0) {
             const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
