@@ -245,7 +245,22 @@ Deno.serve(async (req) => {
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
 
-        const finalMessages = [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }];
+        // Convert file_urls to OpenAI vision format (image_url for images)
+        const userMessageContent = [];
+        userMessageContent.push({ type: 'text', text: input });
+        if (file_urls && file_urls.length > 0) {
+            file_urls.forEach(url => {
+                if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    userMessageContent.push({ type: 'image_url', image_url: { url } });
+                }
+            });
+        }
+
+        const finalMessages = [
+            { role: 'system', content: systemPrompt },
+            ...conversationHistory,
+            { role: 'user', content: userMessageContent.length === 1 ? input : userMessageContent }
+        ];
         const sysMsgs = finalMessages.filter(m => m.role === 'system');
 
         console.log('AUDIT_BUILD', { BUILD_ID, request_id, session_id });
