@@ -33,10 +33,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { input = '' } = body;
 
-    const requires_web = detectExternalKnowledgeNeed(input);
+    const webSearchEnabled = RUNTIME_AUTHORITY.capabilities.web_search.enabled;
+    const requires_web = detectExternalKnowledgeNeed(input, webSearchEnabled);
 
     return Response.json({
       requires_web,
+      web_search_enabled: webSearchEnabled,
       detection_timestamp: new Date().toISOString()
     });
   } catch (error) {
