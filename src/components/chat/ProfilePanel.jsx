@@ -159,25 +159,11 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
               {/* File Management Buttons */}
               <div className="grid grid-cols-2 gap-2 mb-6">
                 <button
-                  onClick={() => setActiveView('desktop')}
-                  className="flex items-center gap-2 p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg border border-blue-500/30 transition-colors"
-                >
-                  <HardDrive className="w-4 h-4 text-blue-400" />
-                  <span className="text-white text-xs">Desktop</span>
-                </button>
-                <button
                   onClick={() => setActiveView('files')}
                   className="flex items-center gap-2 p-3 bg-green-500/10 hover:bg-green-500/20 rounded-lg border border-green-500/30 transition-colors"
                 >
                   <FileText className="w-4 h-4 text-green-400" />
                   <span className="text-white text-xs">Files</span>
-                </button>
-                <button
-                  onClick={() => setActiveView('folders')}
-                  className="flex items-center gap-2 p-3 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg border border-yellow-500/30 transition-colors"
-                >
-                  <Folder className="w-4 h-4 text-yellow-400" />
-                  <span className="text-white text-xs">Folders</span>
                 </button>
                 <button
                   onClick={() => setActiveView('photos')}
