@@ -308,23 +308,28 @@ No other output.
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
-        console.log('🔬 [AUDIT_PROBE] reached audit block');
 
-        // ── PROMPT INTEGRITY AUDIT v1 (temporary) ────────────────────────────
-        const _auditMessages = [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }];
-        const _sysMsgs = _auditMessages.filter(m => m.role === 'system').map((m, i) => ({
-            i, len: (m.content || '').length,
-            has_env: (m.content || '').includes('CAOS_ENVIRONMENT_AUTHORITY_BEGIN'),
-            has_cap: (m.content || '').includes('CAOS_CAPABILITY_AUTHORITY_BEGIN'),
-            has_ui: (m.content || '').includes('CAOS_UI_AUTHORITY_BEGIN'),
-            has_model_name: (m.content || '').includes('model_name='),
-            head: (m.content || '').slice(0, 160),
-            tail: (m.content || '').slice(-160),
-        }));
-        console.log('===== SYSTEM_MSG_AUDIT =====', JSON.stringify(_sysMsgs));
+        const finalMessages = [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }];
+        const sysMsgs = finalMessages.filter(m => m.role === 'system');
+
+        console.log('AUDIT_BUILD', { BUILD_ID, request_id, session_id });
+        console.log('AUDIT_SYSTEM', {
+            BUILD_ID,
+            system_message_count: sysMsgs.length,
+            has_begin: systemPrompt.includes('CAOS_AUTHORITY_KV_BEGIN'),
+            has_model: systemPrompt.includes('model_name='),
+            has_token: systemPrompt.includes('token_limit='),
+            has_backend: systemPrompt.includes('backend_runtime='),
+            has_frontend: systemPrompt.includes('frontend_framework='),
+            has_provider: systemPrompt.includes('inference_provider='),
+            has_web: systemPrompt.includes('web_search_enabled='),
+            has_file: systemPrompt.includes('file_read_enabled='),
+            has_tts: systemPrompt.includes('tts_enabled='),
+            has_learning: systemPrompt.includes('learning_mode='),
+        });
 
         const inferenceStart = Date.now();
-        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }], ACTIVE_MODEL, 2000);
+        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000);
         const inferenceMs = Date.now() - inferenceStart;
         if (!reply) throw new Error('No response from OpenAI');
 
