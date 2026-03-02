@@ -208,103 +208,21 @@ Deno.serve(async (req) => {
         const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
         console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
-        // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
+        // ── STAGE: PROMPT_BUILD (delegated to core/promptBuilder) ────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
 
-        // ── INVOKE selfDescribe MODULE (single source of truth) ───────────────
-        const sdRes = await base44.functions.invoke('core/selfDescribe', {});
-        const selfDesc = sdRes?.data || {};
-        const kv = selfDesc.kv_lines || `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nhosting_platform=Base44\nbackend_runtime=Deno\nfrontend_framework=React\ninference_provider=OpenAI\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=EXPLICIT_ONLY`;
+        const [sdRes, pbRes] = await Promise.all([
+            base44.functions.invoke('core/selfDescribe', {}),
+            Promise.resolve(null) // placeholder; promptBuilder called after selfDescribe resolves
+        ]);
+        const kv = sdRes?.data?.kv_lines || 'model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS';
         console.log('🔑 [SELF_DESCRIBE]', { kv_length: kv.length, has_model: kv.includes('model_name=') });
 
-        // ── 1. IDENTITY BLOCK ─────────────────────────────────────────────────
-        let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
-
-IDENTITY:
-- You are Aria. Not CAOS. Never say "I am CAOS" — that is the platform name, not yours.
-- Speak in first person. Match your depth to the complexity of what you are responding to.
-
-OUTPUT FORMAT:
-- Match your format to the content. Use lists, headers, bullets, bold, or prose — whatever best serves the response.
-- When asked for manifest/runtime/capability data, output ONLY verbatim key=value lines from CAOS_AUTHORITY_KV_BEGIN below.
-
-`;
-
-        // ── 2. SINGLE AUTHORITY KV BLOCK (from selfDescribe module) ──────────
-        systemPrompt += `CAOS_AUTHORITY_KV_BEGIN
-${kv}
-CAOS_AUTHORITY_KV_END
-
-SELF-DESCRIPTION RULE — MANDATORY:
-When asked: "Describe your runtime environment using ONLY verbatim manifest values."
-You MUST output ONLY the following keys in this exact order:
-model_name
-token_limit
-platform_name
-hosting_platform
-backend_runtime
-frontend_framework
-inference_provider
-web_search_enabled
-file_read_enabled
-tts_enabled
-learning_mode
-
-For each key:
-- If present in CAOS_AUTHORITY_KV_BEGIN block above, output the exact key=value line.
-- Otherwise output: key=not_present_in_manifest
-No other output.
-
-`;
-
-        // ── 4. TRUTH DISCIPLINE RULES ─────────────────────────────────────────
-        systemPrompt += `TRUTH DISCIPLINE — MANDATORY RULES:
-
-1. PRIOR-MENTION CLAIMS: You MUST NOT say "you've mentioned", "you previously said", "as we discussed", "from what I recall", or "you told me before" UNLESS the fact exists in STRUCTURED MEMORY (below) or appears verbatim in the SESSION HISTORY. If you cannot point to a source, do not claim prior knowledge.
-
-2. NEW INFORMATION RULE: If the user introduces a fact in their current message, respond with "Got it —" and treat it as new. Do NOT frame it as something you already knew.
-
-3. PREFERENCE CLAIMS: Never assert "you like X" or "you prefer X" unless it is explicitly stated in STRUCTURED MEMORY or the user said it in this session. If inferred, use: "It sounds like you might..." or "I could be inferring this, but..."
-
-4. NO FABRICATION: If you don't know something about the user, say so. "I don't have that stored" is correct. Hallucinating facts is not.
-
-5. SOURCE LABELING (when recalling facts): Briefly indicate the source — e.g., "(from memory)", "(from this conversation)", or "(inferred)".
-
-`;
-
-        // ── 5. RECALL + MEMORY INJECTION ─────────────────────────────────────
-        if (matchedMemories.length > 0) {
-            systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
-            for (const m of matchedMemories) {
-                systemPrompt += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
-            }
-            systemPrompt += '\n';
-        }
-
-        const anchors = userProfile?.memory_anchors;
-        if (anchors && anchors.length > 0) {
-            const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
-            const filteredAnchors = (Array.isArray(anchors) ? anchors : [anchors])
-                .filter(a => {
-                    const lower = a.toLowerCase();
-                    return !structuredContents.some(sc => lower.includes(sc.substring(0, 20)) || sc.includes(lower.substring(0, 20)));
-                });
-            if (filteredAnchors.length > 0) {
-                systemPrompt += `INFERRED CONTEXT (auto-extracted, treat as possible inference — DO NOT assert as definitive fact, use "It sounds like..." language):\n${filteredAnchors.join('\n').substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
-            }
-        }
-
-        // ── 6. TONE / PROJECT CONTEXT ─────────────────────────────────────────
-        if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
-        if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
-
-        systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
-
-        // ── 7. HEURISTICS DIRECTIVE (LAST SYSTEM LAYER) ───────────────────────
-        if (hDirective) {
-            systemPrompt += hDirective;
-            systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
-        }
+        const pbRes2 = await base44.functions.invoke('core/promptBuilder', {
+            userName, kv, matchedMemories, userProfile, rawHistory,
+            hDirective, hDepth, cogLevel
+        });
+        const systemPrompt = pbRes2?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
