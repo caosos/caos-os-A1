@@ -500,22 +500,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
 
           {/* 10. KNOWN ISSUES / NEXT WORK */}
           <Section title="10. Known Issues & Candidate Next Work" color="blue">
-            <Code>{`KNOWN:
-- Memory save strips "that" from "remember that my dog..." → saves "my dog's name is Biscuit"
-  (acceptable — content is accurate)
-- Legacy memory_anchors (auto-extracted) are still injected as INFERRED context
-  → could accumulate noise over time → Phase B will replace this
-- hybridMessage is 620 lines — consider splitting into sub-modules
-
-CANDIDATE NEXT:
-- Phase B: Typed schema normalization for structured_memory entries
-  (person/place/preference/date classification)
-- Phase C: Entity graph (link related facts)
-- Wire hybridMessage to read UserProfile.tone.style and apply to Aria's personality
-- Expose structured_memory in ProfilePanel MemoryPanel (partially done)
-- Add memory delete/edit capability to MemoryPanel
-- Activate LexicalRule normalization (chaos → CAOS)
-- Thread auto-summary on conversation close`}</Code>
+            <Code>{"KNOWN:\n- Memory save strips \"that\" from \"remember that my dog...\" → saves \"my dog's name is Biscuit\"\n  (acceptable — content is accurate)\n- Legacy memory_anchors (auto-extracted) are still injected as INFERRED context\n  → could accumulate noise over time → Phase B will replace this\n- hybridMessage is 620 lines — consider splitting into sub-modules\n\nCANDIDATE NEXT:\n- Phase B: Typed schema normalization for structured_memory entries\n  (person/place/preference/date classification)\n- Phase C: Entity graph (link related facts)\n- Wire hybridMessage to read UserProfile.tone.style and apply to Aria's personality\n- Expose structured_memory in ProfilePanel MemoryPanel (partially done)\n- Add memory delete/edit capability to MemoryPanel\n- Activate LexicalRule normalization (chaos → CAOS)\n- Thread auto-summary on conversation close"}</Code>
           </Section>
 
           {/* 11. TTS — LIVE LOCKED FEATURES */}
