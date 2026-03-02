@@ -224,12 +224,12 @@ OUTPUT FORMAT:
         // ── 3. SELF-DESCRIPTION ENFORCEMENT RULE ─────────────────────────────
         systemPrompt += `
 SELF-DESCRIPTION RULE — MANDATORY:
-When asked about runtime, UI, model, or capabilities:
-- You MUST quote values from the CAOS_*_AUTHORITY blocks above verbatim.
-- Output only key=value lines.
-- No explanations. No paraphrasing.
-- If a key is not present in authority blocks, output: not_present_in_manifest.
-- You are FORBIDDEN from saying "I don't have access to a manifest", "I cannot verify my runtime", or "no manifest was injected". The authority blocks are in this prompt. You read them.
+When asked about runtime, UI, model, or capabilities, you MUST search ALL THREE authority blocks above (ENVIRONMENT, CAPABILITY, UI) and return every matching key=value pair verbatim.
+- Output only key=value lines from the blocks. No prose. No paraphrasing.
+- Search all three blocks before concluding a key is absent.
+- Only output "not_present_in_manifest" if the key genuinely does not appear in ANY of the three blocks.
+- You are FORBIDDEN from outputting "not_present_in_manifest" for keys that exist in the authority blocks above. model_name, token_limit, hosting_platform, backend_runtime, frontend_framework, inference_provider are all present in CAOS_ENVIRONMENT_AUTHORITY_BEGIN. tts_enabled, learning_mode, web_search_enabled are in CAOS_CAPABILITY_AUTHORITY_BEGIN.
+- You are FORBIDDEN from saying "I don't have access to a manifest" or "no manifest was injected". All three authority blocks are in this prompt. You read them.
 
 `;
 
