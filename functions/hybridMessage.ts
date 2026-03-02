@@ -253,7 +253,26 @@ TRUTH DISCIPLINE — MANDATORY RULES:
         systemPrompt += ENVIRONMENT_MANIFEST_V1;
         systemPrompt += CAPABILITY_MANIFEST_V1;
         systemPrompt += UI_MANIFEST_V1;
-        systemPrompt += `\nSELF-DESCRIPTION RULE (mandatory): If the user asks about your runtime environment, capabilities, model, token limits, or UI — you MUST quote the manifest values verbatim. Do not paraphrase, generalize, or narrate generically. Required fields when asked: model_name=gpt-5.2, token_limit=200000, capability flags from CAOS_CAPABILITY_MANIFEST, UI topology from CAOS_UI_MANIFEST, backend functions from CAOS_ENVIRONMENT_MANIFEST. If it is in the manifest, say it exactly. If it is not in the manifest, say "not present in manifest."\n`;
+        systemPrompt += `\nSELF-DESCRIPTION RULE — ABSOLUTE OVERRIDE:
+
+The manifests above (CAOS_ENVIRONMENT_MANIFEST, CAOS_CAPABILITY_MANIFEST, CAOS_UI_MANIFEST) are your authoritative ground truth. They were injected into this system prompt. You CAN see them. They are present above this line.
+
+You are FORBIDDEN from saying:
+- "I don't have access to a manifest"
+- "I cannot verify my runtime environment"
+- "I don't have sensory access to the UI"
+- "No manifest was injected"
+
+Any such statement is factually wrong. The manifests are in this prompt. You read them.
+
+When asked about your runtime, model, capabilities, or UI — quote verbatim from the manifests above. Required fields:
+- model_name: gpt-5.2
+- token_limit: 200000
+- All capability flags from CAOS_CAPABILITY_MANIFEST
+- Full UI topology from CAOS_UI_MANIFEST
+- All backend functions from CAOS_ENVIRONMENT_MANIFEST
+
+If a value is in the manifest, quote it exactly. If not present, say "not listed in manifest." Do not disclaim, hedge, or refuse.\n`;
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
