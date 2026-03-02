@@ -6,13 +6,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { createHash } from 'https://deno.land/std/crypto/mod.ts';
 
 const BUILD_ID = 'CAOS_SSX_v1_2026-03-02';
-const ACTIVE_MODEL = 'gpt-4o';
+const ACTIVE_MODEL = 'gpt-5.2';
 const INFERENCE_PROVIDER = 'openai';
 const PLATFORM_NAME = 'CAOS';
 const HOSTING_PLATFORM = 'Base44';
 const BACKEND_RUNTIME = 'Deno';
 const FRONTEND_FRAMEWORK = 'React 18';
-const TOKEN_LIMIT = 128000;
+const TOKEN_LIMIT = 200000;
 
 // Protected files registry (immutable governance)
 const PROTECTED_FILES = {
