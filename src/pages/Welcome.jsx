@@ -18,13 +18,13 @@ export default function Welcome() {
 
   // Check authentication status on mount — LOCKED AGAINST INFINITE LOOP
   React.useEffect(() => {
-    // Triple-lock: if already checked, never check again
-    if (authCheckRef.current || sessionStorage.getItem('welcome_auth_checked')) {
+    // Prevent double-run within same render cycle only — do NOT block on sessionStorage
+    // (OAuth redirects back here and need a fresh auth check every time)
+    if (authCheckRef.current) {
       setChecking(false);
       return;
     }
     authCheckRef.current = true;
-    sessionStorage.setItem('welcome_auth_checked', 'true');
     
     let mounted = true;
     
