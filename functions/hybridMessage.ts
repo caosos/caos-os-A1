@@ -284,6 +284,7 @@ When asked about runtime, UI, model, or capabilities:
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
+        console.log('🔬 [AUDIT_PROBE] reached audit block');
 
         // ── PROMPT INTEGRITY AUDIT v1 (temporary) ────────────────────────────
         const _auditMessages = [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }];
