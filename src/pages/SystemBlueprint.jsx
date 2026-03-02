@@ -523,7 +523,7 @@ CANDIDATE NEXT:
             <p><strong className="text-green-300">Both TTS systems are confirmed working and locked as of Mar 1, 2026.</strong> There are two independent voice read-aloud paths serving different UI surfaces.</p>
 
             <h4 className="text-white font-semibold mt-3">Path A — OpenAI TTS (ChatBubble speaker icon + VoiceSettings)</h4>
-            <Code>{`LOCK_SIGNATURE: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01
+            <Code>{"LOCK_SIGNATURE: CAOS_OPENAI_TTS_LOCK_v1_2026-03-01
 Files locked:  components/chat/VoiceSettings.jsx
                components/chat/ChatBubbleReadAloud.jsx
 Backend:       functions/textToSpeech (Deno)
