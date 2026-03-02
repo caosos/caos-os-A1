@@ -472,14 +472,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           {/* 6. FRONTEND STRUCTURE */}
           <Section title="6. Frontend Structure" color="orange">
             <h4 className="text-white font-semibold">Pages:</h4>
-            <Code>{`Welcome         — auth gate (Google sign-in, email, guest mode)
-Chat            — main interface (all chat logic lives here)
-Admin           — admin dashboard (errors, stats, pipeline visualizer)
-Console         — SSH/terminal console view
-Implementation  — CAOS-A1 Python backend blueprint (FastAPI + SQLite)
-MemoryIsolation — memory isolation architecture docs
-SystemBlueprint — THIS FILE (living architecture doc)
-News            — news feed page`}</Code>
+            <Code>{"Welcome - auth gate (Google sign-in, email, guest mode)\nChat - main interface (all chat logic lives here)\nAdmin - admin dashboard (errors, stats, pipeline visualizer)\nConsole - SSH/terminal console view\nImplementation - CAOS-A1 Python backend blueprint (FastAPI + SQLite)\nMemoryIsolation - memory isolation architecture docs\nSystemBlueprint - THIS FILE (living architecture doc)\nNews - news feed page"}</Code>
 
             <h4 className="text-white font-semibold mt-3">Key Components:</h4>
             <Code>{`components/chat/
