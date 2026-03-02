@@ -26,6 +26,8 @@ Deno.serve(async (req) => {
             hDirective = '',
             hDepth = 'STANDARD',
             cogLevel = 3,
+            webSearchResults = [],
+            webSearchEnabled = false
         } = body;
 
         // Inject SSX_AUTHORITY_KV if not provided
