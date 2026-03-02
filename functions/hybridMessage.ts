@@ -284,6 +284,20 @@ When asked about runtime, UI, model, or capabilities:
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
+
+        // ── PROMPT INTEGRITY AUDIT v1 (temporary) ────────────────────────────
+        const _auditMessages = [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }];
+        const _sysMsgs = _auditMessages.filter(m => m.role === 'system').map((m, i) => ({
+            i, len: (m.content || '').length,
+            has_env: (m.content || '').includes('CAOS_ENVIRONMENT_AUTHORITY_BEGIN'),
+            has_cap: (m.content || '').includes('CAOS_CAPABILITY_AUTHORITY_BEGIN'),
+            has_ui: (m.content || '').includes('CAOS_UI_AUTHORITY_BEGIN'),
+            has_model_name: (m.content || '').includes('model_name='),
+            head: (m.content || '').slice(0, 160),
+            tail: (m.content || '').slice(-160),
+        }));
+        console.log('===== SYSTEM_MSG_AUDIT =====', JSON.stringify(_sysMsgs));
+
         const inferenceStart = Date.now();
         const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, [{ role: 'system', content: systemPrompt }, ...conversationHistory, { role: 'user', content: input }], ACTIVE_MODEL, 2000);
         const inferenceMs = Date.now() - inferenceStart;
