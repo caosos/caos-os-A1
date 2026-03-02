@@ -489,19 +489,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           {/* 8. TRUTH DISCIPLINE */}
           <Section title="8. Aria Truth Discipline (Active Rules)" color="red">
             <p>These rules are injected into Aria's system prompt on every request:</p>
-            <Code>{`1. PRIOR-MENTION CLAIMS: Never say "you mentioned" / "you previously said" / "as we discussed"
-   unless the fact is in STRUCTURED MEMORY or verbatim in session history.
-
-2. NEW INFORMATION RULE: If user introduces a fact in the current message,
-   respond with "Got it —" and treat it as new.
-
-3. PREFERENCE CLAIMS: Never assert "you like X" or "you prefer X" unless in
-   structured_memory or stated this session. Use "It sounds like..." for inferences.
-
-4. NO FABRICATION: If a fact isn't stored, say "I don't have that stored."
-
-5. SOURCE LABELING: When recalling facts, label the source:
-   "(from memory)" | "(from this conversation)" | "(inferred)"`}</Code>
+            <Code>{"1. PRIOR-MENTION CLAIMS: Never say \"you mentioned\" / \"you previously said\" / \"as we discussed\"\nunless the fact is in STRUCTURED MEMORY or verbatim in session history.\n\n2. NEW INFORMATION RULE: If user introduces a fact in the current message,\nrespond with \"Got it —\" and treat it as new.\n\n3. PREFERENCE CLAIMS: Never assert \"you like X\" or \"you prefer X\" unless in\nstructured_memory or stated this session. Use \"It sounds like...\" for inferences.\n\n4. NO FABRICATION: If a fact isn't stored, say \"I don't have that stored.\"\n\n5. SOURCE LABELING: When recalling facts, label the source:\n\"(from memory)\" | \"(from this conversation)\" | \"(inferred)\""}</Code>
           </Section>
 
           {/* 9. WHAT IS NOT YET ACTIVE */}
