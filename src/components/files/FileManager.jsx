@@ -1,31 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, FileText, Image, Upload, ArrowLeft, Trash2, Download } from 'lucide-react';
+import { FileText, Image, Upload, Trash2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function FileManager({ user, viewType = 'desktop' }) {
+export default function FileManager({ user, viewType = 'files' }) {
   const [files, setFiles] = useState([]);
-  const [currentPath, setCurrentPath] = useState('/');
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadFiles();
-  }, [currentPath, viewType]);
+  }, [viewType]);
 
   const loadFiles = async () => {
     try {
-      const filter = { created_by: user.email };
+      const filter = { created_by: user.email, folder_path: '/' };
       
       if (viewType === 'photos') {
         filter.type = 'photo';
-      } else if (viewType === 'folders') {
-        filter.type = 'folder';
       } else if (viewType === 'files') {
         filter.type = 'file';
-      }
-      
-      if (currentPath !== '/') {
-        filter.folder_path = currentPath;
       }
 
       const userFiles = await base44.entities.UserFile.filter(filter, '-created_date', 1000);
