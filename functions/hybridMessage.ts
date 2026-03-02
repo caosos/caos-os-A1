@@ -202,10 +202,17 @@ Deno.serve(async (req) => {
         }
 
         // ── STAGE: HEURISTICS ─────────────────────────────────────────────────
-        setStage(STAGES.HEURISTICS);
-        const hRes = await base44.functions.invoke('core/heuristicsEngine', { input });
-        const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
-        console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
+         setStage(STAGES.HEURISTICS);
+         const [hRes, extRes] = await Promise.all([
+           base44.functions.invoke('core/heuristicsEngine', { input }),
+           base44.functions.invoke('core/externalKnowledgeDetector', { input })
+         ]);
+         const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
+         const webSearchNeeded = extRes?.data?.requires_web ?? false;
+         const webSearchEnabled = extRes?.data?.web_search_enabled ?? false;
+
+         console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
+         console.log('🔍 [WEB_SEARCH_CHECK]', { web_search_enabled: webSearchEnabled, search_needed: webSearchNeeded });
 
         // ── STAGE: PROMPT_BUILD (delegated to core/promptBuilder) ────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
