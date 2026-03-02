@@ -70,34 +70,6 @@ export default function FileManager({ user, viewType = 'files' }) {
     }
   };
 
-  const createFolder = async () => {
-    const name = prompt('Folder name:');
-    if (!name) return;
-
-    try {
-      await base44.entities.UserFile.create({
-        name: name,
-        type: 'folder',
-        folder_path: currentPath
-      });
-      toast.success('Folder created');
-      loadFiles();
-    } catch (error) {
-      console.error('Error creating folder:', error);
-      toast.error('Failed to create folder');
-    }
-  };
-
-  const openFolder = (folder) => {
-    setCurrentPath(`${currentPath === '/' ? '' : currentPath}/${folder.name}`);
-  };
-
-  const goBack = () => {
-    const parts = currentPath.split('/').filter(p => p);
-    parts.pop();
-    setCurrentPath('/' + parts.join('/'));
-  };
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
