@@ -31,6 +31,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // Static build-time imports. No runtime invocation. No per-turn call. No DB read.
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
 const ACTIVE_MODEL = 'gpt-5.2';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 100;
