@@ -26,6 +26,8 @@ const Section = ({ title, color = 'blue', children, defaultOpen = false }) => {
   return (
     <div className={`${bgColor} border ${borderColor} rounded-xl overflow-hidden`}>
       <button
+        data-section-toggle
+        data-open={open ? 'true' : 'false'}
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
       >
