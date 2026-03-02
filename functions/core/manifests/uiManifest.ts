@@ -2,6 +2,7 @@
 // STATIC — NO DYNAMIC FIELDS — NO FUNCTION CALLS — NO TIMESTAMPS
 // Regenerate only when UI structure changes.
 
+// Full descriptive manifest — for documentation and introspection only. NOT injected into systemPrompt.
 export const UI_MANIFEST_V1 = `
 CAOS_UI_MANIFEST_v1_2026-03-01
 
@@ -55,4 +56,25 @@ NOT PRESENT:
 - Live sensor dashboard
 - Calendar integration panel
 - Public web browsing interface
+`;
+
+// LOCK_SIGNATURE: CAOS_UI_AUTHORITY_v1_2026-03-02
+// MACHINE AUTHORITY BLOCK — NO PROSE — NO DUPLICATES — NO BULLETS
+// THIS is what gets injected into systemPrompt. Nothing else.
+export const UI_MANIFEST_AUTHORITY = `
+=== CAOS_UI_AUTHORITY_BEGIN ===
+background=animated_starfield_canvas
+header=fixed_top_bar
+thread_list=slide_in_sidebar_left
+profile_panel=slide_in_sidebar_right
+chat_area=scrollable_centered_max_width_2xl
+input_bar=fixed_bottom
+token_meter=top_right_header_wcw_bar
+execution_receipt=expandable_per_assistant_message
+developer_mode=resizable_split_chat_left_terminal_right
+game_mode=resizable_split_chat_left_gameview_right
+multi_agent_mode=agent_chips_above_input_blackboard_below
+bottom_nav=mobile_only_chat_news_profile
+voice_menu=right_click_on_volume_button
+=== CAOS_UI_AUTHORITY_END ===
 `;
