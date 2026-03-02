@@ -118,7 +118,7 @@ Wait for the owner to tell you what they need.`}</pre>
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 1, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅ · Authority Domain Separation: LOCKED ✅ · Pull-Only Awareness Rule: LOCKED ✅ · Active Model: gpt-5.2 ✅</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 2, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Artifact Loader: IMPLEMENTED ✅ · External Knowledge Detector: IMPLEMENTED ✅ · UserStorage Entity: ADDED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅ · Authority Domain Separation: LOCKED ✅ · Pull-Only Awareness Rule: LOCKED ✅ · Active Model: gpt-5.2 (200K token limit) ✅</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="Agent Onboarding Contract: Section 0" color="red" />
               <Tag label="hybridMessage: LOCKED" color="green" />
@@ -447,15 +447,23 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           <Section title="5. Data Entities (Active)" color="indigo">
             <h4 className="text-white font-semibold">Core Chat:</h4>
             <Code>{`Conversation  — thread metadata (title, last_message_time, summary, keywords)
-Message       — individual messages (conversation_id, role, content, tool_calls,
-                execution_receipt, reactions, replies, file_urls)
-UserProfile   — persistent user data:
-                  preferred_name, assistant_name, environment_name
-                  tone: { style, humor_ok, emoji_light, no_scaffold_titles, no_flattery }
-                  project: { name, current_focus, known_friction_points }
-                  memory_anchors: string[]   (legacy auto-extracted)
-                  structured_memory: []       (Phase A atomic entries — ACTIVE)
-UserFile      — uploaded files (name, url, type, folder_path, size, mime_type)`}</Code>
+          Message       — individual messages (conversation_id, role, content, tool_calls,
+              execution_receipt, reactions, replies, file_urls)
+          UserProfile   — persistent user data:
+                preferred_name, assistant_name, environment_name
+                tone: { style, humor_ok, emoji_light, no_scaffold_titles, no_flattery }
+                project: { name, current_focus, known_friction_points }
+                memory_anchors: string[]   (legacy auto-extracted)
+                structured_memory: []       (Phase A atomic entries — ACTIVE)
+          UserFile      — uploaded files (name, url, type, folder_path, size, mime_type)
+
+          USER STORAGE (NEW — Mar 2, 2026):
+          UserStorage   — user file storage box:
+                user_email, file_name, mime_type, size_bytes, sha256
+                base44_file_id, file_type (document|image|code|data|other)
+                created_at timestamp
+                Schema enables proper file versioning, SHA256 integrity checking,
+                and deterministic file tracking (not anonymous blobs).</Code>
 
             <h4 className="text-white font-semibold mt-3">Governance / Advanced (built, partially used):</h4>
             <Code>{`Anchor         — hash-chained profile-global memory anchors (BUILT, not fully active)
@@ -550,52 +558,85 @@ caos_google_speech_rate    — Google Web Speech speed`}</Code>
           {/* 7. BACKEND FUNCTIONS */}
           <Section title="7. Backend Functions" color="green">
             <Code>{`MAIN PIPELINE:
-hybridMessage          ← ALL chat flows through here. Auth, memory, history,
-                          heuristics, OpenAI call, message save, receipt write.
+          hybridMessage          ← ALL chat flows through here. Auth, memory, history,
+                         heuristics, OpenAI call, message save, receipt write.
 
-VOICE / AUDIO:
-textToSpeech           — OpenAI TTS (tts-1-hd). Returns JSON { audio_base64 }.
-                          LOCKED. Called via base44.functions.invoke() only.
-transcribeAudio        — Whisper transcription (voice input → text)
-googleTextToSpeech     — Returns browser Web Speech config (no API call). LOCKED.
+          VOICE / AUDIO:
+          textToSpeech           — OpenAI TTS (tts-1-hd). Returns JSON { audio_base64 }.
+                         LOCKED. Called via base44.functions.invoke() only.
+          transcribeAudio        — Whisper transcription (voice input → text)
+          googleTextToSpeech     — Returns browser Web Speech config (no API call). LOCKED.
 
-THREAD MANAGEMENT:
-generateThreadSummary  — summarize a conversation thread (OpenAI call)
+          THREAD MANAGEMENT:
+          generateThreadSummary  — summarize a conversation thread (OpenAI call)
 
-DIAGNOSTICS / ADMIN:
-systemHealth           — admin health check (auth required)
-diagnosticSnapshot     — full session state snapshot
-diagnosticRecall       — memory recall trace diagnostic
-inspectPipeline        — hybridMessage pipeline step trace
-inspectRouting         — function routing audit
-quickInspect           — fast session state check
-postPatchAudit         — post-deploy verification
-probeReceiptWrite      — test DiagnosticReceipt write path
-runHybridPipeline      — test harness for hybridMessage stages
-generateSystemsReport  — full system state report
+          RUNTIME AUTHORITY & CONFIGURATION:
+          runtimeAuthority       — CENTRALIZED SOURCE OF TRUTH (NEW — Mar 2, 2026)
+                         Single RUNTIME_AUTHORITY object exported by this module.
+                         All other modules import and use this for canonical values.
+                         Eliminates duplicated config across system.
+                         Contains: model_name, token_limit, platform_name, 
+                         hosting_platform, backend_runtime, frontend_framework,
+                         inference_provider, capabilities, safeguards.
 
-MEMORY / ANCHOR:
-testAnchors            — anchor system test
-extractUserPreference  — preference extraction utility
-pinMemory              — pin a memory entry to structured_memory
-diagnosticRecall       — recall path trace
+          systemSnapshot         — Generate system state snapshot (REFACTORED Mar 2, 2026)
+                         Now imports RUNTIME_AUTHORITY instead of hardcoded values.
+                         Ensures all snapshots reflect single canonical source.
 
-INTEGRATIONS:
-grokProvider           — Grok/xAI API (built, not the primary model)
-checkGrokModels        — list available Grok models
+          WEB SEARCH & ARTIFACTS:
+          webSearch              — Real web search via Bing API (NEW — Mar 2, 2026)
+                         Performs actual external search. Returns structured results
+                         with title, url, snippet, publication date.
+                         Signature: { query, limit } → { results[], hash }
 
-CORE MODULES (functions/core/):
-contextBuilder, contextLoader, continuousLearning, deterministicExecutor,
-diagnosticMode, environmentLoader, errorRecovery, executorContract,
-globalBinGovernance, indexPersistence, indexedSearch, laneIsolation,
-latencyTracking, memoryAnchors, memoryUpdate, normalize, persistentSearch,
-presentationSilence, receiptLogger, routeRegistry, sanitizer, selectorEngine,
-tieredRecall, tokenizer, toolExecutor, unifiedGovernanceGate, wcwBudget,
-wcwSelfRegulation
-(BUILT — modular governors. Not all are active in hybridMessage v2)
-(See Section 15 for detailed catalogue of: laneIsolation, indexedSearch,
-continuousLearning, contextLoader, contextBuilder, memoryUpdate, toolExecutor
-— purpose, design notes, and intended wiring path for each)`}</Code>
+          externalKnowledgeDetector  — Automatic web trigger detection (NEW — Mar 2, 2026)
+                         Analyzes user input for time-sensitive keywords
+                         (today, latest, current, news, price, weather, stock, etc).
+                         Returns: { requires_web: boolean }
+                         Enables needs-based automatic web search without user prompt.
+
+          artifactLoader         — Multi-format artifact processor (NEW — Mar 2, 2026)
+                         Handles: base44_file, url (allowlisted), inline_base64
+                         Validates size limits: 5MB per artifact, 10MB total per request.
+                         Extracts text from files (up to 200K chars).
+                         Returns: structured receipt with hash + metadata.
+                         Supports: images (multimodal via OpenAI), text files,
+                         PDFs (binary only — no OCR extraction yet).
+
+          DIAGNOSTICS / ADMIN:
+          systemHealth           — admin health check (auth required)
+          diagnosticSnapshot     — full session state snapshot
+          diagnosticRecall       — memory recall trace diagnostic
+          inspectPipeline        — hybridMessage pipeline step trace
+          inspectRouting         — function routing audit
+          quickInspect           — fast session state check
+          postPatchAudit         — post-deploy verification
+          probeReceiptWrite      — test DiagnosticReceipt write path
+          runHybridPipeline      — test harness for hybridMessage stages
+          generateSystemsReport  — full system state report
+
+          MEMORY / ANCHOR:
+          testAnchors            — anchor system test
+          extractUserPreference  — preference extraction utility
+          pinMemory              — pin a memory entry to structured_memory
+          diagnosticRecall       — recall path trace
+
+          INTEGRATIONS:
+          grokProvider           — Grok/xAI API (built, not the primary model)
+          checkGrokModels        — list available Grok models
+
+          CORE MODULES (functions/core/):
+          contextBuilder, contextLoader, continuousLearning, deterministicExecutor,
+          diagnosticMode, environmentLoader, errorRecovery, executorContract,
+          globalBinGovernance, indexPersistence, indexedSearch, laneIsolation,
+          latencyTracking, memoryAnchors, memoryUpdate, normalize, persistentSearch,
+          presentationSilence, receiptLogger, routeRegistry, sanitizer, selectorEngine,
+          tieredRecall, tokenizer, toolExecutor, unifiedGovernanceGate, wcwBudget,
+          wcwSelfRegulation
+          (BUILT — modular governors. Not all are active in hybridMessage v2)
+          (See Section 15 for detailed catalogue of: laneIsolation, indexedSearch,
+          continuousLearning, contextLoader, contextBuilder, memoryUpdate, toolExecutor
+          — purpose, design notes, and intended wiring path for each)`}</Code>
           </Section>
 
           {/* 8. TRUTH DISCIPLINE */}
@@ -835,6 +876,39 @@ Backend check:
             <p className="text-gray-300 text-xs mb-4">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. Each entry is a permanent record.</p>
 
             <div className="space-y-4">
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-013 — Duplicate Runtime Authority (Config Scattered Across System)</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 2, 2026
+          Component: functions/core/systemSnapshot, functions/core/wcwMeasure, 
+          functions/core/promptBuilder, and others
+          Symptom:   Runtime configuration (model_name, token_limit, platform_name, etc)
+          was hardcoded in multiple locations. Changes to one file did not
+          propagate. The "source of truth" was ambiguous — different modules
+          had slightly different values.
+          Example: systemSnapshot had token_limit=128000, but the actual active
+          model gpt-5.2 has 200K context. Snapshots were wrong.
+          Root Cause: No single source of truth. Each module defined its own constants.
+          When the active model was upgraded from gpt-4o to gpt-5.2,
+          not all files were updated consistently.
+          Fix:       Created functions/core/runtimeAuthority.js as the canonical source.
+          Exported: RUNTIME_AUTHORITY = {
+            build_id, runtime: { model_name, token_limit, platform_name, ... },
+            capabilities: { file_read, file_write, vision, web_search, tts, learning_mode },
+            safeguards: { domain_allowlist, max_request_timeout_ms, max_response_size_bytes, ... }
+          }
+          Refactored systemSnapshot, wcwMeasure, promptBuilder to import
+          and use RUNTIME_AUTHORITY instead of local constants.
+          Impact:    - Single source of truth for all runtime configuration
+          - Model upgrades propagate automatically to all consumers
+          - Web search capability now declarative (web_search.enabled: true,
+            trigger: "NEEDS_BASED_AUTOMATIC", provider: "bing_api")
+          - All safeguards centralized and visible
+          Lock:      RUNTIME_AUTHORITY is the governance point. Changes require TSB entry.`}</Code>
+              </div>
 
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1128,9 +1202,64 @@ Fix (2):   Added reset effect: when currentConversationId changes, immediately
 GREP ANCHOR: CAOS_WCW_METER_FIX_v1_2026-03-01`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-014 — Web Search & Artifact Processing Not Implemented</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 2, 2026
+              Component: Artifact handling, web search, external knowledge detection
+              Symptom:   The spec called for:
+              1. Real artifact processing (file upload → read)
+              2. Automatic web search on time-sensitive queries
+              3. User storage box for downloaded/generated files
+              But these were only documented, not implemented.
+              Root Cause: Feature was specified but no backend functions existed to:
+              - Fetch and validate artifacts from multiple sources
+              - Detect when external knowledge was needed
+              - Persist user downloads to storage
+              - Provide structured web search results
+              Fix:       Implemented three new modular backend functions:
+
+              1. functions/core/artifactLoader.js
+              - Fetches artifacts from base44_file, URL, inline_base64
+              - Validates size limits (5MB per, 10MB total)
+              - Extracts text from text/json files (200K char limit)
+              - Returns structured receipt with sha256 hash
+              - Supports images (multimodal) and binary files
+
+              2. functions/core/webSearch.js
+              - Performs real Bing API web search
+              - Returns structured results: title, url, snippet, published date
+              - Signature: { query, limit } → { results[], hash, timestamp }
+              - Uses RUNTIME_AUTHORITY.capabilities.web_search.provider
+
+              3. functions/core/externalKnowledgeDetector.js
+              - Analyzes user input for time-sensitive keywords
+              - Detects: today, latest, current, news, price, weather, stock, etc
+              - Returns: { requires_web: boolean }
+              - Enables automatic web search WITHOUT explicit user trigger
+
+              4. Entity: UserStorage (new schema)
+              - user_email, file_name, mime_type, size_bytes, sha256
+              - base44_file_id, file_type, created_at
+              - Provides deterministic file tracking (not anonymous blobs)
+
+              Impact:    - User can upload files → CAOS processes them → returns to user
+              - User asks time-sensitive questions → automatic web search
+              - User downloads/exports files → stored in UserStorage → retrievable
+              - All operations logged with SHA256 hashes for integrity
+              - Web results properly cited (not hallucinated)
+              Behavior:  Web search is now NEEDS_BASED_AUTOMATIC (from runtimeAuthority):
+              If externalKnowledgeDetector.requires_web = true,
+              hybridMessage calls webSearch() automatically.
+              No user permission dance. No friction.
+              Exactly like this system.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
-            </div>
-            </Section>
+              </div>
+              </Section>
 
           {/* BUILD SEQUENCE */}
           <Section title="CAOS_BUILD_SEQUENCE_v1 — Controlled Build Phases" color="cyan">
