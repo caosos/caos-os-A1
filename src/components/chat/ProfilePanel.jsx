@@ -10,13 +10,13 @@ import moment from 'moment';
 import FileManager from '../files/FileManager';
 import MemoryPanel from '@/components/profile/MemoryPanel';
 
-export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange }) {
+export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange, initialView }) {
   const [rememberConversations, setRememberConversations] = useState(true);
   const [isEditingBirthday, setIsEditingBirthday] = useState(false);
   const [birthday, setBirthday] = useState('');
   const [availableTokens, setAvailableTokens] = useState(0);
   const [gameModeEnabled, setGameModeEnabled] = useState(false);
-  const [activeView, setActiveView] = useState('profile'); // 'profile', 'desktop', 'files', 'folders', 'photos', 'memory'
+  const [activeView, setActiveView] = useState(initialView || 'profile'); // 'profile', 'files', 'photos', 'memory'
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
