@@ -24,6 +24,7 @@
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import CAPABILITY_MANIFEST from './manifests/CapabilityManifest_v1.json' assert { type: 'json' };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const ACTIVE_MODEL = 'gpt-5.2';
