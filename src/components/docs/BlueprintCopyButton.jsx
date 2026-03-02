@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 
-// Full plain-text blueprint for pasting into any AI agent
-const FULL_BLUEPRINT_TEXT = `CAOS SYSTEM BLUEPRINT — FULL CONTEXT DUMP
+export default function BlueprintCopyButton() {
 Generated: Mar 2, 2026
 ==========================================
 
