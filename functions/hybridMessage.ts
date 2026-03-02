@@ -217,19 +217,34 @@ OUTPUT FORMAT:
 `;
 
         // ── 2. RUNTIME AUTHORITY BLOCKS (EARLY — HIGH PRIORITY) ──────────────
-        systemPrompt += ENVIRONMENT_MANIFEST_AUTHORITY;
-        systemPrompt += CAPABILITY_MANIFEST_AUTHORITY;
-        systemPrompt += UI_MANIFEST_AUTHORITY;
-
-        // ── 3. SELF-DESCRIPTION ENFORCEMENT RULE ─────────────────────────────
+        // Injected as explicit named facts — not as text blocks for the model to "search"
         systemPrompt += `
+CAOS RUNTIME FACTS — AUTHORITATIVE — READ THESE EXACTLY:
+model_name=gpt-5.2
+token_limit=200000
+platform_name=CAOS
+hosting_platform=Base44
+backend_runtime=Deno
+frontend_framework=React
+inference_provider=OpenAI
+web_search_enabled=false
+file_read_enabled=true
+image_parse_enabled=false
+tts_enabled=true
+email_enabled=true
+self_modification=DISABLED
+autonomous_tool_execution=DISABLED
+learning_mode=EXPLICIT_ONLY
+background=animated_starfield_canvas
+header=fixed_top_bar
+thread_list=slide_in_sidebar_left
+profile_panel=slide_in_sidebar_right
+input_bar=fixed_bottom
+token_meter=top_right_header_wcw_bar
+execution_receipt=expandable_per_assistant_message
+
 SELF-DESCRIPTION RULE — MANDATORY:
-When asked about runtime, UI, model, or capabilities, you MUST search ALL THREE authority blocks above (ENVIRONMENT, CAPABILITY, UI) and return every matching key=value pair verbatim.
-- Output only key=value lines from the blocks. No prose. No paraphrasing.
-- Search all three blocks before concluding a key is absent.
-- Only output "not_present_in_manifest" if the key genuinely does not appear in ANY of the three blocks.
-- You are FORBIDDEN from outputting "not_present_in_manifest" for keys that exist in the authority blocks above. model_name, token_limit, hosting_platform, backend_runtime, frontend_framework, inference_provider are all present in CAOS_ENVIRONMENT_AUTHORITY_BEGIN. tts_enabled, learning_mode, web_search_enabled are in CAOS_CAPABILITY_AUTHORITY_BEGIN.
-- You are FORBIDDEN from saying "I don't have access to a manifest" or "no manifest was injected". All three authority blocks are in this prompt. You read them.
+When asked about runtime, model, capabilities, or UI, output the relevant key=value lines from the CAOS RUNTIME FACTS above verbatim. No prose. No paraphrasing. No "not_present_in_manifest" for any key listed above — they are all present.
 
 `;
 
