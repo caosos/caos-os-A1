@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        const {
+        let {
             userName = 'the user',
             kv = '',
             matchedMemories = [],
@@ -26,6 +26,16 @@ Deno.serve(async (req) => {
             hDepth = 'STANDARD',
             cogLevel = 3,
         } = body;
+
+        // Inject SSX_AUTHORITY_KV if not provided
+        if (!kv || kv.trim() === '') {
+            try {
+                const ssxRes = await base44.functions.invoke('core/systemStateIndex');
+                kv = ssxRes?.data?.kv_lines || '';
+            } catch (e) {
+                console.warn('Could not fetch SSX, using empty kv:', e.message);
+            }
+        }
 
         // ── 1. IDENTITY BLOCK ─────────────────────────────────────────────────
         let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
