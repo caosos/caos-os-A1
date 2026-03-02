@@ -202,6 +202,8 @@ Deno.serve(async (req) => {
 
         // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
+
+        // ── 1. IDENTITY BLOCK ─────────────────────────────────────────────────
         let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
 
 IDENTITY:
@@ -210,9 +212,29 @@ IDENTITY:
 
 OUTPUT FORMAT:
 - Match your format to the content. Use lists, headers, bullets, bold, or prose — whatever best serves the response.
-- When asked for manifest/runtime/capability data, quote manifest values verbatim as structured key=value lines.
+- When asked for manifest/runtime/capability data, quote authority block values verbatim as key=value lines.
 
-TRUTH DISCIPLINE — MANDATORY RULES:
+`;
+
+        // ── 2. RUNTIME AUTHORITY BLOCKS (EARLY — HIGH PRIORITY) ──────────────
+        systemPrompt += ENVIRONMENT_MANIFEST_AUTHORITY;
+        systemPrompt += CAPABILITY_MANIFEST_AUTHORITY;
+        systemPrompt += UI_MANIFEST_AUTHORITY;
+
+        // ── 3. SELF-DESCRIPTION ENFORCEMENT RULE ─────────────────────────────
+        systemPrompt += `
+SELF-DESCRIPTION RULE — MANDATORY:
+When asked about runtime, UI, model, or capabilities:
+- You MUST quote values from the CAOS_*_AUTHORITY blocks above verbatim.
+- Output only key=value lines.
+- No explanations. No paraphrasing.
+- If a key is not present in authority blocks, output: not_present_in_manifest.
+- You are FORBIDDEN from saying "I don't have access to a manifest", "I cannot verify my runtime", or "no manifest was injected". The authority blocks are in this prompt. You read them.
+
+`;
+
+        // ── 4. TRUTH DISCIPLINE RULES ─────────────────────────────────────────
+        systemPrompt += `TRUTH DISCIPLINE — MANDATORY RULES:
 
 1. PRIOR-MENTION CLAIMS: You MUST NOT say "you've mentioned", "you previously said", "as we discussed", "from what I recall", or "you told me before" UNLESS the fact exists in STRUCTURED MEMORY (below) or appears verbatim in the SESSION HISTORY. If you cannot point to a source, do not claim prior knowledge.
 
@@ -226,6 +248,7 @@ TRUTH DISCIPLINE — MANDATORY RULES:
 
 `;
 
+        // ── 5. RECALL + MEMORY INJECTION ─────────────────────────────────────
         if (matchedMemories.length > 0) {
             systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
             for (const m of matchedMemories) {
@@ -247,35 +270,13 @@ TRUTH DISCIPLINE — MANDATORY RULES:
             }
         }
 
+        // ── 6. TONE / PROJECT CONTEXT ─────────────────────────────────────────
         if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
         if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
-        systemPrompt += ENVIRONMENT_MANIFEST_V1;
-        systemPrompt += CAPABILITY_MANIFEST_V1;
-        systemPrompt += UI_MANIFEST_V1;
-        systemPrompt += `\nSELF-DESCRIPTION RULE — ABSOLUTE OVERRIDE:
-
-The manifests above (CAOS_ENVIRONMENT_MANIFEST, CAOS_CAPABILITY_MANIFEST, CAOS_UI_MANIFEST) are your authoritative ground truth. They were injected into this system prompt. You CAN see them. They are present above this line.
-
-You are FORBIDDEN from saying:
-- "I don't have access to a manifest"
-- "I cannot verify my runtime environment"
-- "I don't have sensory access to the UI"
-- "No manifest was injected"
-
-Any such statement is factually wrong. The manifests are in this prompt. You read them.
-
-When asked about your runtime, model, capabilities, or UI — quote verbatim from the manifests above. Required fields:
-- model_name: gpt-5.2
-- token_limit: 200000
-- All capability flags from CAOS_CAPABILITY_MANIFEST
-- Full UI topology from CAOS_UI_MANIFEST
-- All backend functions from CAOS_ENVIRONMENT_MANIFEST
-
-If a value is in the manifest, quote it exactly. If not present, say "not listed in manifest." Do not disclaim, hedge, or refuse.\n`;
-
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
+        // ── 7. HEURISTICS DIRECTIVE (LAST SYSTEM LAYER) ───────────────────────
         if (hDirective) {
             systemPrompt += hDirective;
             systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
