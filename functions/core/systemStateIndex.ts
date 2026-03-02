@@ -35,6 +35,7 @@ async function generateSystemState() {
     inference_provider: INFERENCE_PROVIDER,
     web_search_enabled: true,
     file_read_enabled: true,
+    image_parse_enabled: true,
     tts_enabled: true,
     learning_mode: true,
     protected_files: Object.keys(PROTECTED_FILES).length,
@@ -66,6 +67,7 @@ function generateKVLines(state) {
     `inference_provider=${state.inference_provider}`,
     `web_search_enabled=${state.web_search_enabled}`,
     `file_read_enabled=${state.file_read_enabled}`,
+    `image_parse_enabled=${state.image_parse_enabled}`,
     `tts_enabled=${state.tts_enabled}`,
     `learning_mode=${state.learning_mode}`,
     `build_id=${state.build_id}`

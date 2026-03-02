@@ -16,7 +16,7 @@ const RUNTIME_FACTS = {
     inference_provider: "OpenAI",
     web_search_enabled: true,
     file_read_enabled: true,
-    image_parse_enabled: false,
+    image_parse_enabled: true,
     tts_enabled: true,
     email_enabled: true,
     self_modification: "DISABLED",
