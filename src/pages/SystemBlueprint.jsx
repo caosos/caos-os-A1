@@ -67,6 +67,47 @@ export default function SystemBlueprint() {
       <ScrollArea className="h-[calc(100vh-6rem)]">
         <div className="max-w-4xl mx-auto space-y-4 pb-8">
 
+          {/* START HERE — NEW AGENT ONBOARDING */}
+          <div className="bg-red-950 border-2 border-red-400 rounded-xl p-6 mb-6">
+            <h2 className="text-red-300 font-black text-xl mb-3">🔴 NEW AGENT — START HERE BEFORE DOING ANYTHING</h2>
+            <p className="text-white text-sm mb-4">If this is the beginning of a new builder session, paste this entire block as your first message to the agent:</p>
+            <pre className="bg-black/60 border border-red-500/40 rounded-lg p-4 text-xs text-green-300 whitespace-pre-wrap select-all">{`YOU ARE A NEW AGENT INHERITING THE CAOS CODEBASE.
+STOP. DO NOT TOUCH ANYTHING YET.
+
+Your first and only job right now is to read the System Blueprint.
+Use the read_file tool on: pages/SystemBlueprint
+
+Read ALL of it — especially:
+  - Section 0: Agent Onboarding Contract (standing rules — non-negotiable)
+  - Section 2: hybridMessage pipeline (the spine — LOCKED)
+  - Section 9: What is NOT yet active (don't accidentally activate it)
+  - The TSB log: know what has broken before and why
+
+LOCKED FILES — DO NOT TOUCH WITHOUT EXPLICIT OWNER APPROVAL + TSB ENTRY:
+  - functions/hybridMessage
+  - functions/textToSpeech
+  - functions/transcribeAudio
+  - components/chat/ChatBubble (TTS path)
+  - components/chat/VoiceSettings
+  - components/chat/ChatInputReadAloud
+  - functions/core/memoryEngine
+  - functions/core/heuristicsEngine
+  - functions/core/receiptWriter
+  - functions/core/errorEnvelopeWriter
+
+RULES (from Section 0):
+  1. Never modify a LOCKED file without a TSB entry + owner approval in THIS session
+  2. Max 200 lines preferred / 400 lines hard limit per file
+  3. Build → Test → Lock. Nothing ships without all three gates.
+  4. No silent writes. No background state changes.
+  5. Pull-only awareness. No polling, no push-based state injection.
+  6. Aria ≠ CAOS. Never conflate the persona with the platform.
+
+Do not confirm you've read it. Do not ask what to do next.
+Wait for the owner to tell you what they need.`}</pre>
+            <p className="text-red-300 text-xs mt-3 font-semibold">Copy the block above and paste it as the FIRST message in any new builder session. A new session starts when the chat resets or the page reloads.</p>
+          </div>
+
           {/* HEADER */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint</h1>
