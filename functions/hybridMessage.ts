@@ -250,12 +250,10 @@ TRUTH DISCIPLINE — MANDATORY RULES:
         if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
         if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
-        systemPrompt += `
-CAOS_CAPABILITY_MANIFEST_v1:
-${JSON.stringify(CapabilityManifest, null, 2)}
-
-If the user asks about architecture, capabilities, runtime, memory, what's been built, or system state — answer from this manifest only. Do not fabricate or infer beyond it.
-`;
+        systemPrompt += ENVIRONMENT_MANIFEST_V1;
+        systemPrompt += CAPABILITY_MANIFEST_V1;
+        systemPrompt += UI_MANIFEST_V1;
+        systemPrompt += `\nIf the user asks about architecture, capabilities, runtime, or system state — answer from the manifests above only. Do not fabricate or infer beyond them.\n`;
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
