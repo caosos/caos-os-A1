@@ -108,23 +108,45 @@ export default function FileManager({ user, viewType = 'files', conversationId =
     }
   };
 
+  const filteredFiles = files.filter(f => 
+    f.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    f.url?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
-        <span className="text-white text-sm font-mono">{viewType === 'photos' ? 'Photos' : 'Files'}</span>
+        <span className="text-white text-sm font-mono">
+          {viewType === 'photos' ? 'Photos' : viewType === 'links' ? 'Saved Links' : 'Files'}
+        </span>
         
-        <label className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors cursor-pointer flex items-center gap-2">
-          <Upload className="w-3 h-3" />
-          {uploading ? 'Uploading...' : 'Upload'}
-          <input
-            type="file"
-            onChange={handleUpload}
-            className="hidden"
-            disabled={uploading}
-          />
-        </label>
+        {viewType !== 'links' && (
+          <label className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors cursor-pointer flex items-center gap-2">
+            <Upload className="w-3 h-3" />
+            {uploading ? 'Uploading...' : 'Upload'}
+            <input
+              type="file"
+              onChange={handleUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+        )}
       </div>
+
+      {/* Search Bar */}
+      {files.length > 0 && (
+        <div className="p-3 border-b border-white/10">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white text-xs placeholder-white/50"
+          />
+        </div>
+      )}
 
       {/* File Grid */}
       <div className="flex-1 overflow-y-auto p-4">
