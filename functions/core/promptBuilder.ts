@@ -127,7 +127,7 @@ No other output.
             }
         }
 
-        // ── 6. TONE / PROJECT ─────────────────────────────────────────────────
+        // ── 7. TONE / PROJECT ─────────────────────────────────────────────────
         if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
         if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
