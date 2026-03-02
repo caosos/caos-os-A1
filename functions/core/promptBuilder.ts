@@ -133,7 +133,12 @@ No other output.
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
-        // ── 8. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
+        // ── 8. WEB SEARCH CAPABILITY ──────────────────────────────────────────
+        if (webSearchEnabled) {
+            systemPrompt += `\nCAPABILITY: You can run web searches automatically for time-sensitive queries. Results are included above if found. Always cite sources from web results.`;
+        }
+
+        // ── 9. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
         if (hDirective) {
             systemPrompt += hDirective;
             systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
