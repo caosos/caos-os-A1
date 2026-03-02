@@ -56,7 +56,7 @@ function compressHistory(messages) {
     const head = messages.slice(0, HOT_HEAD);
     const tail = messages.slice(-HOT_TAIL);
     const middleCount = messages.length - HOT_HEAD - HOT_TAIL;
-    return [...head, { role: 'system', content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]` }, ...tail];
+    return [...head, { role: 'assistant', content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]` }, ...tail];
 }
 
 // ─── OPENAI CALL (pure HTTP — stays inline) ───────────────────────────────────
