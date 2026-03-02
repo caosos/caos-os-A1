@@ -14,6 +14,7 @@ import ExecutionReceipt from './ExecutionReceipt';
 import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
+import YouTubeEmbed from './YouTubeEmbed';
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);
