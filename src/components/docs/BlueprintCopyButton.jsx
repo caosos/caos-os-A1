@@ -4,14 +4,36 @@ import { Copy, Check } from 'lucide-react';
 export default function BlueprintCopyButton() {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const container = document.getElementById('blueprint-content');
     if (!container) return;
-    const text = container.innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+
+    // Find all collapsed section content divs (hidden ones)
+    // Each Section renders a button + a div that's only present when open
+    // We'll click all closed toggle buttons, grab text, then click them back
+
+    const toggleButtons = Array.from(container.querySelectorAll('button[data-section-toggle]'));
+    const wasOpen = toggleButtons.map(btn => btn.getAttribute('data-open') === 'true');
+
+    // Open all closed sections
+    toggleButtons.forEach((btn, i) => {
+      if (!wasOpen[i]) btn.click();
     });
+
+    // Wait a tick for React to re-render
+    await new Promise(r => setTimeout(r, 100));
+
+    const text = container.innerText;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+
+    // Restore original state — close the ones we opened
+    await new Promise(r => setTimeout(r, 50));
+    toggleButtons.forEach((btn, i) => {
+      if (!wasOpen[i]) btn.click();
+    });
+
+    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
