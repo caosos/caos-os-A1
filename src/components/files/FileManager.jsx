@@ -94,11 +94,9 @@ export default function FileManager({ user, viewType = 'files' }) {
           {files.map((file) => (
             <div
               key={file.id}
-              className="group relative bg-white/5 border border-white/10 rounded-lg p-3 hover:bg-white/10 transition-colors cursor-pointer"
-              onClick={() => file.type === 'folder' ? openFolder(file) : null}
+              className="group relative bg-white/5 border border-white/10 rounded-lg p-3 hover:bg-white/10 transition-colors"
             >
               <div className="flex flex-col items-center gap-2">
-                {file.type === 'folder' && <Folder className="w-10 h-10 text-blue-400" />}
                 {file.type === 'photo' && file.url && (
                   <img src={file.url} alt={file.name} className="w-full h-20 object-cover rounded" />
                 )}
@@ -116,7 +114,6 @@ export default function FileManager({ user, viewType = 'files' }) {
                     href={file.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
                     className="p-1 bg-white/20 rounded hover:bg-white/30"
                   >
                     <Download className="w-3 h-3 text-white" />
@@ -138,8 +135,8 @@ export default function FileManager({ user, viewType = 'files' }) {
 
         {files.length === 0 && (
           <div className="flex flex-col items-center justify-center h-64 text-white/50">
-            <Folder className="w-16 h-16 mb-2" />
-            <p className="text-sm">No files yet</p>
+            <Image className="w-16 h-16 mb-2" />
+            <p className="text-sm">No {viewType === 'photos' ? 'photos' : 'files'} yet</p>
           </div>
         )}
       </div>
