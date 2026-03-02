@@ -37,7 +37,6 @@ const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 100;
 const HOT_TAIL = 40;
 const HOT_HEAD = 15;
-const MAX_ANCHOR_LENGTH = 3000;
 const MODEL_CONTEXT_WINDOW = {
     'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
     'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
