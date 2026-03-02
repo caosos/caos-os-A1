@@ -14,7 +14,7 @@ const RUNTIME_FACTS = {
     backend_runtime: "Deno",
     frontend_framework: "React",
     inference_provider: "OpenAI",
-    web_search_enabled: false,
+    web_search_enabled: true,
     file_read_enabled: true,
     image_parse_enabled: false,
     tts_enabled: true,
