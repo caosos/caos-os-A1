@@ -42,7 +42,7 @@ export default function FileManager({ user, viewType = 'files' }) {
         name: file.name,
         url: result.file_url,
         type: type,
-        folder_path: currentPath,
+        folder_path: '/',
         size: file.size,
         mime_type: file.type
       });
