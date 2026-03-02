@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import BlueprintCopyButton from '@/components/docs/BlueprintCopyButton';
 
 const Section = ({ title, color = 'blue', children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
