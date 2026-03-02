@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
 
 const TIME_SENSITIVE_KEYWORDS = [
   'today', 'latest', 'current', 'news', 'price of', 'weather', 'stock', 'score',
@@ -6,7 +7,9 @@ const TIME_SENSITIVE_KEYWORDS = [
   'as of', 'happening', 'trending', 'recent', 'live', 'now'
 ];
 
-function detectExternalKnowledgeNeed(userInput) {
+function detectExternalKnowledgeNeed(userInput, webSearchEnabled) {
+  if (!webSearchEnabled) return false;
+  
   const lower = userInput.toLowerCase();
   
   for (const keyword of TIME_SENSITIVE_KEYWORDS) {
