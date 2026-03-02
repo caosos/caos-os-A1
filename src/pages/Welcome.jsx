@@ -16,10 +16,14 @@ export default function Welcome() {
   const [checking, setChecking] = useState(true);
   const authCheckRef = React.useRef(false);
 
-  // Check authentication status on mount — LOCKED AGAINST INFINITE LOOP
+  // ─── AUTH CHECK — LOCKED v2 2026-03-02 ───────────────────────────────────────
+  // DO NOT ADD sessionStorage/localStorage locks here. OAuth redirects back to this
+  // page on every login — any persistent flag will block the post-OAuth auth check
+  // and cause a 404/broken state. The useRef guard is sufficient: it prevents double
+  // execution within a single render cycle only, and correctly resets on each
+  // full-page navigation (including OAuth return). DO NOT CHANGE THIS LOGIC.
+  // ─────────────────────────────────────────────────────────────────────────────
   React.useEffect(() => {
-    // Prevent double-run within same render cycle only — do NOT block on sessionStorage
-    // (OAuth redirects back here and need a fresh auth check every time)
     if (authCheckRef.current) {
       setChecking(false);
       return;
