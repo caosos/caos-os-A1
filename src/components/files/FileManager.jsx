@@ -74,36 +74,18 @@ export default function FileManager({ user, viewType = 'files' }) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          {currentPath !== '/' && (
-            <button
-              onClick={goBack}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 text-white/70" />
-            </button>
-          )}
-          <span className="text-white text-sm font-mono">{currentPath || '/'}</span>
-        </div>
+        <span className="text-white text-sm font-mono">{viewType === 'photos' ? 'Photos' : 'Files'}</span>
         
-        <div className="flex gap-2">
-          <button
-            onClick={createFolder}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
-          >
-            New Folder
-          </button>
-          <label className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors cursor-pointer flex items-center gap-2">
-            <Upload className="w-3 h-3" />
-            {uploading ? 'Uploading...' : 'Upload'}
-            <input
-              type="file"
-              onChange={handleUpload}
-              className="hidden"
-              disabled={uploading}
-            />
-          </label>
-        </div>
+        <label className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors cursor-pointer flex items-center gap-2">
+          <Upload className="w-3 h-3" />
+          {uploading ? 'Uploading...' : 'Upload'}
+          <input
+            type="file"
+            onChange={handleUpload}
+            className="hidden"
+            disabled={uploading}
+          />
+        </label>
       </div>
 
       {/* File Grid */}
