@@ -49,19 +49,19 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Query required' }, { status: 400 });
     }
 
-    const rawResults = await performBingSearch(query, Math.min(limit, 10));
+    const rawResults = await performWebSearch(base44, query, Math.min(limit, 10));
     const structuredResults = structureResults(rawResults);
     const payload = {
       tool_name: 'web.search',
       tool_version: 'WEB_v1_2026-03-02',
-      source: RUNTIME_AUTHORITY.capabilities.web_search.provider,
+      source: 'openai_llm_web_context',
       results: structuredResults
     };
 
     const hash = await computeHash(structuredResults);
 
     return Response.json({
-      ...payload,
+      results: structuredResults,
       hash: `sha256:${hash}`,
       timestamp: new Date().toISOString()
     });
