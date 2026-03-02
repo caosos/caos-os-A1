@@ -157,7 +157,7 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
               </div>
 
               {/* File Management Buttons */}
-              <div className="grid grid-cols-2 gap-2 mb-6">
+              <div className="grid grid-cols-3 gap-2 mb-6">
                 <button
                   onClick={() => setActiveView('files')}
                   className="flex items-center gap-2 p-3 bg-green-500/10 hover:bg-green-500/20 rounded-lg border border-green-500/30 transition-colors"
@@ -171,6 +171,13 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                 >
                   <ImageIcon className="w-4 h-4 text-purple-400" />
                   <span className="text-white text-xs">Photos</span>
+                </button>
+                <button
+                  onClick={() => setActiveView('links')}
+                  className="flex items-center gap-2 p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg border border-blue-500/30 transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  <span className="text-white text-xs">Links</span>
                 </button>
               </div>
 
