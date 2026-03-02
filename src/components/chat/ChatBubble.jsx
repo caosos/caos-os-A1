@@ -738,19 +738,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               const vimeoId = getVimeoId(url);
 
               if (youtubeId) {
-                return (
-                  <div key={idx} className="w-full rounded-xl overflow-hidden border border-white/20 shadow-lg">
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                      <iframe
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        src={`https://www.youtube.com/embed/${youtubeId}`}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                  </div>
-                );
+                return <YouTubeEmbed key={idx} videoId={youtubeId} url={url} />;
               }
 
               if (vimeoId) {
