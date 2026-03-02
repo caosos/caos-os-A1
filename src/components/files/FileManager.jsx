@@ -3,13 +3,14 @@ import { FileText, Image, Upload, Trash2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function FileManager({ user, viewType = 'files' }) {
+export default function FileManager({ user, viewType = 'files', conversationId = null }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadFiles();
-  }, [viewType]);
+  }, [viewType, conversationId]);
 
   const loadFiles = async () => {
     try {
@@ -19,12 +20,49 @@ export default function FileManager({ user, viewType = 'files' }) {
         filter.type = 'photo';
       } else if (viewType === 'files') {
         filter.type = 'file';
+      } else if (viewType === 'links') {
+        // Links are handled differently
+        return loadLinks();
       }
 
       const userFiles = await base44.entities.UserFile.filter(filter, '-created_date', 1000);
       setFiles(userFiles);
     } catch (error) {
       console.error('Error loading files:', error);
+    }
+  };
+
+  const loadLinks = async () => {
+    try {
+      const allMessages = await base44.entities.Message.list('-created_date', 1000);
+      const links = [];
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const seenUrls = new Set();
+
+      allMessages.forEach(msg => {
+        if (msg.content) {
+          const matches = msg.content.match(urlRegex);
+          if (matches) {
+            matches.forEach(url => {
+              if (!seenUrls.has(url)) {
+                seenUrls.add(url);
+                const title = new URL(url).hostname.replace('www.', '');
+                links.push({
+                  id: url,
+                  name: title,
+                  url: url,
+                  type: 'link',
+                  timestamp: msg.timestamp
+                });
+              }
+            });
+          }
+        }
+      });
+
+      setFiles(links.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+    } catch (error) {
+      console.error('Error loading links:', error);
     }
   };
 
