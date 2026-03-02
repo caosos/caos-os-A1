@@ -32,8 +32,6 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    // Try to match Google voice preference
-    const voices = window.speechSynthesis.getVoices();
     const voicePref = localStorage.getItem('caos_google_voice') || 'Google US English';
     const voiceMap = {
       'Google US English': 'en-US',
@@ -43,8 +41,6 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       'Google German': 'de-DE',
     };
     const langCode = voiceMap[voicePref] || 'en-US';
-    const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-    if (selectedVoice) utterance.voice = selectedVoice;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);
@@ -53,8 +49,30 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       toast.error('Google Voice read-aloud failed');
     };
 
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    // Voices load async — wait for them if not yet available, then speak
+    const speakWithVoice = (voices) => {
+      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+      if (selectedVoice) utterance.voice = selectedVoice;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      speakWithVoice(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        speakWithVoice(window.speechSynthesis.getVoices());
+      };
+      // Fallback: speak after 300ms even if voices never fire
+      setTimeout(() => {
+        if (!window.speechSynthesis.speaking) {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 300);
+    }
   } catch (error) {
     setIsPlaying(false);
     console.error('[GOOGLE_VOICE_ERROR]', error.message);
