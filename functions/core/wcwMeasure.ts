@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
 
 Deno.serve(async (req) => {
     try {
@@ -7,7 +8,7 @@ Deno.serve(async (req) => {
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        const { messages = [], model_name = "gpt-4o", token_budget = 128000 } = body;
+        const { messages = [], model_name = RUNTIME_AUTHORITY.runtime.model_name, token_budget = RUNTIME_AUTHORITY.runtime.token_limit } = body;
 
         const ts_iso = new Date().toISOString();
         const request_id = crypto.randomUUID();

@@ -4,6 +4,7 @@
 // OUTPUT: { systemPrompt }
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
 
 const HOT_HEAD = 15;
 const HOT_TAIL = 40;
