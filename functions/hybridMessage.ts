@@ -211,6 +211,12 @@ Deno.serve(async (req) => {
         // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
 
+        // ── INVOKE selfDescribe MODULE (single source of truth) ───────────────
+        const sdRes = await base44.functions.invoke('core/selfDescribe', {});
+        const selfDesc = sdRes?.data || {};
+        const kv = selfDesc.kv_lines || `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nhosting_platform=Base44\nbackend_runtime=Deno\nfrontend_framework=React\ninference_provider=OpenAI\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=EXPLICIT_ONLY`;
+        console.log('🔑 [SELF_DESCRIBE]', { kv_length: kv.length, has_model: kv.includes('model_name=') });
+
         // ── 1. IDENTITY BLOCK ─────────────────────────────────────────────────
         let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
 
@@ -220,39 +226,34 @@ IDENTITY:
 
 OUTPUT FORMAT:
 - Match your format to the content. Use lists, headers, bullets, bold, or prose — whatever best serves the response.
-- When asked for manifest/runtime/capability data, quote authority block values verbatim as key=value lines.
+- When asked for manifest/runtime/capability data, output ONLY verbatim key=value lines from CAOS_AUTHORITY_KV_BEGIN below.
 
 `;
 
-        // ── 2. RUNTIME AUTHORITY BLOCKS (EARLY — HIGH PRIORITY) ──────────────
-        // Injected as explicit named facts — not as text blocks for the model to "search"
-        systemPrompt += `
-CAOS RUNTIME FACTS — AUTHORITATIVE — READ THESE EXACTLY:
-model_name=gpt-5.2
-token_limit=200000
-platform_name=CAOS
-hosting_platform=Base44
-backend_runtime=Deno
-frontend_framework=React
-inference_provider=OpenAI
-web_search_enabled=false
-file_read_enabled=true
-image_parse_enabled=false
-tts_enabled=true
-email_enabled=true
-self_modification=DISABLED
-autonomous_tool_execution=DISABLED
-learning_mode=EXPLICIT_ONLY
-background=animated_starfield_canvas
-header=fixed_top_bar
-thread_list=slide_in_sidebar_left
-profile_panel=slide_in_sidebar_right
-input_bar=fixed_bottom
-token_meter=top_right_header_wcw_bar
-execution_receipt=expandable_per_assistant_message
+        // ── 2. SINGLE AUTHORITY KV BLOCK (from selfDescribe module) ──────────
+        systemPrompt += `CAOS_AUTHORITY_KV_BEGIN
+${kv}
+CAOS_AUTHORITY_KV_END
 
 SELF-DESCRIPTION RULE — MANDATORY:
-When asked about runtime, model, capabilities, or UI, output the relevant key=value lines from the CAOS RUNTIME FACTS above verbatim. No prose. No paraphrasing. No "not_present_in_manifest" for any key listed above — they are all present.
+When asked: "Describe your runtime environment using ONLY verbatim manifest values."
+You MUST output ONLY the following keys in this exact order:
+model_name
+token_limit
+platform_name
+hosting_platform
+backend_runtime
+frontend_framework
+inference_provider
+web_search_enabled
+file_read_enabled
+tts_enabled
+learning_mode
+
+For each key:
+- If present in CAOS_AUTHORITY_KV_BEGIN block above, output the exact key=value line.
+- Otherwise output: key=not_present_in_manifest
+No other output.
 
 `;
 
