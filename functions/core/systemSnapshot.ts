@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
 
 Deno.serve(async (req) => {
     try {
@@ -16,35 +17,26 @@ Deno.serve(async (req) => {
         let ssx = {};
         let kv_lines = [];
 
-        ssx.build_id = "CAOS_BUILD_2026-03-02_v1.0.0";
+        ssx.build_id = RUNTIME_AUTHORITY.build_id;
 
         if (include.runtime) {
-            ssx.runtime = {
-                model_name: "gpt-4o",
-                token_limit: 128000,
-                platform_name: "CAOS",
-                hosting_platform: "Base44",
-                backend_runtime: "Deno",
-                frontend_framework: "React",
-                inference_provider: "OpenAI"
-            };
+            ssx.runtime = RUNTIME_AUTHORITY.runtime;
             Object.entries(ssx.runtime).forEach(([key, value]) => kv_lines.push(`${key}=${value}`));
         }
 
         if (include.tooling) {
             ssx.tooling = {
-                web_search_enabled: true,
-                file_read_enabled: true,
-                tts_enabled: true,
-                image_parse_enabled: true,
-                pdf_generation_enabled: false,
-                calendar_enabled: false
+                web_search: RUNTIME_AUTHORITY.capabilities.web_search,
+                file_read: RUNTIME_AUTHORITY.capabilities.file_read,
+                file_write: RUNTIME_AUTHORITY.capabilities.file_write,
+                vision: RUNTIME_AUTHORITY.capabilities.vision,
+                tts: RUNTIME_AUTHORITY.capabilities.tts
             };
         }
 
         if (include.governance) {
             ssx.governance = {
-                learning_mode: "EXPLICIT_ONLY",
+                learning_mode: RUNTIME_AUTHORITY.capabilities.learning_mode,
                 autonomous_tool_execution: false,
                 self_modification: false,
                 anchor_auto_extraction: false,
