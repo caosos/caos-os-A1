@@ -475,55 +475,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
             <Code>{"Welcome - auth gate (Google sign-in, email, guest mode)\nChat - main interface (all chat logic lives here)\nAdmin - admin dashboard (errors, stats, pipeline visualizer)\nConsole - SSH/terminal console view\nImplementation - CAOS-A1 Python backend blueprint (FastAPI + SQLite)\nMemoryIsolation - memory isolation architecture docs\nSystemBlueprint - THIS FILE (living architecture doc)\nNews - news feed page"}</Code>
 
             <h4 className="text-white font-semibold mt-3">Key Components:</h4>
-            <Code>{`components/chat/
-            ChatBubble          — message rendering (markdown, code, reactions, thread replies,
-                         execution receipts, file attachments, inline link preview)
-            ChatBubbleReadAloud — OpenAI TTS read-aloud handler (LOCKED)
-            ChatHeader          — header (thread controls, search trigger, token meter)
-            ChatInput           — input bar (file upload, voice recording, screen capture,
-                         camera photo, Google Web Speech TTS, multi-agent toggle)
-            ChatInputReadAloud  — Google Web Speech read-aloud handler (LOCKED)
-            VoiceSettings       — OpenAI TTS voice/speed config modal (LOCKED)
-            ThreadList          — conversation sidebar with rename/delete
-            ProfilePanel        — user profile, file manager, memory panel, mode switches
-            TokenMeter          — WCW usage bar (live from DiagnosticReceipt or estimated)
-            WCWStatusBadge      — WCW regulated/nominal status pill
-            ConversationSearch  — in-thread message search with jump-to highlight
-            StarfieldBackground — animated WebGL canvas starfield backdrop
-            WelcomeGreeting     — randomized greeting on empty thread
-            ExecutionReceipt    — expandable pipeline debug receipt on AI messages
-            LatencyIndicator    — response time display on AI messages
-            LaneSelector        — lane/topic context selector (built, UI wired)
-            ContinuityToken     — session context export dialog
-            TextSelectionMenu   — floating action menu on selected message text
-            CopyBlock           — code block copy-to-clipboard helper
-            LinkPreview         — auto-fetch URL preview cards in messages
-            ThreadSummary       — thread summary display component
-            QuickActionBar      — quick action shortcuts below chat
-            DegradationNotice   — shows when fallback/degraded mode is active
-
-            components/game/
-            GameView            — embedded game iframe viewer (token-gated)
-
-            components/terminal/
-            CodeTerminal        — in-app code terminal panel (developer mode)
-
-            components/mobile/
-            BottomNavBar        — mobile bottom navigation bar
-
-            components/admin/
-            StatsViewer         — message/conversation stats
-            RecentErrors        — ErrorLog viewer with ODEL envelope rendering
-            PipelineVisualizer  — hybridMessage stage visualization
-            WCWMonitor          — working context window budget monitor
-            SystemHealth        — systemHealth function display
-            SessionSelector     — session picker for admin views
-            RoutesViewer        — function routing audit
-
-            components/profile/
-            MemoryPanel         — structured_memory viewer + legacy anchors
-
-            components/docs/       — architecture doc snapshot components (read-only views)`}</Code>
+            <Code>{"components/chat:\nChatBubble - message rendering (markdown, code, reactions, thread replies, execution receipts, file attachments, inline link preview)\nChatBubbleReadAloud - OpenAI TTS read-aloud handler (LOCKED)\nChatHeader - header (thread controls, search trigger, token meter)\nChatInput - input bar (file upload, voice recording, screen capture, camera photo, Google Web Speech TTS, multi-agent toggle)\nChatInputReadAloud - Google Web Speech read-aloud handler (LOCKED)\nVoiceSettings - OpenAI TTS voice/speed config modal (LOCKED)\nThreadList - conversation sidebar with rename/delete\nProfilePanel - user profile, file manager, memory panel, mode switches\nTokenMeter - WCW usage bar (live from DiagnosticReceipt or estimated)\nWCWStatusBadge - WCW regulated/nominal status pill\nConversationSearch - in-thread message search with jump-to highlight\nStarfieldBackground - animated WebGL canvas starfield backdrop\nWelcomeGreeting - randomized greeting on empty thread\nExecutionReceipt - expandable pipeline debug receipt on AI messages\nLatencyIndicator - response time display on AI messages\nLaneSelector - lane/topic context selector (built, UI wired)\nContinuityToken - session context export dialog\nTextSelectionMenu - floating action menu on selected message text\nCopyBlock - code block copy-to-clipboard helper\nLinkPreview - auto-fetch URL preview cards in messages\nThreadSummary - thread summary display component\nQuickActionBar - quick action shortcuts below chat\nDegradationNotice - shows when fallback/degraded mode is active\n\ncomponents/game:\nGameView - embedded game iframe viewer (token-gated)\n\ncomponents/terminal:\nCodeTerminal - in-app code terminal panel (developer mode)\n\ncomponents/mobile:\nBottomNavBar - mobile bottom navigation bar\n\ncomponents/admin:\nStatsViewer - message/conversation stats\nRecentErrors - ErrorLog viewer with ODEL envelope rendering\nPipelineVisualizer - hybridMessage stage visualization\nWCWMonitor - working context window budget monitor\nSystemHealth - systemHealth function display\nSessionSelector - session picker for admin views\nRoutesViewer - function routing audit\n\ncomponents/profile:\nMemoryPanel - structured_memory viewer + legacy anchors\n\ncomponents/docs - architecture doc snapshot components (read-only views)"}</Code>
 
             <h4 className="text-white font-semibold mt-3">Modes (localStorage flags):</h4>
             <Code>{`caos_developer_mode        — shows resizable code terminal panel (right panel)
