@@ -224,9 +224,21 @@ Deno.serve(async (req) => {
         const kv = sdRes?.data?.kv_lines || 'model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS';
         console.log('🔑 [SELF_DESCRIBE]', { kv_length: kv.length, has_model: kv.includes('model_name=') });
 
+        // Conditionally invoke webSearch if enabled and needed
+        let webSearchResults = [];
+        if (webSearchEnabled && webSearchNeeded) {
+          try {
+            const wsRes = await base44.functions.invoke('core/webSearch', { query: input, limit: 5 });
+            webSearchResults = wsRes?.data?.results || [];
+            console.log('✅ [WEB_SEARCH_EXECUTED]', { result_count: webSearchResults.length });
+          } catch (e) {
+            console.warn('⚠️ [WEB_SEARCH_FAILED]', e.message);
+          }
+        }
+
         const pbRes2 = await base44.functions.invoke('core/promptBuilder', {
             userName, kv, matchedMemories, userProfile, rawHistory,
-            hDirective, hDepth, cogLevel
+            hDirective, hDepth, cogLevel, webSearchResults, webSearchEnabled
         });
         const systemPrompt = pbRes2?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
 
