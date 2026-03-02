@@ -1,35 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
 
-async function performBingSearch(query, limit = 5) {
-  const bingApiKey = Deno.env.get('BING_SEARCH_API_KEY');
-  if (!bingApiKey) {
-    throw new Error('BING_SEARCH_API_KEY not configured');
-  }
-
-  const encodedQuery = encodeURIComponent(query);
-  const url = `https://api.bing.microsoft.com/v7.0/search?q=${encodedQuery}&count=${limit}`;
-
-  const response = await fetch(url, {
-    headers: { 'Ocp-Apim-Subscription-Key': bingApiKey },
-    signal: AbortSignal.timeout(RUNTIME_AUTHORITY.safeguards.max_request_timeout_ms)
+async function performWebSearch(base44, query, limit = 5) {
+  // Use LLM with web search context instead of external API
+  const result = await base44.integrations.Core.InvokeLLM({
+    prompt: `Perform a web search for: "${query}"\n\nReturn results as JSON array with fields: title, url, snippet, published. Return ONLY valid JSON, no markdown or prose.`,
+    add_context_from_internet: true
   });
 
-  if (!response.ok) {
-    throw new Error(`Bing API error: ${response.status}`);
+  try {
+    const parsed = JSON.parse(result);
+    return Array.isArray(parsed) ? parsed.slice(0, limit) : [];
+  } catch {
+    return [];
   }
-
-  const data = await response.json();
-  return data.webPages?.value || [];
 }
 
 function structureResults(rawResults) {
-  return rawResults.map(item => ({
-    title: item.name,
-    url: item.url,
-    snippet: item.snippet,
-    published: item.datePublished || null
-  }));
+  return (Array.isArray(rawResults) ? rawResults : []).map(item => ({
+    title: item.title || item.name || '',
+    url: item.url || '',
+    snippet: item.snippet || item.description || '',
+    published: item.published || item.datePublished || null
+  })).filter(r => r.url);
 }
 
 async function computeHash(payload) {
