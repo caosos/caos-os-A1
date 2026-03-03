@@ -1860,7 +1860,11 @@ END TOKEN`}</pre>
 - Section 0.8: Authority Domain Separation (LOCKED — Aria ≠ CAOS, no boundary blur)
 - Section 0.9: Pull-Only Awareness Rule (LOCKED — pull-based only, no push/polling)
 - Active model is gpt-5.2 (not gpt-4o — Section 1 updated Mar 1, 2026)
-- PHASE B and PHASE C are governance invariants, locked before audio work begins`}</Code>
+- PHASE B and PHASE C are governance invariants, locked before audio work begins
+- TSB-015: Files/Photos/Links panel fixed (Mar 3, 2026) — persistent storage, correct nav
+- TSB-016: Chat.jsx flagged for refactor (1341 lines, hard limit 400) — PENDING
+- File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
+- pages/Chat.jsx MUST be refactored before next feature is added (see TSB-016 + Section 10)`}</Code>
           </Section>
 
         </div>
