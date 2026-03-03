@@ -131,14 +131,9 @@ Deno.serve(async (req) => {
         // ── STAGE: PROFILE_LOAD ───────────────────────────────────────────────
         setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
-        let environmentState = null;
         try {
-            const [profiles, envRes] = await Promise.all([
-                base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1),
-                base44.functions.invoke('core/environmentLoader', { action: 'load', user_id: user.email }).catch(() => null)
-            ]);
+            const profiles = await base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1);
             userProfile = profiles?.[0] || null;
-            environmentState = envRes?.data || null;
         } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
 
         // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
