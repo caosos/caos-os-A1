@@ -128,7 +128,39 @@ No other output.
             }
         }
 
-        // ── 7. TONE / PROJECT ─────────────────────────────────────────────────
+        // ── 7. CROSS-THREAD AWARENESS ─────────────────────────────────────────
+        if (environmentState && environmentState.active_thread_count > 0) {
+            const recentThreads = (environmentState.recent_threads || []).slice(0, 10);
+            const themes = environmentState.cross_thread_themes || [];
+            const openLoopThreads = environmentState.threads_with_open_loops || [];
+
+            systemPrompt += `\nCROSS-THREAD AWARENESS (you can see all of ${userName}'s threads):\n`;
+            systemPrompt += `Total threads: ${environmentState.active_thread_count}\n`;
+
+            if (recentThreads.length > 0) {
+                systemPrompt += `Recent threads:\n`;
+                recentThreads.forEach(t => {
+                    const tags = t.topic_tags?.length ? ` [${t.topic_tags.slice(0, 3).join(', ')}]` : '';
+                    const summary = t.summary_short ? ` — ${t.summary_short.substring(0, 120)}` : '';
+                    systemPrompt += `  • "${t.title}"${tags}${summary}\n`;
+                });
+            }
+
+            if (openLoopThreads.length > 0) {
+                systemPrompt += `Threads with open loops:\n`;
+                openLoopThreads.forEach(t => {
+                    systemPrompt += `  • "${t.title}": ${t.open_loops.substring(0, 150)}\n`;
+                });
+            }
+
+            if (themes.length > 0) {
+                systemPrompt += `Cross-thread themes: ${themes.join(', ')}\n`;
+            }
+
+            systemPrompt += `You may reference past work across threads naturally. Do not list all threads unless asked.\n\n`;
+        }
+
+        // ── 8. TONE / PROJECT ─────────────────────────────────────────────────
         if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
         if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
 
