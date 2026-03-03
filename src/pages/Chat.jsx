@@ -24,28 +24,37 @@ import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
 
 export default function Chat() {
-  const [user, setUser] = useState(null);
-  const [currentConversationId, setCurrentConversationId] = useState(null);
-  const [conversations, setConversations] = useState([]);
+  const { user, isGuestMode, dataLoaded } = useAuthBootstrap();
+
   const [messages, setMessages] = useState({});
+  const [wcwState, setWcwState] = useState({ used: null, budget: null });
+
+  const {
+    conversations,
+    setConversations,
+    currentConversationId,
+    setCurrentConversationId,
+    handleNewThread,
+    handleDeleteConversation,
+    handleRenameConversation,
+    handleSessionResume,
+  } = useConversations({ user, isGuestMode, messages, setMessages, setWcwState });
+
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [fileView, setFileView] = useState(null);
   const [showToken, setShowToken] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [closeMenuTrigger, setCloseMenuTrigger] = useState(0);
   const [showTerminal, setShowTerminal] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState([]);
   const [multiAgentMode, setMultiAgentMode] = useState(localStorage.getItem('caos_multi_agent_mode') === 'true');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [availableTokens, setAvailableTokens] = useState(0);
-  const [wcwState, setWcwState] = useState({ used: null, budget: null });
   const [currentLane, setCurrentLane] = useState(() => localStorage.getItem('caos_current_lane') || 'general');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
-  const navigate = useNavigate();
   const [messageInputValue, setMessageInputValue] = useState('');
 
   // Helper to set message in input
