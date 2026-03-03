@@ -33,6 +33,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const audioAnalyserRef = useRef(null);
   const audioLevelRafRef = useRef(null);
 
+  // Preload voices on mount so they're available synchronously on first click
+  useEffect(() => {
+    window.speechSynthesis.getVoices();
+  }, []);
+
   // Stop speech synthesis on unmount
   useEffect(() => {
     const handleUnload = () => {
