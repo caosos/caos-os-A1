@@ -1,10 +1,20 @@
 /**
  * transcribeAudio — CAOS Voice Input Transcription
- * LOCK_SIGNATURE: CAOS_TRANSCRIBE_AUDIO_LOCK_v1_2026-03-01
+ * LOCK_SIGNATURE: CAOS_TRANSCRIBE_AUDIO_LOCK_v2_2026-03-03
  *
  * LOCKED. DO NOT MODIFY without TSB entry + owner approval.
  * Model: whisper-1 | Input: audio/webm | Output: { text, success }
- * Handles both SDK binary invocation and FormData HTTP requests.
+ *
+ * ⚠️  TRANSPORT LAW — READ BEFORE TOUCHING:
+ *   base44.functions.invoke() ALWAYS sends Content-Type: application/json.
+ *   It does NOT support FormData or raw binary (ArrayBuffer) transmission.
+ *   Any attempt to send FormData or ArrayBuffer via invoke() results in {}.
+ *   The ONLY correct transport from the frontend SDK is base64-in-JSON:
+ *     { audio_base64: "<base64 string>" }
+ *   This is NOT a workaround. This IS the contract. Do not change it.
+ *
+ * TSB-019 applied: 2026-03-03 — base64 JSON path added, binary/FormData kept
+ *   for direct HTTP callers only (non-SDK). SDK callers MUST use audio_base64.
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import OpenAI from 'npm:openai';

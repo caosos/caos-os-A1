@@ -479,10 +479,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
         setIsTranscribing(true);
         try {
-          // Send as ArrayBuffer so SDK transmits binary correctly
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'audio.webm');
-          const { data } = await base44.functions.invoke('transcribeAudio', formData);
+          // ⚠️ LOCK: base44.functions.invoke() ALWAYS sends application/json.
+          // FormData and ArrayBuffer are silently serialized to {}.
+          // The ONLY correct way to send binary via SDK is base64-in-JSON.
+          // DO NOT change this to FormData or ArrayBuffer — it will break silently.
+          // TSB-019 | LOCK_SIGNATURE: CAOS_STT_BASE64_TRANSPORT_v1_2026-03-03
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          const audio_base64 = btoa(binary);
+          const { data } = await base44.functions.invoke('transcribeAudio', { audio_base64 });
           if (data.success && data.text) {
             const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
