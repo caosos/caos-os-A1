@@ -567,21 +567,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setSpeechProgress(0);
 
     // Wait for metadata before playing to ensure duration is loaded
-    const playWhenReady = () => {
-      if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
-        audio.removeEventListener('canplay', playWhenReady);
-        audio.play().then(() => {
-          console.log('[AUDIO_PLAYING]', url.substring(0, 40));
-        }).catch((err) => {
-          console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
-          setIsSpeaking(false);
-          toast.error(`Playback blocked: ${err.message}`);
-        });
-      }
-    };
-
-    audio.addEventListener('canplay', playWhenReady);
-    audio.load();
+    // Play directly — blob URLs are always same-origin, no need for canplay gate
+    audio.play().then(() => {
+      console.log('[AUDIO_PLAYING]', url.substring(0, 40));
+    }).catch((err) => {
+      console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
+      setIsSpeaking(false);
+      toast.error(`Playback blocked: ${err.message}`);
+    });
   };
 
   const handleStopReading = () => {
