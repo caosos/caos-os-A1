@@ -446,6 +446,24 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
+      // Live audio level meter
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        audioAnalyserRef.current = analyser;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const updateLevel = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          setAudioLevel(Math.min(100, avg * 2));
+          audioLevelRafRef.current = requestAnimationFrame(updateLevel);
+        };
+        audioLevelRafRef.current = requestAnimationFrame(updateLevel);
+      } catch (_) { /* analyser optional */ }
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -453,6 +471,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       };
 
       mediaRecorder.onstop = async () => {
+        // Stop audio level animation
+        if (audioLevelRafRef.current) cancelAnimationFrame(audioLevelRafRef.current);
+        setAudioLevel(0);
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         stream.getTracks().forEach(track => track.stop());
 
