@@ -214,22 +214,17 @@ Deno.serve(async (req) => {
             console.log('🔍 [MEMORY_RECALL]', { matched: matchedMemories.length });
         }
 
-        // ── STAGE: HEURISTICS ─────────────────────────────────────────────────
+        // ── STAGE: HEURISTICS (inlined — no network) ─────────────────────────
         setStage(STAGES.HEURISTICS);
-        const hRes = await base44.functions.invoke('core/heuristicsEngine', { input });
-        const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
+        const hIntent = classifyIntent(input);
+        const cogLevel = detectCogLevel(input);
+        const hDepth = calibrateDepth(hIntent, cogLevel);
+        const hDirective = buildDirective(hIntent, hDepth, cogLevel);
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
-        // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
+        // ── STAGE: PROMPT_BUILD (inlined — no network) ───────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
-        const kv = `model_name=${ACTIVE_MODEL}\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=true`;
-
-        const pbRes = await base44.functions.invoke('core/promptBuilder', {
-            userName, kv, matchedMemories, userProfile, rawHistory,
-            hDirective, hDepth, cogLevel, webSearchResults: [], webSearchEnabled: false,
-            environmentState: null
-        });
-        const systemPrompt = pbRes?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
+        const systemPrompt = buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel });
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
