@@ -94,130 +94,29 @@ export default function Chat() {
     };
   }, []);
 
-  // Load user and their data
+  // Game token loading (non-critical, auth mode only)
   useEffect(() => {
+    if (!user?.email || isGuestMode) return;
     let mounted = true;
-    
-    const loadUserData = async () => {
+
+    (async () => {
       try {
-        // ALWAYS check real auth status first — never trust localStorage alone
-        const isAuthenticated = await base44.auth.isAuthenticated();
-        if (!mounted) return;
-
-        if (isAuthenticated) {
-          // Authenticated user: clear any stale guest flag immediately
-          localStorage.removeItem('caos_guest_user');
-        } else {
-          // Not authenticated — check if user chose guest mode
-          const guestUser = localStorage.getItem('caos_guest_user');
-          if (guestUser) {
-            const currentUser = JSON.parse(guestUser);
-            setUser(currentUser);
-            const guestConvos = JSON.parse(localStorage.getItem('caos_guest_conversations') || '[]');
-            setConversations(guestConvos);
-            const guestMessages = JSON.parse(localStorage.getItem('caos_guest_messages') || '{}');
-            setMessages(guestMessages);
-            setDataLoaded(true);
-            return;
-          }
-          // Not authenticated, not guest — send to Welcome
-          navigate(createPageUrl('Welcome'), { replace: true });
-          return;
-        }
-        
-        const currentUser = await base44.auth.me();
-        if (!mounted) return;
-        setUser(currentUser);
-        
-        // CRITICAL: Remove guest flag for authenticated users
-        localStorage.removeItem('caos_guest_user');
-
-        // Load conversations only — messages loaded lazily on selection
-        const userConvos = await base44.entities.Conversation.filter(
-          { created_by: currentUser.email },
-          '-last_message_time',
-          200
-        );
-        if (!mounted) return;
-        setConversations(userConvos || []);
-
-        // Load game tokens (lightweight)
-        if (currentUser?.email) {
-          try {
-            const tokens = await base44.entities.GameToken.filter({
-              user_email: currentUser.email,
-              approved: true,
-              spent: false
-            });
-            const total = tokens.reduce((sum, token) => sum + (token.tokens_earned || 0), 0);
-            if (!mounted) return;
-            setAvailableTokens(total);
-          } catch (e) { /* non-critical */ }
-        }
-
-        setDataLoaded(true);
-        } catch (error) {
-        console.error('Error loading user data:', error);
-        if (!mounted) return;
-
-        // Clear any stale guest data and retry authentication
-        localStorage.removeItem('caos_guest_user');
-
-        // Auth failed - send back to Welcome to re-authenticate
-        navigate(createPageUrl('Welcome'), { replace: true });
-        }
-    };
-
-    loadUserData();
-    
-    return () => {
-      mounted = false;
-    };
-  }, [navigate]);
-
-  const isGuestMode = !!localStorage.getItem('caos_guest_user');
-  const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
-
-  // Reset WCW meter when switching threads (prevent stale state bleeding across threads)
-  // Real data will be restored from DiagnosticReceipt or updated after next message
-  const prevConversationIdRef = React.useRef(null);
-  useEffect(() => {
-    if (prevConversationIdRef.current !== currentConversationId) {
-      prevConversationIdRef.current = currentConversationId;
-      setWcwState({ used: null, budget: null });
-    }
-  }, [currentConversationId]);
-
-  // Lazy-load messages when conversation is selected
-  useEffect(() => {
-    if (!currentConversationId || isGuestMode) return;
-    if (messages[currentConversationId]) return; // already loaded
-    let mounted = true;
-
-    // Load messages AND last WCW state for this session in parallel
-    Promise.all([
-      base44.entities.Message.filter(
-        { conversation_id: currentConversationId },
-        'timestamp',
-        500
-      ),
-      base44.entities.DiagnosticReceipt.filter(
-        { session_id: currentConversationId },
-        '-created_date',
-        1
-      ).catch(() => [])
-    ]).then(([msgs, receipts]) => {
-      if (!mounted) return;
-      setMessages(prev => ({ ...prev, [currentConversationId]: msgs || [] }));
-      // Restore real WCW state from last receipt so meter shows live data, not estimate
-      const lastReceipt = receipts?.[0];
-      if (lastReceipt?.wcw_budget && lastReceipt?.wcw_used !== undefined) {
-        setWcwState({ used: lastReceipt.wcw_used, budget: lastReceipt.wcw_budget });
+        const tokens = await base44.entities.GameToken.filter({
+          user_email: user.email,
+          approved: true,
+          spent: false
+        });
+        const total = (tokens || []).reduce((sum, t) => sum + (t.tokens_earned || 0), 0);
+        if (mounted) setAvailableTokens(total);
+      } catch (e) {
+        // non-critical
       }
-    }).catch(console.error);
+    })();
 
     return () => { mounted = false; };
-  }, [currentConversationId, isGuestMode]);
+  }, [user, isGuestMode]);
+
+  const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
