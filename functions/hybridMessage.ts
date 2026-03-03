@@ -273,15 +273,15 @@ Deno.serve(async (req) => {
         }
         const conversationHistory = compressHistory(rawHistory);
 
-        // ── MEMORY RECALL ─────────────────────────────────────────────────────
-        // FIX 2: Inlined — no network round-trip
+        // ── MEMORY RECALL — INLINED (no function invoke) ──────────────────────
         const isRecallQuery = detectRecallIntent(input);
         const structuredMemory = userProfile?.structured_memory || [];
         let matchedMemories = [];
         if (isRecallQuery && structuredMemory.length > 0) {
-            const recallData = await base44.functions.invoke('core/memoryEngine', { action: 'recall', structuredMemory, query: input });
-            matchedMemories = recallData?.data?.matches || [];
-            console.log('🔍 [MEMORY_RECALL]', { matched: matchedMemories.length });
+            const queryTerms = input.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            matchedMemories = structuredMemory.filter(m => 
+                queryTerms.some(term => m.content?.toLowerCase().includes(term))
+            ).slice(0, 5);
         }
 
         // ── STAGE: HEURISTICS (inlined — no network) ─────────────────────────
