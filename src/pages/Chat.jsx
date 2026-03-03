@@ -194,35 +194,6 @@ export default function Chat() {
     }
   };
 
-  const handleSessionResume = async (sessionId) => {
-    try {
-      const conversation = conversations.find(c => c.id === sessionId);
-      const conversationMessages = messages[sessionId] || [];
-      
-      // Format message history for backend
-      const messageHistory = conversationMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        file_urls: msg.file_urls || []
-      }));
-
-      const { data } = await base44.functions.invoke('hybridMessage', {
-        input: "__SESSION_RESUME__",
-        session_id: sessionId,
-        limit: 20
-      });
-
-      // Verify session alignment per CAOS-A1 contract
-      if (data.session && data.session !== sessionId) {
-        console.error('SESSION DESYNC on resume:', { expected: sessionId, received: data.session });
-        toast.error('Session mismatch detected during resume.');
-      }
-    } catch (error) {
-      console.error('Session resume handshake failed:', error);
-    }
-  };
-
   const handleSendMessage = async (content, fileUrls = [], selectedAgents = null) => {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
 
