@@ -215,46 +215,21 @@ Deno.serve(async (req) => {
         }
 
         // ── STAGE: HEURISTICS ─────────────────────────────────────────────────
-         setStage(STAGES.HEURISTICS);
-         const [hRes, extRes] = await Promise.all([
-           base44.functions.invoke('core/heuristicsEngine', { input }),
-           base44.functions.invoke('core/externalKnowledgeDetector', { input })
-         ]);
-         const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
-         const webSearchNeeded = extRes?.data?.requires_web ?? false;
-         const webSearchEnabled = extRes?.data?.web_search_enabled ?? false;
+        setStage(STAGES.HEURISTICS);
+        const hRes = await base44.functions.invoke('core/heuristicsEngine', { input });
+        const { intent: hIntent = 'GENERAL_QUERY', depth: hDepth = 'STANDARD', cognitive_level: cogLevel = 3, directive: hDirective = '' } = hRes?.data || {};
+        console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
-         console.log('🎛️ [HEURISTICS+DCS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
-         console.log('🔍 [WEB_SEARCH_CHECK]', { web_search_enabled: webSearchEnabled, search_needed: webSearchNeeded });
-
-        // ── STAGE: PROMPT_BUILD (delegated to core/promptBuilder) ────────────
+        // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
+        const kv = `model_name=${ACTIVE_MODEL}\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=true`;
 
-        const [sdRes, pbRes] = await Promise.all([
-            base44.functions.invoke('core/selfDescribe', {}),
-            Promise.resolve(null) // placeholder; promptBuilder called after selfDescribe resolves
-        ]);
-        const kv = sdRes?.data?.kv_lines || 'model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS';
-        console.log('🔑 [SELF_DESCRIBE]', { kv_length: kv.length, has_model: kv.includes('model_name=') });
-
-        // Conditionally invoke webSearch if enabled and needed
-        let webSearchResults = [];
-        if (webSearchEnabled && webSearchNeeded) {
-          try {
-            const wsRes = await base44.functions.invoke('core/webSearch', { query: input, limit: 5 });
-            webSearchResults = wsRes?.data?.results || [];
-            console.log('✅ [WEB_SEARCH_EXECUTED]', { result_count: webSearchResults.length });
-          } catch (e) {
-            console.warn('⚠️ [WEB_SEARCH_FAILED]', e.message);
-          }
-        }
-
-        const pbRes2 = await base44.functions.invoke('core/promptBuilder', {
+        const pbRes = await base44.functions.invoke('core/promptBuilder', {
             userName, kv, matchedMemories, userProfile, rawHistory,
-            hDirective, hDepth, cogLevel, webSearchResults, webSearchEnabled,
-            environmentState
+            hDirective, hDepth, cogLevel, webSearchResults: [], webSearchEnabled: false,
+            environmentState: null
         });
-        const systemPrompt = pbRes2?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
+        const systemPrompt = pbRes?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
