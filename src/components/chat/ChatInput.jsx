@@ -23,12 +23,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const fileInputRef = useRef(null);
   const voiceMenuRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const googleUtteranceRef = useRef(null);
   const voiceButtonRef = useRef(null);
+  const audioAnalyserRef = useRef(null);
+  const audioLevelRafRef = useRef(null);
 
   // Stop speech synthesis on unmount
   useEffect(() => {
