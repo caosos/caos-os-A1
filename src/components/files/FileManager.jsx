@@ -34,33 +34,8 @@ export default function FileManager({ user, viewType = 'files', conversationId =
 
   const loadLinks = async () => {
     try {
-      const allMessages = await base44.entities.Message.list('-created_date', 1000);
-      const links = [];
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const seenUrls = new Set();
-
-      allMessages.forEach(msg => {
-        if (msg.content) {
-          const matches = msg.content.match(urlRegex);
-          if (matches) {
-            matches.forEach(url => {
-              if (!seenUrls.has(url)) {
-                seenUrls.add(url);
-                const title = new URL(url).hostname.replace('www.', '');
-                links.push({
-                  id: url,
-                  name: title,
-                  url: url,
-                  type: 'link',
-                  timestamp: msg.timestamp
-                });
-              }
-            });
-          }
-        }
-      });
-
-      setFiles(links.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+      const userLinks = await base44.entities.UserFile.filter({ created_by: user.email, type: 'link' }, '-created_date', 1000);
+      setFiles(userLinks);
     } catch (error) {
       console.error('Error loading links:', error);
     }
