@@ -48,6 +48,54 @@ async function openAICall(key, messages, model, maxTokens = 2000) {
     return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
 }
 
+// ─── INLINED HEURISTICS (pure — no network) ───────────────────────────────────
+function classifyIntent(input) {
+    const t = input.toLowerCase();
+    if (/\b(remember|save to memory|add to memory|note that|store that)\b/i.test(input)) return 'MEMORY_ACTION';
+    if (/\b(architect|design|system|layer|contract|schema|spec|pipeline|phase|module|interface|protocol|structure|refactor|decouple|boundary|invariant)\b/i.test(t) && t.length > 80) return 'TECHNICAL_DESIGN';
+    if (/\b(review|thoughts on|assess|evaluate|what do you think|critique|feedback on|opinion on)\b/i.test(t)) return 'PARTNER_REVIEW';
+    if (/\b(run|execute|do|apply|implement|build|create|write|generate|deploy|fix|update)\b/i.test(t) && t.length < 120) return 'EXECUTION_DIRECTIVE';
+    if (/\b(summarize|tldr|brief|short version|in a sentence|quick summary)\b/i.test(t)) return 'SUMMARY_COMPACT';
+    return 'GENERAL_QUERY';
+}
+function detectCogLevel(input) {
+    const lengthScore = Math.min(input.length / 300, 3);
+    const abstractTerms = (input.match(/\b(system|architecture|deterministic|governance|modular|inference|boundary|schema|contract|latency|invariant|substrate|canonical|decoupled|coherent|abstraction)\b/gi) || []).length;
+    const metaSignals = (input.match(/\b(blueprint|spec|control law|failure mode|audit|pipeline|heuristic|phase|layer|protocol|invariant|receipt|validation)\b/gi) || []).length;
+    return Math.min(10, 3 + lengthScore + abstractTerms * 0.5 + metaSignals * 0.75);
+}
+function calibrateDepth(intent, cogLevel) {
+    if (intent === 'SUMMARY_COMPACT') return 'COMPACT';
+    const elevated = Math.min(10, cogLevel + 0.75);
+    if (elevated <= 3) return 'STANDARD';
+    if (elevated <= 7) return 'STANDARD';
+    return 'LAYERED';
+}
+function buildDirective(intent, depth, cogLevel) {
+    if (intent === 'MEMORY_ACTION') return '';
+    const posture = `\nRESPONSE POSTURE (apply silently): Write flowing prose. No praise openers. No CRM framing. Architect-level tone. Shared ownership where appropriate.\n`;
+    const depthMap = { COMPACT: 'Respond concisely — one to three sentences.', STANDARD: 'Respond with natural paragraphing. Logical sequencing.', LAYERED: 'Full analytical depth. Address each logical layer.' };
+    return posture + `DEPTH: ${depthMap[depth] || depthMap.STANDARD}\n`;
+}
+
+// ─── INLINED PROMPT BUILDER (pure — no network) ────────────────────────────────
+const KV = `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=true`;
+function buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel }) {
+    let p = `You are Aria, a personal AI assistant for ${userName}.\n\nIDENTITY: You are Aria. Not CAOS. Speak in first person.\n\nCAOS_AUTHORITY_KV_BEGIN\n${KV}\nCAOS_AUTHORITY_KV_END\n\n`;
+    p += `TRUTH DISCIPLINE: Do not claim "you mentioned" or "you previously said" unless the fact is in STRUCTURED MEMORY or verbatim SESSION HISTORY. If the user introduces a fact, respond with "Got it —" and treat as new.\n\n`;
+    if (matchedMemories.length > 0) {
+        p += `RECALLED MEMORY:\n${matchedMemories.map(m => `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}`).join('\n')}\n\n`;
+    }
+    const anchors = userProfile?.memory_anchors;
+    if (anchors?.length > 0) {
+        p += `INFERRED CONTEXT (treat as possible inference):\n${(Array.isArray(anchors) ? anchors : [anchors]).join('\n').substring(0, 2000)}\n\n`;
+    }
+    if (userProfile?.tone?.style) p += `Communication style: ${userProfile.tone.style}\n`;
+    p += `Session: ${rawHistory.length} messages.\n`;
+    if (hDirective) p += hDirective + `\nCOGNITIVE_LEVEL: ${typeof cogLevel === 'number' ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth}`;
+    return p;
+}
+
 // ─── INLINED MEMORY DETECTION (pure regex — no network) ──────────────────────
 // FIX 2: Inlined from memoryEngine to eliminate 2 Deno function-call round-trips
 // LOCK_SIGNATURE: CAOS_INLINE_MEMORY_DETECT_v1_2026-03-03
