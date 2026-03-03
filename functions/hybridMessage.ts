@@ -1,48 +1,8 @@
-/**
- * hybridMessage — CAOS Primary Pipeline
- * CONTRACT v2 — 2026-03-01
- * LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01
- *
- * ════════════════════════════════════════════════════════════════════════════
- * ⚠️  ARCHITECTURAL LAW — READ BEFORE TOUCHING THIS FILE
- * ════════════════════════════════════════════════════════════════════════════
- *
- * THIS FILE IS THE SPINE. IT ORCHESTRATES. IT DOES NOT IMPLEMENT.
- *
- * THE LAW:
- *   1. THIS FILE MUST STAY UNDER 400 LINES. No exceptions.
- *   2. NO logic belongs here. Logic lives in contracted modules (see below).
- *   3. This file calls modules. Modules do not call each other without a contract.
- *   4. Every module is independently removable. Pull one out — nothing else breaks.
- *   5. DO NOT ADD NEW LOGIC HERE. If you think you need to, create a new module.
- *   6. DO NOT EDIT WITHOUT A TSB (Technical Specification Block) and a new LOCK_SIGNATURE.
- *   7. The system is an ORCHESTRATION — a clean conductor, not a monolith.
- *
- * CONTRACTED MODULES (each is its own file, under 400 lines):
- *   - functions/core/memoryEngine          (Phase A: save/recall)
- *   - functions/core/heuristicsEngine      (intent, DCS, directive)
- *   - functions/core/promptBuilder         (system prompt assembly)
- *   - functions/core/receiptWriter         (DiagnosticReceipt + SessionContext)
- *   - functions/core/errorEnvelopeWriter   (ODEL v1 error persistence)
- *   - functions/core/environmentLoader     (cross-thread awareness)
- *   - functions/core/selfDescribe          (runtime manifest / kv lines)
- *   - functions/core/webSearch             (external knowledge)
- *   - functions/core/externalKnowledgeDetector (should we search?)
- *
- * PIPELINE STAGES (in order):
- *   AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_LOAD →
- *   HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
- *
- * INVARIANTS (do not change without TSB + new lock):
- *   - SESSION_RESUME sentinel → noop, no AI call, no message saved
- *   - Memory save → returns immediately, bypasses inference
- *   - Receipt write is AWAITED (I2) — no fire-and-forget
- *   - body and user hoisted above try{} so catch block has full context
- *   - Active model: gpt-5.2
- *   - compressHistory: HOT_HEAD=15, HOT_TAIL=40
- *
- * ════════════════════════════════════════════════════════════════════════════
- */
+// hybridMessage — CAOS Primary Pipeline
+// LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01
+// PIPELINE: AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_LOAD → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
+// INVARIANTS: SESSION_RESUME=noop | Memory save=early return | Receipt=fire-and-forget | Model=gpt-5.2 | HOT_HEAD=15 HOT_TAIL=40
+// MAX 400 LINES — orchestration only, no logic
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // Manifest imports removed — runtime facts now sourced from core/selfDescribe module
