@@ -373,8 +373,8 @@ Deno.serve(async (req) => {
         setStage(STAGES.RESPONSE_BUILD);
         const responseTime = Date.now() - startTime;
 
-        // Invoke receiptWriter module (awaited)
-        await base44.functions.invoke('core/receiptWriter', {
+        // FIX 1: Fire-and-forget — receipt is diagnostic, not functional (I2 → best-effort)
+        base44.functions.invoke('core/receiptWriter', {
             request_id, correlation_id, session_id, model_used: ACTIVE_MODEL,
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
             heuristics_intent: hIntent, heuristics_depth: hDepth, cognitive_level: cogLevel,
