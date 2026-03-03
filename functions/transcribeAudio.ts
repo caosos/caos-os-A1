@@ -23,21 +23,23 @@ Deno.serve(async (req) => {
     }
 
     let audioBuffer;
-    const contentType = req.headers.get('content-type');
+    const contentType = req.headers.get('content-type') || '';
 
-    // Handle SDK invocation (binary audio data)
-    if (contentType?.includes('application/octet-stream')) {
-      audioBuffer = await req.arrayBuffer();
-    } else {
-      // Handle FormData for direct HTTP requests
+    if (contentType.includes('multipart/form-data')) {
+      // Direct HTTP FormData upload
       const formData = await req.formData();
       const audioFile = formData.get('audio');
-      
       if (!audioFile) {
         return Response.json({ error: 'No audio file provided' }, { status: 400 });
       }
-      
       audioBuffer = await audioFile.arrayBuffer();
+    } else if (contentType.includes('application/json')) {
+      // SDK JSON invocation — body may be empty or contain metadata, ignore
+      // Fall through to error below
+      return Response.json({ error: 'Audio must be sent as binary (ArrayBuffer), not JSON' }, { status: 400 });
+    } else {
+      // SDK binary invocation (application/octet-stream or any other binary content-type)
+      audioBuffer = await req.arrayBuffer();
     }
 
     if (!audioBuffer || audioBuffer.byteLength === 0) {
