@@ -851,14 +851,26 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             )}
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={toggleVoiceRecording}
-            className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex-shrink-0"
-            title="Finish recording"
-          >
-            <Check className="w-4 h-4 text-white" />
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Live audio level bars */}
+            <div className="flex items-end gap-0.5 h-5">
+              {[0.4, 0.7, 1.0, 0.7, 0.4].map((scale, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-red-500 rounded-full transition-all duration-75"
+                  style={{ height: `${Math.max(4, audioLevel * scale)}%`, maxHeight: '20px', minHeight: '4px' }}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={toggleVoiceRecording}
+              className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 transition-colors"
+              title="Finish recording"
+            >
+              <Check className="w-4 h-4 text-white" />
+            </button>
+          </div>
         )}
 
         <input
