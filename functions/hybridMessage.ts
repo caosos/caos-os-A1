@@ -243,7 +243,8 @@ Deno.serve(async (req) => {
 
         const pbRes2 = await base44.functions.invoke('core/promptBuilder', {
             userName, kv, matchedMemories, userProfile, rawHistory,
-            hDirective, hDepth, cogLevel, webSearchResults, webSearchEnabled
+            hDirective, hDepth, cogLevel, webSearchResults, webSearchEnabled,
+            environmentState
         });
         const systemPrompt = pbRes2?.data?.systemPrompt || `You are Aria, assistant for ${userName}.`;
 
