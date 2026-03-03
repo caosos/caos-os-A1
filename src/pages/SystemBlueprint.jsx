@@ -1062,6 +1062,75 @@ GREP ANCHOR: CAOS_WCW_METER_FIX_v1_2026-03-01`}</Code>
               Exactly like this system.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-015 — Files/Photos/Links Panel: Wrong Views, Non-Persistent Links, Broken Navigation</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: components/chat/ChatHeader.jsx, components/chat/ProfilePanel.jsx,
+           components/files/FileManager.jsx, pages/Chat.jsx
+Symptom 1: Dropdown showed "Folders" instead of "Links" — clicking it opened a generic view.
+Symptom 2: "Photos" and "Files" menu items both routed to the "Links" view in ProfilePanel.
+Symptom 3: Links were not persistently stored — loadLinks() scanned all Message records
+           on every load, extracting URLs from message content. No persistence = no delete.
+Symptom 4: Files and photos shared in chat were not appearing in the Files/Photos panels.
+Symptom 5: ProfilePanel did not respond to initialView prop changes (first open only).
+Root Cause 1: ChatHeader had "Folders" label hardcoded calling onShowFiles('folders').
+              The handler in ProfilePanel had no 'folders' case, so it fell through.
+Root Cause 2: ProfilePanel used useState(initialView || 'profile') — the initial value was
+              set once on mount. When the parent called setFileView(view) → setShowProfile(true),
+              ProfilePanel was already mounted and its state didn't update.
+Root Cause 3: loadLinks() in FileManager queried Message entity and extracted URLs inline
+              each time — no writes to UserFile. No UserFile records = nothing to delete.
+Root Cause 4: Chat.jsx saveToUserFiles/saveImageToPhotos helpers existed but were incomplete
+              or referenced different function names inconsistently.
+Fix 1:  ChatHeader: changed label "Folders" → "Links", handler → onShowFiles('links')
+Fix 2:  ProfilePanel: added useEffect(() => { if (initialView) setActiveView(initialView) }, [initialView])
+        Now responds to prop changes when panel is already open.
+Fix 3:  FileManager.loadLinks(): replaced inline Message scan with:
+          base44.entities.UserFile.filter({ created_by: user.email, type: 'link' })
+        Links are now read from the same persistent store as files/photos.
+Fix 4:  Chat.jsx: unified saveToUserFiles(url, type, name, mimeType) helper.
+        Called after EVERY send: fileUrls → save as photo or file based on extension.
+        Also added extractAndSaveLinks(text) → scans AI reply for URLs → saves as 'link'.
+Fix 5:  UserFile entity: confirmed 'link' is a valid type in the enum.
+Impact: Files, photos, and links all now persistently stored in UserFile entity.
+        All three are deletable. All three panels show correct data.
+        Navigation from dropdown correctly opens the right panel view.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-016 — pages/Chat.jsx Exceeds Hard File Size Limit (1341 lines)</span>
+                  <Tag label="IDENTIFIED — REFACTOR REQUIRED ⚠️" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: pages/Chat.jsx
+Symptom:   File has grown to 1341 lines. Hard limit is 400. Preferred is 200.
+           The file now handles: auth, conversation management, message sending,
+           file upload auto-save, link extraction, guest mode, WCW state,
+           error logging, timeout management, session resume, and rendering.
+           This violates Rule 2 (File Size Hard Limits) and Rule 1 (Modularity).
+Root Cause: Chat.jsx was the original single-page app. Features were added inline
+            instead of being extracted to sub-components and hooks.
+            The sendMessage handler alone is ~200 lines.
+Impact:    - Finding and fixing bugs takes longer (hard to locate the right code)
+           - Adding features risks side effects (too much logic in one place)
+           - A new agent cannot safely edit this without reading the whole file
+Status:    IDENTIFIED. Not yet refactored. No new features should be added to
+           Chat.jsx until refactor is complete.
+Required Action:
+  Extract to:
+    hooks/useSendMessage.js     — handleSendMessage, timeout, error logging
+    hooks/useConversations.js   — load/create/delete/rename conversations
+    hooks/useGuestMode.js       — guest session logic
+    hooks/useFileAutoSave.js    — saveToUserFiles, extractAndSaveLinks
+    components/chat/ChatLayout.jsx — rendering (chat container, scroll, input)
+  Chat.jsx should become an orchestrator of ~200 lines, not an implementor.
+Priority:  HIGH. Must complete before next feature addition.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
               </div>
               </Section>
