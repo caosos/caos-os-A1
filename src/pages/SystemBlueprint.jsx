@@ -267,7 +267,7 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
             <Code>{`Before making ANY change to this codebase, a new agent must:
 
   □ Read Section 0 (this section) — understand the standing contracts
-  □ Read Section 2 — understand the hybridMessage pipeline
+  □ Read Section 2 — understand the hybridMessage pipeline (LOCKED spine — do not add logic)
   □ Read Section 3 — understand Phase A memory (LOCKED — do not touch)
   □ Check Section 9 — confirm what is NOT yet active (don't accidentally activate it)
   □ Check the TSB log — understand what has broken before and why
@@ -275,7 +275,24 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Confirm their change stays within the 200/400 line limit
   □ Confirm their change sends minimal data in any API calls added
   □ Confirm their change has a test path before implementing
-  □ Ask the owner if any of the above is unclear — do not assume`}</Code>
+  □ Apply Section 0.10 Workflow Etiquette from the first change (edit tracking, read-before-write, etc.)
+  □ Ask the owner if any of the above is unclear — do not assume
+
+  CONFIRMED STACK STATE (as of Mar 3, 2026):
+  pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
+   └─ hooks/useAuthBootstrap   56 lines    EXTRACTED ✅
+   └─ hooks/useConversations  240 lines    EXTRACTED ✅
+  functions/hybridMessage      387 lines    LOCKED ✅ (spine — orchestrates, does not implement)
+   └─ core/memoryEngine        (module — save/recall)
+   └─ core/heuristicsEngine    (module — intent/DCS)
+   └─ core/promptBuilder       (module — system prompt)
+   └─ core/receiptWriter       (module — DiagnosticReceipt)
+   └─ core/errorEnvelopeWriter (module — ODEL v1)
+   └─ core/environmentLoader   (module — cross-thread state)
+   └─ core/selfDescribe        (module — runtime manifest kv)
+   └─ core/webSearch           (module — Bing API search)
+   └─ core/externalKnowledgeDetector  v2 BROWSE-ON-VERB ✅
+   └─ core/selectorEngine      v2 BROWSE-ON-VERB ✅`}</Code>
 
             <h4 className="text-white font-semibold mt-3">8. Authority Domain Separation</h4>
             <Code>{`LOCK_SIGNATURE: CAOS_AUTHORITY_DOMAIN_SEPARATION_v1_2026-03-01
