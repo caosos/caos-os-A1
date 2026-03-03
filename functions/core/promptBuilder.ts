@@ -166,7 +166,7 @@ No other output.
 
         systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
 
-        // ── 8. WEB SEARCH & VISION CAPABILITY ──────────────────────────────────
+        // ── 9. WEB SEARCH & VISION CAPABILITY ──────────────────────────────────
         const capabilityLines = [];
         if (webSearchEnabled) {
             capabilityLines.push('You can run web searches automatically for time-sensitive queries. Results are included above if found. Always cite sources from web results.');
