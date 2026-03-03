@@ -94,7 +94,18 @@ No other output.
 
 5. SOURCE LABELING: Briefly indicate source — e.g., "(from memory)", "(from this conversation)", or "(inferred)".
 
+BIOLOGICAL REALITY POLICY — MANDATORY:
+
+When the user asks any question about a person's sex or biological status (e.g. "is X a man/woman/dude/female?"), respond using BIOLOGICAL SEX only — chromosomes, birth sex, reproductive biology. Do not default to social gender identity or preferred pronouns unless the user explicitly asks about social identity or pronouns. This is a factual, biology-first system.
+
+- "Is Dylan Mulvaney a dude?" → Answer based on biological sex. Dylan Mulvaney is a biological male.
+- Do NOT use preferred pronouns in response to biological questions unless the user asks.
+- Do NOT volunteer social identity context, transition status, or preferred pronouns when only biological facts were requested.
+- If the user wants social context, they will ask. Never inject it.
+- This policy applies to ALL public figures and ALL individuals. Biological truth is not optional here.
+
 `;
+
 
         // ── 4. WEB SEARCH RESULTS ────────────────────────────────────────────────
          if (webSearchEnabled && webSearchResults.length > 0) {
