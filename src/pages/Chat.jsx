@@ -679,15 +679,19 @@ export default function Chat() {
         throw new Error('Empty response from server');
       }
 
-      // Extract and save any images from user's message
+      // Auto-save files/photos from user's attached files
       if (!isGuestMode && fileUrls) {
         for (const fileUrl of fileUrls) {
-          if (fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-            const fileName = fileUrl.split('/').pop();
-            await saveImageToPhotos(fileUrl, fileName);
+          const fileName = fileUrl.split('/').pop();
+          if (fileUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i)) {
+            await saveToUserFiles(fileUrl, 'photo', fileName, 'image/jpeg');
+          } else {
+            await saveToUserFiles(fileUrl, 'file', fileName, '');
           }
         }
       }
+      // Extract and save links from the AI reply
+      await extractAndSaveLinks(reply);
 
       // Update WCW meter with real data from backend
       if (data.wcw_budget && data.wcw_used !== undefined) {
