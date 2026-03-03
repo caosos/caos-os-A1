@@ -225,6 +225,44 @@ WORKFLOW for code audit:
 RULE: selfInspect is the ONLY sanctioned path for Aria to reason about source code.
       Aria must never assume source code content. Always ask for it to be shared.`}</Code>
 
+            <h4 className="text-white font-semibold mt-3">10. Workflow Etiquette — Standing Build Conventions</h4>
+            <Code>{`These are active workflow conventions established during the Mar 2026 build sprint.
+Every agent must follow them from the first change, without being asked.
+
+A. EDIT TRACKING (established Mar 3, 2026):
+   After EVERY edit, report a one-line change summary:
+     "Changed: <file> +N lines | <file> +N lines"
+   Format: file path, then +N for lines added or -N for lines removed.
+   Example: "Changed: functions/core/selectorEngine +18 lines | externalKnowledgeDetector +32 lines"
+   This is non-optional. Every single response that modifies a file must include this.
+   Purpose: owner tracks codebase growth, spots overreach, and catches bloat early.
+
+B. READ BEFORE WRITE:
+   Never modify a file without reading its current content first.
+   Use read_file. Never assume file contents. Never patch blind.
+
+C. PARALLEL TOOL CALLS:
+   When reading multiple files, issue all reads simultaneously.
+   Never sequential reads when parallel is possible.
+
+D. FIND_REPLACE OVER WRITE_FILE:
+   For existing code files (JS/JSX): use find_replace.
+   For entity schema files (JSON): use write_file (they are stored as objects, not strings).
+   Never rewrite an entire JS/JSX file when a targeted edit will do.
+
+E. NO FEATURE CREEP:
+   Do exactly what was asked. Nothing more.
+   If an adjacent improvement is obvious, mention it — don't implement it silently.
+
+F. MINIMUM VIABLE CHANGE:
+   Prefer surgical edits over restructures.
+   If you're touching 5+ unrelated areas in one response, stop and ask the owner to scope it.
+
+G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
+   When a significant change is made (new hook, new module, behavior change, TSB),
+   the blueprint MUST be updated in the same session — not later.
+   The blueprint is the living truth. If it's out of date, the system is out of date.`}</Code>
+
             <h4 className="text-white font-semibold mt-3">7. New Agent Checklist</h4>
             <Code>{`Before making ANY change to this codebase, a new agent must:
 
