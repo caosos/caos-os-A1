@@ -53,7 +53,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
-const ACTIVE_MODEL = 'gpt-5.2';
+const ACTIVE_MODEL = 'gpt-4o';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 100;
 const HOT_TAIL = 40;
