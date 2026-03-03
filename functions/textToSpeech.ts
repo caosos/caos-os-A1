@@ -8,10 +8,19 @@
  * Auth: handled by calling context (ChatBubble) — no auth check here (see TSB-009)
  * Encoding: chunked loop to avoid stack overflow on large buffers (see TSB-009)
  */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
 Deno.serve(async (req) => {
     try {
+        // Auth check — required for published app
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         if (!OPENAI_API_KEY) {
             return Response.json({ error: 'OpenAI API key not configured' }, { status: 500 });
         }
