@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { X, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -18,10 +17,11 @@ import GameView from '@/components/game/GameView';
 import TokenMeter from '@/components/chat/TokenMeter';
 import LaneSelector from '@/components/chat/LaneSelector';
 import BottomNavBar from '@/components/mobile/BottomNavBar';
-import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
+import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
+import { useConversations } from '@/components/hooks/useConversations';
 
 export default function Chat() {
   const [user, setUser] = useState(null);
