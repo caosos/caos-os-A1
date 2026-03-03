@@ -513,6 +513,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
+    if (audioLevelRafRef.current) cancelAnimationFrame(audioLevelRafRef.current);
+    setAudioLevel(0);
   };
 
   const toggleVoiceRecording = () => {
