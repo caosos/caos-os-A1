@@ -176,7 +176,7 @@ No other output.
             systemPrompt += `\nCAPABILITY: ${capabilityLines.join(' ')}`;
         }
 
-        // ── 9. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
+        // ── 10. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
         if (hDirective) {
             systemPrompt += hDirective;
             systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
