@@ -17,6 +17,10 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
   const [availableTokens, setAvailableTokens] = useState(0);
   const [gameModeEnabled, setGameModeEnabled] = useState(false);
   const [activeView, setActiveView] = useState(initialView || 'profile'); // 'profile', 'files', 'photos', 'links', 'memory'
+
+  useEffect(() => {
+    if (initialView) setActiveView(initialView);
+  }, [initialView]);
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
