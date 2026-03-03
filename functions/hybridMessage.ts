@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
             latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
             token_breakdown: tokenBreakdown,
             user_email: user.email
-        });
+        }).catch(e => console.error('🔥 [RECEIPT_WRITE_FAIL_NONFATAL]', e?.message || e));
 
         // 3.1: Background anchor auto-extraction DISABLED.
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
