@@ -235,6 +235,7 @@ export function useConversations({
     setConversations,
     currentConversationId,
     setCurrentConversationId,
+    bootCompleted,
     handleNewThread,
     handleDeleteConversation,
     handleRenameConversation,
