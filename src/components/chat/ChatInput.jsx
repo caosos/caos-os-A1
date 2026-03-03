@@ -262,11 +262,14 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
     };
 
-    // Voices load async — wait for them if not yet available
+    // ⚠️ TRANSPORT LAW — Web Speech API requires active user gesture context.
+    // DO NOT call cancel() before speak() — it can invalidate the gesture context
+    // in some browsers (Chrome on published domains). Cancel only if already speaking.
+    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (gesture fix 2026-03-03)
     const speakWithVoice = (voices) => {
       const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
       if (selectedVoice) utterance.voice = selectedVoice;
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     };
 
@@ -278,12 +281,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         window.speechSynthesis.onvoiceschanged = null;
         speakWithVoice(window.speechSynthesis.getVoices());
       };
+      // Fallback for browsers that never fire onvoiceschanged
       setTimeout(() => {
         if (!window.speechSynthesis.speaking) {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(utterance);
+          speakWithVoice(window.speechSynthesis.getVoices());
         }
-      }, 300);
+      }, 250);
     }
   };
 
