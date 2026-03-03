@@ -1917,9 +1917,16 @@ END TOKEN`}</pre>
 - Active model is gpt-5.2 (not gpt-4o — Section 1 updated Mar 1, 2026)
 - PHASE B and PHASE C are governance invariants, locked before audio work begins
 - TSB-015: Files/Photos/Links panel fixed (Mar 3, 2026) — persistent storage, correct nav
-- TSB-016: Chat.jsx flagged for refactor (1341 lines, hard limit 400) — PENDING
+- TSB-016: Chat.jsx flagged for refactor (1341 lines, hard limit 400) — IN PROGRESS
+- TSB-017: Web search trigger UX mismatch fixed (Mar 3, 2026) — explicit browse verbs now honored
+- TSB-018: Chat.jsx refactor phase 1 complete — useAuthBootstrap (56L) + useConversations (240L) extracted
 - File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
-- pages/Chat.jsx MUST be refactored before next feature is added (see TSB-016 + Section 10)`}</Code>
+- Section 0.10: Workflow Etiquette — edit tracking, read-before-write, find_replace-first, no feature creep
+- Chat.jsx refactor stack: ~1126 lines remaining → next extraction is hooks/useSendMessage.js
+- hybridMessage is at 387 lines (LOCKED ✅) — confirmed active pipeline with 9 contracted modules
+- externalKnowledgeDetector v2: two-stage browse-verb + sufficiency logic (ACTIVE ✅)
+- selectorEngine v2: explicit browse verb patterns + split trigger logic (ACTIVE ✅)
+- Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"`}</Code>
           </Section>
 
         </div>
