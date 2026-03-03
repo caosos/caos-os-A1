@@ -455,9 +455,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
         setIsTranscribing(true);
         try {
-          // Convert blob to File for proper handling
-          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
-          const { data } = await base44.functions.invoke('transcribeAudio', { audio: audioFile });
+          // Send as ArrayBuffer so SDK transmits binary correctly
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const { data } = await base44.functions.invoke('transcribeAudio', arrayBuffer);
           if (data.success && data.text) {
             const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
