@@ -106,9 +106,9 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
                   <Image className="w-3.5 h-3.5 text-blue-400" />
                   <span>Photos</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onShowFiles('folders')} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
-                  <Folder className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Folders</span>
+                <DropdownMenuItem onClick={() => onShowFiles('links')} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm">
+                  <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Links</span>
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
