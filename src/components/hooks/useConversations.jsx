@@ -73,6 +73,7 @@ export function useConversations({
 
   // Lazy load messages + receipt restore
   useEffect(() => {
+    if (!bootCompleted) return;
     if (!currentConversationId || isGuestMode) return;
     if (messages[currentConversationId]) return;
 
