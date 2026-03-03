@@ -254,8 +254,8 @@ Deno.serve(async (req) => {
         const conversationHistory = compressHistory(rawHistory);
 
         // ── MEMORY RECALL ─────────────────────────────────────────────────────
-        const recallRes = await base44.functions.invoke('core/memoryEngine', { action: 'detect_recall', input });
-        const isRecallQuery = recallRes?.data?.result ?? false;
+        // FIX 2: Inlined — no network round-trip
+        const isRecallQuery = detectRecallIntent(input);
         const structuredMemory = userProfile?.structured_memory || [];
         let matchedMemories = [];
         if (isRecallQuery && structuredMemory.length > 0) {
