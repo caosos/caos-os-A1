@@ -11,6 +11,7 @@ export function useConversations({
 }) {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [bootCompleted, setBootCompleted] = useState(false);
 
   const prevConversationIdRef = useRef(null);
 
