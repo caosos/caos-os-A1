@@ -5,11 +5,6 @@
 // MAX 400 LINES — orchestration only, no logic
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-// Manifest imports removed — runtime facts now sourced from core/selfDescribe module
-
-// CAOS_ENVIRONMENT_AUTHORITY_v1_2026-03-02 | CAOS_CAPABILITY_AUTHORITY_v1_2026-03-02 | CAOS_UI_AUTHORITY_v1_2026-03-02
-// Machine-only authority blocks. No prose. No duplicate keys. No schema.
-// Static build-time imports. No runtime invocation. No per-turn call. No DB read.
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
