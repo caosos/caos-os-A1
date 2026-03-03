@@ -105,15 +105,6 @@ Deno.serve(async (req) => {
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
         console.log('🚀 [PIPELINE_START]', { BUILD_ID, request_id, user: user.email, session_id, model: ACTIVE_MODEL });
 
-        // ── FILE READ PROBE (temporary — deployment verification) ─────────────
-        try {
-            const p = "./functions/core/manifests/environmentManifest.js";
-            const txt = await Deno.readTextFile(p);
-            console.log("FILE_READ_TEST_OK", { path: p, head: txt.slice(0, 80) });
-        } catch (e) {
-            console.log("FILE_READ_TEST_FAIL", { message: e?.message || String(e) });
-        }
-
         // ── STAGE: PROFILE_LOAD ───────────────────────────────────────────────
         setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
