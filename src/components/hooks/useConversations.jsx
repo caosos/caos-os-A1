@@ -46,17 +46,17 @@ export function useConversations({
         if (!mounted) return;
         setConversations(userConvos || []);
 
-        // Restore last convo if available
+        // Deterministic boot: only restore if user explicitly saved a last conversation
         const lastId = localStorage.getItem('caos_last_conversation');
         if (lastId && (userConvos || []).some(c => c.id === lastId)) {
           setCurrentConversationId(lastId);
-        } else if ((userConvos || []).length > 0) {
-          setCurrentConversationId(userConvos[0].id);
         } else {
           setCurrentConversationId(null);
         }
       } catch (e) {
         console.error('Failed to load conversations:', e);
+      } finally {
+        if (mounted) setBootCompleted(true);
       }
     })();
 
