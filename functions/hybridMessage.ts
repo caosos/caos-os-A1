@@ -220,10 +220,23 @@ Deno.serve(async (req) => {
             return Response.json({ reply: clarifyReply, mode: 'MEMORY_CLARIFY_PRONOUN', memory_saved: false, entries_created: 0, entry_ids: [], request_id, response_time_ms: Date.now() - startTime, tool_calls: [], execution_receipt: { request_id, session_id, memory_saved: false, latency_ms: Date.now() - startTime } });
         }
 
-        // SAVE path
+        // SAVE path — INLINED (no separate function invoke)
         if (memorySaveSignal) {
-            const saveRes = await base44.functions.invoke('core/memoryEngine', { action: 'save', content: memorySaveSignal });
-            const { saved = [], deduped = [], rejected = [] } = saveRes?.data || {};
+            let saved = [], deduped = [], rejected = [];
+            try {
+                const existing = userProfile?.structured_memory || [];
+                const newMemory = { id: crypto.randomUUID(), content: memorySaveSignal, timestamp: new Date().toISOString(), scope: 'profile', tags: [], source: 'user' };
+                const isDuplicate = existing.some(m => m.content === memorySaveSignal);
+                if (isDuplicate) {
+                    deduped = [newMemory];
+                } else {
+                    saved = [newMemory];
+                    if (userProfile) {
+                        const updated = [...existing, newMemory];
+                        await base44.entities.UserProfile.update(userProfile.id, { structured_memory: updated });
+                    }
+                }
+            } catch (e) { console.warn('⚠️ [MEMORY_SAVE_INLINE_FAILED]', e.message); }
             const memory_saved = saved.length > 0;
             const entry_ids = saved.map(e => e.id);
 
