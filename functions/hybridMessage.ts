@@ -189,9 +189,8 @@ Deno.serve(async (req) => {
         // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
         setStage(STAGES.MEMORY_WRITE);
 
-        // Invoke memoryEngine module for detection
-        const detectRes = await base44.functions.invoke('core/memoryEngine', { action: 'detect_save', input });
-        const memorySaveSignal = detectRes?.data?.result ?? null;
+        // FIX 2: Inlined — no network round-trip
+        const memorySaveSignal = detectSaveIntent(input);
 
         // VAGUE clarify
         if (memorySaveSignal === '__VAGUE__') {
