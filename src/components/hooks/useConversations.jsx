@@ -28,6 +28,7 @@ export function useConversations({
 
     setConversations(guestConvos);
     setMessages(prev => ({ ...prev, ...guestMsgs }));
+    setBootCompleted(true);
   }, [isGuestMode, user, setMessages]);
 
   // Bootstrap authenticated conversations
