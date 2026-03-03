@@ -267,32 +267,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
     };
 
-    // ⚠️ TRANSPORT LAW — Web Speech API requires active user gesture context.
-    // DO NOT call cancel() before speak() — it can invalidate the gesture context
-    // in some browsers (Chrome on published domains). Cancel only if already speaking.
+    // ⚠️ GESTURE LAW — speak() must fire in same synchronous user gesture stack.
+    // Voices are preloaded on mount so getVoices() is synchronous here.
+    // No cancel() before speak() unless already speaking — breaks activation context.
+    // No setTimeout fallback — that fires outside the gesture context and Chrome blocks it.
     // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (gesture fix 2026-03-03)
-    const speakWithVoice = (voices) => {
-      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-      if (selectedVoice) utterance.voice = selectedVoice;
-      if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    };
-
     const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      speakWithVoice(voices);
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.onvoiceschanged = null;
-        speakWithVoice(window.speechSynthesis.getVoices());
-      };
-      // Fallback for browsers that never fire onvoiceschanged
-      setTimeout(() => {
-        if (!window.speechSynthesis.speaking) {
-          speakWithVoice(window.speechSynthesis.getVoices());
-        }
-      }, 250);
-    }
+    const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+    if (selectedVoice) utterance.voice = selectedVoice;
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleVoiceButtonContextMenu = (e) => {
