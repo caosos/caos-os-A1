@@ -110,7 +110,7 @@ export function useConversations({
       .catch(console.error);
 
     return () => { mounted = false; };
-  }, [currentConversationId, isGuestMode, messages, setMessages, setWcwState]);
+  }, [bootCompleted, currentConversationId, isGuestMode, messages, setMessages, setWcwState]);
 
   // Create new thread
   const handleNewThread = async () => {
