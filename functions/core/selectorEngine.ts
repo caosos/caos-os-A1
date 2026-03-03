@@ -100,9 +100,27 @@ export async function invokeSelector(params, base44) {
     }
     
     // WEB_SEARCH tool patterns
-    if (/\b(search|look up|find|what's|current|latest|news|today|weather)\b/i.test(user_input)) {
+    // Stage A: Explicit browse-verb triggers — authorize immediately, no sufficiency gate
+    const EXPLICIT_BROWSE_VERBS = [
+        /\bgo online\b/i,
+        /\bsearch (the )?(web|internet|online|for)\b/i,
+        /\blook (it )?up\b/i,
+        /\bcheck (the )?(news|web|internet|online)\b/i,
+        /\bfind (sources?|info|information|articles?|out)\b/i,
+        /\bcite (sources?|that|this)\b/i,
+        /\bwhat did .+ say\b/i,
+        /\bwhat (is|are|was|were) .+ saying\b/i,
+        /\bbrowse\b/i,
+        /\bpull up\b/i,
+        /\bsee what .+ said\b/i,
+    ];
+    const explicitBrowse = EXPLICIT_BROWSE_VERBS.some(p => p.test(user_input));
+    // Stage B: Time-sensitive keywords (existing behavior)
+    const timeSensitiveWeb = /\b(search|look up|find|what's|current|latest|news|today|weather|yesterday|reportedly|according to)\b/i.test(user_input);
+
+    if (explicitBrowse || timeSensitiveWeb) {
         tools_allowed.push('WEB_SEARCH');
-        console.log('🔍 [WEB_SEARCH_AUTHORIZED]');
+        console.log('🔍 [WEB_SEARCH_AUTHORIZED]', { trigger: explicitBrowse ? 'explicit_browse_verb' : 'time_sensitive' });
     }
     
     // FILE_SEARCH tool patterns
