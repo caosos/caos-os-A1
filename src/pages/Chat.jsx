@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowDown } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
