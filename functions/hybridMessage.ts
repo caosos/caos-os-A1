@@ -93,6 +93,53 @@ async function openAICall(key, messages, model, maxTokens = 2000) {
     return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
 }
 
+// ─── INLINED MEMORY DETECTION (pure regex — no network) ──────────────────────
+// FIX 2: Inlined from memoryEngine to eliminate 2 Deno function-call round-trips
+// LOCK_SIGNATURE: CAOS_INLINE_MEMORY_DETECT_v1_2026-03-03
+
+const MEMORY_SAVE_TRIGGERS = [
+    /^i want you to remember\b(.*)/i,
+    /^please remember\b(.*)/i,
+    /^remember\s+(?:this|these|that)\b[:\s]*(.*)/i,
+    /^remember\s+that\b(.*)/i,
+    /^remember\b[:\s]+(.*)/i,
+    /^can you remember\b(.*)/i,
+    /^save(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
+    /^add(?:\s+this)?\s+to\s+memory[:\s]*(.*)/i,
+    /^note\s+(?:this|that)[:\s]*(.*)/i,
+    /^store\s+(?:this|that)[:\s]*(.*)/i,
+];
+const MEMORY_RECALL_TRIGGERS = [
+    /\b(?:what do you remember about|do you remember|recall|you told me|you mentioned|what did I tell you about)\b/i,
+    /\b(?:what do you know about me|what have I told you)\b/i,
+];
+const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
+
+function detectSaveIntent(input) {
+    const trimmed = input.trim();
+    for (const pattern of MEMORY_SAVE_TRIGGERS) {
+        const match = trimmed.match(pattern);
+        if (match) {
+            const captured = (match[1] || '').trim();
+            const cleaned = captured
+                .replace(/[,.]?\s*(okay|ok|alright|right|too|as well|please)[?.]?\s*$/i, '')
+                .replace(/[?.]$/, '')
+                .replace(/^[\s,?:.]+/, '')
+                .trim();
+            if (!cleaned || cleaned.length < 3) return '__VAGUE__';
+            const meaningfulWords = cleaned.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 1 && !VAGUE_WORDS.has(w));
+            if (meaningfulWords.length === 0) return '__VAGUE__';
+            if (PRONOUN_PATTERN.test(cleaned)) return '__PRONOUN__';
+            return cleaned;
+        }
+    }
+    return null;
+}
+
+function detectRecallIntent(input) {
+    return MEMORY_RECALL_TRIGGERS.some(p => p.test(input));
+}
+
 // ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
