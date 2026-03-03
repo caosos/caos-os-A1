@@ -44,9 +44,18 @@ Deno.serve(async (req) => {
       }
       audioBuffer = await audioFile.arrayBuffer();
     } else if (contentType.includes('application/json')) {
-      // SDK JSON invocation — body may be empty or contain metadata, ignore
-      // Fall through to error below
-      return Response.json({ error: 'Audio must be sent as binary (ArrayBuffer), not JSON' }, { status: 400 });
+      // SDK invocation path — base44.functions.invoke() always sends JSON.
+      // Frontend must encode audio as base64 and send { audio_base64: "..." }.
+      // DO NOT change this to expect binary — the SDK cannot send binary.
+      // TSB-019 | LOCK_SIGNATURE: CAOS_STT_BASE64_TRANSPORT_v1_2026-03-03
+      const body = await req.json();
+      if (!body.audio_base64) {
+        return Response.json({ error: 'audio_base64 field required in JSON payload. base44 SDK cannot send binary — use base64 encoding.' }, { status: 400 });
+      }
+      const binaryStr = atob(body.audio_base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      audioBuffer = bytes.buffer;
     } else {
       // SDK binary invocation (application/octet-stream or any other binary content-type)
       audioBuffer = await req.arrayBuffer();
