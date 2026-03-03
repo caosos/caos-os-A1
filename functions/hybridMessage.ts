@@ -158,31 +158,40 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
+        // AUTH + PROFILE_LOAD in parallel
         setStage(STAGES.AUTH);
-        user = await base44.auth.me();
+        [user, body] = await Promise.all([
+            base44.auth.me(),
+            req.json()
+        ]);
         if (!user || !user.email) {
             return Response.json({ reply: "Authentication required.", error: 'UNAUTHORIZED' }, { status: 401 });
         }
 
-        body = await req.json();
         const { input, session_id, file_urls = [] } = body;
 
         // SESSION_RESUME sentinel — noop
         if (input === '__SESSION_RESUME__') {
-            console.log('🔄 [SESSION_RESUME_NOOP]', { session_id });
             return Response.json({ reply: null, mode: 'SESSION_RESUME_NOOP', request_id });
         }
 
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
-        console.log('🚀 [PIPELINE_START]', { BUILD_ID, request_id, user: user.email, session_id, model: ACTIVE_MODEL });
+        console.log('🚀 [START]', { request_id, user: user.email, session_id });
 
-        // ── STAGE: PROFILE_LOAD ───────────────────────────────────────────────
+        // ── STAGE: PROFILE_LOAD + HISTORY_LOAD in parallel ───────────────────
         setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
+        let rawHistory = [];
         try {
-            const profiles = await base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1);
+            const [profiles, historyMsgs] = await Promise.all([
+                base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1),
+                session_id
+                    ? base44.entities.Message.filter({ conversation_id: session_id }, '-timestamp', MAX_HISTORY_MESSAGES)
+                    : Promise.resolve([])
+            ]);
             userProfile = profiles?.[0] || null;
-        } catch (e) { console.warn('⚠️ [PROFILE_FAILED]', e.message); }
+            rawHistory = historyMsgs.reverse().map(m => ({ role: m.role, content: m.content }));
+        } catch (e) { console.warn('⚠️ [PROFILE_HISTORY_FAILED]', e.message); }
 
         // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
         setStage(STAGES.MEMORY_WRITE);
