@@ -5,7 +5,7 @@ import { createPageUrl } from '@/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import BlueprintCopyButton from '@/components/docs/BlueprintCopyButton';
 
-const Section = ({ title, color = 'blue', children, defaultOpen = false }) => {
+const Section = ({ title, color = 'blue', children, defaultOpen = false, forceVisible = false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const borderColor = {
     blue: 'border-blue-500/30', green: 'border-green-500/30', red: 'border-red-500/30',
