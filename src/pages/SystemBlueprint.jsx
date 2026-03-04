@@ -517,7 +517,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
                 and deterministic file tracking (not anonymous blobs).</Code>
 
             <h4 className="text-white font-semibold mt-3">Governance / Advanced (built, partially used):</h4>
-            <Code>{"Anchor: hash-chained profile-global memory anchors (BUILT)\nRecord: Plane B message storage (BUILT, not primary store)\nSessionContext: WCW budget tracking (BUILT)\nLane: topic-based context windows (BUILT, not active)\nLexicalRule: normalization rules (BUILT)\nSessionManifest: capability contracts (BUILT)\nDriftEvent: contract violation log (BUILT)\nRetrievalReceipt: retrieval audit trail (BUILT)\nThreadToken/Meta: title search index (BUILT)\nErrorLog: failed message log (ACTIVE)\nConfigChangeLog: config audit trail (BUILT)"}</Code>
+            <Code>{"Anchor, Record, SessionContext, Lane, LexicalRule, SessionManifest\nDriftEvent, RetrievalReceipt, ThreadToken/Meta\nErrorLog (ACTIVE), ConfigChangeLog"}</Code>
           </Section>
 
           {/* 6. FRONTEND STRUCTURE */}
