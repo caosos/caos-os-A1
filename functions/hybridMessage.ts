@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
-        return Response.json({
+        const response = {
             reply, mode: 'GEN', request_id, correlation_id,
             response_time_ms: responseTime, tool_calls: [],
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
@@ -499,7 +499,14 @@ Deno.serve(async (req) => {
                 ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
                 ctc_injection_meta: ctcInjectionMeta
             }
-        });
+        };
+        
+        // Dev-only debug metadata
+        if (debugMode) {
+            response.debug_meta = debug_meta;
+        }
+        
+        return Response.json(response);
 
     } catch (error) {
         const latency_ms = Date.now() - startTime;
