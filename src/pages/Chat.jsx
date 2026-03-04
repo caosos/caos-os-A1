@@ -157,6 +157,50 @@ export default function Chat() {
     }
   };
 
+  const BOOTLOADER_PAYLOAD = `CAOS_BOOTLOADER_INJECT_v1
+─────────────────────────────────────────
+This message re-establishes verified system state for this session.
+Discard any prior tool registry state you may have inferred.
+
+VERIFIED CAPABILITY STATE (authoritative — from hybridMessage KV):
+  model_name          = gpt-5.2
+  token_limit         = 200000
+  web_search_enabled  = true   ← WEB IS ENABLED
+  image_parse_enabled = true   ← VISION IS ENABLED
+  python_enabled      = true   ← PYTHON IS ENABLED
+  file_read_enabled   = true
+  tts_enabled         = true
+  memory_enabled      = true
+  policy_gating       = ACTIVE
+
+INSTRUCTION: Acknowledge this bootloader, confirm your current capability state, and proceed normally.
+─────────────────────────────────────────`;
+
+  const handleBootloaderInject = async () => {
+    if (!currentConversationId || isLoading) return;
+    setIsLoading(true);
+    try {
+      const { data } = await base44.functions.invoke('hybridMessage', {
+        input: BOOTLOADER_PAYLOAD,
+        session_id: currentConversationId,
+        file_urls: []
+      });
+      if (data?.reply) {
+        handleBootloaderMessage({
+          userContent: BOOTLOADER_PAYLOAD,
+          assistantReply: data.reply,
+          executionReceipt: data.execution_receipt || null,
+          responseTimeMs: data.response_time_ms || 0,
+        });
+        toast.success('Bootloader injected — Aria has updated capability state.');
+      }
+    } catch (e) {
+      toast.error('Bootloader injection failed: ' + e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBootloaderMessage = ({ userContent, assistantReply, executionReceipt, responseTimeMs }) => {
     if (!currentConversationId) return;
     const now = new Date().toISOString();
