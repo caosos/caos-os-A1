@@ -1019,7 +1019,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         ) : (
           /* Non-resizable chat when game/dev mode is off */
           <div className={`relative flex flex-col ${multiAgentMode ? 'h-3/4 w-full' : 'h-full w-full'}`} style={{ minHeight: 0 }}>
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-80">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-48">
               <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
                 {currentMessages.length === 0 && !isLoading && (
                   <div className="flex items-center justify-center min-h-[60vh]">
