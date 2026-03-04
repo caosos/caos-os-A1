@@ -134,7 +134,7 @@ Wait for the owner to tell you what they need.`}</pre>
           </div>
 
           {/* 0. AGENT ONBOARDING CONTRACT */}
-          <Section title="0. Agent Onboarding Contract — Strict Development Principles" color="red" defaultOpen={true}>
+          <Section title="0. Agent Onboarding Contract — Strict Development Principles" color="red">
             <div className="bg-red-950/50 border border-red-500/40 rounded-lg p-4 mb-4">
               <p className="text-red-300 font-bold text-sm mb-1">⚠️ READ THIS FIRST — applies to every agent, every session, every change.</p>
               <p className="text-gray-300 text-xs">These are standing requirements established by the system owner. They are not suggestions. Any new agent inheriting this codebase must treat these as invariants. Do not deviate without explicit written instruction from the owner in the current session.</p>
