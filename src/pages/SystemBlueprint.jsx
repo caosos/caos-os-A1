@@ -302,9 +302,8 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
    └─ ContextSeed     (compressed ARC pack — span_hash, arc_pack_json, token metrics)
    └─ LaneState       (lane-level pinned state + active seed IDs)
    └─ LaneSeedHistory (ordered seed creation history per lane)`}</Code>
-</invoke>
 
-            <h4 className="text-white font-semibold mt-3">8. Authority Domain Separation</h4>
+           <h4 className="text-white font-semibold mt-3">8. Authority Domain Separation</h4>
             <Code>{`LOCK_SIGNATURE: CAOS_AUTHORITY_DOMAIN_SEPARATION_v1_2026-03-01
 
 Aria (the AI persona) and CAOS (the platform) are separate authority domains.
