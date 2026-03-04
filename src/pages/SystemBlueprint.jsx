@@ -521,6 +521,9 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
             <h4 className="text-white font-semibold">Core Chat:</h4>
             <Code>{"Conversation  — thread metadata (title, last_message_time, summary, keywords)\nMessage       — messages (conversation_id, role, content, file_urls, execution_receipt)\nUserProfile   — persistent user data:\n  tone, project, memory_anchors (legacy), structured_memory (Phase A ACTIVE)\nUserFile      — files/photos/links (name, url, type, folder_path, size, mime_type)\nUserStorage   — user file storage box (user_email, file_name, mime_type, sha256, base44_file_id)"}</Code>
 
+            <h4 className="text-white font-semibold mt-3">CTC Memory System (ACTIVE ✅ — Mar 4, 2026):</h4>
+            <Code>{"ThreadIndex     — thread registry (thread_id, lane_id, user_email, title, tags,\n                  last_active_at, last_seed_created_at, temperature, summary_seed_id)\nContextSeed     — compressed ARC pack (seed_id, lane_id, thread_id, user_email,\n                  created_at, last_hydrated_at, source_span {from_ts, to_ts, message_ids,\n                  span_hash, msg_count}, arc_pack_json {definitions, decisions, constraints,\n                  action_items, references}, arc_pack_hash, approx_tokens_in/out,\n                  token_reduction_ratio, compressor_version, topics, importance_score)\nLaneState       — lane-level pinned state + active_seed_ids, last_active_at\nLaneSeedHistory — ordered seed history per lane (lane_id, seed_id, created_at, temperature)"}</Code>
+
             <h4 className="text-white font-semibold mt-3">Governance / Advanced (built, partially used):</h4>
             <Code>{"Anchor, Record, SessionContext, Lane, LexicalRule, SessionManifest\nDriftEvent, RetrievalReceipt, ThreadToken/Meta\nErrorLog (ACTIVE), ConfigChangeLog"}</Code>
           </Section>
