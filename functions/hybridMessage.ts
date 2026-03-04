@@ -286,37 +286,54 @@ Deno.serve(async (req) => {
         const conversationHistory = compressHistory(rawHistory);
 
         // ── STAGE: CTC — Cross-Thread Context (Phase 3) ───────────────────────
-        // Detect → Hydrate → Assemble ARC block (all non-fatal — pipeline continues on failure)
+        // G1: Explicit gating — only run if user signal detected
+        // G2: Conditional execution — skip stages if not needed
+        // G4: Time budget guard — abort if >1500ms elapsed
         let arcBlock = '';
         let ctcInjectionMeta = [];
+        const ctcStartTime = Date.now();
 
-        try {
-            setStage(STAGES.CTC_INTENT);
-            const intentRes = await base44.functions.invoke('context/crossThreadIntent', {
-                input, session_id, user_email: user.email
-            });
-            const intentData = intentRes?.data || {};
-
-            if (intentData.cross_thread && intentData.thread_ids?.length > 0) {
-                setStage(STAGES.CTC_HYDRATE);
-                const hydrateRes = await base44.functions.invoke('context/threadHydrator', {
-                    thread_ids: intentData.thread_ids, user_email: user.email
+        // G1: Check explicit CTC signal first (fast, no DB)
+        const ctcSignalDetected = shouldRunCTC(input);
+        
+        if (ctcSignalDetected && (Date.now() - startTime) < BUDGET_MS) {
+            try {
+                // G3: Cap input for intent detection
+                const ctcInput = input.slice(0, INTENT_MAX_CHARS);
+                
+                setStage(STAGES.CTC_INTENT);
+                const intentRes = await base44.functions.invoke('context/crossThreadIntent', {
+                    input: ctcInput, session_id, user_email: user.email
                 });
-                const hydrateData = hydrateRes?.data || {};
+                const intentData = intentRes?.data || {};
 
-                if (hydrateData.hydrated?.length > 0) {
-                    setStage(STAGES.ARC_ASSEMBLE);
-                    const arcRes = await base44.functions.invoke('context/arcAssembler', {
-                        hydrated: hydrateData.hydrated, current_session_id: session_id, arc_token_budget: 2000
+                // G2: Only hydrate if intent found
+                if (intentData.cross_thread && intentData.thread_ids?.length > 0 && (Date.now() - startTime) < BUDGET_MS) {
+                    setStage(STAGES.CTC_HYDRATE);
+                    const hydrateRes = await base44.functions.invoke('context/threadHydrator', {
+                        thread_ids: intentData.thread_ids, user_email: user.email
                     });
-                    const arcData = arcRes?.data || {};
-                    arcBlock = arcData.arc_block || '';
-                    ctcInjectionMeta = arcData.injection_meta || [];
-                    console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens });
+                    const hydrateData = hydrateRes?.data || {};
+
+                    // G2: Only assemble if seeds hydrated
+                    if (hydrateData.hydrated?.length > 0 && (Date.now() - startTime) < BUDGET_MS) {
+                        setStage(STAGES.ARC_ASSEMBLE);
+                        const arcRes = await base44.functions.invoke('context/arcAssembler', {
+                            hydrated: hydrateData.hydrated, current_session_id: session_id, arc_token_budget: 2000
+                        });
+                        const arcData = arcRes?.data || {};
+                        arcBlock = arcData.arc_block || '';
+                        ctcInjectionMeta = arcData.injection_meta || [];
+                        console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens });
+                    }
                 }
+            } catch (ctcErr) {
+                console.warn('⚠️ [CTC_NONFATAL]', ctcErr.message);
             }
-        } catch (ctcErr) {
-            console.warn('⚠️ [CTC_NONFATAL]', ctcErr.message);
+        } else if (!ctcSignalDetected) {
+            console.log('⏭️ [CTC_SKIPPED] No explicit signal detected');
+        } else {
+            console.log('⏭️ [CTC_SKIPPED] Budget exceeded');
         }
 
         // ── MEMORY RECALL — INLINED (no function invoke) ──────────────────────
