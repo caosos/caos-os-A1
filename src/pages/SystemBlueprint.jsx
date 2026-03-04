@@ -1971,7 +1971,16 @@ END TOKEN`}</pre>
 - CTC Phase 1 deployed (Mar 4, 2026): ThreadIndex, ContextSeed, LaneState, LaneSeedHistory entities + threadIndexLoader module
 - Temperature lifecycle: HOT(<24h), WARM(<30d), COLD(<90d), VANISH(>90d) — recalculated on access, never trusted from storage
 - Patches: CSC-TIME-001, CTC-TIME-001, CTC-TIME-002 — timestamps are hard requirements in all seed/injection contracts
-- TSB-020: CTC Phase 1 deployed — entity schemas + threadIndexLoader with full ErrorLog traceability`}</Code>
+- TSB-020: CTC Phase 1 deployed — entity schemas + threadIndexLoader with full ErrorLog traceability
+- CTC Phase 2 deployed (Mar 4, 2026): crossThreadIntent + threadHydrator + sanitizer modules
+- CTC Phase 3 WIRED (Mar 4, 2026): seedCompressor + arcAssembler deployed, hybridMessage CTC stages LIVE
+- hybridMessage CTC pipeline: CTC_INTENT → CTC_HYDRATE → ARC_ASSEMBLE (non-fatal, post-history, pre-heuristics)
+- ARC_PACK injection: between identity/truth-discipline and RECALLED MEMORY blocks in system prompt
+- seedCompressor anti-drift rule: physical signature only accepts raw Message records, not prior seeds
+- span_hash idempotency: SHA256(message_ids+timestamps) — duplicate spans return existing seed, no new write
+- Truth discipline updated: ARC_PACK entries are "verified facts from past threads" — Aria may reference directly
+- No ContextSeed records yet — first seed requires explicit call to context/seedCompressor with a message span
+- Phase 4 (CTC): ARC Inspector UI — browse seeds, view injection metadata, trigger compression from developer mode`}</Code>
           </Section>
 
         </div>
