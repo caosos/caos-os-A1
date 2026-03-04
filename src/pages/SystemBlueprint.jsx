@@ -1892,7 +1892,7 @@ END TOKEN`}</pre>
           </Section>
 
           {/* 13. ARIA ACCESS NOTE */}
-          <Section title="13. How Aria Reads This Blueprint" color="cyan">
+          <Section title="19. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
             <p className="mt-2">To ask Aria about the system state, use recall-trigger phrases like: <em>"what do you know about CAOS architecture"</em>, <em>"what have we built"</em>, or <em>"what's the current state of the memory system"</em>.</p>
             <Code>{`Aria knows:
