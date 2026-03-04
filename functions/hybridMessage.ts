@@ -48,6 +48,20 @@ async function openAICall(key, messages, model, maxTokens = 2000) {
     return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
 }
 
+// ─── EXPLICIT CTC GATING (pure — no network) ──────────────────────────────────
+function shouldRunCTC(input) {
+    const t = input || '';
+    const patterns = [
+        /\bin\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+thread\b/i,
+        /\bin\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+conversation\b/i,
+        /\bfrom\s+(?:the\s+)?(\w+(?:\s+\w+)?)\s+(?:thread|conversation)\b/i,
+        /\b(\w+(?:\s+\w+)?)\s*:\s+/,
+        /\b(?:other|another)\s+thread\b/i,
+        /\bctc:/i
+    ];
+    return patterns.some(p => p.test(t));
+}
+
 // ─── INLINED HEURISTICS (pure — no network) ───────────────────────────────────
 function classifyIntent(input) {
     const t = input.toLowerCase();
