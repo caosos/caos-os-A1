@@ -114,7 +114,7 @@ Wait for the owner to tell you what they need.`}</pre>
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint v2</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 3, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Artifact Loader: IMPLEMENTED ✅ · External Knowledge Detector: v2 BROWSE-ON-VERB ✅ · SelectorEngine: v2 BROWSE-ON-VERB ✅ · UserStorage Entity: ADDED ✅ · UserFile Entity: ACTIVE (files/photos/links) ✅ · Files/Photos/Links Panel: FIXED ✅ · File Storage Architecture: DOCUMENTED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅ · Authority Domain Separation: LOCKED ✅ · Pull-Only Awareness Rule: LOCKED ✅ · Active Model: gpt-5.2 (200K token limit) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (useAuthBootstrap ✅ · useConversations ✅ · ~1126 lines remaining) · Edit Tracking Convention: ACTIVE ✅</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 4, 2026 · ODEL v1: IN PROGRESS 🔧 · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Artifact Loader: IMPLEMENTED ✅ · External Knowledge Detector: v2 BROWSE-ON-VERB ✅ · SelectorEngine: v2 BROWSE-ON-VERB ✅ · UserStorage Entity: ADDED ✅ · UserFile Entity: ACTIVE (files/photos/links) ✅ · Files/Photos/Links Panel: FIXED ✅ · File Storage Architecture: DOCUMENTED ✅ · Platform Constraints: DOCUMENTED ✅ · Module Catalogue: ADDED ✅ · Agent Onboarding Contract: ADDED ✅ · hybridMessage: LOCKED ✅ · textToSpeech: LOCKED ✅ · transcribeAudio: LOCKED ✅ · Authority Domain Separation: LOCKED ✅ · Pull-Only Awareness Rule: LOCKED ✅ · Active Model: gpt-5.2 (200K token limit) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (useAuthBootstrap ✅ · useConversations ✅ · ~1126 lines remaining) · Edit Tracking Convention: ACTIVE ✅ · CTC Phase 1: DEPLOYED ✅ (ThreadIndex + ContextSeed + LaneState + LaneSeedHistory + threadIndexLoader) · CTC Phase 2: DEPLOYED ✅ (crossThreadIntent + threadHydrator + sanitizer) · CTC Phase 3: WIRED ✅ (seedCompressor + arcAssembler + hybridMessage CTC stages LIVE)</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="Agent Onboarding Contract: Section 0" color="red" />
               <Tag label="hybridMessage: LOCKED" color="green" />
@@ -123,6 +123,7 @@ Wait for the owner to tell you what they need.`}</pre>
               <Tag label="OpenAI TTS: LOCKED" color="green" />
               <Tag label="Google Web Speech TTS: LOCKED" color="green" />
               <Tag label="WCW Meter: LIVE DATA" color="green" />
+              <Tag label="CTC Memory System: LIVE ✅" color="green" />
               <Tag label="PHASE 1 — Observability: IN PROGRESS" color="yellow" />
               <Tag label="Module Catalogue: Section 15" color="indigo" />
               <Tag label="PHASE 2–6: RESERVED" color="purple" />
