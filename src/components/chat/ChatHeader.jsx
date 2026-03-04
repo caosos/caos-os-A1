@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
