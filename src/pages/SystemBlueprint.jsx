@@ -1822,7 +1822,7 @@ hybridMessage is the unified orchestration gate.
 It orchestrates. It does not implement. Modules implement.
 
 Pipeline:
-AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_LOAD → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
+AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_PREP → CTC_INTENT → CTC_HYDRATE → ARC_ASSEMBLE → HEURISTICS → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
 
 Spine invariants are locked. No creeping logic into spine.
 
