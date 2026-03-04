@@ -6,7 +6,8 @@ export default function YouTubeEmbed({ videoId, url }) {
 
   if (!videoId) return null;
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`;
 
   return (
     <>
