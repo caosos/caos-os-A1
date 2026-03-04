@@ -791,10 +791,15 @@ export default function Chat() {
                 sessionFilesCount={generatedFiles.length}
               />
               {currentConversationId && currentMessages.length > 0 && (
-                <div className="z-10">
+                <div className="z-10 flex items-center gap-2">
                   <ConversationSearch
                     messages={currentMessages}
                     onJumpToMessage={handleJumpToMessage}
+                  />
+                  <BootloaderInject
+                    conversationId={currentConversationId}
+                    onMessageSent={handleBootloaderMessage}
+                    disabled={isLoading}
                   />
                 </div>
               )}
