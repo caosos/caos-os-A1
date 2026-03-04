@@ -1749,7 +1749,7 @@ Intended activation path:
           </Section>
 
           {/* CONTINUATION TOKEN */}
-          <Section title="CAOS Continuation Token — vNext (2026-03-02)" color="green">
+          <Section title="18. CAOS Continuation Token — vNext (2026-03-02)" color="green">
             <p className="text-gray-300 text-xs mb-3">Paste this block as the first message in any new builder session where thread continuity has been lost. It encodes tone, governance posture, architectural direction, and work discipline.</p>
             <pre className="bg-black/60 border border-green-500/40 rounded-lg p-4 text-xs text-green-300 whitespace-pre-wrap select-all">{`CAOS_CONTINUATION_TOKEN_vNEXT_2026-03-02
 ROOT: CAOS
