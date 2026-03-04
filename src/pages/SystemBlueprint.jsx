@@ -371,44 +371,52 @@ Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
   │
   ├─ 1. AUTH: base44.auth.me() — reject if not authenticated
   │
-  ├─ 2. LOAD USER PROFILE: UserProfile entity (structured_memory, anchors, tone, project)
+  ├─ 2. LOAD USER PROFILE + SESSION HISTORY: parallel fetch
+  │      └─ UserProfile entity (structured_memory, anchors, tone, project)
+  │      └─ Message entity, up to 40 messages (HOT_HEAD=15 + HOT_TAIL=40)
   │
   ├─ 3. PHASE A: ATOMIC MEMORY SAVE (if input matches trigger phrases)
-  │      └─ detectMemorySave() → '__VAGUE__' | '__PRONOUN__' | content string | null
+  │      └─ detectSaveIntent() → '__VAGUE__' | '__PRONOUN__' | content string | null
   │      └─ If vague → ask for clarification (MEMORY_CLARIFY mode)
   │      └─ If pronoun → ask who (MEMORY_CLARIFY_PRONOUN mode)
-  │      └─ If content → splitAtomicFacts() → saveAtomicMemory() → receipt
+  │      └─ If content → dedup check → write to UserProfile.structured_memory → receipt
   │      └─ Returns immediately — BYPASSES inference entirely
   │
-  ├─ 4. LOAD SESSION HISTORY: Message entity, up to 200 messages
-  │      └─ compressHistory() → HOT_HEAD(20) + summary block + HOT_TAIL(80)
+  ├─ 4. HISTORY COMPRESSION: compressHistory() — HOT_HEAD(15) + summary + HOT_TAIL(40)
   │
-  ├─ 5. DETERMINISTIC RECALL: if detectMemoryRecall(input)
-  │      └─ recallStructuredMemory() → keyword match against structured_memory
-  │      └─ Returns top 10 matched entries, injected into system prompt
+  ├─ 5. CTC — CROSS-THREAD CONTEXT (Phase 3 — LIVE ✅)
+  │      └─ CTC_INTENT: context/crossThreadIntent → detects explicit/topic/time recall
+  │      └─ CTC_HYDRATE: context/threadHydrator → loads ContextSeed records (if cross_thread)
+  │      └─ ARC_ASSEMBLE: context/arcAssembler → builds ARC_PACK block (token budget: 2000)
+  │      └─ arcBlock injected into system prompt BEFORE memory recall
+  │      └─ Non-fatal: any failure → pipeline continues without CTC context
   │
-  ├─ 6. HEURISTICS ENGINE v1 (internal — never surfaced in output)
+  ├─ 6. DETERMINISTIC RECALL: if detectRecallIntent(input)
+  │      └─ Keyword match against UserProfile.structured_memory
+  │      └─ Returns top 5 matched entries, injected after ARC_PACK in system prompt
+  │
+  ├─ 7. HEURISTICS ENGINE v1 (internal — never surfaced in output)
   │      └─ classifyIntent() → MEMORY_ACTION | TECHNICAL_DESIGN | PARTNER_REVIEW |
-  │                              EXECUTION_DIRECTIVE | SUMMARY_COMPACT | TOOL_INVOCATION | GENERAL_QUERY
+  │                              EXECUTION_DIRECTIVE | SUMMARY_COMPACT | GENERAL_QUERY
   │      └─ calibrateDepth() → COMPACT | STANDARD | LAYERED
-  │      └─ buildHeuristicsDirective() → appended to system prompt
-  │      └─ MEMORY_ACTION bypasses — no directive injected
+  │      └─ buildDirective() → appended to system prompt
   │
-  ├─ 7. BUILD SYSTEM PROMPT
-  │      └─ Aria identity + truth discipline rules
-  │      └─ OUTPUT FORMAT: prose only, no lists/headers unless asked
-  │      └─ Recalled memories (if any)
-  │      └─ Legacy memory_anchors (filtered, labeled INFERRED)
-  │      └─ Tone/project context from UserProfile
+  ├─ 8. BUILD SYSTEM PROMPT
+  │      └─ Aria identity + truth discipline rules (ARC_PACK entries = verified facts)
+  │      └─ ARC_PACK block (CTC cross-thread context, if any)
+  │      └─ RECALLED MEMORY (Phase A structured_memory, if triggered)
+  │      └─ INFERRED CONTEXT (legacy anchors, labeled)
+  │      └─ Communication style + session length
   │      └─ Heuristics directive (depth + posture)
   │
-  ├─ 8. OPENAI CALL: gpt-5.2, max_tokens=2000
+  ├─ 9. OPENAI CALL: gpt-5.2, max_tokens=2000
   │
-  ├─ 9. SAVE MESSAGES: Message entity (user + assistant)
+  ├─ 10. SAVE MESSAGES: Message entity (user + assistant)
   │
-  ├─ 10. BACKGROUND: auto-extract legacy anchors (every 5 turns)
+  ├─ 11. RECEIPT: core/receiptWriter (fire-and-forget) — includes ctc_injected, ctc_seed_ids
+  │       ANCHOR EXTRACTION: DISABLED (Phase 3.1 lock active)
   │
-  └─ RETURN: { reply, mode, request_id, execution_receipt, ... }`}</Code>
+  └─ RETURN: { reply, mode, request_id, wcw_*, ctc_injected, ctc_seed_ids, execution_receipt }`}</Code>
           </Section>
 
           {/* 3. MEMORY SYSTEM — PHASE A LOCKED */}
