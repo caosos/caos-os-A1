@@ -261,16 +261,8 @@ Deno.serve(async (req) => {
             return Response.json({ reply: confirmReply, mode: 'MEMORY_SAVE', memory_saved, entries_created: saved.length, entry_ids, dedup_ids: deduped.map(e => e.id), rejected_entries: rejected, request_id, response_time_ms: Date.now() - startTime, tool_calls: [], execution_receipt: { request_id, session_id, memory_saved, entries_created: saved.length, latency_ms: Date.now() - startTime } });
         }
 
-        // ── STAGE: HISTORY_LOAD ───────────────────────────────────────────────
-        setStage(STAGES.HISTORY_LOAD);
-        let rawHistory = [];
-        if (session_id) {
-            try {
-                const msgs = await base44.entities.Message.filter({ conversation_id: session_id }, '-timestamp', MAX_HISTORY_MESSAGES);
-                rawHistory = msgs.reverse().map(m => ({ role: m.role, content: m.content }));
-                console.log('✅ [HISTORY_LOADED]', { count: rawHistory.length });
-            } catch (e) { console.warn('⚠️ [HISTORY_FAILED]', e.message); }
-        }
+        // ── STAGE: HISTORY_PREP — history already loaded in PROFILE_LOAD parallel ─
+        setStage(STAGES.HISTORY_PREP);
         const conversationHistory = compressHistory(rawHistory);
 
         // ── MEMORY RECALL — INLINED (no function invoke) ──────────────────────
