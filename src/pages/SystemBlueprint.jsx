@@ -525,18 +525,6 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           </Section>
 
           {/* 6. FRONTEND STRUCTURE */}
-          <div className="bg-orange-950/40 border border-orange-500/30 rounded-xl overflow-hidden">
-            <button onClick={() => {}} className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors" onClick={(e) => e.currentTarget.parentElement.querySelector('.section-body').classList.toggle('hidden')}>
-              <h2 className="text-xl font-bold text-orange-300">6. Frontend Structure — Pages &amp; Components</h2>
-              <span className="text-white/50">›</span>
-            </button>
-            <div className="section-body hidden px-5 pb-5 space-y-4 text-gray-200 text-sm">
-              <h4 className="text-white font-semibold">Pages:</h4>
-              <Code>{"Welcome - auth gate\nChat - main interface\nAdmin - admin dashboard\nConsole - SSH/terminal console view\nSystemBlueprint - THIS FILE"}</Code>
-            </div>
-          </div>
-
-          {/* 6 REAL */}
           <Section title="6. Frontend Structure — Pages & Components" color="orange">
             <h4 className="text-white font-semibold">Pages:</h4>
             <Code>{"Welcome - auth gate (Google sign-in, email, guest mode)\nChat - main interface (all chat logic lives here)\nAdmin - admin dashboard (errors, stats, pipeline visualizer)\nConsole - SSH/terminal console view\nImplementation - CAOS-A1 Python backend blueprint v1 (FastAPI + SQLite)\nMemoryIsolation - memory isolation architecture docs\nSystemBlueprint - THIS FILE — System Blueprint v2\nNews - news feed page"}</Code>
