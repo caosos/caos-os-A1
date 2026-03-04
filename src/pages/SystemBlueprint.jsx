@@ -605,7 +605,7 @@ Dependency:  PURE BROWSER API. No external network calls. No base44.functions.in
             </div>
           </Section>
 
-          {/* 11b. WCW TOKEN METER */}
+          {/* 12. WCW TOKEN METER */}
           <Section title="12. WCW Token Meter — Working Context Window Display (FIXED)" color="cyan">
             <p>The token meter in the chat header shows real backend WCW data, not a client-side estimate. Fixed Mar 1, 2026 (see TSB-012).</p>
             <Code>{`File:     components/chat/TokenMeter.jsx
