@@ -1487,7 +1487,7 @@ For mission-critical calls: log failures to ErrorLog entity for auditability.`}<
           </Section>
 
           {/* 15. FOUNDATIONAL MODULES — BUILT, NOT WIRED */}
-          <Section title="15. Foundational Modules — Built, Not Wired (Catalogue)" color="indigo">
+          <Section title="17. Foundational Modules — Built, Not Wired (Catalogue)" color="indigo">
             <p className="text-gray-300 text-xs mb-3">These modules exist in <code>functions/core/</code> and were purpose-built for future memory and tool expansion. Each is documented here so we can wire them in deliberately, one at a time. None are active in the current hybridMessage pipeline.</p>
 
             <div className="space-y-5">
