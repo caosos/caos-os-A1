@@ -1320,17 +1320,25 @@ EXIT CONDITION:
               {/* PHASE 3 */}
               <div className="bg-green-950/40 border border-green-500/40 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-green-300 font-bold text-sm">PHASE 3 — Memory Stabilization & Mutation Control</span>
-                  <Tag label="RESERVED" color="purple" />
+                  <span className="text-green-300 font-bold text-sm">PHASE 3 — CTC Memory System (Cross-Thread Context)</span>
+                  <Tag label="WIRED ✅" color="green" />
                 </div>
-                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Memory becomes fully auditable and deterministic. No surprise writes.</p>
-                <Code>{`3.1 Disable Auto Anchor Extraction (if still active)
-3.2 Enforce Explicit Save Triggers — no silent writes
-3.3 Memory Write Receipt: memory_write_success, memory_entity, anchor_count_delta
-3.4 Idempotency Protection — repeated request = identical memory state
+                <p className="text-gray-300 text-xs mb-2"><strong>Goal:</strong> Aria recalls structured context from past threads via idempotent compressed seeds. No re-reading raw history. No compression drift.</p>
+                <Code>{`3.1 Anchor auto-extraction DISABLED ✅ (Phase 3.1 lock active in hybridMessage)
+3.2 Entities deployed ✅ — ThreadIndex, ContextSeed, LaneState, LaneSeedHistory
+3.3 Phase 1 modules ✅ — threadIndexLoader (temperature recalc on access)
+3.4 Phase 2 modules ✅ — crossThreadIntent, threadHydrator, sanitizer
+3.5 Phase 3 modules WIRED ✅ — seedCompressor + arcAssembler + hybridMessage CTC stages LIVE
+    ARC_PACK injected into system prompt between identity and memory recall blocks.
+    Anti-drift: seedCompressor only accepts raw Message records (physical enforcement).
+    Idempotency: span_hash = SHA256(message_ids+timestamps) — no duplicate seeds per span.
+    Token audit: approx_tokens_in/out, token_reduction_ratio, compressor_version on every seed.
+    Receipt: every hybridMessage response includes ctc_injected, ctc_seed_ids, ctc_injection_meta.
 
-EXIT CONDITION:
-  Repeated identical request → memory state unchanged (idempotent)`}</Code>
+PENDING — SEEDS NOT YET CREATED:
+  No ContextSeed records exist yet. First seed created by calling:
+    context/seedCompressor with { messages: [...], thread_id, lane_id, user_email }
+  Phase 4 (UI): ARC Inspector panel in developer mode to browse seeds + trigger compression.`}</Code>
               </div>
 
               {/* PHASE 4 */}
