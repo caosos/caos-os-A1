@@ -395,7 +395,8 @@ Deno.serve(async (req) => {
 
         // ── STAGE: PROMPT_BUILD (inlined — no network) ───────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
-        const systemPrompt = buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock });
+        const server_time = new Date().toISOString();
+        const systemPrompt = buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
