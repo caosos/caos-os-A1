@@ -732,7 +732,7 @@ Backend check:
           </Section>
 
           {/* TSB — Troubleshooting Bulletins */}
-          <Section title="TSB — Troubleshooting Bulletins (Known Issues & Fixes)" color="red">
+          <Section title="14. TSB — Troubleshooting Bulletins (Known Issues & Fixes)" color="red">
             <p className="text-gray-300 text-xs mb-4">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. Each entry is a permanent record.</p>
 
             <div className="space-y-4">
