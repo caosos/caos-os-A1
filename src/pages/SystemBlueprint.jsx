@@ -835,9 +835,7 @@ Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
              Memory write receipt. Idempotency protection.`}</Code>
               </div>
 
-            </div>
-
-            <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-red-300 font-bold text-sm">TSB-005 — Token Meter Showing 0 / 2M (No Count)</span>
                 <Tag label="FIXED ✅" color="green" />
