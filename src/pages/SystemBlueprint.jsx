@@ -5,33 +5,29 @@ import { createPageUrl } from '@/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import BlueprintCopyButton from '@/components/docs/BlueprintCopyButton';
 
-const Section = ({ title, color = 'blue', children, defaultOpen = false, forceVisible = false }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  const borderColor = {
-    blue: 'border-blue-500/30', green: 'border-green-500/30', red: 'border-red-500/30',
-    purple: 'border-purple-500/30', yellow: 'border-yellow-500/30', cyan: 'border-cyan-500/30',
-    indigo: 'border-indigo-500/30', orange: 'border-orange-500/30'
-  }[color];
-  const textColor = {
-    blue: 'text-blue-300', green: 'text-green-300', red: 'text-red-300',
-    purple: 'text-purple-300', yellow: 'text-yellow-300', cyan: 'text-cyan-300',
-    indigo: 'text-indigo-300', orange: 'text-orange-300'
-  }[color];
-  const bgColor = {
-    blue: 'bg-blue-950/40', green: 'bg-green-950/40', red: 'bg-red-950/40',
-    purple: 'bg-purple-950/40', yellow: 'bg-yellow-950/40', cyan: 'bg-cyan-950/40',
-    indigo: 'bg-indigo-950/40', orange: 'bg-orange-950/40'
-  }[color];
+const Section = ({ title, color = 'blue', children }) => {
+  const [open, setOpen] = useState(false);
+  const colorMap = {
+    blue:   { border: 'border-blue-500/30',   text: 'text-blue-300',   bg: 'bg-blue-950/40'   },
+    green:  { border: 'border-green-500/30',  text: 'text-green-300',  bg: 'bg-green-950/40'  },
+    red:    { border: 'border-red-500/30',    text: 'text-red-300',    bg: 'bg-red-950/40'    },
+    purple: { border: 'border-purple-500/30', text: 'text-purple-300', bg: 'bg-purple-950/40' },
+    yellow: { border: 'border-yellow-500/30', text: 'text-yellow-300', bg: 'bg-yellow-950/40' },
+    cyan:   { border: 'border-cyan-500/30',   text: 'text-cyan-300',   bg: 'bg-cyan-950/40'   },
+    indigo: { border: 'border-indigo-500/30', text: 'text-indigo-300', bg: 'bg-indigo-950/40' },
+    orange: { border: 'border-orange-500/30', text: 'text-orange-300', bg: 'bg-orange-950/40' },
+  };
+  const c = colorMap[color] || colorMap.blue;
 
   return (
-    <div className={`${bgColor} border ${borderColor} rounded-xl overflow-hidden`}>
+    <div className={`${c.bg} border ${c.border} rounded-xl overflow-hidden`}>
       <button
         data-section-toggle
         data-open={open ? 'true' : 'false'}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
       >
-        <h2 className={`text-xl font-bold ${textColor}`}>{title}</h2>
+        <h2 className={`text-xl font-bold ${c.text}`}>{title}</h2>
         {open ? <ChevronDown className="w-5 h-5 text-white/50" /> : <ChevronRight className="w-5 h-5 text-white/50" />}
       </button>
       {open && <div className="px-5 pb-5 space-y-4 text-gray-200 text-sm">{children}</div>}
