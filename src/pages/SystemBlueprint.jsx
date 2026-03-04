@@ -1165,6 +1165,35 @@ Required Action:
 Priority:  HIGH. Must complete before next feature addition.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-019 — Unterminated String Literal in SystemBlueprint (TTS Lock Block)</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 4, 2026
+Component: pages/SystemBlueprint.jsx — Section 11 (TTS), Path A Code block
+Symptom:   Build failed with:
+             Unterminated string literal at line 544:70
+             SyntaxError: Unterminated string constant
+           App would not compile. All pages broken.
+Root Cause: The <Code> block for the OpenAI TTS lock signature was written using
+           double-quote string syntax: {"...multiline content..."}
+           JavaScript double-quoted (and single-quoted) strings CANNOT span
+           multiple lines. The string started on line 544 but the closing quote
+           was never found — parser hit EOF.
+           Template literals (backtick strings) are required for multi-line JSX
+           string expressions.
+Fix:       Changed the Code block from:
+             <Code>{"LOCK_SIGNATURE: ...multiline..."}
+           to:
+             <Code>{\`LOCK_SIGNATURE: ...multiline...\`}
+           Backtick template literals support multi-line strings natively.
+Rule:      ANY multi-line string inside a JSX expression {} MUST use backtick
+           template literals, never double or single quotes.
+           All existing Code blocks in this file already used backticks correctly —
+           this was a one-off introduced during a manual edit.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
               </div>
           </Section>
