@@ -553,7 +553,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
 
           {/* 9. WHAT IS NOT YET ACTIVE */}
           <Section title="9. Built But Not Yet Active" color="yellow">
-            <Code>{"Lane-based context isolation - not wired into hybridMessage\nPlane B (Record entity) - schema built, not primary store\nAnchor hash-chain - schema built, not active\nThreadSnapshot / rotation - built, not triggered\nLexicalRule normalization - built, not applied\nDrift detection (DriftEvent) - built, not active\nSessionManifest capability gate - built, not enforced\nMulti-agent blackboard - UI placeholder only\nCAOS-A1 Python backend - blueprinted, not deployed\n\nLEGACY / ORPHANED:\npinMemory - superseded by Phase A structured_memory. Dead function."}</Code>
+            <Code>{"Lane-based context isolation - not wired into hybridMessage\nPlane B (Record entity) - schema built, not primary store\nAnchor hash-chain - schema built, not active\nThreadSnapshot / rotation - built, not triggered\nLexicalRule normalization - built, not applied\nDrift detection (DriftEvent) - built, not active\nSessionManifest capability gate - built, not enforced\nMulti-agent blackboard - UI placeholder only\nCAOS-A1 Python backend - blueprinted, not deployed\n\nCTC — SEEDING NOT YET TRIGGERED:\n  seedCompressor exists and is wired — but ContextSeed records must be created\n  before cross-thread recall can actually surface anything. First seeds are\n  created by calling context/seedCompressor directly with a message span.\n  No UI yet to trigger compression from the Chat interface.\n\nLEGACY / ORPHANED:\npinMemory - superseded by Phase A structured_memory. Dead function."}</Code>
           </Section>
 
           {/* 10. KNOWN ISSUES */}
