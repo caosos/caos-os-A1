@@ -423,7 +423,10 @@ Deno.serve(async (req) => {
                 heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
                 model_used: ACTIVE_MODEL, latency_ms: responseTime,
                 token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
-                wcw_used: promptTokens, wcw_remaining: wcwRemaining
+                wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+                ctc_injected: ctcInjectionMeta.length > 0,
+                ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
+                ctc_injection_meta: ctcInjectionMeta
             }
         });
 
