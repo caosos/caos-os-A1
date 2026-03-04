@@ -275,21 +275,34 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Apply Section 0.10 Workflow Etiquette from the first change (edit tracking, read-before-write, etc.)
   □ Ask the owner if any of the above is unclear — do not assume
 
-  CONFIRMED STACK STATE (as of Mar 3, 2026):
+  CONFIRMED STACK STATE (as of Mar 4, 2026):
   pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
    └─ hooks/useAuthBootstrap   56 lines    EXTRACTED ✅
    └─ hooks/useConversations  240 lines    EXTRACTED ✅
-  functions/hybridMessage      387 lines    LOCKED ✅ (spine — orchestrates, does not implement)
+  functions/hybridMessage      ~420 lines   LOCKED ✅ (spine — orchestrates, does not implement)
    └─ core/memoryEngine        (module — save/recall)
    └─ core/heuristicsEngine    (module — intent/DCS)
    └─ core/promptBuilder       (module — system prompt)
-   └─ core/receiptWriter       (module — DiagnosticReceipt)
+   └─ core/receiptWriter       (module — DiagnosticReceipt + CTC meta)
    └─ core/errorEnvelopeWriter (module — ODEL v1)
    └─ core/environmentLoader   (module — cross-thread state)
    └─ core/selfDescribe        (module — runtime manifest kv)
    └─ core/webSearch           (module — Bing API search)
    └─ core/externalKnowledgeDetector  v2 BROWSE-ON-VERB ✅
-   └─ core/selectorEngine      v2 BROWSE-ON-VERB ✅`}</Code>
+   └─ core/selectorEngine      v2 BROWSE-ON-VERB ✅
+  CTC MEMORY SYSTEM — LIVE ✅ (Mar 4, 2026)
+   └─ context/threadIndexLoader    (load ThreadIndex — temperature recalc on access)
+   └─ context/crossThreadIntent    (detect explicit/topic/time cross-thread references)
+   └─ context/threadHydrator       (load ContextSeed → update last_hydrated_at)
+   └─ context/sanitizer            (filter conversational noise from message spans)
+   └─ context/seedCompressor       (compress raw spans → ARC pack → ContextSeed entity)
+   └─ context/arcAssembler         (assemble ARC_PACK block — 2000 token budget)
+  ENTITIES:
+   └─ ThreadIndex     (thread registry — temperature, last_active_at, summary_seed_id)
+   └─ ContextSeed     (compressed ARC pack — span_hash, arc_pack_json, token metrics)
+   └─ LaneState       (lane-level pinned state + active seed IDs)
+   └─ LaneSeedHistory (ordered seed creation history per lane)`}</Code>
+</invoke>
 
             <h4 className="text-white font-semibold mt-3">8. Authority Domain Separation</h4>
             <Code>{`LOCK_SIGNATURE: CAOS_AUTHORITY_DOMAIN_SEPARATION_v1_2026-03-01
