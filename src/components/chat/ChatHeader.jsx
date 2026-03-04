@@ -86,7 +86,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </button>
           </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-48 bg-[#1a2744] backdrop-blur-xl border-white/10 text-white"
+          className="w-56 bg-[#1a2744] backdrop-blur-xl border-white/10 text-white"
           align="start"
           sideOffset={8}
           style={{ zIndex: 9999 }}
