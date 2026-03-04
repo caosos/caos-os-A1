@@ -304,17 +304,22 @@ Deno.serve(async (req) => {
         // G1: Explicit gating — only run if user signal detected
         // G2: Conditional execution — skip stages if not needed
         // G4: Time budget guard — abort if >1500ms elapsed
+        // G5: Separate hydration budget — max 800ms for hydrate + assemble
         let arcBlock = '';
         let ctcInjectionMeta = [];
         const ctcStartTime = Date.now();
 
         // G1: Check explicit CTC signal first (fast, no DB)
         const ctcSignalDetected = shouldRunCTC(input);
+        debug_meta.ctc_signal_detected = ctcSignalDetected;
         
         if (ctcSignalDetected && (Date.now() - startTime) < BUDGET_MS) {
             try {
-                // G3: Cap input for intent detection
+                // G3: Cap input for intent detection (preserve canonical message)
                 const ctcInput = input.slice(0, INTENT_MAX_CHARS);
+                const inputTruncated = input.length > INTENT_MAX_CHARS;
+                debug_meta.intent_truncated = inputTruncated;
+                debug_meta.intent_chars = ctcInput.length;
                 
                 setStage(STAGES.CTC_INTENT);
                 const intentRes = await base44.functions.invoke('context/crossThreadIntent', {
@@ -322,16 +327,20 @@ Deno.serve(async (req) => {
                 });
                 const intentData = intentRes?.data || {};
 
-                // G2: Only hydrate if intent found
-                if (intentData.cross_thread && intentData.thread_ids?.length > 0 && (Date.now() - startTime) < BUDGET_MS) {
+                // G2 + G5: Only hydrate if intent found AND hydration budget available
+                const hydrationStartTime = Date.now();
+                if (intentData.cross_thread && intentData.thread_ids?.length > 0 && 
+                    (Date.now() - startTime) < BUDGET_MS &&
+                    (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
                     setStage(STAGES.CTC_HYDRATE);
                     const hydrateRes = await base44.functions.invoke('context/threadHydrator', {
                         thread_ids: intentData.thread_ids, user_email: user.email
                     });
                     const hydrateData = hydrateRes?.data || {};
 
-                    // G2: Only assemble if seeds hydrated
-                    if (hydrateData.hydrated?.length > 0 && (Date.now() - startTime) < BUDGET_MS) {
+                    // G2 + G5: Only assemble if seeds hydrated AND still within hydration budget
+                    if (hydrateData.hydrated?.length > 0 && 
+                        (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
                         setStage(STAGES.ARC_ASSEMBLE);
                         const arcRes = await base44.functions.invoke('context/arcAssembler', {
                             hydrated: hydrateData.hydrated, current_session_id: session_id, arc_token_budget: 2000
@@ -339,17 +348,31 @@ Deno.serve(async (req) => {
                         const arcData = arcRes?.data || {};
                         arcBlock = arcData.arc_block || '';
                         ctcInjectionMeta = arcData.injection_meta || [];
-                        console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens });
+                        debug_meta.ctc_elapsed_ms = Date.now() - ctcStartTime;
+                        console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens, elapsed_ms: debug_meta.ctc_elapsed_ms });
+                    } else if (hydrateData.hydrated?.length > 0) {
+                        debug_meta.budget_exceeded_stages.push('ARC_ASSEMBLE');
+                        console.log('⏭️ [ARC_ASSEMBLE_SKIPPED] Hydration budget exceeded');
                     }
+                } else if (intentData.cross_thread) {
+                    debug_meta.ctc_skipped_reason = (Date.now() - startTime) >= BUDGET_MS ? 'total_budget_exceeded' : 'hydration_budget_exceeded';
+                    debug_meta.budget_exceeded_stages.push('CTC_HYDRATE');
+                    console.log('⏭️ [CTC_HYDRATE_SKIPPED]', debug_meta.ctc_skipped_reason);
                 }
             } catch (ctcErr) {
                 console.warn('⚠️ [CTC_NONFATAL]', ctcErr.message);
+                debug_meta.gating_decisions.ctc_error = ctcErr.message;
             }
         } else if (!ctcSignalDetected) {
+            debug_meta.ctc_skipped_reason = 'no_explicit_signal';
+            debug_meta.gating_decisions.signal_gate = 'blocked';
             console.log('⏭️ [CTC_SKIPPED] No explicit signal detected');
         } else {
+            debug_meta.ctc_skipped_reason = 'total_budget_exceeded';
+            debug_meta.gating_decisions.time_gate = 'blocked';
             console.log('⏭️ [CTC_SKIPPED] Budget exceeded');
         }
+        debug_meta.ctc_elapsed_ms = Date.now() - ctcStartTime;
 
         // ── MEMORY RECALL — INLINED (no function invoke) ──────────────────────
         const isRecallQuery = detectRecallIntent(input);
