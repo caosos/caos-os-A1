@@ -356,7 +356,7 @@ ESTABLISHED: Mar 1, 2026. Directive from system owner.`}</Code>
           </Section>
 
           {/* 1. WHAT CAOS IS */}
-          <Section title="1. What CAOS Is" color="blue" defaultOpen={true}>
+          <Section title="1. What CAOS Is" color="blue">
             <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
             <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with OpenAI gpt-5.2 as the active inference engine. It has a deterministic memory system, a heuristics formatting layer, and a chat UI with thread management, file support, and developer tools.</p>
             <Code>{`Platform:   Base44 (React + Deno serverless functions)
