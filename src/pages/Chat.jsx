@@ -57,6 +57,7 @@ export default function Chat() {
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
   const [messageInputValue, setMessageInputValue] = useState('');
+  const [inputHeight, setInputHeight] = useState(0);
 
   // Helper to set message in input
   const setMessage = (text) => {
