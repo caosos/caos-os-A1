@@ -1934,7 +1934,11 @@ END TOKEN`}</pre>
 - hybridMessage is at 387 lines (LOCKED ✅) — confirmed active pipeline with 9 contracted modules
 - externalKnowledgeDetector v2: two-stage browse-verb + sufficiency logic (ACTIVE ✅)
 - selectorEngine v2: explicit browse verb patterns + split trigger logic (ACTIVE ✅)
-- Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"`}</Code>
+- Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"
+- CTC Phase 1 deployed (Mar 4, 2026): ThreadIndex, ContextSeed, LaneState, LaneSeedHistory entities + threadIndexLoader module
+- Temperature lifecycle: HOT(<24h), WARM(<30d), COLD(<90d), VANISH(>90d) — recalculated on access, never trusted from storage
+- Patches: CSC-TIME-001, CTC-TIME-001, CTC-TIME-002 — timestamps are hard requirements in all seed/injection contracts
+- TSB-020: CTC Phase 1 deployed — entity schemas + threadIndexLoader with full ErrorLog traceability`}</Code>
           </Section>
 
         </div>
