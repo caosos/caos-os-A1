@@ -13,8 +13,10 @@ const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 40;
 const HOT_TAIL = 40;
 const HOT_HEAD = 15;
-const BUDGET_MS = 1500;  // Time budget for optional stages
+const BUDGET_MS = 1500;  // Total time budget for optional stages
+const CTC_HYDRATION_BUDGET_MS = 800;  // Max time for hydrate + assemble
 const INTENT_MAX_CHARS = 5000;  // Cap for CTC intent detection
+const SANITIZER_MAX_CHARS = 8000;  // Cap for sanitizer input (if used)
 const MODEL_CONTEXT_WINDOW = {
     'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
     'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
