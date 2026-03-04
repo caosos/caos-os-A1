@@ -1,5 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+const HARD_MAX_LIMIT = 80;
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -8,46 +10,58 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { thread_id, limit = 40, include_content = false } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return Response.json({ error: 'JSON body required' }, { status: 400 });
+    }
+
+    const thread_id = body?.thread_id;
+    const include_content = Boolean(body?.include_content);
+    const requestedLimit = Number(body?.limit ?? 40);
+
     if (!thread_id) {
       return Response.json({ error: 'thread_id required' }, { status: 400 });
     }
 
-    // Fetch messages for this thread
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.min(HARD_MAX_LIMIT, Math.floor(requestedLimit)))
+      : 40;
+
     const messages = await base44.entities.Message.filter(
       { conversation_id: thread_id },
       '-created_date',
       limit
     );
 
-    if (!messages || messages.length === 0) {
-      return Response.json({
-        thread_id,
-        message_count: 0,
-        messages: [],
-        loaded_at: new Date().toISOString()
-      });
-    }
+    const mapped = (messages ?? []).map((msg) => {
+      const content = msg.content ?? '';
+      const created = msg.created_date ?? msg.timestamp ?? null;
 
-    // Map to metadata + optional content
-    const mapped = messages.map(msg => ({
-      message_id: msg.id,
-      created_at: msg.created_date || msg.timestamp,
-      role: msg.role,
-      thread_id: msg.conversation_id,
-      snippet: msg.content ? msg.content.substring(0, 100) : '[no content]',
-      ...(include_content && { content: msg.content })
-    }));
+      return {
+        message_id: msg.id,
+        created_at: created ? new Date(created).toISOString() : null,
+        role: msg.role ?? null,
+        thread_id: msg.conversation_id ?? thread_id,
+        snippet: content ? content.slice(0, 100) : '[no content]',
+        ...(include_content ? { content } : {})
+      };
+    });
 
     return Response.json({
       thread_id,
+      conversation_id: thread_id,
+      order: 'desc',
+      limit,
+      include_content,
       message_count: mapped.length,
       messages: mapped,
       loaded_at: new Date().toISOString()
     });
   } catch (error) {
     return Response.json(
-      { error: error.message },
+      { error: String(error?.message ?? error) },
       { status: 500 }
     );
   }
