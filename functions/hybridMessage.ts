@@ -486,7 +486,7 @@ Deno.serve(async (req) => {
 
         const response = {
             reply, mode: 'GEN', request_id, correlation_id,
-            response_time_ms: responseTime, tool_calls: [],
+            server_time, response_time_ms: responseTime, tool_calls: [],
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
             execution_receipt: {
                 request_id, correlation_id, session_id,
