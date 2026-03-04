@@ -560,6 +560,7 @@ Speed pref:  localStorage caos_speech_rate (default: 1.0)
 Voices:      alloy | echo | fable | onyx | nova | shimmer
 VoiceSettings modal: preview + save voice selection → same invoke path`}</Code>
 
+
             <h4 className="text-white font-semibold mt-3">Path B — Google Web Speech API (ChatInput mic bar)</h4>
             <Code>{`LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01
 File locked:   components/chat/ChatInput.jsx
