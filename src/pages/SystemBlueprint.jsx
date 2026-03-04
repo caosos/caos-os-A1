@@ -525,7 +525,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           </Section>
 
           {/* 6. FRONTEND STRUCTURE */}
-          <Section title="6. Frontend Structure — Pages & Components" color="orange">
+          <Section title="6. Frontend Structure — Pages &amp; Components" color="orange">
             <h4 className="text-white font-semibold">Pages:</h4>
             <Code>{"Welcome - auth gate (Google sign-in, email, guest mode)\nChat - main interface (all chat logic lives here)\nAdmin - admin dashboard (errors, stats, pipeline visualizer)\nConsole - SSH/terminal console view\nImplementation - CAOS-A1 Python backend blueprint v1 (FastAPI + SQLite)\n  └─ renders: components/docs/CAOSBlueprint (the Python Implementation Blueprint v1)\nMemoryIsolation - memory isolation architecture docs\nSystemBlueprint - THIS FILE — System Blueprint v2 (living Base44 architecture doc)\nNews - news feed page"}</Code>
 
