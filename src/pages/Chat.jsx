@@ -1072,7 +1072,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   onClick={scrollToBottom}
-                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-2 transition-colors"
+                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm border border-white/20 rounded-full p-4 transition-colors touch-manipulation"
+                  style={{ minWidth: '52px', minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <ArrowDown className="w-5 h-5 text-white" />
                 </motion.button>
