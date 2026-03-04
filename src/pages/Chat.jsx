@@ -789,6 +789,15 @@ export default function Chat() {
                 }}
                 currentConversation={conversations.find(c => c.id === currentConversationId)}
                 sessionFilesCount={generatedFiles.length}
+                onBootloader={currentConversationId && currentMessages.length > 0 ? () => {
+                  // trigger bootloader inline without leaving the dropdown
+                  const { base44: b44 } = require('@/api/base44Client');
+                  import('@/components/chat/BootloaderInject').then(m => {
+                    // use the standalone function from the component
+                  });
+                  handleBootloaderFromMenu();
+                } : undefined}
+                bootloaderDisabled={isLoading}
               />
               {currentConversationId && currentMessages.length > 0 && (
                 <div className="z-10 flex items-center gap-2">
