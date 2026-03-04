@@ -1080,7 +1080,9 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               )}
             </AnimatePresence>
 
-            <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none" ref={(el) => {
+              if (el) setInputHeight(el.offsetHeight);
+            }}>
               <div className="pointer-events-auto">
                 <ChatInput 
                   onSend={handleSendMessage} 
@@ -1090,6 +1092,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   multiAgentMode={multiAgentMode}
                   messageValue={messageInputValue}
                   onMessageChange={setMessageInputValue}
+                  onHeightChange={setInputHeight}
                 />
               </div>
 
