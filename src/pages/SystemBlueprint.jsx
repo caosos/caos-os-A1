@@ -368,7 +368,7 @@ Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
           </Section>
 
           {/* 2. ACTIVE ARCHITECTURE */}
-          <Section title="2. Active Architecture — hybridMessage Pipeline" color="cyan" defaultOpen={true}>
+          <Section title="2. Active Architecture — hybridMessage Pipeline" color="cyan">
             <p>All messages flow through a single backend function: <code className="text-cyan-300">hybridMessage</code>. It is the unified governance gate. There is no separate pipeline runner — everything is in this one file.</p>
             <Code>{`Request → hybridMessage
   │
