@@ -553,7 +553,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           </Section>
 
           {/* 10. KNOWN ISSUES */}
-          <Section title="10. Known Issues & Candidate Next Work" color="blue">
+          <Section title="10. Known Issues and Candidate Next Work" color="blue">
             <Code>{"KNOWN:\n- Memory save strips 'that' from 'remember that...' (acceptable)\n- Legacy memory_anchors still injected as INFERRED context\n- pages/Chat.jsx is 1341 lines - FLAGGED FOR REFACTOR\n\nFILE STORAGE (confirmed Mar 3, 2026):\n- ChatInput uploads → UserFile on attach\n- Chat.jsx saveToUserFiles() after AI reply\n- Chat.jsx extractAndSaveLinks() scans AI replies for URLs\n\nCANDIDATE NEXT:\n- Refactor Chat.jsx (highest priority)\n- Phase B typed schema for structured_memory\n- Wire hybridMessage to read UserProfile.tone.style\n- Thread auto-summary on close"}</Code>
           </Section>
 
