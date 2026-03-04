@@ -497,24 +497,7 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
           {/* 5. DATA ENTITIES */}
           <Section title="5. Data Entities (Active)" color="indigo">
             <h4 className="text-white font-semibold">Core Chat:</h4>
-            <Code>{`Conversation  — thread metadata (title, last_message_time, summary, keywords)
-          Message       — individual messages (conversation_id, role, content, tool_calls,
-              execution_receipt, reactions, replies, file_urls)
-          UserProfile   — persistent user data:
-                preferred_name, assistant_name, environment_name
-                tone: { style, humor_ok, emoji_light, no_scaffold_titles, no_flattery }
-                project: { name, current_focus, known_friction_points }
-                memory_anchors: string[]   (legacy auto-extracted)
-                structured_memory: []       (Phase A atomic entries — ACTIVE)
-          UserFile      — uploaded files (name, url, type, folder_path, size, mime_type)
-
-          USER STORAGE (NEW — Mar 2, 2026):
-          UserStorage   — user file storage box:
-                user_email, file_name, mime_type, size_bytes, sha256
-                base44_file_id, file_type (document|image|code|data|other)
-                created_at timestamp
-                Schema enables proper file versioning, SHA256 integrity checking,
-                and deterministic file tracking (not anonymous blobs).</Code>
+            <Code>{"Conversation  — thread metadata (title, last_message_time, summary, keywords)\nMessage       — messages (conversation_id, role, content, file_urls, execution_receipt)\nUserProfile   — persistent user data:\n  tone, project, memory_anchors (legacy), structured_memory (Phase A ACTIVE)\nUserFile      — files/photos/links (name, url, type, folder_path, size, mime_type)\nUserStorage   — user file storage box (user_email, file_name, mime_type, sha256, base44_file_id)"}</Code>
 
             <h4 className="text-white font-semibold mt-3">Governance / Advanced (built, partially used):</h4>
             <Code>{"Anchor, Record, SessionContext, Lane, LexicalRule, SessionManifest\nDriftEvent, RetrievalReceipt, ThreadToken/Meta\nErrorLog (ACTIVE), ConfigChangeLog"}</Code>
