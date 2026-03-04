@@ -55,9 +55,9 @@ import Logs from './pages/Logs';
 import MemoryIsolation from './pages/MemoryIsolation';
 import News from './pages/News';
 import SystemBlueprint from './pages/SystemBlueprint';
+import TSBLog from './pages/TSBLog';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
-import TSBLog from './pages/TSBLog';
 
 
 export const PAGES = {
@@ -69,9 +69,9 @@ export const PAGES = {
     "MemoryIsolation": MemoryIsolation,
     "News": News,
     "SystemBlueprint": SystemBlueprint,
+    "TSBLog": TSBLog,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
-    "TSBLog": TSBLog,
 }
 
 export const pagesConfig = {
