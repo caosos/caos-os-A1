@@ -399,8 +399,11 @@ Deno.serve(async (req) => {
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
             heuristics_intent: hIntent, heuristics_depth: hDepth, cognitive_level: cogLevel,
             history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
-            matched_memories: matchedMemories.length,
-            latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
+                matched_memories: matchedMemories.length,
+                ctc_injected: ctcInjectionMeta.length > 0,
+                ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
+                ctc_injection_meta: ctcInjectionMeta,
+                latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
             token_breakdown: tokenBreakdown,
             user_email: user.email
         }).catch(e => console.error('🔥 [RECEIPT_WRITE_FAIL_NONFATAL]', e?.message || e));
