@@ -1166,7 +1166,7 @@ Priority:  HIGH. Must complete before next feature addition.`}</Code>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
               </div>
-              </Section>
+          </Section>
 
           {/* BUILD SEQUENCE */}
           <Section title="15. Build Phases — CAOS_BUILD_SEQUENCE_v1" color="cyan">
