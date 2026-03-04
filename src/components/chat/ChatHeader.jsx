@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation, sessionFilesCount }) {
+export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation, sessionFilesCount, onBootloader, bootloaderDisabled }) {
   const navigate = useNavigate();
   const [showGuestLogoutDialog, setShowGuestLogoutDialog] = useState(false);
   const [showExecution, setShowExecution] = useState(() => {
