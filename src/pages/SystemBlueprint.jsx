@@ -1191,7 +1191,7 @@ Priority:  HIGH. Must complete before next feature addition.`}</Code>
               </Section>
 
           {/* BUILD SEQUENCE */}
-          <Section title="CAOS_BUILD_SEQUENCE_v1 — Controlled Build Phases" color="cyan">
+          <Section title="15. Build Phases — CAOS_BUILD_SEQUENCE_v1" color="cyan">
             <p className="text-cyan-200 font-semibold">This is the locked execution sequence. Phases are executed in order. No phase is started until the previous one meets its exit condition.</p>
 
             <div className="space-y-5 mt-4">
