@@ -633,7 +633,7 @@ PASSED TO: <TokenMeter wcwUsed={wcwState.used} wcwBudget={wcwState.budget} />`}<
           </Section>
 
           {/* 12. AUDIO BLUEPRINT */}
-          <Section title="12. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
+          <Section title="13. Audio Blueprint v1 — CAOS Audio Layer (PENDING)" color="orange">
             <p><strong className="text-orange-300">Status: Blueprint complete. Not yet implemented. Modular — isolated from cognitive core.</strong></p>
             <p className="mt-2">Goal: enable Aria to process raw audio with multi-speaker separation, prosody/emotion detection, and natural conversational flow preservation. All invocation is permission-gated.</p>
 
