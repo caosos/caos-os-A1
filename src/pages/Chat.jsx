@@ -157,6 +157,31 @@ export default function Chat() {
     }
   };
 
+  const handleBootloaderMessage = ({ userContent, assistantReply, executionReceipt, responseTimeMs }) => {
+    if (!currentConversationId) return;
+    const now = new Date().toISOString();
+    const userMsg = {
+      id: 'boot_user_' + Date.now(),
+      conversation_id: currentConversationId,
+      role: 'user',
+      content: userContent,
+      timestamp: now,
+    };
+    const aiMsg = {
+      id: 'boot_ai_' + Date.now(),
+      conversation_id: currentConversationId,
+      role: 'assistant',
+      content: assistantReply,
+      response_time_ms: responseTimeMs,
+      execution_receipt: executionReceipt,
+      timestamp: now,
+    };
+    setMessages(prev => ({
+      ...prev,
+      [currentConversationId]: [...(prev[currentConversationId] || []), userMsg, aiMsg]
+    }));
+  };
+
   const handleJumpToMessage = (messageId) => {
     const element = messageRefs.current[messageId];
     if (element) {
