@@ -796,11 +796,6 @@ export default function Chat() {
                     messages={currentMessages}
                     onJumpToMessage={handleJumpToMessage}
                   />
-                  <BootloaderInject
-                    conversationId={currentConversationId}
-                    onMessageSent={handleBootloaderMessage}
-                    disabled={isLoading}
-                  />
                 </div>
               )}
             </div>
