@@ -173,6 +173,19 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
     const correlation_id = request_id;
+    const debugMode = req.headers.get('x-caos-debug') === 'true' || Deno.env.get('CAOS_DEBUG_MODE') === 'true';
+    
+    // Debug metadata (dev-only tracking)
+    const debug_meta = {
+        ctc_signal_detected: null,
+        ctc_skipped_reason: null,
+        ctc_elapsed_ms: 0,
+        intent_truncated: false,
+        intent_chars: 0,
+        budget_exceeded_stages: [],
+        time_checks: {},
+        gating_decisions: {}
+    };
 
     let body = null;
     let user = null;
