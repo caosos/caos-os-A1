@@ -902,7 +902,9 @@ Phase 3 Fix: Disable auto-extraction entirely. Explicit saves only.
             error_code=TTS_CALL_FAILED, visible in /Logs page.`}</Code>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded p-3 mt-4 space-y-4">
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded p-3 mt-4 space-y-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-orange-300 font-bold text-sm">TSB-008 — Welcome Page Infinite Loading Cycle</span>
