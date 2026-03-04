@@ -1361,7 +1361,7 @@ Session health heatmap`}</Code>
           </Section>
 
           {/* 14. BASE44 PLATFORM CONSTRAINTS */}
-          <Section title="14. Base44 Platform Constraints (Deno Serverless)" color="red">
+          <Section title="16. Base44 Platform Constraints (Deno Serverless)" color="red">
             <p className="text-gray-300">These are hard platform facts, not preferences. Every architectural decision involving backend functions must be designed around them. Verified Mar 1, 2026.</p>
 
             <h4 className="text-white font-semibold mt-3">1. No Cross-Function Local Imports</h4>
