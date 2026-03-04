@@ -287,8 +287,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     const voices = window.speechSynthesis.getVoices();
     const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
     if (selectedVoice) utterance.voice = selectedVoice;
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.cancel();
+    // rAF: flush cancel before queuing speak, stays inside gesture context
+    requestAnimationFrame(() => {
+      window.speechSynthesis.speak(utterance);
+    });
   };
 
   const handleVoiceButtonContextMenu = (e) => {
