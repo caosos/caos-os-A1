@@ -38,15 +38,14 @@ function resolveCapabilities() {
     const token_limit = MODEL_TOKEN_LIMITS[model_name] ?? 128000;
 
     return {
-        // Web search: not wired into hybridMessage v2 pipeline
-        web_enabled: false,
+        // Web search: enabled — needs-based automatic via webSearch executor
+        web_enabled: true,
 
         // File read: UserFile entity exists and is readable — capability is present
         file_read_enabled: true,
 
-        // Image parse: file_urls supported on Message entity, OpenAI vision capable
-        // but not explicitly invoked in current pipeline — not enabled
-        image_parse_enabled: false,
+        // Image parse: file_urls + OpenAI vision both active in hybridMessage pipeline
+        image_parse_enabled: true,
 
         // PDF generation: jsPDF available as npm package but no active function wired
         pdf_generation_enabled: false,

@@ -79,7 +79,7 @@ function buildDirective(intent, depth, cogLevel) {
 }
 
 // ─── INLINED PROMPT BUILDER (pure — no network) ────────────────────────────────
-const KV = `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=false\nfile_read_enabled=true\ntts_enabled=true\nlearning_mode=true`;
+const KV = `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=true\nfile_read_enabled=true\nimage_parse_enabled=true\ntts_enabled=true\npython_enabled=true\nlearning_mode=true`;
 function buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel }) {
     let p = `You are Aria, a personal AI assistant for ${userName}.\n\nIDENTITY: You are Aria. Not CAOS. Speak in first person.\n\nCAOS_AUTHORITY_KV_BEGIN\n${KV}\nCAOS_AUTHORITY_KV_END\n\n`;
     p += `TRUTH DISCIPLINE: Do not claim "you mentioned" or "you previously said" unless the fact is in STRUCTURED MEMORY or verbatim SESSION HISTORY. If the user introduces a fact, respond with "Got it —" and treat as new.\n\n`;
