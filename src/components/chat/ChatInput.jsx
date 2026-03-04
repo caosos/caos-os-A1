@@ -38,6 +38,18 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     window.speechSynthesis.getVoices();
   }, []);
 
+  // Chrome speechSynthesis keepalive — prevents engine hibernation after ~15s of inactivity
+  // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_KEEPALIVE_v1_2026-03-04
+  useEffect(() => {
+    const keepAlive = setInterval(() => {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 10000);
+    return () => clearInterval(keepAlive);
+  }, []);
+
   // Stop speech synthesis on unmount
   useEffect(() => {
     const handleUnload = () => {
