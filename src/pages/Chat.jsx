@@ -506,8 +506,14 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         const urlRegex = /(https?:\/\/[^\s"'<>)]+)/g;
         const matches = text.match(urlRegex) || [];
         for (const url of matches) {
-          const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
-          await saveToUserFiles(url, 'link', hostname);
+          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^\s]*)?$/i.test(url);
+          if (isImage) {
+            const fileName = url.split('/').pop().split('?')[0] || 'image';
+            await saveToUserFiles(url, 'photo', fileName, 'image/jpeg');
+          } else {
+            const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
+            await saveToUserFiles(url, 'link', hostname);
+          }
         }
       };
 
