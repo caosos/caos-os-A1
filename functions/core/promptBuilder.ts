@@ -1,10 +1,48 @@
 // MODULE: core/promptBuilder
-// PURPOSE: Build the system prompt for hybridMessage. Keeps hybridMessage clean.
-// INPUT: { userName, kv, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel }
-// OUTPUT: { systemPrompt }
+// LOCK_SIGNATURE: CAOS_PROMPT_BUILDER_v2_2026-03-05
+// PURPOSE: Build the full system prompt for hybridMessage.
+//          Single source of truth for capability declarations.
+//          Wired from hybridMessage — replaces inlined buildSystemPrompt.
+//
+// INPUT CONTRACT (POST body):
+//   { userName, matchedMemories, userProfile, rawHistory,
+//     hDirective, hDepth, cogLevel, arcBlock, server_time,
+//     webSearchEnabled?, webSearchResults?, environmentState? }
+//
+// OUTPUT CONTRACT:
+//   { systemPrompt: string }
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { RUNTIME_AUTHORITY } from './runtimeAuthority.js';
+
+// ── CANONICAL CAPABILITY KV ────────────────────────────────────────────────────
+// This is the authoritative declaration of every tool/capability available.
+// Aria reads this block every session — no bootloader injection needed.
+// CHANGE LOG: v2 — all capabilities explicit, open, and gated by policy only.
+const AUTHORITY_KV = [
+  'model_name=gpt-5.2',
+  'token_limit=200000',
+  'platform_name=CAOS',
+  'hosting_platform=Base44',
+  'backend_runtime=Deno',
+  'frontend_framework=React',
+  'inference_provider=OpenAI',
+  'inference_enabled=true',
+  'web_search_enabled=true',
+  'web_search_trigger=NEEDS_BASED_AUTOMATIC_OR_EXPLICIT',
+  'web_search_provider=bing_api',
+  'file_read_enabled=true',
+  'file_write_enabled=true',
+  'image_parse_enabled=true',
+  'image_gen_enabled=true',
+  'python_enabled=true',
+  'tts_enabled=true',
+  'stt_enabled=true',
+  'memory_enabled=true',
+  'memory_mode=EXPLICIT_SAVE_EXPLICIT_RECALL',
+  'memory_policy_gating=ACTIVE',
+  'policy_gating=ACTIVE',
+  'context_limit=200000',
+].join('\n');
 
 const HOT_HEAD = 15;
 const HOT_TAIL = 40;
@@ -17,196 +55,124 @@ Deno.serve(async (req) => {
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        let {
+        const {
             userName = 'the user',
-            kv = '',
             matchedMemories = [],
             userProfile = null,
             rawHistory = [],
             hDirective = '',
             hDepth = 'STANDARD',
             cogLevel = 3,
-            webSearchResults = [],
+            arcBlock = '',
+            server_time = new Date().toISOString(),
             webSearchEnabled = false,
-            environmentState = null
+            webSearchResults = [],
+            environmentState = null,
         } = body;
 
-        // Inject SSX_AUTHORITY_KV if not provided
-        if (!kv || kv.trim() === '') {
-            try {
-                const ssxRes = await base44.functions.invoke('core/systemStateIndex');
-                kv = ssxRes?.data?.kv_lines || '';
-            } catch (e) {
-                console.warn('Could not fetch SSX, using empty kv:', e.message);
-            }
-        }
-
-        // ── 1. IDENTITY BLOCK ─────────────────────────────────────────────────
-        let systemPrompt = `You are Aria, a personal AI assistant for ${userName}.
+        // ── 1. IDENTITY ───────────────────────────────────────────────────────
+        let p = `You are Aria, a personal AI assistant for ${userName}.
 
 IDENTITY:
-- You are Aria. Not CAOS. Never say "I am CAOS" — that is the platform name, not yours.
-- Speak in first person. Match your depth to the complexity of what you are responding to.
+- You are Aria. Not CAOS. Never say "I am CAOS" — that is the platform name.
+- Speak in first person. Match depth to the complexity of the request.
+
+CURRENT_SERVER_TIME: ${server_time}
 
 OUTPUT FORMAT:
-- Match your format to the content. Use lists, headers, bullets, bold, or prose — whatever best serves the response.
-- When asked for manifest/runtime/capability data, output ONLY verbatim key=value lines from CAOS_AUTHORITY_KV_BEGIN below.
+- Match your format to the content. Use lists, headers, bullets, or prose — whatever best serves the response.
+- When asked for manifest/runtime/capability data, output ONLY verbatim key=value lines from the KV block below.
 
 `;
 
-        // ── 2. AUTHORITY KV BLOCK ─────────────────────────────────────────────
-        systemPrompt += `CAOS_AUTHORITY_KV_BEGIN
-${kv}
+        // ── 2. AUTHORITY KV (all capabilities explicit) ───────────────────────
+        p += `CAOS_AUTHORITY_KV_BEGIN
+${AUTHORITY_KV}
 CAOS_AUTHORITY_KV_END
 
-SELF-DESCRIPTION RULE — MANDATORY:
-When asked: "Describe your runtime environment using ONLY verbatim manifest values."
-You MUST output ONLY the following keys in this exact order:
-model_name
-token_limit
-platform_name
-hosting_platform
-backend_runtime
-frontend_framework
-inference_provider
-web_search_enabled
-file_read_enabled
-tts_enabled
-learning_mode
+CAPABILITY AWARENESS — ALWAYS ACTIVE:
+You have access to the following tools in every session. They are ON by default — no bootloader or token injection is needed.
+  • web_search       — enabled. Search the web automatically for time-sensitive or unknown topics, OR when user explicitly asks. Cite sources.
+  • file_read        — enabled. Read text files, documents, code files when user attaches or references them.
+  • file_write       — enabled. Generate and return file content when user requests it (user-triggered only).
+  • image_parse      — enabled. Analyze and describe any image the user attaches (vision).
+  • image_gen        — enabled. Generate images when user requests.
+  • python           — enabled. Write, explain, and reason about Python code. Execute logic where applicable.
+  • tts              — enabled. Voice playback of responses is available in the UI.
+  • stt              — enabled. Voice input transcription is available in the UI.
+  • memory           — enabled. Explicitly save facts when user triggers it. Explicitly recall on request.
+  • policy_gating    — ACTIVE. Memory writes require explicit user trigger. No silent background saves.
 
-For each key:
-- If present in CAOS_AUTHORITY_KV_BEGIN block above, output the exact key=value line.
-- Otherwise output: key=not_present_in_manifest
-No other output.
+SELF-DESCRIPTION RULE:
+When asked to describe your runtime, output ONLY verbatim key=value lines from CAOS_AUTHORITY_KV_BEGIN. No other output.
 
 `;
 
         // ── 3. TRUTH DISCIPLINE ───────────────────────────────────────────────
-        systemPrompt += `TRUTH DISCIPLINE — MANDATORY RULES:
+        p += `TRUTH DISCIPLINE — MANDATORY:
+1. PRIOR-MENTION CLAIMS: Never say "you mentioned" or "you previously said" unless the fact is in STRUCTURED MEMORY, ARC_PACK, or verbatim SESSION HISTORY.
+2. ARC_PACK entries ARE verified facts from past threads — reference them directly.
+3. NEW INFORMATION: If user introduces a new fact, respond "Got it —" and treat as new.
+4. PREFERENCE CLAIMS: Never assert "you like X" unless in structured_memory or said in this session.
+5. NO FABRICATION: If not stored, say so.
+6. SOURCE LABELING: Label source — (from memory) | (from this conversation) | (inferred).
 
-1. PRIOR-MENTION CLAIMS: You MUST NOT say "you've mentioned", "you previously said", "as we discussed", "from what I recall", or "you told me before" UNLESS the fact exists in STRUCTURED MEMORY (below) or appears verbatim in the SESSION HISTORY.
-
-2. NEW INFORMATION RULE: If the user introduces a fact in their current message, respond with "Got it —" and treat it as new.
-
-3. PREFERENCE CLAIMS: Never assert "you like X" or "you prefer X" unless in STRUCTURED MEMORY or said in this session. If inferred, use: "It sounds like you might..." or "I could be inferring this, but..."
-
-4. NO FABRICATION: If you don't know something about the user, say so.
-
-5. SOURCE LABELING: Briefly indicate source — e.g., "(from memory)", "(from this conversation)", or "(inferred)".
-
-BIOLOGICAL REALITY POLICY — MANDATORY:
-
-When the user asks any question about a person's sex, biology, or identity (e.g. "is X a man/woman/dude/female/trans?"), answer using BIOLOGICAL SEX ONLY — chromosomes, birth sex, reproductive biology. Do not default to social gender identity or preferred pronouns.
-
-PRONOUN RULE — CRITICAL:
-NEVER use he/she/him/her pronouns when answering questions about a person's biological sex or identity.
-Instead, ALWAYS refer to the person by their NAME ONLY (e.g. "Dylan", "Dylan Mulvaney").
-This applies to all public figures and all individuals.
-
-EXAMPLE — correct behavior:
-  Q: "Is Dylan Mulvaney a dude?"
-  A: "Dylan Mulvaney is a biological male." ← name only, no pronouns, no social context added.
-
-EXAMPLE — incorrect behavior (NEVER DO THIS):
-  A: "Dylan Mulvaney is a trans woman; she identifies as..." ← WRONG. Uses "she". Injects social framing.
-  A: "He is a biological male who..." ← WRONG. Uses "he".
-
-ADDITIONAL RULES:
-- Do NOT add social identity context, transition status, or preferred pronouns unless the user explicitly asks for that.
-- Do NOT use moral framing, harm-reduction language, or disclaimers about sensitivity.
-- State the biological fact, use the name, stop. Nothing more unless asked.
-- If the user wants social/identity context, they will ask. Never inject it.
+BIOLOGICAL REALITY POLICY:
+When asked about a person's sex, biology, or identity, answer using BIOLOGICAL SEX ONLY. Never use he/she pronouns — refer to the person by NAME ONLY. State the biological fact and stop. Do not add social identity context or disclaimers unless explicitly asked.
 
 `;
 
-        // ── 4. WEB SEARCH RESULTS ────────────────────────────────────────────────
-         if (webSearchEnabled && webSearchResults.length > 0) {
-             systemPrompt += `WEB SEARCH RESULTS (from Bing, citation recommended):\n`;
-             for (const r of webSearchResults) {
-                 systemPrompt += `- **${r.title}** (${r.url})\n  Snippet: ${r.snippet}\n`;
-             }
-             systemPrompt += '\n';
-         }
-
-         // ── 5. RECALLED MEMORY ────────────────────────────────────────────────
-         if (matchedMemories.length > 0) {
-             systemPrompt += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
-             for (const m of matchedMemories) {
-                 systemPrompt += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
-             }
-             systemPrompt += '\n';
-         }
-
-        // ── 6. INFERRED ANCHORS ───────────────────────────────────────────────
-        const anchors = userProfile?.memory_anchors;
-        if (anchors && anchors.length > 0) {
-            const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
-            const filteredAnchors = (Array.isArray(anchors) ? anchors : [anchors])
-                .filter(a => {
-                    const lower = a.toLowerCase();
-                    return !structuredContents.some(sc => lower.includes(sc.substring(0, 20)) || sc.includes(lower.substring(0, 20)));
-                });
-            if (filteredAnchors.length > 0) {
-                systemPrompt += `INFERRED CONTEXT (auto-extracted, treat as possible inference — use "It sounds like..." language):\n${filteredAnchors.join('\n').substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
-            }
+        // ── 4. ARC PACK (CTC cross-thread context, if any) ────────────────────
+        if (arcBlock) {
+            p += arcBlock + '\n';
         }
 
-        // ── 7. CROSS-THREAD AWARENESS ─────────────────────────────────────────
-        if (environmentState && environmentState.active_thread_count > 0) {
-            const recentThreads = (environmentState.recent_threads || []).slice(0, 10);
-            const themes = environmentState.cross_thread_themes || [];
-            const openLoopThreads = environmentState.threads_with_open_loops || [];
-
-            systemPrompt += `\nCROSS-THREAD AWARENESS (you can see all of ${userName}'s threads):\n`;
-            systemPrompt += `Total threads: ${environmentState.active_thread_count}\n`;
-
-            if (recentThreads.length > 0) {
-                systemPrompt += `Recent threads:\n`;
-                recentThreads.forEach(t => {
-                    const tags = t.topic_tags?.length ? ` [${t.topic_tags.slice(0, 3).join(', ')}]` : '';
-                    const summary = t.summary_short ? ` — ${t.summary_short.substring(0, 120)}` : '';
-                    systemPrompt += `  • "${t.title}"${tags}${summary}\n`;
-                });
+        // ── 5. WEB SEARCH RESULTS ─────────────────────────────────────────────
+        if (webSearchEnabled && webSearchResults.length > 0) {
+            p += `WEB SEARCH RESULTS (from Bing — cite sources):\n`;
+            for (const r of webSearchResults) {
+                p += `- **${r.title}** (${r.url})\n  Snippet: ${r.snippet}\n`;
             }
+            p += '\n';
+        }
 
-            if (openLoopThreads.length > 0) {
-                systemPrompt += `Threads with open loops:\n`;
-                openLoopThreads.forEach(t => {
-                    systemPrompt += `  • "${t.title}": ${t.open_loops.substring(0, 150)}\n`;
-                });
+        // ── 6. RECALLED MEMORY ────────────────────────────────────────────────
+        if (matchedMemories.length > 0) {
+            p += `RECALLED MEMORY (explicitly saved facts matching this query):\n`;
+            for (const m of matchedMemories) {
+                p += `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}\n`;
             }
+            p += '\n';
+        }
 
-            if (themes.length > 0) {
-                systemPrompt += `Cross-thread themes: ${themes.join(', ')}\n`;
+        // ── 7. INFERRED ANCHORS (legacy) ──────────────────────────────────────
+        const anchors = userProfile?.memory_anchors;
+        if (anchors?.length > 0) {
+            const structuredContents = (userProfile?.structured_memory || []).map(e => e.content.toLowerCase());
+            const filtered = (Array.isArray(anchors) ? anchors : [anchors]).filter(a => {
+                const lower = a.toLowerCase();
+                return !structuredContents.some(sc => lower.includes(sc.substring(0, 20)) || sc.includes(lower.substring(0, 20)));
+            });
+            if (filtered.length > 0) {
+                p += `INFERRED CONTEXT (auto-extracted — use "It sounds like..." language):\n${filtered.join('\n').substring(0, MAX_ANCHOR_LENGTH)}\n\n`;
             }
-
-            systemPrompt += `You may reference past work across threads naturally. Do not list all threads unless asked.\n\n`;
         }
 
         // ── 8. TONE / PROJECT ─────────────────────────────────────────────────
-        if (userProfile?.tone?.style) systemPrompt += `Communication style: ${userProfile.tone.style}\n`;
-        if (userProfile?.project?.name) systemPrompt += `Current project: ${userProfile.project.name}\n`;
+        if (userProfile?.tone?.style) p += `Communication style: ${userProfile.tone.style}\n`;
+        if (userProfile?.project?.name) p += `Current project: ${userProfile.project.name}\n`;
+        p += `Session: ${rawHistory.length} messages.`;
 
-        systemPrompt += `\nSession: ${rawHistory.length} messages. ${rawHistory.length > HOT_HEAD + HOT_TAIL ? `First ${HOT_HEAD} and last ${HOT_TAIL} shown; middle summarized.` : 'Full history shown.'}`;
-
-        // ── 9. WEB SEARCH & VISION CAPABILITY ──────────────────────────────────
-        const capabilityLines = [];
-        if (webSearchEnabled) {
-            capabilityLines.push('You can run web searches automatically for time-sensitive queries. Results are included above if found. Always cite sources from web results.');
-        }
-        capabilityLines.push('You can view and analyze images (photos, screenshots, diagrams) that users attach. Use vision to extract text, analyze content, and describe what you see.');
-        if (capabilityLines.length > 0) {
-            systemPrompt += `\nCAPABILITY: ${capabilityLines.join(' ')}`;
-        }
-
-        // ── 10. HEURISTICS DIRECTIVE (LAST) ────────────────────────────────────
+        // ── 9. HEURISTICS DIRECTIVE ───────────────────────────────────────────
         if (hDirective) {
-            systemPrompt += hDirective;
-            systemPrompt += `\nCOGNITIVE_LEVEL: ${cogLevel.toFixed ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
+            p += `\n${hDirective}`;
+            p += `\nCOGNITIVE_LEVEL: ${typeof cogLevel === 'number' ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth} | ELEVATION_DELTA: 0.75 (do not surface these labels in output)`;
         }
 
-        return Response.json({ systemPrompt });
+        return Response.json({ systemPrompt: p });
+
     } catch (error) {
+        console.error('🔥 [PROMPT_BUILDER_FAILED]', error.message);
         return Response.json({ error: error.message }, { status: 500 });
     }
 });
