@@ -424,13 +424,13 @@ Deno.serve(async (req) => {
             has_begin: systemPrompt.includes('CAOS_AUTHORITY_KV_BEGIN'),
             has_model: systemPrompt.includes('model_name='),
             has_token: systemPrompt.includes('token_limit='),
-            has_backend: systemPrompt.includes('backend_runtime='),
-            has_frontend: systemPrompt.includes('frontend_framework='),
-            has_provider: systemPrompt.includes('inference_provider='),
             has_web: systemPrompt.includes('web_search_enabled='),
             has_file: systemPrompt.includes('file_read_enabled='),
+            has_image_gen: systemPrompt.includes('image_gen_enabled='),
+            has_python: systemPrompt.includes('python_enabled='),
             has_tts: systemPrompt.includes('tts_enabled='),
-            has_learning: systemPrompt.includes('learning_mode='),
+            has_memory: systemPrompt.includes('memory_enabled='),
+            built_via: 'promptBuilder',
         });
 
         const inferenceStart = Date.now();
