@@ -69,6 +69,222 @@ export default function TSBLog() {
             <div className="space-y-4">
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-002 — Memory Save Strips "that" from "remember that..."</span>
+                  <Tag label="KNOWN / ACCEPTABLE ✅" color="yellow" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — detectSaveIntent()
+Symptom:   When user says "remember that my dog is Biscuit", the stored
+           memory entry reads "my dog is Biscuit" — the word "that" is stripped.
+Root Cause: The detectSaveIntent() regex strips the trigger phrase including
+           "remember that" as a single token, then takes everything after it.
+           This is correct behavior — "that" is part of the trigger, not the content.
+Fix:       Accepted as intentional behavior. The stripped content is semantically
+           complete. "my dog is Biscuit" is the correct atomic fact.
+Status:    KNOWN, ACCEPTABLE. Not a bug. No fix required.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-003 — Legacy memory_anchors Still Injected as INFERRED Context</span>
+                  <Tag label="KNOWN / ACTIVE" color="yellow" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — buildSystemPrompt()
+Symptom:   Old memory_anchors (string array, legacy format) from UserProfile
+           are still injected into the system prompt as "INFERRED CONTEXT."
+           These were stored before Phase A structured_memory was implemented.
+Root Cause: hybridMessage still reads UserProfile.memory_anchors and injects them
+           as a legacy block below the structured_memory recall block.
+           They are labeled "INFERRED" which is correct — they were auto-extracted,
+           not explicitly user-confirmed.
+Fix:       None yet. The injection is labeled correctly ("INFERRED CONTEXT").
+           Users who have no legacy anchors see nothing in this block.
+           Phase B or a future cleanup pass should formally deprecate this block.
+Status:    KNOWN, ACTIVE. Will be addressed in Phase B (typed schema refactor).`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-004 — Silent Background Writes: Auto-Extraction Violating "No Silent Writes" Rule</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — anchor extraction stage
+Symptom:   Every AI turn was silently extracting "interesting facts" from the
+           conversation and writing them to memory_anchors without user knowledge
+           or confirmation. Users had no visibility into what was being saved.
+Root Cause: Auto-extraction was running on every message_save stage.
+           Violated the "No Silent Writes" invariant (Rule 5 in Section 0).
+Fix:       Anchor auto-extraction DISABLED via Phase 3.1 lock in hybridMessage.
+           A comment in the source marks the disabled block.
+           Memory saves are now EXPLICIT ONLY via Phase A trigger phrases.
+Status:    FIXED. Auto-extraction disabled. No passive writes.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-005 — Vague Memory Save: No Clarification Requested</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — detectSaveIntent() / MEMORY_CLARIFY mode
+Symptom:   When user said "remember that" with no content, or vague phrases like
+           "remember everything we talked about", Aria would either save nothing
+           silently or save a nonsensical empty entry.
+Root Cause: detectSaveIntent() was not checking for vague/empty content
+           before attempting to save. It returned an empty string, which was
+           then passed to the save flow.
+Fix:       detectSaveIntent() now returns '__VAGUE__' for non-specific content.
+           hybridMessage: if vague → return MEMORY_CLARIFY mode response asking
+           user to be more specific. No write occurs until content is explicit.
+           Similarly, pronoun-only content → '__PRONOUN__' → MEMORY_CLARIFY_PRONOUN.
+Status:    FIXED. Vague and pronoun-only saves trigger clarification, not silent failure.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-006 — Memory Dedup Not Working: Identical Facts Saved Multiple Times</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — saveOneAtomicEntry()
+Symptom:   Saying "remember my dog is Biscuit" twice would create two identical
+           entries in UserProfile.structured_memory. No deduplication was occurring.
+Root Cause: The save flow was not checking for existing entries with the same
+           normalized content before writing. Each trigger created a new UUID entry.
+Fix:       Added dedup check in saveOneAtomicEntry():
+           - Normalize both new content and existing entries (lowercase, strip whitespace)
+           - If normalized match found → skip write, return dedup_ids in receipt
+           - Receipt now includes: dedup_ids[] (IDs of entries that were skipped)
+Status:    FIXED. Duplicate memory saves are silently skipped with receipt audit trail.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-007 — Memory Recall Returns Unrelated Entries</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — recallStructuredMemory()
+Symptom:   Asking "what do you remember about me?" would surface unrelated entries.
+           e.g., asking about dogs would return entries about software projects.
+           Scoring was not filtering effectively.
+Root Cause: Early recall logic returned ALL structured_memory entries sorted by
+           recency, not by relevance. There was no keyword intersection scoring.
+Fix:       recallStructuredMemory() now:
+           1. Extracts keywords from query (tags extracted same way as save)
+           2. Scores each entry by tag intersection hits
+           3. Returns top 10 by score (not by recency)
+           4. Zero-score entries are excluded from injection
+Status:    FIXED. Recall is keyword-scored. Unrelated entries no longer surface.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-008 — Aria Claims to "Remember" Things Not in Structured Memory</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: functions/hybridMessage — buildSystemPrompt() / Truth Discipline block
+Symptom:   Aria would say "I remember you mentioned..." or "you told me earlier..."
+           referring to facts from the conversation that were never saved to memory.
+           This is fabrication — treating session context as persistent memory.
+Root Cause: No truth discipline rules were injected into the system prompt.
+           Aria was drawing from conversation history and framing it as memory.
+Fix:       Added 5 Truth Discipline rules to every system prompt:
+           1. PRIOR-MENTION CLAIMS: Never say "you mentioned" unless in STRUCTURED MEMORY
+           2. NEW INFORMATION RULE: If introduced now, treat as new
+           3. PREFERENCE CLAIMS: Never assert "you like X" unless in structured_memory
+           4. NO FABRICATION: If not stored, say "I don't have that stored"
+           5. SOURCE LABELING: (from memory) | (from this conversation) | (inferred)
+Status:    FIXED. Truth discipline enforced on every request.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-009 — Read Aloud Progress Bar Not Reflecting Real Playback</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: components/chat/ChatBubble.jsx — audio progress tracking
+Symptom:   The progress bar during read-aloud was animating at a fixed rate
+           instead of tracking actual audio position. It would complete before
+           audio finished, or continue after audio stopped.
+Root Cause: Progress was being driven by a fake setInterval() counter, not by
+           the audio element's timeupdate event.
+Fix:       - Removed fake interval
+           - Added audio.addEventListener('timeupdate', ...) to track real position
+           - Progress = (audio.currentTime / audio.duration) * 100
+           - Duration shown using audio.addEventListener('loadedmetadata', ...)
+           - Seek-on-click wired to the progress bar
+           - Skip ±10s buttons wired to audio.currentTime ±= 10
+Status:    FIXED. Progress bar reflects real playback position.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-010 — Google Web Speech TTS Not Playing (Browser Autoplay Block)</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: components/chat/ChatInput.jsx — Google Web Speech path
+Symptom:   Clicking the speaker icon in ChatInput would silently fail to play.
+           No audio, no error, no UI feedback.
+Root Cause: Browser autoplay policy requires audio to be initiated within a direct
+           user gesture handler (click event). The code was scheduling playback
+           asynchronously (inside a Promise or setTimeout), breaking the gesture
+           link and causing the browser to block it silently.
+Fix:       - speechSynthesis.speak() called synchronously inside the click handler
+           - Pre-warm the engine: speechSynthesis.cancel() at startup
+           - Engine keep-alive: periodic silent cancel() to prevent Chrome
+             from garbage-collecting the TTS engine after 10s of inactivity
+           - Voice list loaded via speechSynthesis.onvoiceschanged event
+Status:    FIXED. Google Web Speech now plays reliably from button click.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-011 — OpenAI TTS Model "tts-1" No Longer Valid</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: functions/textToSpeech.js
+Symptom:   OpenAI TTS API calls were returning 404 / model not found errors.
+           Audio was not being generated. The read-aloud feature was broken.
+Root Cause: The function was using model: "tts-1" which was deprecated/renamed.
+           As of Mar 2026, the correct model identifier is "tts-1-hd".
+Fix:       Changed model from "tts-1" to "tts-1-hd" in functions/textToSpeech.js.
+           Verified working: OpenAI /v1/audio/speech returns audio/mpeg binary.
+Rule:      textToSpeech is LOCKED. Model string is "tts-1-hd" ONLY.
+           Do not change without testing + TSB entry.
+Status:    FIXED. textToSpeech function locked with tts-1-hd.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-012 — WCW Token Meter Showing Estimated Data Instead of Real Backend Data</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 1, 2026
+Component: components/chat/TokenMeter.jsx + pages/Chat.jsx
+Symptom:   In the published app (not iframe), the WCW meter always showed
+           "~Xk / Yk (estimated)" with the ~ prefix, even after multiple messages.
+           In the iframe preview it showed real data. Discrepancy between environments.
+Root Cause: Chat.jsx was not fetching the last DiagnosticReceipt on thread load.
+           In the iframe, wcwState was populated by the active session's live data.
+           In the published app (fresh page load), no receipt was ever fetched,
+           so wcwState stayed null → TokenMeter fell back to character-count estimate.
+Fix:       Chat.jsx now fetches the last DiagnosticReceipt for the current
+           conversation_id on thread load (inside useConversations hook).
+           If found: setWcwState({ used: receipt.wcw_used, budget: receipt.wcw_budget })
+           On thread switch: wcwState resets to { used: null, budget: null }
+           to prevent stale WCW from previous thread bleeding into new thread display.
+Status:    FIXED. Published app now shows real WCW data from DiagnosticReceipt.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-013 — Duplicate Runtime Authority (Config Scattered Across System)</span>
                   <Tag label="FIXED ✅" color="green" />
                 </div>
