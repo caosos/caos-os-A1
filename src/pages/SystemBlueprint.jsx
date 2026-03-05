@@ -1517,6 +1517,7 @@ END TOKEN`}</pre>
 - TSB-017: Web search trigger UX mismatch fixed (Mar 3, 2026) — explicit browse verbs now honored
 - TSB-018: Chat.jsx refactor phase 1 complete — useAuthBootstrap (56L) + useConversations (240L) extracted
 - TSB-019: JSX multi-line string literal crash fixed (Mar 4, 2026) — backtick rule enforced
+- TSB-023: Capability declaration moved to promptBuilder (Mar 5, 2026) — all tools ON by default, no bootloader needed for new sessions
 - File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
 - Section 0.10: Workflow Etiquette — edit tracking, read-before-write, find_replace-first, no feature creep
 - Chat.jsx refactor stack: ~1126 lines remaining → next extraction is hooks/useSendMessage.js
