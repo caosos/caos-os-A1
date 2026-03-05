@@ -96,26 +96,22 @@ function buildDirective(intent, depth, cogLevel) {
     return posture + `DEPTH: ${depthMap[depth] || depthMap.STANDARD}\n`;
 }
 
-// ─── INLINED PROMPT BUILDER (pure — no network) ────────────────────────────────
-const KV = `model_name=gpt-5.2\ntoken_limit=200000\nplatform_name=CAOS\nbackend_runtime=deno\nfrontend_framework=react\ninference_provider=openai\nweb_search_enabled=true\nfile_read_enabled=true\nimage_parse_enabled=true\ntts_enabled=true\npython_enabled=true\nlearning_mode=true`;
-function buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time }) {
-    let p = `You are Aria, a personal AI assistant for ${userName}.\n\nIDENTITY: You are Aria. Not CAOS. Speak in first person.\n\nCURRENT_SERVER_TIME: ${server_time}\n\nCAOS_AUTHORITY_KV_BEGIN\n${KV}\nCAOS_AUTHORITY_KV_END\n\n`;
-    p += `TRUTH DISCIPLINE: Do not claim "you mentioned" or "you previously said" unless the fact is in STRUCTURED MEMORY, ARC_PACK, or verbatim SESSION HISTORY. ARC_PACK entries ARE verified facts from past threads — you may reference them directly. If the user introduces a new fact, respond with "Got it —" and treat as new.\n\n`;
-    // ── ARC PACK (Phase 3) — injected between system and memory, before WCW ──
-    if (arcBlock) {
-        p += arcBlock + '\n';
+// ─── PROMPT BUILD — delegates to core/promptBuilder (TSB-023: 2026-03-05) ────
+// Inlined buildSystemPrompt REPLACED. promptBuilder is now the canonical source.
+// It carries the full capability declaration block (all tools explicit + open).
+// Fallback: if promptBuilder call fails, use a minimal inline prompt.
+async function buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time }) {
+    try {
+        const res = await base44.functions.invoke('core/promptBuilder', {
+            userName, matchedMemories, userProfile, rawHistory,
+            hDirective, hDepth, cogLevel, arcBlock, server_time
+        });
+        if (res?.data?.systemPrompt) return res.data.systemPrompt;
+    } catch (e) {
+        console.warn('⚠️ [PROMPT_BUILDER_FALLBACK]', e.message);
     }
-    if (matchedMemories.length > 0) {
-        p += `RECALLED MEMORY:\n${matchedMemories.map(m => `- [${m.timestamp?.split('T')[0] || 'saved'}] ${m.content}`).join('\n')}\n\n`;
-    }
-    const anchors = userProfile?.memory_anchors;
-    if (anchors?.length > 0) {
-        p += `INFERRED CONTEXT (treat as possible inference):\n${(Array.isArray(anchors) ? anchors : [anchors]).join('\n').substring(0, 2000)}\n\n`;
-    }
-    if (userProfile?.tone?.style) p += `Communication style: ${userProfile.tone.style}\n`;
-    p += `Session: ${rawHistory.length} messages.\n`;
-    if (hDirective) p += hDirective + `\nCOGNITIVE_LEVEL: ${typeof cogLevel === 'number' ? cogLevel.toFixed(1) : cogLevel} | TARGET_DEPTH: ${hDepth}`;
-    return p;
+    // Minimal fallback — should rarely trigger
+    return `You are Aria, a personal AI assistant for ${userName}.\nCURRENT_SERVER_TIME: ${server_time}\nAll tools are enabled: web_search, file_read, file_write, image_parse, image_gen, python, tts, memory.\nSession: ${rawHistory.length} messages.`;
 }
 
 // ─── INLINED MEMORY DETECTION (pure regex — no network) ──────────────────────
