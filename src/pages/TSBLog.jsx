@@ -69,6 +69,30 @@ export default function TSBLog() {
             <div className="space-y-4">
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-001 — Read Aloud Using Browser Voices Instead of OpenAI TTS</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Feb 28, 2026
+Component: components/chat/ChatBubble.jsx — handleReadAloud()
+Symptom:   The speaker icon on AI responses was using browser SpeechSynthesis
+           (Google/system voices), not the OpenAI TTS backend.
+           The progress bar would animate but not reflect real audio playback.
+Root Cause: handleReadAloud() was calling window.speechSynthesis.speak()
+           directly instead of invoking the textToSpeech backend function.
+           The textToSpeech function (functions/textToSpeech.js) existed and
+           worked correctly — it just wasn't being called from ChatBubble.
+Fix:       Replaced browser speech synthesis with:
+             1. base44.functions.invoke('textToSpeech', { text, voice, speed })
+             2. Convert returned ArrayBuffer → Blob → ObjectURL → Audio()
+             3. Real progress bar tied to audio.currentTime / audio.duration
+             4. Caching: audioCache Map keyed on messageId + voice + speed
+             5. Global audio manager: only one audio plays at a time
+Voice pref: Uses localStorage key caos_voice_preference_message (default: nova)
+Speed pref: Uses localStorage key caos_speech_rate (default: 1.0)`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-002 — Memory Save Strips "that" from "remember that..."</span>
                   <Tag label="KNOWN / ACCEPTABLE ✅" color="yellow" />
                 </div>
