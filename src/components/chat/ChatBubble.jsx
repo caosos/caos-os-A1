@@ -947,8 +947,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={isNew ? { opacity: 0, y: 10 } : false}
+        animate={isNew ? { opacity: 1, y: 0 } : undefined}
         transition={{ duration: 0.3 }}
         className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full max-w-4xl mx-auto px-2 sm:px-4`}
       >
