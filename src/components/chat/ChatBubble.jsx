@@ -430,26 +430,32 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     // If audio is already loaded, toggle pause/resume
     if (audioRef.current && audioRef.current.src) {
       if (audioRef.current.paused) {
-        audioRef.current.play().then(() => {
-          setIsSpeaking(true);
-          setIsPausedBySpeech(false);
-        }).catch((err) => {
+        audioRef.current.play().catch((err) => {
           console.error('[AUDIO_RESUME_REJECTED]', err.message);
         });
+        setIsSpeaking(true);
+        setIsPausedBySpeech(false);
       } else {
         audioRef.current.pause();
         setIsPausedBySpeech(true);
-        setIsSpeaking(true); // keep player visible
+        setIsSpeaking(true);
       }
       return;
     }
 
-    // Check cache
+    // Check cache — can play immediately, still need gesture unlock
     if (audioCache.has(cacheKey)) {
-      const cachedUrl = audioCache.get(cacheKey);
-      playAudioUrl(cachedUrl);
+      playAudioUrl(audioCache.get(cacheKey));
       return;
     }
+
+    // Pre-create and gesture-unlock the Audio element NOW (synchronous, inside gesture)
+    const audio = new Audio();
+    audio.volume = 1.0;
+    // Calling play() on a silent/empty element unlocks autoplay for this instance
+    audio.play().catch(() => {}); // will fail silently — that's expected
+    audioRef.current = audio;
+    globalAudioInstance = audio;
 
     const cleanText = (message.content || '')
       .replace(/#{1,6}\s/g, '')
@@ -465,7 +471,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .replace(/---+/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim()
-      .substring(0, 4096); // OpenAI TTS limit
+      .substring(0, 4096);
 
     const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
     const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
@@ -473,7 +479,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsGenerating(true);
     setGenerationProgress(0);
 
-    // Animate generation progress
     const genInterval = setInterval(() => {
       setGenerationProgress(prev => Math.min(prev + 4, 90));
     }, 150);
@@ -489,19 +494,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         throw new Error(data?.error || 'TTS returned no audio');
       }
 
-      // Decode base64 → Blob → Object URL
       const byteChars = atob(data.audio_base64);
       const byteArray = new Uint8Array(byteChars.length);
       for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
       const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       audioCache.set(cacheKey, audioUrl);
-      playAudioUrl(audioUrl);
+
+      // Reuse the already-gesture-unlocked audio element
+      playAudioUrl(audioUrl, audio);
     } catch (err) {
       clearInterval(genInterval);
       setIsGenerating(false);
       setGenerationProgress(0);
-
+      audioRef.current = null;
+      globalAudioInstance = null;
       console.error('[TTS_ERROR]', err.message);
       toast.error(`Read aloud failed: ${err.message}`);
     }
