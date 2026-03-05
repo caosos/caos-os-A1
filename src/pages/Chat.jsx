@@ -1014,7 +1014,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   </div>
                 )}
 
-                {currentMessages.map((message) => (
+                {currentMessages.map((message, idx) => (
                   <div
                     key={message.id}
                     ref={(el) => messageRefs.current[message.id] = el}
@@ -1026,6 +1026,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                       onUpdateMessage={handleUpdateMessage}
                       closeMenuTrigger={closeMenuTrigger}
                       userInitials={user?.email ? user.email.substring(0, 2).toUpperCase() : "ME"}
+                      isNew={idx >= currentMessages.length - 2}
                     />
                   </div>
                 ))}
