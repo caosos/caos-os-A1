@@ -859,7 +859,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 </div>
               )}
 
-              {currentMessages.map((message) => (
+              {currentMessages.map((message, idx) => (
                 <div
                   key={message.id}
                   ref={(el) => messageRefs.current[message.id] = el}
@@ -870,6 +870,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                     isUser={message.role === 'user'}
                     onUpdateMessage={handleUpdateMessage}
                     closeMenuTrigger={closeMenuTrigger}
+                    isNew={idx >= currentMessages.length - 2}
                   />
                 </div>
               ))}
