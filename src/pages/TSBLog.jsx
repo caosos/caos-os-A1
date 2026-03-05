@@ -488,6 +488,32 @@ Rule:      ANY multi-line string inside a JSX expression {} MUST use backtick
 
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-020 — CTC Memory System Phase 1 Deployed: Entities + threadIndexLoader</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 4, 2026
+Component: CTC Memory System — Phase 1
+Entities deployed:
+  ThreadIndex     — thread registry with temperature lifecycle
+  ContextSeed     — compressed ARC pack storage (span_hash idempotency)
+  LaneState       — lane-level pinned state
+  LaneSeedHistory — ordered seed history per lane
+Module deployed:
+  context/threadIndexLoader — loads ThreadIndex with temperature recalculation on access
+    Temperature lifecycle: HOT(<24h), WARM(<30d), COLD(<90d), VANISH(>90d)
+    Never trusted from storage — always recalculated on load
+Patches applied:
+  CSC-TIME-001: ContextSeed now requires created_at + last_hydrated_at + source_span timestamps
+  CTC-TIME-001: threadIndexLoader stores last_active_at + last_seed_created_at on every write
+  CTC-TIME-002: threadHydrator updates last_hydrated_at on every seed load
+Error traceability:
+  All CTC failures log to ErrorLog with stage=CTC_PHASE1, full context preserved
+Status:    COMPLETE. Entities live. threadIndexLoader deployed and testable.
+Notes:     No ContextSeed records yet — first seeds created via context/seedCompressor.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-021 — hybridMessage Bloat: 538 Lines, Logic Inlined, I2 Invariant Violated</span>
                   <Tag label="OPEN ⚠️" color="red" />
                 </div>
