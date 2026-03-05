@@ -318,6 +318,149 @@ Lock:      RUNTIME_AUTHORITY is the governance point. Changes require TSB entry.
 
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-014 — Chat.jsx Refactor: File Too Large to Safely Edit (1341 Lines)</span>
+                  <Tag label="IN PROGRESS 🔧" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: pages/Chat.jsx
+Symptom:   Chat.jsx grew to 1341 lines — more than 3x the 400-line hard limit.
+           Every edit to this file risked breaking unrelated functionality.
+           The file was doing authentication, data loading, conversation management,
+           message sending, TTS, file handling, and UI rendering all in one place.
+Root Cause: Incremental feature additions without extraction. Each sprint added
+           more hooks, effects, and handlers into a single file.
+Fix:       Phased extraction plan:
+           Phase 1 (COMPLETE ✅ — Mar 3, 2026):
+             → hooks/useAuthBootstrap.js (56 lines) — user auth init + guest mode
+             → hooks/useConversations.js (240 lines) — conversation CRUD + state
+           Phase 2 (PENDING): hooks/useSendMessage.js — message send + error handling
+           Phase 3 (PENDING): split UI sections into sub-components
+Current:   ~1126 lines remaining in Chat.jsx after Phase 1 extraction.
+Status:    IN PROGRESS. useAuthBootstrap ✅ useConversations ✅ useSendMessage PENDING.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-015 — Files/Photos/Links Panel Broken: Not Saving, Nav Not Working</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: components/chat/ProfilePanel.jsx + components/files/FileManager.jsx
+Symptom 1: Files attached in chat were not appearing in the Files panel.
+Symptom 2: Clicking "Files" in the nav would not open the files view.
+Symptom 3: AI-generated links in replies were not being saved to UserFile.
+Root Cause 1: ChatInput was uploading files to Base44 storage but not writing
+             a UserFile entity record. The entity and the storage were disconnected.
+Root Cause 2: ProfilePanel nav was not correctly routing to the fileView state
+             because the onClick handler was calling the wrong setter.
+Root Cause 3: Chat.jsx extractAndSaveLinks() was not running after AI reply
+             because it was placed after a conditional return that could exit early.
+Fix:       1. ChatInput: after upload → base44.entities.UserFile.create({ name, url, type })
+           2. Chat.jsx: saveToUserFiles() called for every attached file after AI reply
+           3. Chat.jsx: extractAndSaveLinks() runs unconditionally after reply received
+           4. ProfilePanel: nav onClick correctly sets fileView state
+Status:    FIXED. Files, photos, and links all persist to UserFile on chat interactions.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-016 — Web Search Not Triggering on Explicit Browse Requests</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: functions/core/externalKnowledgeDetector + functions/core/selectorEngine
+Symptom:   When user said "search for X" or "look up X", Aria would respond
+           from training data instead of executing a web search. Even when the
+           user explicitly used browse verbs, the detector returned false.
+Root Cause: externalKnowledgeDetector was using a two-stage logic where:
+           Stage 1: check if query requires external knowledge (recent events, etc.)
+           Stage 2: check if there's sufficient existing knowledge in context
+           But browse verbs ("search", "look up", "find", "browse") were only
+           checked in Stage 1 and could be overridden by Stage 2 sufficiency logic.
+           A user saying "search for the weather" would pass Stage 1 but fail Stage 2
+           because "weather" has some training data — so search was skipped.
+Fix:       v2 rewrite:
+           - Browse verbs now trigger an UNCONDITIONAL search bypass:
+             if browseVerbDetected → force_search = true, skip sufficiency check
+           - selectorEngine v2 similarly: explicit browse verbs → always authorize search
+           - Sufficiency check only applies to implicit/ambiguous queries
+Status:    FIXED. Explicit browse verb requests always trigger web search.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-017 — Chat.jsx Refactor Phase 1: useAuthBootstrap + useConversations Extracted</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 3, 2026
+Component: pages/Chat.jsx → hooks/useAuthBootstrap.js + hooks/useConversations.js
+Action:    Phase 1 of the Chat.jsx refactor (TSB-016) complete.
+Files created:
+  components/hooks/useAuthBootstrap.js (56 lines)
+    → user auth initialization, guest mode detection, dataLoaded state
+    → replaces ~60 lines of auth logic in Chat.jsx
+  components/hooks/useConversations.js (240 lines)
+    → conversation CRUD: create, delete, rename
+    → session resume handshake
+    → message history lazy-loading
+    → WCW state reset on thread switch
+    → replaces ~280 lines of conversation management in Chat.jsx
+Result:    Chat.jsx reduced from 1341 to ~1126 lines.
+           Still over the 400-line hard limit — refactor continues.
+Next:      hooks/useSendMessage.js — message send + error handling + retry logic`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-018 — runtimeAuthority: Centralized Config Source of Truth Created</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 2, 2026
+Component: functions/core/runtimeAuthority.js (NEW)
+See also:  TSB-013 (duplicate config problem that motivated this)
+Action:    Created functions/core/runtimeAuthority.js as the single canonical
+           source for all runtime configuration.
+Exports:   RUNTIME_AUTHORITY = {
+             build_id: "CAOS_BUILD_v2_2026-03-02",
+             runtime: { model_name: "gpt-5.2", token_limit: 200000,
+                        platform_name: "Base44", hosting: "Base44 (Deno serverless)", ... },
+             capabilities: { file_read, file_write, vision, web_search: { enabled: true,
+                             trigger: "NEEDS_BASED_AUTOMATIC", provider: "bing_api" }, tts, ... },
+             safeguards: { domain_allowlist, max_request_timeout_ms: 300000, ... }
+           }
+Consumers: systemSnapshot, wcwMeasure, promptBuilder — all now import from runtimeAuthority.
+Lock:      RUNTIME_AUTHORITY is the governance point. Model changes require a TSB entry.
+Status:    COMPLETE. runtimeAuthority.js is the canonical source of truth for all config.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-020 — CTC Memory System Phase 1 Deployed: Entities + threadIndexLoader</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 4, 2026
+Component: CTC Memory System — Phase 1
+Entities deployed:
+  ThreadIndex     — thread registry with temperature lifecycle
+  ContextSeed     — compressed ARC pack storage (span_hash idempotency)
+  LaneState       — lane-level pinned state
+  LaneSeedHistory — ordered seed history per lane
+Module deployed:
+  context/threadIndexLoader — loads ThreadIndex with temperature recalculation on access
+    Temperature lifecycle: HOT(<24h), WARM(<30d), COLD(<90d), VANISH(>90d)
+    Never trusted from storage — always recalculated on load
+Patches applied:
+  CSC-TIME-001: ContextSeed now requires created_at + last_hydrated_at + source_span timestamps
+  CTC-TIME-001: threadIndexLoader stores last_active_at + last_seed_created_at on every write
+  CTC-TIME-002: threadHydrator updates last_hydrated_at on every seed load
+Error traceability:
+  All CTC failures log to ErrorLog with stage=CTC_PHASE1, full context preserved
+Status:    COMPLETE. Entities live. threadIndexLoader deployed and testable.
+Notes:     No ContextSeed records yet — first seeds created via context/seedCompressor.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-001 — Read Aloud Using Browser Voices Instead of OpenAI TTS</span>
                   <Tag label="FIXED ✅" color="green" />
                 </div>
