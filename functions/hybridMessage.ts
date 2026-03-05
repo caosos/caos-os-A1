@@ -2,7 +2,9 @@
 // LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01
 // PIPELINE: AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_PREP → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
 // INVARIANTS: SESSION_RESUME=noop | Memory save=early return | Receipt=fire-and-forget | Model=gpt-5.2 | HOT_HEAD=15 HOT_TAIL=40
-// MAX 400 LINES — orchestration only, no logic
+// ⚠️ FROZEN: 536 lines — OVER 400-LINE HARD LIMIT (TSB-021/TSB-024)
+// GOVERNANCE: No new features. Only permitted change = adding a call/invoke to an external module.
+// Next edit must be a REFACTOR to extract inlined logic OUT, not add more IN.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
