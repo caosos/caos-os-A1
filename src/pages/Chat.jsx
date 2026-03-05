@@ -640,17 +640,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         });
       } else {
         // Backend (hybridMessage) already saves both messages to DB.
-        // We only update local state here — no duplicate DB writes.
-        const tempConvoId = conversationId;
-        const userMsg = {
-          id: 'local_user_' + Date.now(),
-          conversation_id: conversationId,
-          role: 'user',
-          content: messageText,
-          file_urls: fileUrls,
-          timestamp: new Date().toISOString(),
-          user_initials: user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : user?.email?.substring(0, 2).toUpperCase()
-        };
+        // Promote the temp user message in-place, append only the AI reply.
+        // This prevents duplicates when the conversation is re-loaded from DB.
         const aiMsg = {
           id: 'local_ai_' + Date.now(),
           conversation_id: conversationId,
@@ -663,10 +654,19 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null
         };
-        setMessages(prev => ({
-          ...prev,
-          [tempConvoId]: [...(prev[tempConvoId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
-        }));
+        setMessages(prev => {
+          const existing = prev[conversationId] || [];
+          // Promote temp → confirmed user message (keep same position, update id)
+          const promoted = existing.map(m =>
+            m.id === tempId
+              ? { ...m, id: 'confirmed_user_' + Date.now(), failed: false }
+              : m
+          );
+          return {
+            ...prev,
+            [conversationId]: [...promoted, aiMsg]
+          };
+        });
       }
 
       setConversations(prev => {
