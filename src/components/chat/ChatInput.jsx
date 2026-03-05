@@ -50,6 +50,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     return () => clearInterval(keepAlive);
   }, []);
 
+  // Pre-warm Chrome TTS engine when a new AI message arrives.
+  // Chrome lets the speech engine go cold after ~30s of inactivity, causing a 1–3s
+  // delay on the next speak() call. Calling cancel() on message arrival wakes it
+  // immediately — no gesture required, no audio played — so the button fires instantly.
+  useEffect(() => {
+    if (!lastAssistantMessage) return;
+    window.speechSynthesis.cancel();
+  }, [lastAssistantMessage]);
+
   // Stop speech synthesis on unmount
   useEffect(() => {
     const handleUnload = () => {
