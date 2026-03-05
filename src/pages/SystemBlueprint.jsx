@@ -1520,7 +1520,7 @@ END TOKEN`}</pre>
 - File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
 - Section 0.10: Workflow Etiquette — edit tracking, read-before-write, find_replace-first, no feature creep
 - Chat.jsx refactor stack: ~1126 lines remaining → next extraction is hooks/useSendMessage.js
-- hybridMessage is at 387 lines (LOCKED ✅) — confirmed active pipeline with 9 contracted modules
+- hybridMessage is now 538 lines (⚠️ OVER LIMIT — frozen, refactor pending TSB-021)
 - externalKnowledgeDetector v2: two-stage browse-verb + sufficiency logic (ACTIVE ✅)
 - selectorEngine v2: explicit browse verb patterns + split trigger logic (ACTIVE ✅)
 - Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"
@@ -1536,7 +1536,11 @@ END TOKEN`}</pre>
 - span_hash idempotency: SHA256(message_ids+timestamps) — duplicate spans return existing seed, no new write
 - Truth discipline updated: ARC_PACK entries are "verified facts from past threads" — Aria may reference directly
 - No ContextSeed records yet — first seed requires explicit call to context/seedCompressor with a message span
-- Phase 4 (CTC): ARC Inspector UI — browse seeds, view injection metadata, trigger compression from developer mode`}</Code>
+- Phase 4 (CTC): ARC Inspector UI — browse seeds, view injection metadata, trigger compression from developer mode
+- TSB-021 (Mar 5, 2026): hybridMessage bloat — 538 lines, logic inlined, I2 violated, receiptWriter fire-and-forget
+- Governance gates designed (Mar 5, 2026): LOCK_MANIFEST + GATE-0/1/2 — dashboard-only enforcement path
+- Biological Reality Policy added to core/promptBuilder (Mar 5, 2026) — name-only pronouns for biological sex queries
+- runtimeAuthority.js confirmed as single source of truth: model_name=gpt-5.2, token_limit=200000, hosting=Base44`}</Code>
           </Section>
 
         </div>
