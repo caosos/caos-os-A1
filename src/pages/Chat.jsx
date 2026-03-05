@@ -572,8 +572,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           }
         }
       }
-      // Extract and save links from the AI reply
-      await extractAndSaveLinks(reply);
+      // Extract and save explicitly shared resources from the AI reply (sanitized — no prose links)
+      await extractAndSaveExplicitResources(reply);
 
       // Update WCW meter with real data from backend
       if (data.wcw_budget && data.wcw_used !== undefined) {
