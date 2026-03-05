@@ -153,6 +153,80 @@ Rule:      ANY multi-line string inside a JSX expression {} MUST use backtick
            this was a one-off introduced during a manual edit.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-021 — hybridMessage Bloat: 538 Lines, Logic Inlined, I2 Invariant Violated</span>
+                  <Tag label="OPEN ⚠️" color="red" />
+                </div>
+                <Code>{`Date:      Mar 5, 2026
+Component: functions/hybridMessage
+Symptom 1: hybridMessage grew from ~420 lines to 538 lines — exceeds the 400-line hard limit.
+Symptom 2: receiptWriter is now invoked fire-and-forget (.catch only), violating the I2
+           invariant which requires it to be awaited (it is diagnostic infrastructure,
+           not optional). If receiptWriter fails silently, WCW data and DiagnosticReceipt
+           are lost with no trace.
+Symptom 3: Memory detection, heuristics, and prompt building logic were inlined into the
+           spine (pure function optimization to reduce Deno round-trip latency). This means
+           the standalone modules core/memoryEngine, core/heuristicsEngine, and
+           core/promptBuilder now contain DUPLICATE logic — they exist but are not called
+           from hybridMessage. There is no single canonical source for these functions.
+Root Cause: Incremental optimization without a refactor plan. Each inlining was justifiable
+           in isolation (latency reduction is real), but the cumulative effect:
+             a) Violated the 400-line hard limit
+             b) Created logic duplication across spine and standalone modules
+             c) Degraded the I2 invariant (receipt await → fire-and-forget)
+             d) Made the spine do implementation work (violates spine-only-orchestrates rule)
+Current Status: FROZEN — no further edits to hybridMessage until a scoped refactor plan
+           is approved by owner. Plan must address:
+             1. Extract inlined pure functions into a single shared module (not duplicate modules)
+             2. Restore receiptWriter to awaited call
+             3. Reduce hybridMessage to ≤400 lines
+             4. Re-lock with new LOCK_SIGNATURE after refactor
+Fix Path:  Step A (today): Freeze hybridMessage. No new edits.
+           Step B (next session, with explicit unlock): Scoped refactor plan submitted to owner.
+           Step C: Execute refactor. Test. Re-lock. Confirm line count ≤400.
+           Step D: Decommission duplicate logic in standalone modules OR make them authoritative.
+Impact:    Pipeline is FUNCTIONAL. These are governance and maintainability violations,
+           not runtime failures. receiptWriter fire-and-forget means WCW data may be
+           lost on failure, but pipeline continues and responds correctly.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-022 — Governance Gates: Design Complete, Mechanical Enforcement Not Yet Active</span>
+                  <Tag label="OPEN — IN DESIGN" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 5, 2026
+Component: Governance / Build Process
+Symptom:   The repeated pattern of files exceeding the 400-line hard limit (hybridMessage,
+           Chat.jsx) and locked files being modified without TSB entries demonstrates that
+           "I will comply" promises from agents are insufficient enforcement.
+           No mechanical gates currently prevent violations.
+Root Cause: The enforcement mechanism is trust-based, not mechanical. An agent can
+           (and has) modified locked files or bloated files without consequence at
+           the tooling level.
+Design Completed (Mar 5, 2026):
+   GATE-0: governance/LOCK_MANIFEST.json — single source of truth for:
+     - locked_files[]
+     - line_limit_default (400)
+     - exceptions[] (SystemBlueprint, TSBLog)
+     - owner_unlock_phrase ("UNLOCK")
+   GATE-1: Pre-deploy check — fail if locked file modified without UNLOCK token
+   GATE-2: Pre-deploy check — fail if any non-exempt file exceeds 400 lines
+   Enforcement path: Dashboard-only (no GitHub CI available)
+     → Base44 does not currently expose a pre-deploy hook
+     → Nearest equivalent: a backend function (core/governanceCheck) that
+       reads file metadata and fails loudly when called at session start
+     → Owner must invoke manually until native hook exists
+Fix Path:  Implement core/governanceCheck backend function that:
+     1. Reads LOCK_MANIFEST from entity storage
+     2. Checks line counts of all non-exempt files
+     3. Returns a governance_report: { violations[], locked_files_clean: boolean }
+   Wire it to the new-agent onboarding block (Section 0) — first tool call of every session.
+   This makes violations visible immediately, even without CI.
+Status:    Design complete. Implementation pending owner approval.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
