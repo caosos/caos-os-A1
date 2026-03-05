@@ -514,22 +514,21 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
   };
 
-  const playAudioUrl = (url) => {
+  const playAudioUrl = (url, existingAudio = null) => {
     // Stop any other playing audio
     if (globalAudioInstance && globalAudioInstance !== audioRef.current) {
       globalAudioInstance.pause();
       if (globalAudioCleanup) globalAudioCleanup();
     }
 
-    // Revoke old blob URL if it was cached differently
-    if (audioRef.current) {
+    // Use pre-created gesture-unlocked element if provided, otherwise create new
+    if (!existingAudio && audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
-    const audio = new Audio();
+    const audio = existingAudio || new Audio();
     audio.src = url;
-    audio.crossOrigin = 'anonymous';
     audio.volume = 1.0;
     audioRef.current = audio;
     globalAudioInstance = audio;
