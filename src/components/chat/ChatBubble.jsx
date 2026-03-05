@@ -149,7 +149,7 @@ let globalAudioCleanup = null;
 // Audio cache - store generated audio per message
 const audioCache = new Map();
 
-export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger, userInitials = "ME" }) {
+export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger, userInitials = "ME", isNew = false }) {
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [selectedText, setSelectedText] = useState('');
