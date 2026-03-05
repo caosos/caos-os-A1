@@ -779,11 +779,9 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           <ReactMarkdown 
             className="text-xs sm:text-sm max-w-full overflow-hidden"
             components={{
-              p: ({ children }) => {
-                const hasCodeBlock = Array.isArray(children) && children.some(child => child?.type?.name === 'code');
-                if (hasCodeBlock) return <div className="mb-2 sm:mb-3 leading-relaxed text-white/90 break-words">{children}</div>;
-                return <p className="mb-2 sm:mb-3 leading-relaxed text-white/90 break-words">{children}</p>;
-              },
+              p: ({ children }) => (
+                <div className="mb-2 sm:mb-3 leading-relaxed text-white/90 break-words">{children}</div>
+              ),
               code: ({ inline, className, children, ...props }) => {
                 const match = /language-(\w+)/.exec(className || '');
                 return !inline && match ? (

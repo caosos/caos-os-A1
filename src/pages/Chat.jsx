@@ -630,15 +630,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null
         };
-
-        // AUDIT LOG 6: Confirm receipt attached to message
-        console.log('🔍 [AUDIT_6_MESSAGE_RECEIPT]', {
-          message_id: aiMsg.id,
-          has_execution_receipt: !!aiMsg.execution_receipt,
-          receipt_from_backend: !!data.execution_receipt,
-          receipt_keys: aiMsg.execution_receipt ? Object.keys(aiMsg.execution_receipt) : []
-        });
-
         setMessages(prev => {
           const updated = {
             ...prev,
@@ -648,16 +639,20 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           return updated;
         });
       } else {
-        const tempConvoId = conversationId; // Capture for closure
-        const userMsg = await base44.entities.Message.create({
+        // Backend (hybridMessage) already saves both messages to DB.
+        // We only update local state here — no duplicate DB writes.
+        const tempConvoId = conversationId;
+        const userMsg = {
+          id: 'local_user_' + Date.now(),
           conversation_id: conversationId,
           role: 'user',
           content: messageText,
           file_urls: fileUrls,
           timestamp: new Date().toISOString(),
           user_initials: user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : user?.email?.substring(0, 2).toUpperCase()
-        });
-        const aiMsg = await base44.entities.Message.create({
+        };
+        const aiMsg = {
+          id: 'local_ai_' + Date.now(),
           conversation_id: conversationId,
           role: 'assistant',
           content: reply,
@@ -667,16 +662,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null
-        });
-
-        // AUDIT LOG 6: Confirm receipt attached to message
-        console.log('🔍 [AUDIT_6_MESSAGE_RECEIPT]', {
-          message_id: aiMsg.id,
-          has_execution_receipt: !!aiMsg.execution_receipt,
-          receipt_from_backend: !!data.execution_receipt,
-          receipt_keys: aiMsg.execution_receipt ? Object.keys(aiMsg.execution_receipt) : []
-        });
-
+        };
         setMessages(prev => ({
           ...prev,
           [tempConvoId]: [...(prev[tempConvoId] || []).filter(m => m.id !== tempId), userMsg, aiMsg]
