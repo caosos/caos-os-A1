@@ -389,10 +389,12 @@ Deno.serve(async (req) => {
         const hDirective = buildDirective(hIntent, hDepth, cogLevel);
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
-        // ── STAGE: PROMPT_BUILD (inlined — no network) ───────────────────────
+        // ── STAGE: PROMPT_BUILD — via core/promptBuilder (TSB-023: 2026-03-05) ─
+        // Delegates to promptBuilder which carries full capability declarations.
+        // No bootloader injection needed — all tools declared on every session.
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         const server_time = new Date().toISOString();
-        const systemPrompt = buildSystemPrompt({ userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
+        const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
