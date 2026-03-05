@@ -774,7 +774,7 @@ Backend check:
           <Section title="14. TSB Log — Troubleshooting Bulletins" color="red">
             <p className="text-gray-300 text-xs mb-4">All TSB entries have been moved to a dedicated page for clarity and maintainability.</p>
             <Link to={createPageUrl('TSBLog')} className="inline-block text-blue-300 hover:text-blue-100 underline font-semibold">
-              → View Full TSB Log (TSB-001 through TSB-019)
+              → View Full TSB Log (TSB-001 through TSB-021)
             </Link>
             <p className="text-white/40 text-xs mt-3">TSB entries are permanent records documenting every significant issue, failure, and fix in CAOS development.</p>
           </Section>
