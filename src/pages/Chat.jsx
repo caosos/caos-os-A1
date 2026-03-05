@@ -506,13 +506,19 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         const urlRegex = /(https?:\/\/[^\s"'<>)]+)/g;
         const matches = text.match(urlRegex) || [];
         for (const url of matches) {
-          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?[^\s]*)?$/i.test(url);
+          const cleanUrl = url.replace(/[.,;:!?)]+$/, ''); // strip trailing punctuation
+          const pathPart = cleanUrl.split('?')[0];
+          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(pathPart);
+          const isFile = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|txt|csv|mp3|mp4|mov|avi)$/i.test(pathPart);
           if (isImage) {
-            const fileName = url.split('/').pop().split('?')[0] || 'image';
-            await saveToUserFiles(url, 'photo', fileName, 'image/jpeg');
+            const fileName = pathPart.split('/').pop() || 'image';
+            await saveToUserFiles(cleanUrl, 'photo', fileName, 'image/jpeg');
+          } else if (isFile) {
+            const fileName = pathPart.split('/').pop() || 'file';
+            await saveToUserFiles(cleanUrl, 'file', fileName, '');
           } else {
-            const hostname = (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
-            await saveToUserFiles(url, 'link', hostname);
+            const hostname = (() => { try { return new URL(cleanUrl).hostname.replace('www.', ''); } catch { return cleanUrl; } })();
+            await saveToUserFiles(cleanUrl, 'link', hostname);
           }
         }
       };
