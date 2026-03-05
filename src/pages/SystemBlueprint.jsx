@@ -773,7 +773,7 @@ Backend check:
           <Section title="14. TSB Log — Troubleshooting Bulletins" color="red">
             <p className="text-gray-300 text-xs mb-4">All TSB entries have been moved to a dedicated page for clarity and maintainability.</p>
             <Link to={createPageUrl('TSBLog')} className="inline-block text-blue-300 hover:text-blue-100 underline font-semibold">
-              → View Full TSB Log (TSB-001 through TSB-021)
+              → View Full TSB Log (TSB-001 through TSB-022)
             </Link>
             <p className="text-white/40 text-xs mt-3">TSB entries are permanent records documenting every significant issue, failure, and fix in CAOS development.</p>
           </Section>
@@ -1500,7 +1500,7 @@ END TOKEN`}</pre>
 - TTS: two locked paths — OpenAI (ChatBubble) + Google (ChatInput)
 - WCW meter: live data from DiagnosticReceipt (TSB-012 fixed)
 - The Python backend blueprint exists but is not deployed
-- TSB-001 through TSB-012 (permanent failure/fix records)
+- TSB-001 through TSB-022 (permanent failure/fix records — full log on TSBLog page)
 - All localStorage mode flags
 - All active backend functions and their purposes
 - Section 0: Agent Onboarding Contract (standing development principles)

@@ -459,7 +459,7 @@ Status:    COMPLETE. Entities live. threadIndexLoader deployed and testable.
 Notes:     No ContextSeed records yet — first seeds created via context/seedCompressor.`}</Code>
               </div>
 
-              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4" style={{order: -1}}>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-001 — Read Aloud Using Browser Voices Instead of OpenAI TTS</span>
                   <Tag label="FIXED ✅" color="green" />
