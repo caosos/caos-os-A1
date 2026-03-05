@@ -568,7 +568,32 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
 
           {/* 10. KNOWN ISSUES */}
           <Section title="10. Known Issues and Candidate Next Work" color="blue">
-            <Code>{"KNOWN:\n- Memory save strips 'that' from 'remember that...' (acceptable)\n- Legacy memory_anchors still injected as INFERRED context\n- pages/Chat.jsx is ~1126 lines - FLAGGED FOR REFACTOR\n- No ContextSeed records yet — CTC system is wired but not seeded\n\nFILE STORAGE (confirmed Mar 3, 2026):\n- ChatInput uploads → UserFile on attach\n- Chat.jsx saveToUserFiles() after AI reply\n- Chat.jsx extractAndSaveLinks() scans AI replies for URLs\n\nCANDIDATE NEXT:\n- Phase 4 (CTC): ARC Inspector UI in developer mode\n  → browse ContextSeed records, view injection metadata, trigger compression\n- Refactor Chat.jsx (still needed — ~1126 lines remaining)\n- Phase B typed schema for structured_memory\n- Wire hybridMessage to read UserProfile.tone.style\n- Thread auto-summary on close → writes to ThreadIndex.summary_seed_id"}</Code>
+            <Code>{"KNOWN (as of Mar 5, 2026):
+- Memory save strips 'that' from 'remember that...' (acceptable)
+- Legacy memory_anchors still injected as INFERRED context
+- pages/Chat.jsx is ~1126 lines — FLAGGED FOR REFACTOR (in progress)
+- No ContextSeed records yet — CTC system is wired but not seeded
+- hybridMessage is 538 lines — OVER 400-LINE HARD LIMIT — FROZEN (see TSB-021)
+- receiptWriter called fire-and-forget — I2 invariant (must be awaited) now violated (TSB-021)
+- core/memoryEngine and core/heuristicsEngine logic is DUPLICATED inline in spine — modules exist
+  but are not called from hybridMessage. This is intentional for latency but violates DRY.
+  Refactor plan must resolve: inline vs. module as single canonical source.
+- promptBuilder has Biological Reality Policy (Mar 5, 2026) — NOT injected by spine (uses inline buildSystemPrompt instead)
+- Governance gates (LOCK_MANIFEST + CI enforcement) designed but NOT yet enforced mechanically
+
+FILE STORAGE (confirmed Mar 3, 2026):
+- ChatInput uploads → UserFile on attach
+- Chat.jsx saveToUserFiles() after AI reply
+- Chat.jsx extractAndSaveLinks() scans AI replies for URLs
+
+CANDIDATE NEXT:
+- hybridMessage refactor — extract inlined logic back to modules (requires scoped plan + TSB)
+- Phase 4 (CTC): ARC Inspector UI in developer mode
+  → browse ContextSeed records, view injection metadata, trigger compression
+- Refactor Chat.jsx (still needed — ~1126 lines remaining)
+- Implement LOCK_MANIFEST + governance gate enforcement (dashboard-only path)
+- Phase B typed schema for structured_memory
+- Wire hybridMessage to read UserProfile.tone.style"}</Code>
           </Section>
 
           {/* 11. TTS */}
