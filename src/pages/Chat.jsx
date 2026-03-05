@@ -501,24 +501,38 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         }
       };
 
-      const extractAndSaveLinks = async (text) => {
+      // SANITIZER: Only save explicitly shared resources, never prose-embedded links.
+      // Triggers: (1) user-attached fileUrls, (2) AI-generated file attachments (generated_files),
+      // (3) URLs that are clearly a direct resource link on their own line (markdown link or bare URL line).
+      const extractAndSaveExplicitResources = async (text) => {
         if (isGuestMode || !text) return;
-        const urlRegex = /(https?:\/\/[^\s"'<>)]+)/g;
-        const matches = text.match(urlRegex) || [];
-        for (const url of matches) {
-          const cleanUrl = url.replace(/[.,;:!?)]+$/, ''); // strip trailing punctuation
-          const pathPart = cleanUrl.split('?')[0];
+        // Only match markdown links [text](url) or bare URLs that appear alone on a line
+        // — NOT URLs embedded mid-sentence in prose.
+        const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+        const bareLineUrlRegex = /^(https?:\/\/[^\s]+)$/gm;
+
+        const toSave = [];
+        let m;
+        while ((m = markdownLinkRegex.exec(text)) !== null) {
+          toSave.push({ url: m[2].replace(/[.,;:!?]+$/, ''), label: m[1] });
+        }
+        while ((m = bareLineUrlRegex.exec(text)) !== null) {
+          toSave.push({ url: m[1].replace(/[.,;:!?]+$/, ''), label: null });
+        }
+
+        for (const { url, label } of toSave) {
+          const pathPart = url.split('?')[0];
           const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(pathPart);
           const isFile = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|txt|csv|mp3|mp4|mov|avi)$/i.test(pathPart);
           if (isImage) {
-            const fileName = pathPart.split('/').pop() || 'image';
-            await saveToUserFiles(cleanUrl, 'photo', fileName, 'image/jpeg');
+            const fileName = label || pathPart.split('/').pop() || 'image';
+            await saveToUserFiles(url, 'photo', fileName, 'image/jpeg');
           } else if (isFile) {
-            const fileName = pathPart.split('/').pop() || 'file';
-            await saveToUserFiles(cleanUrl, 'file', fileName, '');
+            const fileName = label || pathPart.split('/').pop() || 'file';
+            await saveToUserFiles(url, 'file', fileName, '');
           } else {
-            const hostname = (() => { try { return new URL(cleanUrl).hostname.replace('www.', ''); } catch { return cleanUrl; } })();
-            await saveToUserFiles(cleanUrl, 'link', hostname);
+            const name = label || (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
+            await saveToUserFiles(url, 'link', name);
           }
         }
       };
