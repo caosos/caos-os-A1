@@ -586,6 +586,36 @@ Fix Path:  Implement core/governanceCheck backend function that:
 Status:    Design complete. Implementation pending owner approval.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-023 — Capability Declaration Moved to promptBuilder: Every Session Tool-Aware by Default</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 5, 2026
+Component: functions/core/promptBuilder + functions/hybridMessage
+Symptom:   Every new session required a "bootloader inject" token from the user
+           to tell Aria it had web search, file read/write, image gen, Python,
+           TTS, STT, and memory capabilities. Without it, Aria would claim tools
+           were unavailable or uncertain about its capabilities.
+Root Cause: The KV block in hybridMessage's inlined buildSystemPrompt() only
+           declared a minimal set of capabilities and didn't include explicit
+           per-tool ON/OFF declarations. The bootloader token compensated for this.
+Fix:       1. core/promptBuilder rewritten (v2) — now carries the full canonical
+              CAPABILITY AWARENESS block declaring all tools as ON by default:
+                web_search, file_read, file_write, image_parse, image_gen,
+                python, tts, stt, memory, policy_gating — all explicit.
+           2. hybridMessage PROMPT_BUILD stage now delegates to core/promptBuilder
+              via buildSystemPromptViaModule() instead of using the inlined
+              buildSystemPrompt() function. Inlined function removed.
+           3. The bootloader inject button is PRESERVED in the UI for legacy threads
+              that predate this fix — but new sessions no longer need it.
+           4. runtimeAuthority.js updated (v2) with expanded capability map +
+              buildAuthorityKV() helper.
+Impact:    Every new agent session is immediately tool-aware. No user action needed.
+Lock:      core/promptBuilder is now the canonical capability source.
+           Do not modify the AUTHORITY_KV block without a TSB entry.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
