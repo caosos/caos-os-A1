@@ -450,41 +450,28 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       clearTimeout(timeoutId);
       const responseTime = Date.now() - startTime;
 
-      // 1.4: Handle ODEL structured error response — no masking, no auto-retry
+      // RSoD/ODEL: Classify response errors — blocking vs inline
       if (!response || response.status !== 200) {
-        const errData = response?.data || {};
-        const errReply = errData.reply || 'Something went wrong.';
-        const errId = errData.error_id || null;
-        const errCode = errData.error_code || 'SERVER_ERROR';
-        const errStage = errData.stage || null;
+        const classified = classifyError(null, response);
+        console.error('❌ [ODEL_ERROR]', { error_code: classified.error_code, stage: classified.stage, error_id: classified.error_id });
 
-        console.error('❌ [ODEL_ERROR]', { error_id: errId, error_code: errCode, stage: errStage });
-
-        // Render the public reply as a failed assistant message
-        const errMsg = {
-          id: 'err_' + Date.now(),
-          conversation_id: conversationId,
-          role: 'assistant',
-          content: errReply,
-          failed: true,
-          error_id: errId,
-          error_code: errCode,
-          stage: errStage,
-          timestamp: new Date().toISOString()
-        };
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), errMsg]
-        }));
-
-        toast.error(
-          errId
-            ? `Error [${errCode}] — ID: ${errId}`
-            : `Error: ${errCode}`,
-          { duration: 8000 }
-        );
-
-        return; // no throw, no retry
+        if (classified.blocking) {
+          setMessages(prev => ({ ...prev, [conversationId]: (prev[conversationId] || []).filter(m => m.id !== tempId) }));
+          setRsodError(classified);
+        } else {
+          // Non-blocking: render inline failed assistant message
+          setMessages(prev => ({
+            ...prev,
+            [conversationId]: [...(prev[conversationId] || []).filter(m => m.id !== tempId), {
+              id: 'err_' + Date.now(), conversation_id: conversationId, role: 'assistant',
+              content: classified.public_message, failed: true,
+              error_id: classified.error_id, error_code: classified.error_code,
+              stage: classified.stage, timestamp: new Date().toISOString()
+            }]
+          }));
+          toast.error(`Error: ${classified.error_code}`, { duration: 8000 });
+        }
+        return;
       }
 
       const { data } = response;
