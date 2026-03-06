@@ -485,6 +485,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
     const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
+    const input_chars = cleanText.length;
+    const input_hash = cleanText.split('').reduce((h, c) => (((h << 5) + h) ^ c.charCodeAt(0)) >>> 0, 5381).toString(16);
+    ttsLog('tts_generate_start', { input_chars, input_hash, voice, speed });
+
     setIsGenerating(true);
     setGenerationProgress(0);
 
