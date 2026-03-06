@@ -708,15 +708,15 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       console.log('Message saved successfully');
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error('❌ SEND ERROR - Message failed:', {
-        error: error.message,
-        stack: error.stack,
-        conversationId,
-        userMessage: content?.substring(0, 100),
-        contentLength: content?.length,
-        fileCount: fileUrls?.length,
-        timestamp: new Date().toISOString()
-      });
+      const classified = classifyError(error, null);
+      console.error('❌ SEND ERROR - Message failed:', { error_code: classified.error_code, stage: classified.stage, message: error.message });
+
+      if (classified.blocking) {
+        setMessages(prev => ({ ...prev, [conversationId || currentConversationId]: (prev[conversationId || currentConversationId] || []).filter(m => !m.id?.startsWith('temp_')) }));
+        setRsodError(classified);
+        setIsLoading(false);
+        return;
+      }
       
       // Log error to database
       try {
