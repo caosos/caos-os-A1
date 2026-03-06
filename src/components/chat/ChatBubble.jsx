@@ -497,7 +497,24 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }, 150);
 
     try {
-      const { data } = await base44.functions.invoke('textToSpeech', { text: cleanText, voice, speed });
+      const tts_t0 = Date.now();
+      const { data } = await base44.functions.invoke('textToSpeech', {
+          text: cleanText, voice, speed,
+          ...(DEV ? { dev_mode: true } : {}),
+      });
+      const gen_time_ms = Date.now() - tts_t0;
+      const dbg = data?.debug || null;
+      ttsLog('tts_generate_end', {
+          gen_time_ms,
+          audio_base64_len: data?.audio_base64?.length ?? 0,
+          provider: dbg?.provider ?? null,
+          model: dbg?.model ?? null,
+          input_chars: dbg?.input_chars ?? input_chars,
+          audio_bytes: dbg?.audio_bytes ?? null,
+          mime_type: dbg?.mime_type ?? null,
+          backend_gen_time_ms: dbg?.gen_time_ms ?? null,
+          error: data?.error ?? null,
+      });
 
       clearInterval(genInterval);
       setGenerationProgress(100);
