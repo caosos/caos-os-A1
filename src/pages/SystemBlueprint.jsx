@@ -843,12 +843,16 @@ NOTE: Audio work (STT chunking) is deferred until B and C are locked.
      — Expandable JSON, filter by stage + error_code
      — Query error by error_id
 
-1.4 Remove UI Generic Masking (PENDING)
-     — No more 200-status masking of real errors
-     — No auto-retry without explicit policy
+1.4 Remove UI Generic Masking (COMPLETE ✅ — Mar 6, 2026 — TSB-024)
+     — errorClassifier.js: pure utility, classifies errors as blocking or non-blocking
+     — RedScreenOfDeath.jsx: full-screen blocking modal for 5xx/network failures
+     — Blocking errors → RSoD with retry/dismiss. Non-blocking → inline failed bubble.
+     — lastSendRef in Chat.jsx stores last send params for one-click retry from RSoD
+     — Payload never serialized in diagnostics output (telemetry safety invariant enforced)
 
-EXIT CONDITION:
-  Forced failure → structured envelope → visible in ErrorLog → queryable by error_id`}</Code>
+ EXIT CONDITION:
+   Forced failure → structured envelope → visible in ErrorLog → queryable by error_id
+   PHASE 1.1 ✅ | 1.2 ✅ | 1.3 PENDING (Admin Console) | 1.4 ✅`}</Code>
               </div>
 
               {/* PHASE 2 */}
@@ -1500,7 +1504,7 @@ END TOKEN`}</pre>
 - TTS: two locked paths — OpenAI (ChatBubble) + Google (ChatInput)
 - WCW meter: live data from DiagnosticReceipt (TSB-012 fixed)
 - The Python backend blueprint exists but is not deployed
-- TSB-001 through TSB-022 (permanent failure/fix records — full log on TSBLog page)
+- TSB-001 through TSB-024 (permanent failure/fix records — full log on TSBLog page)
 - All localStorage mode flags
 - All active backend functions and their purposes
 - Section 0: Agent Onboarding Contract (standing development principles)
