@@ -271,6 +271,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
   const handleSendMessage = async (content, fileUrls = [], selectedAgents = null) => {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
+    lastSendRef.current = { content, fileUrls, selectedAgents };
 
     console.log('📤 SEND MESSAGE - Starting:', {
       content: content?.substring(0, 100),
