@@ -21,6 +21,44 @@ export default function ThreadList({
   const [editTitle, setEditTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, conv }
+  const longPressTimer = useRef(null);
+  const contextMenuRef = useRef(null);
+
+  const openContextMenu = useCallback((e, conv) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, conv });
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const copyThreadId = useCallback((conv) => {
+    const sessionId = conv.session_id;
+    const convId = conv.id;
+    let toCopy = '';
+    if (sessionId && convId && sessionId !== convId) {
+      toCopy = `sessionId: ${sessionId}\nconversationId: ${convId}`;
+    } else {
+      toCopy = sessionId || convId || '';
+    }
+    navigator.clipboard.writeText(toCopy).then(() => {
+      toast.success('Copied Thread ID');
+    });
+    closeContextMenu();
+  }, [closeContextMenu]);
+
+  // Long-press handlers for mobile
+  const handleLongPressStart = useCallback((conv) => {
+    longPressTimer.current = setTimeout(() => {
+      // Simulate a context menu at center-ish position
+      setContextMenu({ x: window.innerWidth / 2 - 80, y: window.innerHeight / 2, conv });
+    }, 500);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    clearTimeout(longPressTimer.current);
+  }, []);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
