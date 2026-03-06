@@ -1,6 +1,7 @@
 /**
  * textToSpeech — CAOS TTS Backend
  * LOCK_SIGNATURE: CAOS_TTS_OPENAI_LOCK_v1_2026-03-01
+ * TSB-PENDING: Commit 1 instrumentation — dev-mode debug object added (body flag)
  *
  * LOCKED. DO NOT MODIFY without TSB entry + owner approval.
  * Model: tts-1-hd (ONLY valid TTS model — see TSB-011)
