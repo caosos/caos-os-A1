@@ -72,7 +72,23 @@ Deno.serve(async (req) => {
         }
         const audio_base64 = btoa(binary);
 
-        return Response.json({ audio_base64, content_type: 'audio/mpeg' });
+        const gen_time_ms = Date.now() - gen_start_ms;
+        const result = { audio_base64, content_type: 'audio/mpeg' };
+        if (devMode) {
+            result.debug = {
+                provider: 'openai',
+                model: 'tts-1-hd',
+                input_chars: text.length,
+                input_hash: djb2Hash(text),
+                audio_bytes: audioData.byteLength,
+                audio_base64_len: audio_base64.length,
+                mime_type: 'audio/mpeg',
+                gen_time_ms,
+                voice,
+                speed,
+            };
+        }
+        return Response.json(result);
 
     } catch (error) {
         console.error('TTS error:', error);
