@@ -581,6 +581,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setSpeechProgress(0);
       setAudioDuration(0);
       globalAudioInstance = null;
+      ttsLog('audio_ended', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
+    });
+
+    audio.addEventListener('pause', () => {
+      if (audio.ended) return;
+      ttsLog('audio_pause', { t: Number(audio.currentTime?.toFixed(2)) });
     });
 
     audio.addEventListener('error', (e) => {
