@@ -1193,6 +1193,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           localStorage.setItem('caos_multi_agent_mode', enabled);
         }}
         initialView={fileView}
+        conversationId={currentConversationId}
       />
 
       <Dialog open={showToken} onOpenChange={setShowToken}>
