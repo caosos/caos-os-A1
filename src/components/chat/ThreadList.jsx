@@ -93,6 +93,33 @@ export default function ThreadList({
   };
   
   return (
+    <>
+      {/* Row-scoped context menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <>
+            <div className="fixed inset-0" style={{ zIndex: 10001 }} onClick={closeContextMenu} onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }} />
+            <motion.div
+              ref={contextMenuRef}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.1 }}
+              style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 10002 }}
+              className="bg-[#1a2f55] border border-white/20 rounded-lg shadow-xl py-1 min-w-[160px]"
+            >
+              <button
+                onClick={() => copyThreadId(contextMenu.conv)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-white/10 transition-colors text-left"
+              >
+                <Copy className="w-4 h-4 text-blue-400" />
+                Copy Thread ID
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
     <AnimatePresence>
       {isOpen && (
         <>
