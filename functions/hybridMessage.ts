@@ -465,6 +465,11 @@ Deno.serve(async (req) => {
         setStage(STAGES.RESPONSE_BUILD);
         const responseTime = Date.now() - startTime;
 
+        // AUTO-TITLE: Fire-and-forget — only titles new threads with default titles
+        base44.functions.invoke('autoTitleThread', {
+            session_id, user_input: input
+        }).catch(e => console.warn('⚠️ [AUTO_TITLE_NONFATAL]', e?.message));
+
         // FIX 1: Fire-and-forget — receipt is diagnostic, not functional (I2 → best-effort)
         base44.functions.invoke('core/receiptWriter', {
             request_id, correlation_id, session_id, model_used: ACTIVE_MODEL,
