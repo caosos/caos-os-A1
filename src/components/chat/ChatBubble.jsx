@@ -595,6 +595,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setSpeechProgress(0);
       setAudioDuration(0);
       console.error('[AUDIO_PLAYBACK_ERROR]', e.type, audio.error?.code, audio.error?.message);
+      ttsLog('audio_error', { code: audio.error?.code, message: audio.error?.message });
       toast.error('Audio playback failed');
     });
 
