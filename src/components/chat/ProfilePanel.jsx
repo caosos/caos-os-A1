@@ -10,7 +10,7 @@ import moment from 'moment';
 import FileManager from '../files/FileManager';
 import MemoryPanel from '@/components/profile/MemoryPanel';
 
-export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange, initialView }) {
+export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, onMultiAgentModeChange, initialView, conversationId }) {
   const [rememberConversations, setRememberConversations] = useState(true);
   const [isEditingBirthday, setIsEditingBirthday] = useState(false);
   const [birthday, setBirthday] = useState('');
