@@ -616,6 +616,63 @@ Lock:      core/promptBuilder is now the canonical capability source.
            Do not modify the AUTHORITY_KV block without a TSB entry.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-024 — RSoD (Red Screen of Death): Blocking Error Modal + errorClassifier Implemented</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 6, 2026
+Component: components/lib/errorClassifier.js (NEW)
+           components/chat/RedScreenOfDeath.jsx (NEW)
+           pages/Chat.jsx (updated: imports, state, send handler, catch block, render)
+Symptom:   Before this fix, all pipeline errors — including catastrophic 5xx failures
+           and network outages — were handled inline with a toast notification and a
+           "failed" message bubble. There was no distinction between recoverable and
+           blocking errors. Users saw a broken UI state with no clear recovery path.
+Root Cause: The error path in Chat.jsx's handleSendMessage() had a single handling
+           branch: log to ErrorLog, show toast, mark temp message as "failed". This
+           was insufficient for server errors that indicate systemic failure (5xx,
+           network down, payload limit exceeded), which require a hard stop, not an
+           inline degraded state.
+Fix:       Two new focused modules created:
+
+  1. components/lib/errorClassifier.js (pure utility — no React, no imports)
+     - classifyError(error, response) → normalized classification object
+     - Evaluates: network failures, HTTP status codes, structured error_code fields
+     - BLOCKING_CODES = { SERVER_ERROR, INTERNAL_ERROR, PAYLOAD_TOO_LARGE, ... }
+     - Returns: { error_id, error_code, stage, blocking, public_message,
+                  timestamp, recovery_hint }
+     - blocking=true → RSoD. blocking=false → inline failed assistant bubble.
+     - Strict: never serializes request body in error objects (telemetry safety)
+
+  2. components/chat/RedScreenOfDeath.jsx (React modal component)
+     - Full-screen red modal that renders over all other content
+     - Displays: error_code, stage, error_id, session_id, timestamp
+     - Actions: Retry (replays lastSendRef), Copy diagnostics, Escape to dismiss
+     - Does NOT expose request payload or raw error stack to the user
+     - onDismiss() allows user to return to chat (non-fatal RSoD path)
+
+  3. pages/Chat.jsx patched:
+     - imports: RedScreenOfDeath + classifyError added
+     - state: rsodError (null | classified object) + lastSendRef (stores last send params)
+     - Response error path (non-200): classifyError(null, response) → blocking → RSoD or inline
+     - Catch path: classifyError(error, null) → blocking → RSoD or existing toast+retry path
+     - Render: {rsodError && <RedScreenOfDeath ... />} at top of return, above starfield
+
+Architecture:
+  - errorClassifier is pure (no side effects) — testable in isolation
+  - RSoD modal is stateless — driven entirely by classified error object
+  - Chat.jsx is the only orchestrator — no new state leaked to child components
+  - lastSendRef preserves last send params for retry without re-typing
+
+PHASE 1.4 STATUS:
+  "Remove UI Generic Masking" — COMPLETE ✅
+  Blocking errors (5xx, network) now surface as RSoD instead of generic toast.
+  Non-blocking errors (4xx, known codes) remain as inline failed bubbles.
+  PHASE 1 exit condition progress:
+    1.1 Stage Tracker ✅ | 1.2 ODEL v1 ✅ | 1.3 Admin Console PENDING | 1.4 RSoD ✅`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
