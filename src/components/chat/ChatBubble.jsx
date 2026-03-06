@@ -419,6 +419,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   };
 
   const stopAllAudio = () => {
+    ttsLog('stopAllAudio_called', { has_global: !!globalAudioInstance });
     if (globalAudioInstance) {
       globalAudioInstance.pause();
       globalAudioInstance.currentTime = 0;
