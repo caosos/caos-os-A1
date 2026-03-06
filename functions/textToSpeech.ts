@@ -13,7 +13,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
+// ── DEV INSTRUMENTATION — COMMIT 1 ───────────────────────────────────────────
+// djb2 hash — no external dep, bounded output, no raw text exposed
+function djb2Hash(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+    return (h >>> 0).toString(16);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
+    const gen_start_ms = Date.now();
     try {
         // Auth check — required for published app
         const base44 = createClientFromRequest(req);
@@ -26,7 +36,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'OpenAI API key not configured' }, { status: 500 });
         }
 
-        const { text, voice = 'nova', speed = 1.0 } = await req.json();
+        const { text, voice = 'nova', speed = 1.0, dev_mode = false } = await req.json();
+        const devMode = dev_mode === true;
 
         if (!text) {
             return Response.json({ error: 'Text is required' }, { status: 400 });
