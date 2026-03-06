@@ -565,6 +565,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
     audio.addEventListener('loadedmetadata', () => {
       setAudioDuration(audio.duration);
+      ttsLog('audio_loadedmetadata', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
     });
 
     audio.addEventListener('timeupdate', () => {
