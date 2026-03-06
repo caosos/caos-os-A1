@@ -220,6 +220,10 @@ export default function ThreadList({
                           : 'hover:bg-white/10 border border-transparent'
                         }
                       `}
+                      onContextMenu={(e) => openContextMenu(e, conv)}
+                      onTouchStart={() => handleLongPressStart(conv)}
+                      onTouchEnd={handleLongPressEnd}
+                      onTouchMove={handleLongPressEnd}
                     >
                       {editingId === conv.id ? (
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
