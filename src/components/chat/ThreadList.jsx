@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageSquare, Trash2, Edit2, Check, Search } from 'lucide-react';
+import { X, MessageSquare, Trash2, Edit2, Check, Search, Copy } from 'lucide-react';
 import moment from 'moment';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import TokenMeter from './TokenMeter';
+import { toast } from 'sonner';
 
 export default function ThreadList({ 
   isOpen, 
