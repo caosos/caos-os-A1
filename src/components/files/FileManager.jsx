@@ -14,18 +14,22 @@ export default function FileManager({ user, viewType = 'files', conversationId =
 
   const loadFiles = async () => {
     try {
-      const filter = { created_by: user.email, folder_path: '/' };
-      
+      const filter = { created_by: user.email };
+
+      // If scoped to a conversation, only show files from that thread's folder
+      if (conversationId) {
+        filter.folder_path = `/Conversations/${conversationId}`;
+      }
+
       if (viewType === 'photos') {
         filter.type = 'photo';
       } else if (viewType === 'files') {
         filter.type = 'file';
       } else if (viewType === 'links') {
-        // Links are handled differently
         return loadLinks();
       }
 
-      const userFiles = await base44.entities.UserFile.filter(filter, '-created_date', 1000);
+      const userFiles = await base44.entities.UserFile.filter(filter, '-created_date', 500);
       setFiles(userFiles);
     } catch (error) {
       console.error('Error loading files:', error);
@@ -34,7 +38,12 @@ export default function FileManager({ user, viewType = 'files', conversationId =
 
   const loadLinks = async () => {
     try {
-      const userLinks = await base44.entities.UserFile.filter({ created_by: user.email, type: 'link' }, '-created_date', 1000);
+      const filter = { created_by: user.email, type: 'link' };
+      // Links are not folder-scoped (they're saved at root), but scope by conversation name if available
+      if (conversationId) {
+        filter.folder_path = `/Conversations/${conversationId}`;
+      }
+      const userLinks = await base44.entities.UserFile.filter(filter, '-created_date', 500);
       setFiles(userLinks);
     } catch (error) {
       console.error('Error loading links:', error);
