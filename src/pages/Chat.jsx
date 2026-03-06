@@ -60,6 +60,8 @@ export default function Chat() {
   const messageRefs = useRef({});
   const [messageInputValue, setMessageInputValue] = useState('');
   const [inputHeight, setInputHeight] = useState(0);
+  const [rsodError, setRsodError] = useState(null);
+  const lastSendRef = React.useRef(null);
 
   // Helper to set message in input
   const setMessage = (text) => {
