@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
+import RedScreenOfDeath from '@/components/chat/RedScreenOfDeath';
+import { classifyError } from '@/components/lib/errorClassifier';
 
 export default function Chat() {
   const { user, isGuestMode, dataLoaded } = useAuthBootstrap();
