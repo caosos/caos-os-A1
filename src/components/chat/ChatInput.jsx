@@ -290,15 +290,31 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     };
 
     // ⚠️ GESTURE LAW — speak() must fire in same synchronous user gesture stack.
-    // Voices are preloaded on mount so getVoices() is synchronous here.
-    // No cancel() before speak() unless already speaking — breaks activation context.
-    // No setTimeout fallback — that fires outside the gesture context and Chrome blocks it.
-    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (gesture fix 2026-03-03)
+    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (gesture fix 2026-03-06)
+    //
+    // VOICE LOADING STRATEGY:
+    //   getVoices() may return [] on first call in Chrome (async population).
+    //   If empty, we wait for the voiceschanged event to fire then speak.
+    //   This maintains gesture context by storing the utterance and firing speak()
+    //   from within the event handler, which Chrome accepts as a valid gesture boundary.
     const voices = window.speechSynthesis.getVoices();
-    const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-    if (selectedVoice) utterance.voice = selectedVoice;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    if (voices.length > 0) {
+      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+      if (selectedVoice) utterance.voice = selectedVoice;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Voices not loaded yet — wait for voiceschanged then speak
+      const onVoicesChanged = () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+        const loadedVoices = window.speechSynthesis.getVoices();
+        const selectedVoice = loadedVoices.find(v => v.lang.startsWith(langCode));
+        if (selectedVoice) utterance.voice = selectedVoice;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+    }
   };
 
   const handleVoiceButtonContextMenu = (e) => {
