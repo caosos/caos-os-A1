@@ -802,6 +802,20 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
   return (
     <div className="fixed inset-0 bg-[#0a1628] flex flex-col" style={{ height: '100vh', height: '100dvh' }}>
+      {rsodError && (
+        <RedScreenOfDeath
+          error={rsodError}
+          sessionId={currentConversationId}
+          onRetry={() => {
+            setRsodError(null);
+            if (lastSendRef.current) {
+              const { content, fileUrls, selectedAgents } = lastSendRef.current;
+              handleSendMessage(content, fileUrls, selectedAgents);
+            }
+          }}
+          onDismiss={() => setRsodError(null)}
+        />
+      )}
       <div className="fixed inset-0 z-0">
         <StarfieldBackground />
       </div>
