@@ -397,6 +397,7 @@ export default function ProfilePanel({ isOpen, onClose, user, multiAgentMode, on
                   <FileManager 
                   user={user} 
                   viewType={activeView}
+                  conversationId={conversationId}
                   />
                   )}
                   </div>
