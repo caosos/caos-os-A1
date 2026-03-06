@@ -324,5 +324,6 @@ export default function ThreadList({
         </>
       )}
     </AnimatePresence>
+    </>
   );
 }
