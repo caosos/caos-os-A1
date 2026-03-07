@@ -11,6 +11,7 @@ import Replies from './bubble/Replies';
 import ReceiptPanel from './bubble/ReceiptPanel';
 import MessageContent from './bubble/MessageContent';
 import MessageHeader from './bubble/MessageHeader';
+import MessageMetadataDisplay from './bubble/MessageMetadataDisplay';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
@@ -396,27 +397,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           <MessageContent message={message} isUser={isUser} downloadFile={downloadFile} />
           {(message.timestamp || (!isUser && message.response_time_ms)) && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
-              <div className="flex items-center gap-2 flex-wrap">
-                {message.timestamp && (
-                  <p className={`text-xs ${isUser ? 'text-white/60' : 'text-white/40'}`}>
-                    {formatDateTime(message.timestamp)}
-                  </p>
-                )}
-                {!isUser && message.response_time_ms && (
-                  <span className="text-xs text-green-400/70 flex items-center gap-1">
-                    {message.timestamp && <span>•</span>}
-                    ⏱️ {(message.response_time_ms / 1000).toFixed(1)}s
-                  </span>
-                )}
-                {/* Latency Indicator */}
-                {!isUser && message.latency && (
-                  <LatencyIndicator latency={message.latency} compact={true} />
-                )}
-                {/* WCW Status Badge */}
-                {!isUser && message.wcw_status && (
-                  <WCWStatusBadge wcwStatus={message.wcw_status} compact={true} />
-                )}
-              </div>
+              <MessageMetadataDisplay 
+                isUser={isUser} 
+                timestamp={message.timestamp} 
+                response_time_ms={message.response_time_ms} 
+                latency={message.latency} 
+                wcw_status={message.wcw_status}
+                formatDateTime={formatDateTime}
+              />
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={handleCopy}
