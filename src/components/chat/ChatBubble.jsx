@@ -7,6 +7,7 @@ import { getYouTubeId, extractUrls, getVimeoId, isVideoUrl, extractFilename } fr
 import MarkdownMessage from './bubble/MarkdownMessage';
 import Attachments from './bubble/Attachments';
 import GeneratedFiles from './bubble/GeneratedFiles';
+import Reactions from './bubble/Reactions';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
