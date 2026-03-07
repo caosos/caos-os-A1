@@ -509,13 +509,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.info('Regenerate feature coming soon');
   };
 
-  const extractFilename = (langString) => {
-    if (langString && langString.startsWith('filename:')) {
-      return langString.replace('filename:', '');
-    }
-    return null;
-  };
-
   const renderContent = () => {
     let content = message.content || '';
 
