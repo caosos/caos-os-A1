@@ -432,7 +432,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             </div>
           )}
 
-          {renderContent()}
+          <MessageContent message={message} isUser={isUser} downloadFile={downloadFile} />
           {(message.timestamp || (!isUser && message.response_time_ms)) && (
             <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
               <div className="flex items-center gap-2 flex-wrap">
