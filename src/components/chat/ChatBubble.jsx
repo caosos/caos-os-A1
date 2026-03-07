@@ -10,6 +10,7 @@ import Reactions from './bubble/Reactions';
 import Replies from './bubble/Replies';
 import ReceiptPanel from './bubble/ReceiptPanel';
 import MessageContent from './bubble/MessageContent';
+import MessageHeader from './bubble/MessageHeader';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
