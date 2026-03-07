@@ -5,6 +5,7 @@ import { Download, Mail, Copy, RotateCcw, Volume2, Settings, AlertCircle, X, Pla
 import FunctionDisplay from './bubble/FunctionDisplay';
 import { getYouTubeId, extractUrls, getVimeoId, isVideoUrl, extractFilename } from './bubble/MessageHelpers';
 import MarkdownMessage from './bubble/MarkdownMessage';
+import Attachments from './bubble/Attachments';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
