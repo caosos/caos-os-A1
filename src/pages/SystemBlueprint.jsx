@@ -1579,7 +1579,13 @@ END TOKEN`}</pre>
 - TSB-021 (Mar 5, 2026): hybridMessage bloat — 538 lines, logic inlined, I2 violated, receiptWriter fire-and-forget
 - Governance gates designed (Mar 5, 2026): LOCK_MANIFEST + GATE-0/1/2 — dashboard-only enforcement path
 - Biological Reality Policy added to core/promptBuilder (Mar 5, 2026) — name-only pronouns for biological sex queries
-- runtimeAuthority.js confirmed as single source of truth: model_name=gpt-5.2, token_limit=200000, hosting=Base44`}</Code>
+- runtimeAuthority.js confirmed as single source of truth: model_name=gpt-5.2, token_limit=200000, hosting=Base44
+- PR1 COMPLETE (Mar 7, 2026 — TSB-025): ChatBubble refactored into modular bubble/ sub-components. TTS path preserved and untouched. FunctionDisplay (130L), MarkdownMessage (82L), Attachments, GeneratedFiles, Reactions, Replies, ReceiptPanel, VideoEmbeds, MessageHelpers extracted.
+- LOCK CLARIFICATION (TSB-025): ChatBubble LOCK applies ONLY to TTS path (handleReadAloud, audioRef, globalAudioInstance, audio player bar UI). Non-TTS sections of ChatBubble are open for modification via PRs with TSB documentation.
+- TSB-026 (Mar 7, 2026): errorClassifier filename is .jsx not .js. BLOCKING_CODES set covers HTTP-200 structured errors only. NETWORK_ERROR and 5xx handled by independent branches. Documentation-only fix.
+- PR2 IN PROGRESS (Mar 7, 2026 — TSB-027): Message delivery status indicators scoped. Target: Chat.jsx (status field on temp message) + ChatBubble.jsx (non-TTS rendering only). States: sending → sent → failed. Blocks: RSoD path unchanged.
+- useAuthBootstrap confirmed 55 lines (not 56 as TSB-017 stated — minor delta)
+- useConversations confirmed 244 lines (not 240 as TSB-017 stated — minor delta)`}</Code>
           </Section>
 
         </div>
