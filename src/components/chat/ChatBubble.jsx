@@ -12,6 +12,8 @@ import ReceiptPanel from './bubble/ReceiptPanel';
 import MessageContent from './bubble/MessageContent';
 import MessageHeader from './bubble/MessageHeader';
 import MessageMetadataDisplay from './bubble/MessageMetadataDisplay';
+import CopyButton from './bubble/CopyButton';
+import EmailButton from './bubble/EmailButton';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
@@ -406,13 +408,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                 formatDateTime={formatDateTime}
               />
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={handleCopy}
-                  className="p-1 hover:bg-white/10 rounded transition-colors"
-                  title="Copy"
-                >
-                  <Copy className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                </button>
+                <CopyButton onCopy={handleCopy} />
                 <button
                   onClick={handleReadAloud}
                   disabled={isGenerating}
@@ -438,13 +434,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     >
                       <Settings className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
                     </button>
-                    <button
-                      onClick={handleEmailContent}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
-                      title="Email this"
-                    >
-                      <Mail className="w-3.5 h-3.5 text-white/60 hover:text-white/90" />
-                    </button>
+                    <EmailButton onEmail={handleEmailContent} />
                   </>
                 )}
               </div>
