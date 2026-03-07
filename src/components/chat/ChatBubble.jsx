@@ -28,9 +28,8 @@ let globalAudioCleanup = null;
 const audioCache = new Map();
 
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger, userInitials = "ME", isNew = false }) {
-  const [showSelectionMenu, setShowSelectionMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [selectedText, setSelectedText] = useState('');
+  const { showSelectionMenu, menuPosition, selectedText, handleTextSelection, closeMenu } = useTextSelectionMenu(closeMenuTrigger);
+  const { handleReact, handleReply } = useInlineReactions(message, onUpdateMessage);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPausedBySpeech, setIsPausedBySpeech] = useState(false);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
