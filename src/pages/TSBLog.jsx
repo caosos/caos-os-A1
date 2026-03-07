@@ -772,40 +772,47 @@ No code changes required. Documentation only.`}</Code>
 
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-red-300 font-bold text-sm">TSB-027 — PR2 Kickoff: Message Delivery Status Indicators (SCOPED, IN PROGRESS)</span>
+                  <span className="text-red-300 font-bold text-sm">TSB-027 — PR2: ChatBubble Modularization + Cleanup (400-line hard limit)</span>
                   <Tag label="IN PROGRESS 🔧" color="yellow" />
                 </div>
                 <Code>{`Date:      Mar 7, 2026
-Component: pages/Chat.jsx + components/chat/ChatBubble.jsx (non-TTS sections only)
-Session:   PR2 — scoped and approved, not yet implemented.
+Component: components/chat/ChatBubble.jsx + components/chat/bubble/*
+Session:   PR2 — approved and in progress.
 
 Objective:
-  Add visual delivery status indicators to user-sent messages:
-    - 'sending'  → visible immediately on submit (clock/spinner icon)
-    - 'sent'     → transitions on successful hybridMessage response (checkmark)
-    - 'failed'   → transitions on non-blocking error (error icon, alongside existing
-                   message.failed error text)
-  Blocking errors continue to trigger RSoD (TSB-024 path) — no overlap.
+  Reduce ChatBubble.jsx from 928 lines to ≤400 lines (hard limit per §0.2)
+  by extracting remaining inline blocks into focused bubble/ sub-components.
+  No invented features. No behavior changes except one explicitly approved decision.
+
+Approved behavior change (owner decision, Mar 7, 2026):
+  Remove external fetch calls to http://172.234.25.199:3001/api/message
+  from handleReact() and handleReply(). These calls were hardcoded to a dev
+  server, caused failures and toast noise, and were not production-ready.
+  Replacement: reactions and replies update message state locally only via
+  onUpdateMessage. No external AI acknowledgment. No network calls.
+  Rollback: restore fetch behind explicit feature flag when needed.
+  (This change is logged here as TSB-028 is not needed — it is part of PR2 scope.)
+
+Extraction plan (PR2-A):
+  1. renderContent() → components/chat/bubble/MessageContent.jsx (verbatim DOM)
+  2. Recall Results block → components/chat/bubble/RecallResults.jsx (verbatim DOM)
+  3. Selection menu state/effects/handler → components/chat/bubble/useTextSelectionMenu.js
+  4. handleReact + handleReply → components/chat/bubble/useInlineReactions.js
+     (implements local-only behavior per approved decision above)
 
 Scope Boundaries (hard):
   - DO NOT modify TTS path in ChatBubble (LOCKED per §11)
   - DO NOT modify hybridMessage (FROZEN per TSB-021)
   - DO NOT modify VoiceSettings, ChatInputReadAloud, textToSpeech
-  - Changes must be localized to Chat.jsx (status field on temp message object)
-    and ChatBubble.jsx (status prop rendering, non-TTS section only)
+  - Only touch: components/chat/ChatBubble.jsx + components/chat/bubble/*
 
 Acceptance Criteria:
-  1. User messages show 'sending' indicator immediately on submit
-  2. Indicator transitions to 'sent' on successful backend response
-  3. Non-blocking failures show 'failed' indicator (complements existing error UI)
-  4. TTS read-aloud fully functional post-PR2 (regression test required)
-  5. No layout shifts or mobile truncation from new indicators
+  1. ChatBubble.jsx ≤400 lines after PR2-A
+  2. DOM-root parity: all rendered output identical to pre-PR2
+  3. TTS read-aloud fully functional post-PR2 (regression test required)
+  4. Reactions and replies update locally, no external fetch calls
 
-Risk:
-  - Styling conflict with timestamp/response_time display — monitor closely
-  - isLoading + status state must not produce redundant/conflicting indicators
-
-Status: SCOPED ✅ — Implementation pending owner "go" signal.`}</Code>
+Status: IN PROGRESS 🔧`}</Code>
               </div>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
