@@ -845,27 +845,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     <Reactions reactions={message.reactions} />
 
               {/* Replies */}
-              {message.replies && message.replies.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {message.replies.map((reply, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white/5 border-l-2 border-blue-400 rounded px-2 py-1.5 text-xs space-y-1.5"
-                    >
-                      <p className="text-white/50 italic text-[11px]">"{reply.selected_text}"</p>
-                      <div className="bg-blue-600/20 rounded px-2 py-1">
-                        <p className="text-white/90">{reply.user_reply}</p>
-                      </div>
-                      {reply.ai_response && (
-                        <div className="bg-white/10 rounded px-2 py-1">
-                          <p className="text-blue-300 font-medium text-[10px] mb-0.5">CAOS</p>
-                          <p className="text-white/90">{reply.ai_response}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Replies replies={message.replies} />
 
               {/* Audio Player Bar */}
               {isSpeaking && (
