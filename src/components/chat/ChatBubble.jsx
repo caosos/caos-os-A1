@@ -10,6 +10,7 @@ import GeneratedFiles from './bubble/GeneratedFiles';
 import Reactions from './bubble/Reactions';
 import Replies from './bubble/Replies';
 import ReceiptPanel from './bubble/ReceiptPanel';
+import VideoEmbeds from './bubble/VideoEmbeds';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
