@@ -346,13 +346,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
 
 
-  const handleRegenerate = () => {
-    // Trigger regeneration through parent component
-    toast.info('Regenerate feature coming soon');
-  };
-
-
-
   return (
     <>
       <motion.div
