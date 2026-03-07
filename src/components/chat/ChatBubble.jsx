@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2, Settings, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Download, Mail, Copy, RotateCcw, Volume2, Settings, AlertCircle, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import FunctionDisplay from './bubble/FunctionDisplay';
 import ReactMarkdown from 'react-markdown';
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
