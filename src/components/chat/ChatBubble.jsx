@@ -86,19 +86,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     toast.success(`Downloaded ${filename}`);
   };
 
-  const isEmailableContent = (content) => {
-    if (!content) return false;
-    const lower = content.toLowerCase();
-    return (
-      content.includes('- [ ]') || 
-      content.includes('- [x]') ||
-      lower.includes('checklist') ||
-      lower.includes('memo:') ||
-      lower.includes('subject:') ||
-      (content.split('\n').length > 3 && content.includes('-'))
-    );
-  };
-
   const handleEmailContent = () => {
     const subject = encodeURIComponent('From CAOS');
     const body = encodeURIComponent(message.content);
