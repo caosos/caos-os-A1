@@ -1,28 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Download, Mail, Copy, RotateCcw, Volume2, Settings, AlertCircle, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Mail, Copy, Volume2, Settings, AlertCircle, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import FunctionDisplay from './bubble/FunctionDisplay';
-import { getYouTubeId, extractUrls, getVimeoId, isVideoUrl, extractFilename } from './bubble/MessageHelpers';
 import MarkdownMessage from './bubble/MarkdownMessage';
 import Attachments from './bubble/Attachments';
 import GeneratedFiles from './bubble/GeneratedFiles';
 import Reactions from './bubble/Reactions';
 import Replies from './bubble/Replies';
 import ReceiptPanel from './bubble/ReceiptPanel';
-import VideoEmbeds from './bubble/VideoEmbeds';
-import { Button } from "@/components/ui/button";
+import MessageContent from './bubble/MessageContent';
+import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
+import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
-import CopyBlock from './CopyBlock';
-import LinkPreview from './LinkPreview';
 import VoiceSettings from './VoiceSettings';
-import ExecutionReceipt from './ExecutionReceipt';
 import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
-import YouTubeEmbed from './YouTubeEmbed';
 
 // Global audio manager - only one audio plays at a time
 let globalAudioInstance = null;
