@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import StarfieldBackground from '@/components/chat/StarfieldBackground';
 import ChatHeader from '@/components/chat/ChatHeader';
-import ChatBubble from '@/components/chat/ChatBubble.jsx';
+import ChatBubble from '@/components/chat/ChatBubble';
 import ChatInput from '@/components/chat/ChatInput';
 import ThreadList from '@/components/chat/ThreadList';
 import WelcomeGreeting from '@/components/chat/WelcomeGreeting';
