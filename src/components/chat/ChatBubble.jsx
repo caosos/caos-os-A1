@@ -41,7 +41,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const [showExecution, setShowExecution] = useState(() => {
     return localStorage.getItem('caos_show_execution') === 'true';
   });
-  const justSelectedRef = React.useRef(false);
   const audioRef = React.useRef(null);
   const utteranceRef = React.useRef(null);
   const progressInterval = React.useRef(null);
