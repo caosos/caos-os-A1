@@ -20,7 +20,7 @@ import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
 
-// Global audio manager - only one audio plays at a time
+// Global audio manager — only one audio plays at a time (PR2-A)
 let globalAudioInstance = null;
 let globalAudioCleanup = null;
 
