@@ -445,20 +445,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
 
 
-                    {/* Tool Calls */}
-                    {message.tool_calls?.length > 0 && (
-                    <div className="space-y-1 mt-2">
-                    {message.tool_calls.map((toolCall, idx) => (
-                    <FunctionDisplay key={idx} toolCall={toolCall} />
-                    ))}
-                    </div>
-                    )}
-
-                    {/* Reactions */}
-                    <Reactions reactions={message.reactions} />
-
-              {/* Replies */}
-              <Replies replies={message.replies} />
+                    <MessageMetadataContent 
+                      toolCalls={message.tool_calls} 
+                      reactions={message.reactions} 
+                      replies={message.replies} 
+                    />
 
               {/* Audio Player Bar */}
               {isSpeaking && (
