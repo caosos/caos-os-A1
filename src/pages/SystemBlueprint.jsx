@@ -1535,7 +1535,7 @@ END TOKEN`}</pre>
 - TTS: two locked paths — OpenAI (ChatBubble) + Google (ChatInput)
 - WCW meter: live data from DiagnosticReceipt (TSB-012 fixed)
 - The Python backend blueprint exists but is not deployed
-- TSB-001 through TSB-024 (permanent failure/fix records — full log on TSBLog page)
+- TSB-001 through TSB-027 (permanent failure/fix records — full log on TSBLog page)
 - All localStorage mode flags
 - All active backend functions and their purposes
 - Section 0: Agent Onboarding Contract (standing development principles)
