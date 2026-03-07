@@ -275,10 +275,22 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Apply Section 0.10 Workflow Etiquette from the first change (edit tracking, read-before-write, etc.)
   □ Ask the owner if any of the above is unclear — do not assume
 
-  CONFIRMED STACK STATE (as of Mar 5, 2026):
+  CONFIRMED STACK STATE (as of Mar 7, 2026):
    pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
-    └─ hooks/useAuthBootstrap   56 lines    EXTRACTED ✅
-    └─ hooks/useConversations  240 lines    EXTRACTED ✅
+    └─ hooks/useAuthBootstrap   55 lines    EXTRACTED ✅
+    └─ hooks/useConversations  244 lines    EXTRACTED ✅
+   components/chat/ChatBubble.jsx           REFACTORED ✅ (PR1 — Mar 7, 2026 — TSB-025)
+    └─ bubble/FunctionDisplay.jsx  130 lines  EXTRACTED ✅
+    └─ bubble/MarkdownMessage.jsx   82 lines  EXTRACTED ✅
+    └─ bubble/Attachments.jsx               EXTRACTED ✅
+    └─ bubble/GeneratedFiles.jsx            EXTRACTED ✅
+    └─ bubble/Reactions.jsx                 EXTRACTED ✅
+    └─ bubble/Replies.jsx                   EXTRACTED ✅
+    └─ bubble/ReceiptPanel.jsx              EXTRACTED ✅
+    └─ bubble/VideoEmbeds.jsx               EXTRACTED ✅
+    └─ bubble/MessageHelpers.js             EXTRACTED ✅ (pure utility, no React)
+   components/lib/errorClassifier.jsx       DEPLOYED ✅ (TSB-024 — note: .jsx not .js)
+   components/chat/RedScreenOfDeath.jsx     DEPLOYED ✅ (~119 lines, TSB-024)
    functions/hybridMessage      538 lines   ⚠️ OVER LIMIT — FROZEN, refactor planned (see TSB-021)
     ── INLINED PURE FUNCTIONS (no network — correct per platform constraint §16.1):
     └─ detectSaveIntent / detectRecallIntent (inlined from memoryEngine)
