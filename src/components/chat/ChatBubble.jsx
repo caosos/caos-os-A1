@@ -612,10 +612,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               selectedText={selectedText}
               onReact={handleReact}
               onReply={handleReply}
-              onClose={() => {
-              setShowSelectionMenu(false);
-              window.getSelection().removeAllRanges();
-              }}
+              onClose={closeMenu}
               />
               </div>
               )}
