@@ -18,6 +18,7 @@ import MessageMetaRow from './bubble/MessageMetaRow';
 import MessageMetadataContent from './bubble/MessageMetadataContent';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
+import { formatDateTime, downloadFile, formatTime } from './bubble/messageUtils';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import TextSelectionMenu from './TextSelectionMenu';
@@ -74,23 +75,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   }, []);
 
 
-  const formatDateTime = (timestamp) => {
-    return moment(timestamp).format('MMM D, YYYY • h:mm A');
-  };
 
-  const downloadFile = (content, filename) => {
-    const mimeType = filename.endsWith('.pdf') ? 'application/pdf' : 'text/plain';
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`Downloaded ${filename}`);
-  };
 
   const handleEmailContent = () => {
     const subject = encodeURIComponent('From CAOS');
@@ -343,12 +328,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
 
 
-  const formatTime = (seconds) => {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+
 
 
 
