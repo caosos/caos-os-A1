@@ -378,27 +378,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             onContextMenu={handleTextSelection}
           >
 
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium">
-              {isUser ? (
-                <span className="text-green-300">{userInitials}</span>
-              ) : (
-                <span className="text-blue-300">CAOS</span>
-              )}
-            </p>
-            {message.id && (
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(message.id);
-                  toast.success('Message ID copied');
-                }}
-                className="text-[10px] text-white/40 hover:text-white/60 font-mono cursor-pointer"
-                title={`Message ID: ${message.id}`}
-              >
-                {message.id.substring(0, 8)}…
-              </button>
-            )}
-          </div>
+          <MessageHeader isUser={isUser} userInitials={userInitials} messageId={message.id} />
           {message.failed && (
             <div className="mb-2 flex items-center gap-2 text-red-200 text-sm">
               <AlertCircle className="w-4 h-4" />
