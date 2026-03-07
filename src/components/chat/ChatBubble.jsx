@@ -841,19 +841,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                     )}
 
                     {/* Reactions */}
-              {message.reactions && message.reactions.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-              {message.reactions.map((reaction, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white/10 border border-white/20 rounded-full px-2 py-0.5 text-xs flex items-center gap-1"
-                  title={reaction.selected_text}
-                >
-                  <span>{reaction.emoji}</span>
-                </div>
-              ))}
-              </div>
-              )}
+                    <Reactions reactions={message.reactions} />
 
               {/* Replies */}
               {message.replies && message.replies.length > 0 && (
