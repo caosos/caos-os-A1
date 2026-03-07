@@ -15,6 +15,7 @@ import MessageMetadataDisplay from './bubble/MessageMetadataDisplay';
 import CopyButton from './bubble/CopyButton';
 import EmailButton from './bubble/EmailButton';
 import MessageMetaRow from './bubble/MessageMetaRow';
+import MessageMetadataContent from './bubble/MessageMetadataContent';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
