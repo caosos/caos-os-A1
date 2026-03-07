@@ -673,6 +673,141 @@ PHASE 1.4 STATUS:
     1.1 Stage Tracker ✅ | 1.2 ODEL v1 ✅ | 1.3 Admin Console PENDING | 1.4 RSoD ✅`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-025 — PR1: ChatBubble Refactor — Monolith Split into Modular bubble/ Sub-Components</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 7, 2026
+Component: components/chat/ChatBubble.jsx (source) →
+           components/chat/bubble/ (new sub-component directory)
+Session:   PR1 — executed and verified this session before PR2 kickoff.
+
+Symptom / Motivation:
+  ChatBubble.jsx was a monolith handling markdown rendering, video embeds,
+  attachments, generated files, reactions, replies, receipt panel, function
+  display, and audio player — all in a single file well over 400 lines.
+  Violates modularity rule (Section 0.1) and hard line limit (Section 0.2).
+
+Files Created (all under components/chat/bubble/):
+  FunctionDisplay.jsx    — Tool call lifecycle display (130 lines) ✅
+                           Enhanced: tool name → human description mapping,
+                           status icons (pending/running/completed/failed),
+                           expandable arguments + results panel.
+  MarkdownMessage.jsx    — ReactMarkdown block with all custom overrides (82 lines) ✅
+                           Verbatim extraction — no logic changes.
+  Attachments.jsx        — File attachment list renderer (image preview + download links)
+  GeneratedFiles.jsx     — AI-generated file display (image preview + download)
+  Reactions.jsx          — Emoji reaction badge renderer
+  Replies.jsx            — Inline reply thread (selected_text + user_reply + ai_response)
+  ReceiptPanel.jsx       — ExecutionReceipt conditional display + dev suppressed log
+  VideoEmbeds.jsx        — Video URL detection → YouTube/Vimeo embed renderers
+  MessageHelpers.js      — Pure utility: getYouTubeId, getVimeoId, extractUrls,
+                           isVideoUrl, extractFilename (no React, no side effects)
+
+ChatBubble.jsx (parent):
+  Retained: all state management (TTS audio, selection menu, voice settings),
+  all event handlers (handleReadAloud, handleReact, handleReply, etc.),
+  all LOCKED TTS path logic (untouched per governance rules).
+  Now imports sub-components from ./bubble/ and delegates rendering to them.
+
+LOCK CLARIFICATION (Section 0 / §11):
+  The LOCKED declaration on ChatBubble in §0 applies SPECIFICALLY to the TTS path:
+    - handleReadAloud(), audioRef, globalAudioInstance, stopAllAudio()
+    - The audio player bar UI (progress, seek, play/pause/stop, skip controls)
+    - The cacheKey pattern, audioCache Map, ttsLog instrumentation
+  Non-TTS sections of ChatBubble (markdown, reactions, tool display, etc.)
+  are NOT locked and may be modified via PRs with standard TSB documentation.
+
+Verification:
+  - Chat UI loaded, messages rendered correctly post-refactor
+  - TTS read-aloud tested — audio plays, progress bar tracks, pause/stop work
+  - Text selection menu opens on right-click, reactions and replies functional
+  - All sub-components confirmed present in components/chat/bubble/ directory
+
+Changed (PR1):
+  components/chat/bubble/FunctionDisplay.jsx  +130 lines (NEW)
+  components/chat/bubble/MarkdownMessage.jsx  +82 lines (NEW)
+  components/chat/bubble/Attachments.jsx      (NEW)
+  components/chat/bubble/GeneratedFiles.jsx   (NEW)
+  components/chat/bubble/Reactions.jsx        (NEW)
+  components/chat/bubble/Replies.jsx          (NEW)
+  components/chat/bubble/ReceiptPanel.jsx     (NEW)
+  components/chat/bubble/VideoEmbeds.jsx      (NEW)
+  components/chat/bubble/MessageHelpers.js    (NEW)
+  components/chat/ChatBubble.jsx              (MODIFIED — sub-component imports added)`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-026 — Audit: errorClassifier Extension and Filename Correction</span>
+                  <Tag label="KNOWN / DOCUMENTED" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 7, 2026
+Component: components/lib/errorClassifier.jsx
+Session:   PR2 onboarding audit (Mar 7, 2026)
+
+Finding 1 — Filename discrepancy:
+  TSB-024 and Blueprint §19 reference this file as:
+    components/lib/errorClassifier.js
+  Actual deployed filename:
+    components/lib/errorClassifier.jsx
+  The .jsx extension is correct (JSX-capable module, even though it exports
+  only a pure function with no JSX). No functional impact — import paths
+  resolve correctly under the Vite/Base44 build. Documentation corrected.
+
+Finding 2 — BLOCKING_CODES set vs. NETWORK_ERROR:
+  BLOCKING_CODES = Set(['SERVER_ERROR', 'UPSTREAM_UNAVAILABLE', 'PAYLOAD_TOO_LARGE'])
+  NETWORK_ERROR is NOT in BLOCKING_CODES. It is handled as a separate Case 1
+  branch (err && !response) that unconditionally returns blocking: true.
+  This is correct and intentional — network errors are always blocking,
+  but the code path bypasses the BLOCKING_CODES set lookup entirely.
+  TSB-024 description implied BLOCKING_CODES covered all blocking scenarios.
+  Clarification: BLOCKING_CODES only governs HTTP-200-with-structured-error-code
+  responses. Network-level failures (Case 1) and 5xx responses (Case 3)
+  are blocking by their own independent branches.
+
+No code changes required. Documentation only.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-027 — PR2 Kickoff: Message Delivery Status Indicators (SCOPED, IN PROGRESS)</span>
+                  <Tag label="IN PROGRESS 🔧" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 7, 2026
+Component: pages/Chat.jsx + components/chat/ChatBubble.jsx (non-TTS sections only)
+Session:   PR2 — scoped and approved, not yet implemented.
+
+Objective:
+  Add visual delivery status indicators to user-sent messages:
+    - 'sending'  → visible immediately on submit (clock/spinner icon)
+    - 'sent'     → transitions on successful hybridMessage response (checkmark)
+    - 'failed'   → transitions on non-blocking error (error icon, alongside existing
+                   message.failed error text)
+  Blocking errors continue to trigger RSoD (TSB-024 path) — no overlap.
+
+Scope Boundaries (hard):
+  - DO NOT modify TTS path in ChatBubble (LOCKED per §11)
+  - DO NOT modify hybridMessage (FROZEN per TSB-021)
+  - DO NOT modify VoiceSettings, ChatInputReadAloud, textToSpeech
+  - Changes must be localized to Chat.jsx (status field on temp message object)
+    and ChatBubble.jsx (status prop rendering, non-TTS section only)
+
+Acceptance Criteria:
+  1. User messages show 'sending' indicator immediately on submit
+  2. Indicator transitions to 'sent' on successful backend response
+  3. Non-blocking failures show 'failed' indicator (complements existing error UI)
+  4. TTS read-aloud fully functional post-PR2 (regression test required)
+  5. No layout shifts or mobile truncation from new indicators
+
+Risk:
+  - Styling conflict with timestamp/response_time display — monitor closely
+  - isLoading + status state must not produce redundant/conflicting indicators
+
+Status: SCOPED ✅ — Implementation pending owner "go" signal.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
