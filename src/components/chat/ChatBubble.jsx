@@ -14,6 +14,7 @@ import MessageHeader from './bubble/MessageHeader';
 import MessageMetadataDisplay from './bubble/MessageMetadataDisplay';
 import CopyButton from './bubble/CopyButton';
 import EmailButton from './bubble/EmailButton';
+import MessageMetaRow from './bubble/MessageMetaRow';
 import { useTextSelectionMenu } from './bubble/useTextSelectionMenu';
 import { useInlineReactions } from './bubble/useInlineReactions';
 import { base44 } from '@/api/base44Client';
@@ -397,16 +398,14 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
           )}
 
           <MessageContent message={message} isUser={isUser} downloadFile={downloadFile} />
-          {(message.timestamp || (!isUser && message.response_time_ms)) && (
-            <div className={`flex items-center justify-between mt-1.5 ${isUser ? '' : 'gap-3'}`}>
-              <MessageMetadataDisplay 
-                isUser={isUser} 
-                timestamp={message.timestamp} 
-                response_time_ms={message.response_time_ms} 
-                latency={message.latency} 
-                wcw_status={message.wcw_status}
-                formatDateTime={formatDateTime}
-              />
+          <MessageMetaRow
+            isUser={isUser}
+            timestamp={message.timestamp}
+            response_time_ms={message.response_time_ms}
+            latency={message.latency}
+            wcw_status={message.wcw_status}
+            formatDateTime={formatDateTime}
+            rightSlot={
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <CopyButton onCopy={handleCopy} />
                 <button
@@ -438,8 +437,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
                   </>
                 )}
               </div>
-                    </div>
-                    )}
+            }
+          />
                     
 
 
