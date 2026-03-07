@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import moment from 'moment';
 import { Volume2, Settings, AlertCircle, X, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import FunctionDisplay from './bubble/FunctionDisplay';
 import MarkdownMessage from './bubble/MarkdownMessage';
