@@ -15,7 +15,6 @@ export default function RecallResults({ recallResults }) {
         const preview = recall.payload?.content || recall.payload?.text || '';
         const previewText = preview.length > 80 ? preview.slice(0, 80) + '...' : preview;
         const timestamp = recall.ts_ms ? new Date(recall.ts_ms).toLocaleString() : '';
-
         return (
           <div key={idx} className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 space-y-1">
             <div className="flex items-center gap-2 text-xs">

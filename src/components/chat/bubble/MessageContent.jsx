@@ -1,6 +1,5 @@
 // MessageContent.jsx — Verbatim extraction of renderContent() from ChatBubble.jsx
 // PR2-A, Mar 7, 2026. DOM-root parity: top-level div.space-y-3 preserved exactly.
-// No logic changes from source.
 
 import React from 'react';
 import { Download } from 'lucide-react';
@@ -51,9 +50,7 @@ export default function MessageContent({ message, isUser, downloadFile }) {
   while ((match = codeBlockRegex.exec(message.content || '')) !== null) {
     const filename = extractFilename(match[1]);
     const fileContent = match[2];
-    if (filename) {
-      fileBlocks.push({ filename, content: fileContent });
-    }
+    if (filename) fileBlocks.push({ filename, content: fileContent });
   }
 
   const attachedFiles = message.file_urls || [];
@@ -65,9 +62,7 @@ export default function MessageContent({ message, isUser, downloadFile }) {
           const url = m.replace('[YOUTUBE:', '').replace(']', '');
           const videoId = getYouTubeId(url);
           content = content.replace(m, '');
-          if (videoId) {
-            return <YouTubeEmbed key={index} videoId={videoId} url={url} />;
-          }
+          if (videoId) return <YouTubeEmbed key={index} videoId={videoId} url={url} />;
           return null;
         })}
         {content.trim() && (
@@ -80,21 +75,15 @@ export default function MessageContent({ message, isUser, downloadFile }) {
   return (
     <div className="space-y-3">
       <VideoEmbeds videoUrls={videoUrls} />
-
       <RecallResults recallResults={message.recall_results} />
-
       {cleanContent && cleanContent.trim() && (
         <MarkdownMessage content={cleanContent.trim()} />
       )}
-
       {copyBlocks.map((block, index) => (
         <CopyBlock key={index} content={block.content} title={block.title} />
       ))}
-
       <Attachments fileUrls={attachedFiles} />
-
       <GeneratedFiles files={message.generated_files} downloadFile={downloadFile} />
-
       {fileBlocks.map((file, index) => (
         <div key={index} className="flex items-center gap-2 bg-white/5 border border-white/20 rounded-lg px-3 py-2">
           <span className="text-sm text-white/80 flex-1">{file.filename}</span>

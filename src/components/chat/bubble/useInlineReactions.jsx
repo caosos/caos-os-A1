@@ -1,8 +1,8 @@
 // useInlineReactions.js — Local-only reaction/reply handlers.
-// PR2-A decision (Mar 7, 2026 — TSB-028):
+// PR2-A decision (Mar 7, 2026 — TSB-027):
 //   External fetch calls to http://172.234.25.199:3001/api/message REMOVED.
-//   Reactions and replies now update message state locally via onUpdateMessage only.
-//   No external AI acknowledgment. No network calls. No toasts for network failure.
+//   Reactions and replies update message state locally only via onUpdateMessage.
+//   No external AI acknowledgment. No network calls.
 //   Rollback: restore fetch behind explicit feature flag when needed.
 
 export function useInlineReactions(message, onUpdateMessage) {

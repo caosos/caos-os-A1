@@ -9,14 +9,10 @@ export function useTextSelectionMenu(closeMenuTrigger) {
   const [selectedText, setSelectedText] = useState('');
   const justSelectedRef = useRef(false);
 
-  // Close on external trigger (e.g. user starts typing)
   useEffect(() => {
-    if (closeMenuTrigger > 0) {
-      setShowSelectionMenu(false);
-    }
+    if (closeMenuTrigger > 0) setShowSelectionMenu(false);
   }, [closeMenuTrigger]);
 
-  // Close on click outside the menu or bubble
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (justSelectedRef.current) {
@@ -32,7 +28,6 @@ export function useTextSelectionMenu(closeMenuTrigger) {
         }
       }
     };
-
     if (showSelectionMenu) {
       const timer = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside);
@@ -50,20 +45,15 @@ export function useTextSelectionMenu(closeMenuTrigger) {
     if (e.type !== 'contextmenu') return;
     e.preventDefault();
     e.stopPropagation();
-
     const selection = window.getSelection();
     const text = selection.toString().trim();
-
     if (text && text.length > 0) {
       justSelectedRef.current = true;
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-
       setSelectedText(text);
-
       const spaceBelow = window.innerHeight - rect.bottom - 100;
       const menuHeight = 200;
-
       setMenuPosition({
         top: spaceBelow < menuHeight
           ? Math.max(20, rect.top + window.scrollY - menuHeight - 8)
@@ -71,7 +61,6 @@ export function useTextSelectionMenu(closeMenuTrigger) {
         left: Math.min(rect.left + window.scrollX, window.innerWidth - 300),
       });
       setShowSelectionMenu(true);
-
       setTimeout(() => { justSelectedRef.current = false; }, 300);
     }
   };
@@ -81,11 +70,5 @@ export function useTextSelectionMenu(closeMenuTrigger) {
     window.getSelection().removeAllRanges();
   };
 
-  return {
-    showSelectionMenu,
-    menuPosition,
-    selectedText,
-    handleTextSelection,
-    closeMenu,
-  };
+  return { showSelectionMenu, menuPosition, selectedText, handleTextSelection, closeMenu };
 }
