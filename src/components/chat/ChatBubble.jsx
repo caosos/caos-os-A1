@@ -20,8 +20,6 @@ import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
 
-throw new Error("CHATBUBBLE_MARKER__2026_03_07");
-
 // Global audio manager — only one audio plays at a time (PR2-A)
 let globalAudioInstance = null;
 let globalAudioCleanup = null;
