@@ -655,31 +655,36 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
 
           {/* 10. KNOWN ISSUES */}
           <Section title="10. Known Issues and Candidate Next Work" color="blue">
-            <Code>{`KNOWN (as of Mar 5, 2026):
+            <Code>{`KNOWN (as of Mar 8, 2026):
 - Memory save strips 'that' from 'remember that...' (acceptable)
 - Legacy memory_anchors still injected as INFERRED context
 - pages/Chat.jsx is ~1126 lines — FLAGGED FOR REFACTOR (in progress)
 - No ContextSeed records yet — CTC system is wired but not seeded
-- hybridMessage is 538 lines — OVER 400-LINE HARD LIMIT — FROZEN (see TSB-021)
+- hybridMessage is NOW 669 lines — OVER 400-LINE HARD LIMIT — FROZEN (see TSB-021)
+  (grown further with MBCR inline block — Mar 8, 2026)
 - receiptWriter called fire-and-forget — I2 invariant (must be awaited) now violated (TSB-021)
 - core/memoryEngine and core/heuristicsEngine logic is DUPLICATED inline in spine — modules exist
   but are not called from hybridMessage. Refactor plan must resolve canonical source.
-- promptBuilder has Biological Reality Policy (Mar 5, 2026) — NOT injected by spine (uses inline buildSystemPrompt)
 - Governance gates (LOCK_MANIFEST + CI enforcement) designed but NOT yet enforced mechanically
+- TRH v1 in production but LLM model name 'gpt-5.2' used in threadRehydrate — verify
+  this matches the active model naming convention (same as hybridMessage ACTIVE_MODEL)
 
 FILE STORAGE (confirmed Mar 3, 2026):
 - ChatInput uploads → UserFile on attach
 - Chat.jsx saveToUserFiles() after AI reply
-- Chat.jsx extractAndSaveLinks() scans AI replies for URLs
+- Chat.jsx extractAndSaveExplicitResources() — sanitized: only markdown links + bare URL lines saved
+  (NOT prose-embedded URLs — Mar 8, 2026 refinement to avoid false positives)
 
 CANDIDATE NEXT:
-- hybridMessage refactor — extract inlined logic back to modules (requires scoped plan + TSB)
+- hybridMessage refactor — extract inlined MBCR + memory + heuristics logic back to modules
+  (TSB required before touching — it is FROZEN)
 - Phase 4 (CTC): ARC Inspector UI in developer mode
   → browse ContextSeed records, view injection metadata, trigger compression
 - Refactor Chat.jsx (still needed — ~1126 lines remaining)
+- useSendMessage hook extraction from Chat.jsx
 - Implement LOCK_MANIFEST + governance gate enforcement (dashboard-only path)
 - Phase B typed schema for structured_memory
-- Wire hybridMessage to read UserProfile.tone.style`}</Code>
+- TRH v1 acceptance test: verify THREAD_SUMMARY messages appear in DB after trigger`}</Code>
           </Section>
 
           {/* 11. TTS */}
