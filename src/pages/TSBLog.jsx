@@ -934,6 +934,112 @@ Note:      Acceptance test pending: send "Continue PR2. Where are we, what's loc
            in a live campaign thread and verify THREAD_SUMMARY message appears in DB.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-030 — UI Lag: Message List Virtualization & Render Ceiling</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 8, 2026
+Component: pages/Chat.jsx
+           components/chat/ChatBubble.jsx (bubble/ sub-components)
+
+Symptom:
+  Chat UI became progressively slower as threads grew longer. Scrolling lagged,
+  typing in the input bar caused frame drops, and switching between long threads
+  caused noticeable re-render storms. Worst case observed: 80+ message threads
+  with tool call displays and markdown content became nearly unusable.
+
+Root Cause (multi-factor):
+  1. ALL messages rendered to DOM simultaneously — no virtualization, no ceiling.
+     Every message (including 80+ history messages) was mounted and re-rendered
+     on every state update (including every keystroke in the input bar).
+  2. ChatInput's onChange for the textarea was triggering a re-render of the
+     entire Chat.jsx tree due to state being colocated in the parent.
+  3. ChatBubble renders markdown via ReactMarkdown — expensive for long content.
+     With 80+ bubbles all mounted at once, even idle scroll caused layout thrash.
+  4. No memoization on ChatBubble. Every messages[] state update (e.g. streaming
+     token appended) re-rendered ALL bubbles, not just the new/updated one.
+
+Fixes Applied:
+  A. MESSAGE DISPLAY CAP:
+     Only the last N messages rendered into the DOM at any time.
+     Default cap: DISPLAY_LIMIT = 50 messages (configurable).
+     Older messages accessible via "Load more" / auto-load on scroll-to-top.
+     Eliminates the primary DOM bloat source.
+
+  B. CHATBUBBLE MEMOIZATION:
+     React.memo() applied to ChatBubble and all bubble/ sub-components.
+     ChatBubble equality check: only re-render if message.id, message.content,
+     message.tool_calls, or message.reactions actually changed.
+     Result: streaming a new token only re-renders the active (last) bubble.
+
+  C. INPUT BAR STATE ISOLATION:
+     ChatInput textarea state (inputValue) moved to local component state.
+     No longer lifted to Chat.jsx on every keystroke.
+     Chat.jsx only receives the final submitted value via onSend().
+     Result: typing no longer causes Chat.jsx tree re-renders.
+
+  D. MESSAGES[] SLICE IN RENDER:
+     Chat.jsx passes messages.slice(-DISPLAY_LIMIT) to the message list,
+     not the full messages[] array. Older messages fetched on demand.
+
+Result:
+  Input bar: zero perceptible lag at any thread length.
+  Message list: smooth scroll, no re-render storms during streaming.
+  Thread switch: fast — only last 50 messages mount, not full history.
+  Acceptance: verified in 100+ message thread with no observable lag.
+
+Status:    COMPLETE. DISPLAY_LIMIT=50 active. ChatBubble memoized.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-031 — Input Bar Lag: Keystroke Re-render Cascade from Lifted State</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 8, 2026
+Component: pages/Chat.jsx
+           components/chat/ChatInput.jsx
+
+Symptom:
+  Typing in the chat input bar caused visible lag — each keystroke felt delayed
+  by 30–80ms. The issue was most pronounced in long threads (50+ messages)
+  but was present even in new threads once message state was non-trivial.
+
+Root Cause:
+  Chat.jsx maintained inputValue as top-level state:
+    const [inputValue, setInputValue] = useState('');
+  ChatInput called onChange(e.target.value) on every keystroke.
+  This triggered a setState in Chat.jsx, which re-rendered the ENTIRE Chat tree:
+    - ThreadList (sidebar)
+    - All mounted ChatBubble components
+    - ChatHeader with WCW meter
+    - QuickActionBar
+  Even with React's batching, the cost of diffing and reconciling a full Chat tree
+  on every keystroke (at 5–10 keystrokes/second) caused measurable frame drops.
+
+Fix:
+  inputValue state moved entirely inside ChatInput.jsx as local state.
+  Chat.jsx removed inputValue and its onChange handler entirely.
+  ChatInput exposes only: onSend(text, fileUrls) callback — fires once per submit.
+  Chat.jsx receives the final message content only at send time.
+
+  Additional: React.useCallback() applied to onSend in Chat.jsx to prevent
+  ChatInput from receiving a new function reference on every Chat.jsx render,
+  which would have caused ChatInput itself to re-render unnecessarily.
+
+Before:
+  Keystroke → setInputValue (Chat.jsx) → re-render entire Chat tree
+After:
+  Keystroke → setInputValue (ChatInput.jsx) → re-render ChatInput only
+
+Result:
+  Zero-lag typing at any thread length. Input bar is now fully isolated
+  from the message list render cycle.
+
+Status:    COMPLETE. Confirmed no regression on send, file attach, or voice input paths.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
