@@ -69,6 +69,15 @@ const ROUTE_REGISTRY = {
         requires_auth: true,
         requires_role: 'admin',
         description: 'WCW compaction and anchor promotion'
+    },
+
+    // UTILITY ROUTES (infrastructure/tools)
+    'util.repo.read': {
+        route_id: 'util.repo.read',
+        path: '/functions/core/repoRead',
+        category: 'diagnostic',
+        requires_auth: true,
+        description: 'Read allowlisted repo files (docs/, functions/core/, src/pages.config.js, src/registry)'
     }
 };
 
