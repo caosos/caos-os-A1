@@ -59,17 +59,9 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             };
         } catch (error) {
             console.error('🚨 [REPO_READ_ERROR]:', error);
-            // Passthrough HTTP status codes from invoke
-            if (error?.response?.status) {
-                throw {
-                    error: 'REPO_READ_EXECUTION_FAILED',
-                    status: error.response.status,
-                    details: error.message || error.error || error.response.data?.error
-                };
-            }
             throw {
                 error: 'REPO_READ_EXECUTION_FAILED',
-                details: error.message || error.error
+                details: error.message || error.error || JSON.stringify(error)
             };
         }
     }
