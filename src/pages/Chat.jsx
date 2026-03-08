@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+
+const DEFAULT_RENDER_LIMIT = 40;
+const LOAD_OLDER_CHUNK_SIZE = 40;
 import { X, ArrowDown } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,6 +65,9 @@ export default function Chat() {
   const messageRefs = useRef({});
   const isAtBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [renderLimit, setRenderLimit] = useState(DEFAULT_RENDER_LIMIT);
+  const prevScrollHeightRef = useRef(null);
+  const pendingJumpIdRef = useRef(null);
   const [messageInputValue, setMessageInputValue] = useState('');
   const [inputHeight, setInputHeight] = useState(0);
   const [rsodError, setRsodError] = useState(null);
