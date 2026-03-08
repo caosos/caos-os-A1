@@ -45,16 +45,19 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             
             console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
             
+            const content = repoResult.data?.content || '';
+            const contentLength = content.length || (repoResult.data?.content_length || 0);
+            
             return {
                 type: 'REPO_READ',
                 executor: 'core/repoRead',
                 path,
                 status: 'success',
-                content_length: repoResult?.data?.content?.length || repoResult?.data?.content_length || 0,
-                hash: repoResult?.data?.hash || null,
-                owner: repoResult?.data?.owner,
-                repo: repoResult?.data?.repo,
-                ref: repoResult?.data?.ref || 'main',
+                content_length: contentLength,
+                hash: repoResult.data?.hash || null,
+                owner: repoResult.data?.owner || null,
+                repo: repoResult.data?.repo || null,
+                ref: repoResult.data?.ref || 'main',
                 executionId: `exec_${Date.now()}`
             };
         } catch (error) {
