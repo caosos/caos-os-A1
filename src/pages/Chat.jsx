@@ -934,8 +934,22 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 </div>
               )}
 
+              {hasOlderToShow && (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => {
+                      prevScrollHeightRef.current = chatContainerRef.current?.scrollHeight ?? null;
+                      setRenderLimit(prev => prev + LOAD_OLDER_CHUNK_SIZE);
+                    }}
+                    className="px-4 py-1.5 text-xs text-white/60 hover:text-white/90 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-colors"
+                  >
+                    Load older messages
+                  </button>
+                </div>
+              )}
+
               <React.Profiler id="MessageList" onRender={(id, phase, actualDuration) => { if (isDeveloperMode) console.log('[PROFILER]', id, phase, actualDuration.toFixed(1)+'ms'); }}>
-              {currentMessages.map((message, idx) => (
+              {visibleMessages.map((message, idx) => (
                 <div
                   key={message.id}
                   ref={(el) => messageRefs.current[message.id] = el}
@@ -946,7 +960,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                     isUser={message.role === 'user'}
                     onUpdateMessage={handleUpdateMessage}
                     closeMenuTrigger={closeMenuTrigger}
-                    isNew={idx >= currentMessages.length - 2}
+                    isNew={idx >= visibleMessages.length - 2}
                   />
                 </div>
               ))}
@@ -1100,30 +1114,44 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           <div className={`relative flex flex-col ${multiAgentMode ? 'h-3/4 w-full' : 'h-full w-full'}`} style={{ minHeight: 0 }}>
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingBottom: `${Math.max(inputHeight + 20, 192)}px` }}>
               <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
-                {currentMessages.length === 0 && !isLoading && (
-                  <div className="flex items-center justify-center min-h-[60vh]">
-                    <WelcomeGreeting />
-                  </div>
-                )}
+              {currentMessages.length === 0 && !isLoading && (
+                <div className="flex items-center justify-center min-h-[60vh]">
+                  <WelcomeGreeting />
+                </div>
+              )}
 
-                <React.Profiler id="MessageList" onRender={(id, phase, actualDuration) => { if (isDeveloperMode) console.log('[PROFILER]', id, phase, actualDuration.toFixed(1)+'ms'); }}>
-                {currentMessages.map((message, idx) => (
-                  <div
-                    key={message.id}
-                    ref={(el) => messageRefs.current[message.id] = el}
-                    style={{ transition: 'background-color 0.3s' }}
+              {hasOlderToShow && (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => {
+                      prevScrollHeightRef.current = chatContainerRef.current?.scrollHeight ?? null;
+                      setRenderLimit(prev => prev + LOAD_OLDER_CHUNK_SIZE);
+                    }}
+                    className="px-4 py-1.5 text-xs text-white/60 hover:text-white/90 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-colors"
                   >
-                    <ChatBubble 
-                      message={message} 
-                      isUser={message.role === 'user'}
-                      onUpdateMessage={handleUpdateMessage}
-                      closeMenuTrigger={closeMenuTrigger}
-                      userInitials={user?.email ? user.email.substring(0, 2).toUpperCase() : "ME"}
-                      isNew={idx >= currentMessages.length - 2}
-                    />
-                  </div>
-                ))}
-                </React.Profiler>
+                    Load older messages
+                  </button>
+                </div>
+              )}
+
+              <React.Profiler id="MessageList" onRender={(id, phase, actualDuration) => { if (isDeveloperMode) console.log('[PROFILER]', id, phase, actualDuration.toFixed(1)+'ms'); }}>
+              {visibleMessages.map((message, idx) => (
+                <div
+                  key={message.id}
+                  ref={(el) => messageRefs.current[message.id] = el}
+                  style={{ transition: 'background-color 0.3s' }}
+                >
+                  <ChatBubble 
+                    message={message} 
+                    isUser={message.role === 'user'}
+                    onUpdateMessage={handleUpdateMessage}
+                    closeMenuTrigger={closeMenuTrigger}
+                    userInitials={user?.email ? user.email.substring(0, 2).toUpperCase() : "ME"}
+                    isNew={idx >= visibleMessages.length - 2}
+                  />
+                </div>
+              ))}
+              </React.Profiler>
 
                 {isLoading && (
                   <div className="flex justify-start mb-4">
