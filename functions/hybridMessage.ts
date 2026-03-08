@@ -166,10 +166,13 @@ function detectRecallIntent(input) {
 // ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
-// ─── MBCR: THREAD RECOVERY (same-thread v1) ───────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MBCR MODULE (INLINE)
+// NOTE: Base44 functions are isolated workers; NO LOCAL IMPORTS.
+// All MBCR logic lives here to prevent drift into unrelated pipeline sections.
 // LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08
-// Whole-word, case-insensitive regex markers for metadata_tags extraction.
-// Applied to BOTH user and assistant messages before save.
+// Public surface: extractMetadataTags, maybeBuildMbcrInjectedMessage
+// ─────────────────────────────────────────────────────────────────────────────
 const MBCR_TAG_PATTERNS = [
     { tag: 'PR2',                   re: /\bPR2\b/i },
     { tag: 'PR3',                   re: /\bPR3\b/i },
@@ -190,32 +193,20 @@ function extractMetadataTags(content) {
     return MBCR_TAG_PATTERNS.filter(({ re }) => re.test(content)).map(({ tag }) => tag);
 }
 
-// Trigger: detect "thread-reference intent" in user input.
-// Returns { triggered, tags, text_query } — NO network call, pure inline.
-function mbcrTriggerCheck(input) {
-    const t = input || '';
+function _mbcrTriggerCheck(text) {
+    const t = text || '';
     const triggered =
         /\bPR[23]\b/i.test(t) ||
         /\b(locked|unlock|lock status)\b/i.test(t) ||
         /\b(receipts|acceptance criteria|rollback plan)\b/i.test(t) ||
         /\b(continue|where are we|status|next step|what.*plan|approved_scope|waiting_for_approval|stop_after_receipts)\b/i.test(t);
-
     if (!triggered) return { triggered: false, tags: [], text_query: '' };
-
-    // Infer tags from input
-    const inferredTags = MBCR_TAG_PATTERNS
-        .filter(({ re }) => re.test(t))
-        .map(({ tag }) => tag);
-
-    // Infer a primary keyword for text_query
+    const inferredTags = MBCR_TAG_PATTERNS.filter(({ re }) => re.test(t)).map(({ tag }) => tag);
     const kwMatch = t.match(/\b(PR[23]|locked|receipts|acceptance|rollback|approved_scope|waiting_for_approval)\b/i);
-    const text_query = kwMatch ? kwMatch[0] : '';
-
-    return { triggered: true, tags: inferredTags, text_query };
+    return { triggered: true, tags: inferredTags, text_query: kwMatch ? kwMatch[0] : '' };
 }
 
-// Build the Thread Recovery injection block (raw excerpts — no LLM summarization).
-function buildThreadRecoveryBlock(snippets) {
+function _buildThreadRecoveryBlock(snippets) {
     if (!snippets || snippets.length === 0) return '';
     let block = 'THREAD RECOVERY EXCERPTS (same-thread; auto-selected):\n';
     let totalChars = block.length;
@@ -229,6 +220,29 @@ function buildThreadRecoveryBlock(snippets) {
     }
     return block;
 }
+
+async function maybeBuildMbcrInjectedMessage({ thread_id, userText, invokeFn, debugMode }) {
+    const trigger = _mbcrTriggerCheck(userText);
+    if (!trigger.triggered) {
+        if (debugMode) console.log('[MBCR_SKIPPED] No thread-reference intent detected');
+        return null;
+    }
+    try {
+        const snippetRes = await invokeFn('getThreadSnippets', {
+            thread_id, tags: trigger.tags, text_query: trigger.text_query, limit: 20, around: 2
+        });
+        const snippets = snippetRes?.data?.snippets || [];
+        const block = _buildThreadRecoveryBlock(snippets);
+        if (debugMode) console.log('[MBCR_TRIGGERED]', { tag_count: trigger.tags.length, count: snippets.length, injected_chars: block.length, ids: snippets.map(s => s.id) });
+        return block ? { role: 'system', content: block } : null;
+    } catch (err) {
+        console.warn('⚠️ [MBCR_NONFATAL]', err.message);
+        return null;
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// END MBCR MODULE
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
