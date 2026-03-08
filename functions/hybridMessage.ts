@@ -526,9 +526,15 @@ Deno.serve(async (req) => {
         });
 
         const inferenceStart = Date.now();
-        const { content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000);
+        let { content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000);
         const inferenceMs = Date.now() - inferenceStart;
         if (!reply) throw new Error('No response from OpenAI');
+
+        // Dev-only MBCR diagnostic header — prepended to reply content only
+        if (debugMode) {
+            const mbcrHeader = `[MBCR] triggered=${mbcrDebug.triggered} retrieved=${mbcrDebug.retrievedCount} injected=${mbcrDebug.injected} tags=[${mbcrDebug.tags.join(',')}] query="${mbcrDebug.text_query}"\n\n`;
+            reply = mbcrHeader + reply;
+        }
 
         // WCW instrumentation
         const wcwBudget = MODEL_CONTEXT_WINDOW[ACTIVE_MODEL] || 128000;
