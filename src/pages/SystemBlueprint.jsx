@@ -669,7 +669,16 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
   but are not called from hybridMessage. Refactor plan must resolve canonical source.
 - Governance gates (LOCK_MANIFEST + CI enforcement) designed but NOT yet enforced mechanically
 - TRH v1 in production but LLM model name 'gpt-5.2' used in threadRehydrate — verify
-  this matches the active model naming convention (same as hybridMessage ACTIVE_MODEL)
+   this matches the active model naming convention (same as hybridMessage ACTIVE_MODEL)
+
+UI PERFORMANCE (FIXED — Mar 8, 2026 — TSB-030/031):
+- DISPLAY_LIMIT=50: only last 50 messages rendered to DOM at any time (TSB-030)
+- ChatBubble + all bubble/ sub-components: React.memo() applied (TSB-030)
+  Equality check: re-render only if message.id/content/tool_calls/reactions changed
+- ChatInput: inputValue state moved to local component state (TSB-031)
+  No longer lifted to Chat.jsx — typing no longer triggers parent tree re-renders
+- onSend wrapped in React.useCallback() in Chat.jsx to prevent ChatInput re-renders
+- Result: zero-lag typing and smooth scroll at any thread length
 
 FILE STORAGE (confirmed Mar 3, 2026):
 - ChatInput uploads → UserFile on attach
@@ -1656,7 +1665,10 @@ END TOKEN`}</pre>
 - TRH trigger keywords: pr2, pr3, continue, where are we, status, locked, receipts, refresh, rehydrate, update summary, what's locked/next/open, what did we decide, catch me up
 - TRH anti-spam: skip if THREAD_SUMMARY found in last 10 messages AND within last 10 minutes (override: say "refresh" or "rehydrate")
 - Chat.jsx link sanitizer updated: extractAndSaveExplicitResources() — only markdown links [text](url) + bare URL lines saved. No prose-embedded links.
-- hybridMessage now 669 lines (grown from 538 — MBCR inline block added Mar 8, 2026 — FROZEN)`}</Code>
+- hybridMessage now 669 lines (grown from 538 — MBCR inline block added Mar 8, 2026 — FROZEN)
+- TSB-030 (Mar 8, 2026): UI lag fixed — DISPLAY_LIMIT=50 (message render cap), ChatBubble + bubble/ sub-components memoized with React.memo(), equality check on message.id/content/tool_calls/reactions. Root cause: all messages rendered simultaneously with no virtualization.
+- TSB-031 (Mar 8, 2026): Input bar lag fixed — inputValue state moved from Chat.jsx to local ChatInput state. onSend wrapped in React.useCallback(). Root cause: every keystroke triggered a full Chat.jsx tree re-render including all mounted ChatBubble components.
+- UI render contract: Chat.jsx passes messages.slice(-DISPLAY_LIMIT) to message list — never the full messages[] array`}</Code>
           </Section>
 
         </div>
