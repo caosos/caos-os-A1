@@ -1,0 +1,58 @@
+/**
+ * REPO READ GATE — Bridges repoRead into the callable surface
+ * Fronts repoRead.ts with route registration enforcement
+ * 
+ * Invocation: base44.functions.invoke('core/repoReadGate', { path, max_bytes })
+ */
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+
+const ALLOWLIST = [
+    "docs/",
+    "functions/core/",
+    "src/pages.config.js",
+    "src/registry"
+];
+
+function isAllowlisted(path) {
+    return ALLOWLIST.some(prefix => path.startsWith(prefix)) && !path.includes(".env") && !path.includes("secret");
+}
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const body = await req.json();
+        const { path, max_bytes = 200000 } = body;
+
+        const ts_iso = new Date().toISOString();
+        const request_id = crypto.randomUUID();
+        const correlation_id = crypto.randomUUID();
+
+        if (!path) {
+            return Response.json({ error: "MISSING_PATH" }, { status: 400 });
+        }
+
+        if (!isAllowlisted(path)) {
+            return Response.json({
+                request_id,
+                correlation_id,
+                tool_name: "repo.read",
+                tool_version: "REPOREAD_GATE_v1_2026-03-08",
+                ts_iso,
+                source: "repo_fs_allowlist",
+                error: "DENIED_PATH",
+                path
+            }, { status: 403 });
+        }
+
+        // Forward to actual repoRead
+        const repoReadRes = await base44.functions.invoke('core/repoRead', { path, max_bytes });
+        
+        return Response.json(repoReadRes.data || repoReadRes);
+    } catch (error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+});
