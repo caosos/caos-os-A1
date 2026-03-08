@@ -465,9 +465,11 @@ Deno.serve(async (req) => {
         }
 
         // ── STAGE: MBCR — Thread Recovery injection (same-thread v1) ────────
-        const mbcrInjectedMessage = session_id
+        const mbcrResult = session_id
             ? await maybeBuildMbcrInjectedMessage({ thread_id: session_id, userText: input, invokeFn: (n, p) => base44.functions.invoke(n, p), debugMode })
-            : null;
+            : { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
+        const mbcrInjectedMessage = mbcrResult.message;
+        const mbcrDebug = mbcrResult.debug;
 
         // ── STAGE: HEURISTICS (inlined — no network) ─────────────────────────
         setStage(STAGES.HEURISTICS);
