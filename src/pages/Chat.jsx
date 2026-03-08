@@ -974,6 +974,20 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 </motion.button>
               </>
             )}
+            {showJumpToLatest && !showScrollButton && (
+              <motion.button
+                key="jump-latest-1"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                onClick={() => { scrollToBottom(); setShowJumpToLatest(false); }}
+                className="absolute bottom-28 right-4 z-50 bg-blue-600/80 hover:bg-blue-500/90 backdrop-blur-sm border border-blue-400/40 rounded-full px-4 py-2 transition-colors cursor-pointer flex items-center gap-2 text-white text-sm font-medium"
+                title="Jump to latest"
+              >
+                <ArrowDown className="w-4 h-4" />
+                Latest
+              </motion.button>
+            )}
           </AnimatePresence>
 
           <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
@@ -1109,6 +1123,21 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   style={{ minWidth: '52px', minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <ArrowDown className="w-5 h-5 text-white" />
+                </motion.button>
+              )}
+              {showJumpToLatest && !showScrollButton && (
+                <motion.button
+                  key="jump-latest-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={() => { scrollToBottom(); setShowJumpToLatest(false); }}
+                  className="absolute bottom-28 right-4 z-50 bg-blue-600/80 hover:bg-blue-500/90 active:bg-blue-400/90 backdrop-blur-sm border border-blue-400/40 rounded-full px-4 py-3 transition-colors touch-manipulation flex items-center gap-2 text-white text-sm font-medium"
+                  style={{ minHeight: '52px' }}
+                  title="Jump to latest"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                  Latest
                 </motion.button>
               )}
             </AnimatePresence>
