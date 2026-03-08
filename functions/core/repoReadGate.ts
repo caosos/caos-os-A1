@@ -10,12 +10,26 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const ALLOWLIST = [
     "docs/",
     "functions/core/",
-    "src/pages.config.js",
     "src/registry"
 ];
 
+const DENYLIST_PATTERNS = [
+    ".env",
+    "app-params",
+    "package-lock",
+    "pnpm-lock",
+    "yarn.lock",
+    "node_modules/"
+];
+
+function isDenied(path) {
+    const lowerPath = path.toLowerCase();
+    return DENYLIST_PATTERNS.some(pattern => lowerPath.includes(pattern.toLowerCase()));
+}
+
 function isAllowlisted(path) {
-    return ALLOWLIST.some(prefix => path.startsWith(prefix)) && !path.includes(".env") && !path.includes("secret");
+    if (isDenied(path)) return false;
+    return ALLOWLIST.some(prefix => path.startsWith(prefix));
 }
 
 Deno.serve(async (req) => {
