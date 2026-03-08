@@ -86,16 +86,18 @@ Read ALL of it — especially:
   - The TSB log: know what has broken before and why
 
 LOCKED FILES — DO NOT TOUCH WITHOUT EXPLICIT OWNER APPROVAL + TSB ENTRY:
-  - functions/hybridMessage
-  - functions/textToSpeech
-  - functions/transcribeAudio
-  - components/chat/ChatBubble (TTS path)
-  - components/chat/VoiceSettings
-  - components/chat/ChatInputReadAloud
-  - functions/core/memoryEngine
-  - functions/core/heuristicsEngine
-  - functions/core/receiptWriter
-  - functions/core/errorEnvelopeWriter
+  - functions/hybridMessage          (FROZEN — 669 lines, over limit — TSB-021)
+  - functions/textToSpeech           (LOCKED — tts-1-hd — TSB-011)
+  - functions/transcribeAudio        (LOCKED)
+  - functions/threadRehydrate        (LOCKED — TRH v1 — TSB-029)
+  - functions/getThreadSnippets      (LOCKED — MBCR v1 READ-ONLY — TSB-028)
+  - components/chat/ChatBubble       (TTS path ONLY — handleReadAloud, audioRef, globalAudioInstance)
+  - components/chat/VoiceSettings    (LOCKED)
+  - components/chat/ChatInputReadAloud (LOCKED)
+  - functions/core/memoryEngine      (exists, not called from spine)
+  - functions/core/heuristicsEngine  (exists, not called from spine)
+  - functions/core/receiptWriter     (LOCKED)
+  - functions/core/errorEnvelopeWriter (LOCKED)
 
 RULES (from Section 0):
   1. Never modify a LOCKED file without a TSB entry + owner approval in THIS session
