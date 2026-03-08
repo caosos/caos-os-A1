@@ -548,9 +548,11 @@ Deno.serve(async (req) => {
         setStage(STAGES.MESSAGE_SAVE);
         if (session_id) {
             try {
-                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: file_urls.length > 0 ? file_urls : undefined, timestamp: new Date().toISOString() });
-                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() });
-                console.log('✅ [MESSAGES_SAVED]');
+                const userTags = extractMetadataTags(input);
+                const asstTags = extractMetadataTags(reply);
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: file_urls.length > 0 ? file_urls : undefined, timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) });
+                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
+                console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags, asst_tags: asstTags });
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
 
