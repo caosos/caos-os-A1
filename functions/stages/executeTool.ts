@@ -59,60 +59,14 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
         }
     }
 
-    // Check for analyze threads intent (when forceToolExecution=true and wildcard/no terms)
-    // ========== REPO_READ PIPELINE (ADMIN-ONLY) ==========
-    if (route === 'REPO_READ_PIPELINE') {
-        if (user?.role !== 'admin') {
-            console.log('🚫 [REPO_READ_DENIED] Non-admin attempt:', user?.email);
-            throw {
-                error: 'NO_TOOLS_AUTHORIZED',
-                reason: 'ADMIN_ONLY_TOOL',
-                details: 'REPO_READ requires admin role',
-                user_visible: 'This tool is restricted to administrators'
-            };
-        }
-
-        try {
-            const path = extractedTerms?.[0] || userMessage?.split(/\s+/)?.[1];
-            if (!path) {
-                throw {
-                    error: 'REPO_READ_MISSING_PATH',
-                    details: 'No file path provided'
-                };
-            }
-
-            const repoResult = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
-            
-            console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email, request_id });
-            
-            return {
-                type: 'REPO_READ',
-                executor: 'repoReadGate',
-                path,
-                status: 'success',
-                content_length: repoResult?.data?.content?.length || 0,
-                hash: repoResult?.data?.hash || null,
-                executionId: `exec_${Date.now()}`
-            };
-        } catch (error) {
-            console.error('🚨 [REPO_READ_EXECUTION_FAILED]:', error, 'path:', extractedTerms?.[0]);
-            throw {
-                error: error.error || 'REPO_READ_EXECUTION_FAILED',
-                details: error.details || error.message,
-                user_visible: 'Failed to read repository file'
-            };
-        }
-    }
-
     if (forceToolExecution && (extractedTerms?.includes('*') || extractedTerms?.length === 0)) {
         console.log('🔍 [ANALYZE_THREADS_TRIGGERED]', { request_id });
-        const { executeAnalyzeThreads } = await import('../executors/analyzeThreads.js');
-        return await executeAnalyzeThreads({
-            base44,
-            user,
-            query: userMessage || 'analyze threads',
-            request_id
-        });
+        throw {
+            error: 'TOOL_UNAVAILABLE',
+            reason: 'ANALYZE_THREADS_EXECUTOR_NOT_WIRED',
+            details: 'analyzeThreads executor is not available in this deployment',
+            user_visible: 'Analyze threads tool is not available yet'
+        };
     }
 
     if (!requiresTool && !forceToolExecution) {
