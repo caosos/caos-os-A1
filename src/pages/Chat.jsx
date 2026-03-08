@@ -894,6 +894,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 </div>
               )}
 
+              {isDeveloperMode && void console.time('MessageList map render')}
               {currentMessages.map((message, idx) => (
                 <div
                   key={message.id}
@@ -909,6 +910,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   />
                 </div>
               ))}
+              {isDeveloperMode && void console.timeEnd('MessageList map render')}
 
               {isLoading && (
                 <div className="flex justify-start mb-4">
@@ -1050,6 +1052,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   </div>
                 )}
 
+                {isDeveloperMode && void console.time('MessageList map render')}
                 {currentMessages.map((message, idx) => (
                   <div
                     key={message.id}
@@ -1066,6 +1069,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                     />
                   </div>
                 ))}
+                {isDeveloperMode && void console.timeEnd('MessageList map render')}
 
                 {isLoading && (
                   <div className="flex justify-start mb-4">
