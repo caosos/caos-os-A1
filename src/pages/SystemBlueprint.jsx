@@ -1588,7 +1588,7 @@ END TOKEN`}</pre>
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
             <p className="mt-2">To ask Aria about the system state, use recall-trigger phrases like: <em>"what do you know about CAOS architecture"</em>, <em>"what have we built"</em>, or <em>"what's the current state of the memory system"</em>.</p>
             <Code>{`Aria knows:
-- The active pipeline (hybridMessage stages 1–10)
+- The active pipeline (hybridMessage stages 1–13, including TRH v1 + MBCR v1)
 - Phase A memory is locked, Phase B/C reserved
 - Heuristics Engine v1 + DCS locked
 - Truth discipline rules (5 invariants)
