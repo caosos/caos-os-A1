@@ -17,6 +17,14 @@ Deno.serve(async (req) => {
         const user = await base44.auth.me();
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+        // ADMIN-ONLY CHECK
+        if (user.role !== 'admin') {
+            return Response.json({
+                error: 'ADMIN_ONLY_TOOL',
+                details: 'Repository read access requires admin role'
+            }, { status: 403 });
+        }
+
         const body = await req.json();
         const { path, max_bytes = 200000 } = body;
 
@@ -24,45 +32,22 @@ Deno.serve(async (req) => {
         const request_id = crypto.randomUUID();
         const correlation_id = crypto.randomUUID();
 
-        if (!path) {
+        if (!path || typeof path !== 'string') {
             return Response.json({ error: "MISSING_PATH" }, { status: 400 });
         }
 
-        if (!isAllowlisted(path)) {
-            return Response.json({
-                request_id,
-                correlation_id,
-                tool_name: "repo.read",
-                tool_version: "REPOREAD_v1_2026-03-02",
-                ts_iso,
-                source: "repo_fs_allowlist",
-                error: "DENIED_PATH",
-                path
-            }, { status: 403 });
-        }
-
-        // Try to read the file (in a real implementation, this would be filesystem or external service)
-        // For now, return a placeholder
-        const content = `[File content for ${path} - would be fetched from repo]`;
-
-        const encoder = new TextEncoder();
-        const contentData = encoder.encode(content);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', contentData);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-        return Response.json({
-            request_id,
-            correlation_id,
-            tool_name: "repo.read",
-            tool_version: "REPOREAD_v1_2026-03-02",
-            ts_iso,
-            source: "repo_fs_allowlist",
-            hash: `sha256:${contentHash}`,
-            path,
-            content_type: path.endsWith('.json') ? 'application/json' : 'text/plain',
-            content
+        // Forward to repoReadGate for allowlist enforcement
+        const gateResult = await base44.functions.invoke('core/repoReadGate', { 
+            path, 
+            max_bytes 
         });
+
+        // Return gateResult data with success wrapper
+        return Response.json({
+            ok: true,
+            ...gateResult.data
+        }, { status: 200 });
+
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
