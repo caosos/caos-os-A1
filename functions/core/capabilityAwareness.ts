@@ -82,14 +82,16 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const capabilities = resolveCapabilities();
+        const capabilities = resolveCapabilities(user);
 
         console.log('✅ [CAPABILITY_AWARENESS]', {
             user: user.email,
+            role: user.role,
             model: capabilities.model_name,
             token_limit: capabilities.token_limit,
             tts: capabilities.tts_enabled,
             email: capabilities.email_enabled,
+            repo_read_enabled: capabilities.repo_read_enabled,
         });
 
         return Response.json({
