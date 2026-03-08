@@ -1620,7 +1620,7 @@ END TOKEN`}</pre>
 - File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
 - Section 0.10: Workflow Etiquette — edit tracking, read-before-write, find_replace-first, no feature creep
 - Chat.jsx refactor stack: ~1126 lines remaining → next extraction is hooks/useSendMessage.js
-- hybridMessage is now 538 lines (⚠️ OVER LIMIT — frozen, refactor pending TSB-021)
+- hybridMessage is now 669 lines (⚠️ OVER LIMIT — frozen, refactor pending TSB-021 — further grown with MBCR Mar 8)
 - externalKnowledgeDetector v2: two-stage browse-verb + sufficiency logic (ACTIVE ✅)
 - selectorEngine v2: explicit browse verb patterns + split trigger logic (ACTIVE ✅)
 - Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"
