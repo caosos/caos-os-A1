@@ -602,26 +602,36 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
             <Code>{"Welcome - auth gate (Google sign-in, email, guest mode)\nChat - main interface (all chat logic lives here)\nAdmin - admin dashboard (errors, stats, pipeline visualizer)\nConsole - SSH/terminal console view\nImplementation - CAOS-A1 Python backend blueprint v1 (FastAPI + SQLite)\nMemoryIsolation - memory isolation architecture docs\nSystemBlueprint - THIS FILE — System Blueprint v2\nNews - news feed page"}</Code>
 
             <h4 className="text-white font-semibold mt-3">Key Components:</h4>
-            <Code>{`ChatBubble (parent — TTS path LOCKED, non-TTS sections open per TSB-025)
-  └─ bubble/FunctionDisplay    — tool call lifecycle display (130 lines)
-  └─ bubble/MarkdownMessage    — ReactMarkdown with custom overrides (82 lines)
-  └─ bubble/Attachments        — file attachment list (image preview + download)
-  └─ bubble/GeneratedFiles     — AI-generated file display
-  └─ bubble/Reactions          — emoji reaction badge renderer
-  └─ bubble/Replies            — inline reply thread (selected_text → ai_response)
-  └─ bubble/ReceiptPanel       — ExecutionReceipt conditional display
-  └─ bubble/VideoEmbeds        — YouTube/Vimeo embed renderers
-  └─ bubble/MessageHelpers.js  — pure URL/metadata utility (no React)
-ChatHeader, ChatInput, ThreadList, ProfilePanel, TokenMeter,
-ConversationSearch, StarfieldBackground, WelcomeGreeting,
-ExecutionReceipt, LatencyIndicator, ContinuityToken, QuickActionBar
-RedScreenOfDeath   — blocking error modal (TSB-024, ~119 lines)
-components/lib/errorClassifier.jsx — pure error classifier (no React, TSB-024/TSB-026)
+            <Code>{`ChatBubble (parent — TTS path LOCKED — all other sections PR2-complete ✅)
+            └─ bubble/FunctionDisplay.jsx     — tool call lifecycle display (130 lines) [PR1]
+            └─ bubble/MarkdownMessage.jsx     — ReactMarkdown with all custom overrides (82 lines) [PR1]
+            └─ bubble/Attachments.jsx         — file attachment list (image preview + download) [PR1]
+            └─ bubble/GeneratedFiles.jsx      — AI-generated file display [PR1]
+            └─ bubble/Reactions.jsx           — emoji reaction badge renderer [PR1]
+            └─ bubble/Replies.jsx             — inline reply thread (selected_text → ai_response) [PR1]
+            └─ bubble/ReceiptPanel.jsx        — ExecutionReceipt conditional display [PR1]
+            └─ bubble/VideoEmbeds.jsx         — YouTube/Vimeo embed renderers [PR1]
+            └─ bubble/MessageHelpers.js       — pure URL/metadata utility (no React) [PR1]
+            └─ bubble/MessageContent.jsx      — verbatim renderContent() extraction [PR2-A]
+            └─ bubble/RecallResults.jsx       — recall results block [PR2-A]
+            └─ bubble/useTextSelectionMenu.js — selection menu state+effects+handler [PR2-A]
+            └─ bubble/useInlineReactions.js   — local-only react/reply handlers (no external fetch) [PR2-A]
+            └─ bubble/MessageHeader.jsx       — user/CAOS label + message ID copy button [PR2-A]
+            └─ bubble/MessageMetaRow.jsx      — timestamp/latency row [PR2-A]
+            └─ bubble/MessageMetadataContent.jsx — toolCalls + reactions + replies wrapper [PR2-A]
+            └─ bubble/CopyButton.jsx          — copy icon button [PR2-A]
+            └─ bubble/EmailButton.jsx         — email icon button [PR2-A]
+            └─ bubble/messageUtils.js         — formatDateTime, downloadFile, formatTime [PR2-A]
+            ChatHeader, ChatInput, ThreadList, ProfilePanel, TokenMeter,
+            ConversationSearch, StarfieldBackground, WelcomeGreeting,
+            ExecutionReceipt, LatencyIndicator, ContinuityToken, QuickActionBar
+            RedScreenOfDeath   — blocking error modal (TSB-024, ~119 lines)
+            components/lib/errorClassifier.jsx — pure error classifier (no React, TSB-024/TSB-026)
 
-components/game: GameView
-components/terminal: CodeTerminal
-components/mobile: BottomNavBar
-components/admin: StatsViewer, RecentErrors, PipelineVisualizer, WCWMonitor, SystemHealth`}</Code>
+            components/game: GameView
+            components/terminal: CodeTerminal
+            components/mobile: BottomNavBar
+            components/admin: StatsViewer, RecentErrors, PipelineVisualizer, WCWMonitor, SystemHealth`}</Code>
 
             <h4 className="text-white font-semibold mt-3">Modes (localStorage flags):</h4>
             <Code>{"caos_developer_mode, caos_game_mode, caos_multi_agent_mode, caos_guest_user\ncaos_last_conversation, caos_current_lane, caos_voice_preference_message\ncaos_speech_rate, caos_google_voice, caos_google_speech_rate"}</Code>
