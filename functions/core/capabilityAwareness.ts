@@ -30,12 +30,13 @@ const MODEL_TOKEN_LIMITS = {
 const ACTIVE_MODEL = 'gpt-5.2';
 
 // ─── CAPABILITY RESOLVER ──────────────────────────────────────────────────────
-function resolveCapabilities() {
+function resolveCapabilities(user) {
     // Each capability is derived from known system state.
     // Nothing is assumed. Nothing is executed. This is a mirror of truth.
 
     const model_name = ACTIVE_MODEL;
     const token_limit = MODEL_TOKEN_LIMITS[model_name] ?? 128000;
+    const is_admin = user?.role === 'admin';
 
     return {
         // Web search: enabled — needs-based automatic via webSearch executor
@@ -61,6 +62,9 @@ function resolveCapabilities() {
 
         // Sensor registry: no sensor layer exists in this deployment
         sensor_registry_available: false,
+
+        // REPO_READ: admin-only autonomous file read via core/repoReadGate
+        repo_read_enabled: is_admin,
 
         // Model
         model_name,
