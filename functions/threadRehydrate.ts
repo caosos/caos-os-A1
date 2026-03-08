@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
         // ── Stage 2: Fetch up to MAX_SCAN_MESSAGES, summarize ────────────────
         const allMessages = await base44.asServiceRole.entities.Message.filter(
             { conversation_id: thread_id },
-            '-timestamp',
+            '-created_date',
             MAX_SCAN_MESSAGES
         );
 
