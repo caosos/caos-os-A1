@@ -278,39 +278,57 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Apply Section 0.10 Workflow Etiquette from the first change (edit tracking, read-before-write, etc.)
   □ Ask the owner if any of the above is unclear — do not assume
 
-  CONFIRMED STACK STATE (as of Mar 7, 2026):
-   pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
-    └─ hooks/useAuthBootstrap   55 lines    EXTRACTED ✅
-    └─ hooks/useConversations  244 lines    EXTRACTED ✅
-   components/chat/ChatBubble.jsx           REFACTORED ✅ (PR1 — Mar 7, 2026 — TSB-025)
-    └─ bubble/FunctionDisplay.jsx  130 lines  EXTRACTED ✅
-    └─ bubble/MarkdownMessage.jsx   82 lines  EXTRACTED ✅
-    └─ bubble/Attachments.jsx               EXTRACTED ✅
-    └─ bubble/GeneratedFiles.jsx            EXTRACTED ✅
-    └─ bubble/Reactions.jsx                 EXTRACTED ✅
-    └─ bubble/Replies.jsx                   EXTRACTED ✅
-    └─ bubble/ReceiptPanel.jsx              EXTRACTED ✅
-    └─ bubble/VideoEmbeds.jsx               EXTRACTED ✅
-    └─ bubble/MessageHelpers.js             EXTRACTED ✅ (pure utility, no React)
-   components/lib/errorClassifier.jsx       DEPLOYED ✅ (TSB-024 — note: .jsx not .js)
-   components/chat/RedScreenOfDeath.jsx     DEPLOYED ✅ (~119 lines, TSB-024)
-   functions/hybridMessage      538 lines   ⚠️ OVER LIMIT — FROZEN, refactor planned (see TSB-021)
-    ── INLINED PURE FUNCTIONS (no network — correct per platform constraint §16.1):
-    └─ detectSaveIntent / detectRecallIntent (inlined from memoryEngine)
-    └─ classifyIntent / detectCogLevel / calibrateDepth / buildDirective (inlined from heuristicsEngine)
-    └─ buildSystemPrompt / KV block (inlined from promptBuilder)
-    └─ compressHistory / openAICall / shouldRunCTC (inlined pure logic)
-    ── EXTERNAL INVOCATIONS (fire-and-forget or gated):
-    └─ core/receiptWriter       (fire-and-forget — ⚠️ TSB-021: I2 invariant now violated)
-    └─ core/errorEnvelopeWriter (awaited — ODEL v1 error persistence)
-    └─ context/crossThreadIntent / threadHydrator / arcAssembler (CTC — gated, non-fatal)
-   STANDALONE MODULES (exist, invokable, NOT called from spine):
-    └─ core/memoryEngine        (full save/recall — logic duplicated inline in spine)
-    └─ core/heuristicsEngine    (full intent/DCS — logic duplicated inline in spine)
-    └─ core/promptBuilder       (full prompt builder — includes Biological Reality Policy)
-    └─ core/runtimeAuthority    (RUNTIME_AUTHORITY object — single source of truth)
-    └─ core/selfDescribe / core/webSearch / core/externalKnowledgeDetector v2 / core/selectorEngine v2
-    └─ core/environmentLoader
+  CONFIRMED STACK STATE (as of Mar 8, 2026):
+  pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
+   └─ hooks/useAuthBootstrap   55 lines    EXTRACTED ✅
+   └─ hooks/useConversations  244 lines    EXTRACTED ✅
+  components/chat/ChatBubble.jsx           FULLY REFACTORED ✅ (PR1+PR2 — Mar 7-8, 2026 — TSB-025/027/028)
+   └─ bubble/FunctionDisplay.jsx  130 lines  EXTRACTED ✅ (PR1)
+   └─ bubble/MarkdownMessage.jsx   82 lines  EXTRACTED ✅ (PR1)
+   └─ bubble/Attachments.jsx               EXTRACTED ✅ (PR1)
+   └─ bubble/GeneratedFiles.jsx            EXTRACTED ✅ (PR1)
+   └─ bubble/Reactions.jsx                 EXTRACTED ✅ (PR1)
+   └─ bubble/Replies.jsx                   EXTRACTED ✅ (PR1)
+   └─ bubble/ReceiptPanel.jsx              EXTRACTED ✅ (PR1)
+   └─ bubble/VideoEmbeds.jsx               EXTRACTED ✅ (PR1)
+   └─ bubble/MessageHelpers.js             EXTRACTED ✅ (PR1 — pure utility, no React)
+   └─ bubble/MessageContent.jsx            EXTRACTED ✅ (PR2-A — verbatim renderContent())
+   └─ bubble/RecallResults.jsx             EXTRACTED ✅ (PR2-A — recall results block)
+   └─ bubble/useTextSelectionMenu.js       EXTRACTED ✅ (PR2-A — selection menu state+effects)
+   └─ bubble/useInlineReactions.js         EXTRACTED ✅ (PR2-A — local-only react/reply handlers)
+   └─ bubble/MessageHeader.jsx             EXTRACTED ✅ (PR2-A — user/CAOS label + message ID copy)
+   └─ bubble/MessageMetaRow.jsx            EXTRACTED ✅ (PR2-A — timestamp/latency row)
+   └─ bubble/MessageMetadataContent.jsx    EXTRACTED ✅ (PR2-A — toolCalls + reactions + replies)
+   └─ bubble/CopyButton.jsx                EXTRACTED ✅ (PR2-A — copy icon button)
+   └─ bubble/EmailButton.jsx               EXTRACTED ✅ (PR2-A — email icon button)
+   └─ bubble/messageUtils.js               EXTRACTED ✅ (PR2-A — formatDateTime, downloadFile, formatTime)
+   └─ ChatBubble.jsx (parent) ~536 lines   TTS path fully preserved and locked ✅
+  components/lib/errorClassifier.jsx       DEPLOYED ✅ (TSB-024 — note: .jsx not .js)
+  components/chat/RedScreenOfDeath.jsx     DEPLOYED ✅ (~119 lines, TSB-024)
+  functions/hybridMessage      669 lines   ⚠️ OVER LIMIT — FROZEN (TSB-021 open)
+   ── INLINED PURE FUNCTIONS (no network — correct per platform constraint §16.1):
+   └─ detectSaveIntent / detectRecallIntent (inlined from memoryEngine)
+   └─ classifyIntent / detectCogLevel / calibrateDepth / buildDirective (inlined from heuristicsEngine)
+   └─ compressHistory / openAICall / shouldRunCTC (inlined pure logic)
+   └─ MBCR module — extractMetadataTags / _mbcrTriggerCheck / _buildThreadRecoveryBlock /
+                     maybeBuildMbcrInjectedMessage (INLINED, LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08)
+   ── EXTERNAL INVOCATIONS (fire-and-forget or gated):
+   └─ core/promptBuilder       (AWAITED — builds system prompt, TSB-023)
+   └─ core/receiptWriter       (fire-and-forget — ⚠️ TSB-021: I2 invariant violated)
+   └─ core/errorEnvelopeWriter (awaited — ODEL v1 error persistence)
+   └─ context/crossThreadIntent / threadHydrator / arcAssembler (CTC — gated, non-fatal)
+   └─ threadRehydrate          (TRH v1 — awaited with 8s Promise.race timeout, non-fatal)
+   └─ getThreadSnippets        (MBCR v1 — same-thread snippet retrieval, non-fatal)
+   └─ autoTitleThread          (fire-and-forget)
+  NEW FUNCTIONS (deployed Mar 8, 2026):
+   └─ functions/threadRehydrate     (TRH v1 — 2-stage: freshness check → LLM summarize)
+   └─ functions/getThreadSnippets   (MBCR v1 — tag+text snippet retrieval, no LLM, READ-ONLY)
+  STANDALONE MODULES (exist, invokable, NOT called from spine):
+   └─ core/memoryEngine        (full save/recall — logic duplicated inline in spine)
+   └─ core/heuristicsEngine    (full intent/DCS — logic duplicated inline in spine)
+   └─ core/runtimeAuthority    (RUNTIME_AUTHORITY object — single source of truth)
+   └─ core/selfDescribe / core/webSearch / core/externalKnowledgeDetector v2 / core/selectorEngine v2
+   └─ core/environmentLoader
    GOVERNANCE GATES (designed Mar 5, 2026 — dashboard-only enforcement path):
     └─ GATE-0: LOCK_MANIFEST.json — single source of truth (design complete)
     └─ GATE-1: Lock enforcement — no edits to locked files without UNLOCK token
