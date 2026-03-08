@@ -31,11 +31,11 @@ Deno.serve(async (req) => {
             max_bytes 
         });
 
-        // Return gateResult data with success wrapper
+        // Passthrough gateResult status + data (includes 403/413 errors)
         return Response.json({
-            ok: true,
+            ok: gateResult.status === 200,
             ...gateResult.data
-        }, { status: 200 });
+        }, { status: gateResult.status || 200 });
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
