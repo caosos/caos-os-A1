@@ -37,21 +37,36 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 };
             }
 
-            const repoResult = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
+            const repoResult = await base44.functions.invoke('core/repoRead', { 
+                path, 
+                max_bytes: 200000,
+                ref: 'main'
+            });
             
             console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
             
             return {
                 type: 'REPO_READ',
-                executor: 'repoReadGate',
+                executor: 'core/repoRead',
                 path,
                 status: 'success',
-                content_length: repoResult?.data?.content?.length || 0,
+                content_length: repoResult?.data?.content?.length || repoResult?.data?.content_length || 0,
                 hash: repoResult?.data?.hash || null,
+                owner: repoResult?.data?.owner,
+                repo: repoResult?.data?.repo,
+                ref: repoResult?.data?.ref || 'main',
                 executionId: `exec_${Date.now()}`
             };
         } catch (error) {
             console.error('🚨 [REPO_READ_ERROR]:', error);
+            // Passthrough HTTP status codes from invoke
+            if (error?.response?.status) {
+                throw {
+                    error: 'REPO_READ_EXECUTION_FAILED',
+                    status: error.response.status,
+                    details: error.message || error.error || error.response.data?.error
+                };
+            }
             throw {
                 error: 'REPO_READ_EXECUTION_FAILED',
                 details: error.message || error.error
