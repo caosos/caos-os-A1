@@ -60,7 +60,7 @@ export default function TSBLog() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS TSB Log</h1>
             <p className="text-red-300">Troubleshooting Bulletins — Permanent Failure & Fix Records</p>
-            <p className="text-gray-400 text-xs mt-1">A running log of real issues encountered during CAOS development, what caused them, and what fixed them.</p>
+            <p className="text-gray-400 text-xs mt-1">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. TSB-001 through TSB-029.</p>
           </div>
 
           <Section title="TSB — Troubleshooting Bulletins (Known Issues and Fixes)" color="red">
