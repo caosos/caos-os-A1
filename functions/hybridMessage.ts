@@ -447,6 +447,33 @@ Deno.serve(async (req) => {
             ).slice(0, 5);
         }
 
+        // ── STAGE: MBCR — Thread Recovery injection (same-thread v1) ────────
+        // LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08
+        let mbcrBlock = '';
+        let mbcrMeta = { triggered: false, tags: [], text_query: '', count: 0, injected_chars: 0 };
+        if (session_id) {
+            const mbcrTrigger = mbcrTriggerCheck(input);
+            if (mbcrTrigger.triggered) {
+                try {
+                    const snippetRes = await base44.functions.invoke('getThreadSnippets', {
+                        thread_id: session_id,
+                        tags: mbcrTrigger.tags,
+                        text_query: mbcrTrigger.text_query,
+                        limit: 20,
+                        around: 2
+                    });
+                    const snippets = snippetRes?.data?.snippets || [];
+                    mbcrBlock = buildThreadRecoveryBlock(snippets);
+                    mbcrMeta = { triggered: true, tags: mbcrTrigger.tags, text_query: mbcrTrigger.text_query, count: snippets.length, injected_chars: mbcrBlock.length };
+                    if (debugMode) console.log('[MBCR_TRIGGERED]', { tags: mbcrTrigger.tags, text_query: mbcrTrigger.text_query, count: snippets.length, injected_chars: mbcrBlock.length, ids: (snippetRes?.data?.snippets || []).map(s => s.id) });
+                } catch (mbcrErr) {
+                    console.warn('⚠️ [MBCR_NONFATAL]', mbcrErr.message);
+                }
+            } else {
+                if (debugMode) console.log('[MBCR_SKIPPED] No thread-reference intent detected');
+            }
+        }
+
         // ── STAGE: HEURISTICS (inlined — no network) ─────────────────────────
         setStage(STAGES.HEURISTICS);
         const hIntent = classifyIntent(input);
