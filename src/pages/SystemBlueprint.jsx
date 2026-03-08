@@ -334,6 +334,31 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
     └─ GATE-1: Lock enforcement — no edits to locked files without UNLOCK token
     └─ GATE-2: Line limit enforcement — block any non-exempt file >400 lines
     └─ hybridMessage refactor FROZEN until explicit scoped plan + owner approval
+   MBCR v1 — DEPLOYED ✅ (Mar 8, 2026):
+    Message-Based Campaign Recovery — same-thread tag+text snippet injection
+    └─ Trigger: regex match on PR2/PR3/locked/receipts/continue/status keywords in input
+    └─ Flow: _mbcrTriggerCheck → getThreadSnippets → _buildThreadRecoveryBlock → inject as system message
+    └─ Max injection: 6000 chars, 20 snippets, ±2 neighbor expansion around each match
+    └─ Tag writes: every saved Message gets metadata_tags[] via extractMetadataTags()
+    └─ Tags: PR2, PR3, LOCKED, UNLOCK, ACCEPTANCE, RECEIPTS, EXECUTE_STEP_2, STOP_AFTER_RECEIPTS,
+             APPROVED_SCOPE, WAITING_FOR_APPROVAL, THREAD_SUMMARY
+    └─ Injection block: role=system, prepended to conversationHistory in finalMessages
+    └─ Non-fatal: getThreadSnippets failure → pipeline continues without MBCR context
+    └─ Dev diagnostic header in reply when debugMode=true
+   TRH v1 — DEPLOYED ✅ (Mar 8, 2026):
+    Thread Rehydration — 2-stage LLM summarization for campaign thread continuity
+    └─ Gate: TRH_TRIGGER regex in hybridMessage (pr2/pr3/continue/where are we/status/locked/etc.)
+    └─ Stage 1 (deterministic): fetch last 80 messages, check freshness anti-spam
+      Anti-spam: skip if THREAD_SUMMARY exists within last 10 messages AND last 10 minutes
+      Override: user says "refresh" / "rehydrate" / "update summary" → forces Stage 2
+    └─ Stage 2 (LLM): fetch up to 1000 messages, summarize via ACTIVE_MODEL (gpt-5.2)
+      Output: structured THREAD SUMMARY block (Campaign State, Lock Table, TODOs,
+              Last Accepted Plan, Next Step, Open Questions)
+      Max: 1200 completion tokens, 8000 char input cap, 6000 char output cap
+    └─ Summary saved to Message entity: metadata_tags=['THREAD_SUMMARY'], role='assistant'
+    └─ Summary injected into finalMessages as: role='assistant', immediately after system prompt
+    └─ Hard timeout: 8000ms Promise.race in hybridMessage (fail-closed — pipeline continues)
+    └─ Non-fatal: any TRH failure → pipeline continues without summary
    CTC MEMORY SYSTEM — LIVE ✅ (Mar 4, 2026)
    └─ context/threadIndexLoader    (load ThreadIndex — temperature recalc on access)
    └─ context/crossThreadIntent    (detect explicit/topic/time cross-thread references)
