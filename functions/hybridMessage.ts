@@ -470,14 +470,24 @@ Deno.serve(async (req) => {
         // Summary also saved to thread so subsequent last-40 loads include it.
         const TRH_TRIGGER = /\b(pr[23]|continue|where are we|status|locked|receipts|refresh|rehydrate|update summary|what('s| is) (locked|next|open)|what did we decide|catch me up)\b/i;
         let trhSummaryMessage = null;
+        // TRH silent receipt — tracks outcome for assistant self-awareness + admin diagnostics
+        const execution_meta = { trh: { outcome: 'not_triggered' } };
         if (session_id && TRH_TRIGGER.test(input)) {
+            execution_meta.trh.triggered = true;
+            execution_meta.trh.invoked = true;
             try {
                 const trhRes = await Promise.race([
                     base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
                     new Promise(r => setTimeout(() => r(null), 8000))
                 ]);
-                if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
+                if (trhRes === null) {
+                    execution_meta.trh.outcome = 'timeout';
+                    console.warn('⚠️ [TRH_TIMEOUT]');
+                } else if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
+                    execution_meta.trh.outcome = 'wrote_summary';
+                    execution_meta.trh.wrote_summary = true;
                     trhSummaryMessage = { role: 'assistant', content: trhRes.data.summary_text };
+                    execution_meta.trh.save_attempted = true;
                     base44.asServiceRole.entities.Message.create({
                         conversation_id: session_id, role: 'assistant',
                         content: trhRes.data.summary_text,
@@ -485,10 +495,17 @@ Deno.serve(async (req) => {
                         metadata_tags: ['THREAD_SUMMARY']
                     }).catch(e => console.warn('⚠️ [TRH_SAVE_NONFATAL]', e.message));
                     if (debugMode) console.log('[TRH_INJECTED]', { chars: trhRes.data.summary_text.length, meta: trhRes.data.meta });
-                } else if (debugMode) {
-                    console.log('[TRH_SKIPPED]', { reason: trhRes?.data?.meta?.reason || 'null_response' });
+                } else {
+                    const skipReason = trhRes?.data?.meta?.skipReason || trhRes?.data?.meta?.reason || null;
+                    execution_meta.trh.outcome = skipReason === 'fresh_summary_exists' ? 'skipped_fresh' : 'no_summary';
+                    execution_meta.trh.reason = skipReason;
+                    if (debugMode) console.log('[TRH_SKIPPED]', { reason: skipReason || 'null_response' });
                 }
-            } catch (e) { console.warn('⚠️ [TRH_NONFATAL]', e.message); }
+            } catch (e) {
+                execution_meta.trh.outcome = 'error';
+                execution_meta.trh.error = e.message;
+                console.warn('⚠️ [TRH_NONFATAL]', e.message);
+            }
         }
 
         // ── STAGE: MBCR — Thread Recovery injection (same-thread v1) ────────
