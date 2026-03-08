@@ -73,6 +73,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
       window.speechSynthesis.cancel();
+      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
     };
   }, []);
 
