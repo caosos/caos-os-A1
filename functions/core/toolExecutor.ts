@@ -8,7 +8,7 @@
 import { imageGeneratorExecutor } from '../executors/imageGenerator.js';
 import { webSearchExecutor } from '../executors/webSearchExecutor.js';
 
-export async function executeTool(params, base44) {
+export async function executeTool(params, base44, user) {
     const { user_input, selector_decision } = params;
 
     if (!selector_decision || !selector_decision.tools_allowed) {
@@ -18,7 +18,37 @@ export async function executeTool(params, base44) {
     const tools = selector_decision.tools_allowed;
     console.log('🔧 [TOOL_EXECUTOR]', { authorized_tools: tools });
 
-    // Priority order: IMAGE > WEB_SEARCH > FILE_SEARCH
+    // Priority order: REPO_READ (admin) > IMAGE > WEB_SEARCH > FILE_SEARCH
+    
+    // Check REPO_READ tool (admin-only)
+    if (tools.includes('REPO_READ')) {
+        if (user?.role !== 'admin') {
+            console.log('🚫 [REPO_READ_DENIED] Non-admin attempt:', user?.email);
+            throw new Error('REPO_READ_ADMIN_ONLY: This tool requires admin role');
+        }
+        
+        console.log('📖 [EXECUTING_REPO_READ_TOOL]');
+        try {
+            const path = user_input?.split(/\s+/)?.[1] || selector_decision.context?.path;
+            if (!path) {
+                throw new Error('REPO_READ_MISSING_PATH: No file path provided');
+            }
+            
+            const result = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
+            console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
+            
+            return {
+                type: 'REPO_READ',
+                path,
+                status: 'success',
+                content_length: result?.data?.content?.length || 0,
+                hash: result?.data?.hash || null
+            };
+        } catch (error) {
+            console.error('🚨 [REPO_READ_ERROR]:', error.message);
+            throw new Error(`REPO_READ_FAILED: ${error.message}`);
+        }
+    }
     
     // Check IMAGE tool
     if (tools.includes('IMAGE')) {
