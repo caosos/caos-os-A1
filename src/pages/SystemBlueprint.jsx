@@ -124,6 +124,9 @@ Wait for the owner to tell you what they need.`}</pre>
               <Tag label="Google Web Speech TTS: LOCKED" color="green" />
               <Tag label="WCW Meter: LIVE DATA" color="green" />
               <Tag label="CTC Memory System: LIVE ✅" color="green" />
+              <Tag label="MBCR v1: DEPLOYED ✅" color="green" />
+              <Tag label="TRH v1: DEPLOYED ✅" color="green" />
+              <Tag label="PR2 COMPLETE ✅" color="green" />
               <Tag label="PHASE 1 — Observability: IN PROGRESS" color="yellow" />
               <Tag label="Module Catalogue: Section 15" color="indigo" />
               <Tag label="PHASE 2–6: RESERVED" color="purple" />
