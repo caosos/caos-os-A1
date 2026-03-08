@@ -38,33 +38,27 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             }
 
             const repoResult = await base44.functions.invoke('core/repoRead', { 
-                path, 
+                path: path,
                 max_bytes: 200000,
                 ref: 'main'
             });
             
             console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
             
-            const content = repoResult.data?.content || '';
-            const contentLength = content.length || (repoResult.data?.content_length || 0);
-            
             return {
                 type: 'REPO_READ',
                 executor: 'core/repoRead',
-                path,
+                path: path,
                 status: 'success',
-                content_length: contentLength,
-                hash: repoResult.data?.hash || null,
-                owner: repoResult.data?.owner || null,
-                repo: repoResult.data?.repo || null,
-                ref: repoResult.data?.ref || 'main',
-                executionId: `exec_${Date.now()}`
+                content_length: repoResult.data && repoResult.data.content ? repoResult.data.content.length : 0,
+                hash: repoResult.data && repoResult.data.hash ? repoResult.data.hash : null,
+                executionId: 'exec_' + Date.now()
             };
         } catch (error) {
             console.error('🚨 [REPO_READ_ERROR]:', error);
             throw {
                 error: 'REPO_READ_EXECUTION_FAILED',
-                details: error.message || error.error || JSON.stringify(error)
+                details: error.message || 'Unknown error'
             };
         }
     }
@@ -177,7 +171,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 duration: { hours, minutes, ms: durationMs },
                 message_count: messageCount,
                 first_message: firstMessage,
-                executionId: `exec_${Date.now()}`
+                executionId: 'exec_' + Date.now()
             };
         } catch (error) {
             // Fail loud - never downgrade to thread list or GEN
@@ -204,7 +198,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 type: 'LIST',
                 threads: conversations,
                 count: conversations.length,
-                executionId: `exec_${Date.now()}`
+                executionId: 'exec_' + Date.now()
             };
         } catch (error) {
             console.error('🚨 [EXECUTION_ERROR] LIST_THREADS:', error);
@@ -227,9 +221,9 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
 
             // First pass: Filter by metadata (title, summary, keywords)
             const metadataMatches = conversations.filter(c => {
-                const titleMatch = c.title?.toLowerCase().includes(searchTerm);
-                const summaryMatch = c.summary?.toLowerCase().includes(searchTerm);
-                const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(searchTerm));
+                const titleMatch = c.title && c.title.toLowerCase().includes(searchTerm);
+                const summaryMatch = c.summary && c.summary.toLowerCase().includes(searchTerm);
+                const keywordMatch = c.keywords && c.keywords.some(k => k.toLowerCase().includes(searchTerm));
                 return titleMatch || summaryMatch || keywordMatch;
             });
 
@@ -244,7 +238,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 );
                 
                 const matchingMessages = messages.filter(msg => 
-                    msg.content?.toLowerCase().includes(searchTerm)
+                    msg.content && msg.content.toLowerCase().includes(searchTerm)
                 );
                 
                 if (matchingMessages.length > 0) {
@@ -274,7 +268,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                     conversation: metadataMatch || contentMatch.conversation,
                     matchedInMetadata: !!metadataMatch,
                     matchedInContent: !!contentMatch,
-                    messageExcerpts: contentMatch?.matchingMessages || []
+                    messageExcerpts: contentMatch && contentMatch.matchingMessages ? contentMatch.matchingMessages : []
                 };
             });
 
@@ -282,9 +276,9 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             const matchFields = new Set();
             if (metadataMatches.length > 0) {
                 metadataMatches.forEach(m => {
-                    if (m.title?.toLowerCase().includes(searchTerm)) matchFields.add('title');
-                    if (m.summary?.toLowerCase().includes(searchTerm)) matchFields.add('summary');
-                    if (m.keywords?.some(k => k.toLowerCase().includes(searchTerm))) matchFields.add('keywords');
+                    if (m.title && m.title.toLowerCase().includes(searchTerm)) matchFields.add('title');
+                    if (m.summary && m.summary.toLowerCase().includes(searchTerm)) matchFields.add('summary');
+                    if (m.keywords && m.keywords.some(k => k.toLowerCase().includes(searchTerm))) matchFields.add('keywords');
                 });
             }
             if (contentMatches.length > 0) {
@@ -294,8 +288,8 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             return {
                 type: 'SEARCH',
                 query_terms: extractedTerms,
-                matches,
-                match_fields: [...matchFields],
+                matches: matches,
+                match_fields: Array.from(matchFields),
                 match_type: matches.length === 0 ? 'none' : matches.length === 1 ? 'exact' : 'partial',
                 count: matches.length,
                 search_scope: {
@@ -303,7 +297,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                     content_indexed: true,
                     messages_searched: true
                 },
-                executionId: `exec_${Date.now()}`
+                executionId: 'exec_' + Date.now()
             };
         } catch (error) {
             console.error('🚨 [EXECUTION_ERROR] THREAD_SEARCH_PIPELINE:', error);
@@ -330,9 +324,9 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             for (const term of extractedTerms) {
                 const termLower = term.toLowerCase();
                 const matches = conversations.filter(c => {
-                    const titleMatch = c.title?.toLowerCase().includes(termLower);
-                    const summaryMatch = c.summary?.toLowerCase().includes(termLower);
-                    const keywordMatch = c.keywords?.some(k => k.toLowerCase().includes(termLower));
+                    const titleMatch = c.title && c.title.toLowerCase().includes(termLower);
+                    const summaryMatch = c.summary && c.summary.toLowerCase().includes(termLower);
+                    const keywordMatch = c.keywords && c.keywords.some(k => k.toLowerCase().includes(termLower));
 
                     if (titleMatch) allMatchFields.add('title');
                     if (summaryMatch) allMatchFields.add('summary');
@@ -352,8 +346,8 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
             return {
                 type: 'MULTI_SEARCH',
                 query_terms: extractedTerms,
-                multiResults,
-                match_fields: [...allMatchFields],
+                multiResults: multiResults,
+                match_fields: Array.from(allMatchFields),
                 match_type: totalMatches === 0 ? 'none' : 'partial',
                 count: totalMatches,
                 search_scope: {
@@ -361,7 +355,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                     content_indexed: true,
                     topics: extractedTerms.length
                 },
-                executionId: `exec_${Date.now()}`
+                executionId: 'exec_' + Date.now()
             };
         } catch (error) {
             console.error('🚨 [EXECUTION_ERROR] THREAD_MULTI_SEARCH_PIPELINE:', error);
@@ -374,7 +368,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
 
     throw {
         error: 'EXECUTION_INVALID_ROUTE',
-        route,
+        route: route,
         details: 'Unknown route in executeTool'
     };
 }
