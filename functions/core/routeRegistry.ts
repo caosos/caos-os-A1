@@ -71,7 +71,7 @@ const ROUTE_REGISTRY = {
         description: 'WCW compaction and anchor promotion'
     },
 
-    // UTILITY ROUTES (infrastructure/tools)
+    // UTILITY ROUTES (infrastructure)
     'util.repo.read': {
         route_id: 'util.repo.read',
         path: '/functions/core/repoRead',
