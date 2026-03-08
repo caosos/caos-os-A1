@@ -1644,9 +1644,17 @@ END TOKEN`}</pre>
 - PR1 COMPLETE (Mar 7, 2026 — TSB-025): ChatBubble refactored into modular bubble/ sub-components. TTS path preserved and untouched. FunctionDisplay (130L), MarkdownMessage (82L), Attachments, GeneratedFiles, Reactions, Replies, ReceiptPanel, VideoEmbeds, MessageHelpers extracted.
 - LOCK CLARIFICATION (TSB-025): ChatBubble LOCK applies ONLY to TTS path (handleReadAloud, audioRef, globalAudioInstance, audio player bar UI). Non-TTS sections of ChatBubble are open for modification via PRs with TSB documentation.
 - TSB-026 (Mar 7, 2026): errorClassifier filename is .jsx not .js. BLOCKING_CODES set covers HTTP-200 structured errors only. NETWORK_ERROR and 5xx handled by independent branches. Documentation-only fix.
-- PR2 IN PROGRESS (Mar 7, 2026 — TSB-027): Message delivery status indicators scoped. Target: Chat.jsx (status field on temp message) + ChatBubble.jsx (non-TTS rendering only). States: sending → sent → failed. Blocks: RSoD path unchanged.
+- PR2 COMPLETE (Mar 7-8, 2026 — TSB-027/028): ChatBubble.jsx fully modularized. All rendering extracted into bubble/ sub-components (PR2-A). External fetch calls to hardcoded dev server removed. Local-only reactions/replies via useInlineReactions. Parent ChatBubble retained TTS path untouched.
+- bubble/ sub-components added in PR2-A: MessageContent, RecallResults, useTextSelectionMenu, useInlineReactions, MessageHeader, MessageMetaRow, MessageMetadataContent, CopyButton, EmailButton, messageUtils
 - useAuthBootstrap confirmed 55 lines (not 56 as TSB-017 stated — minor delta)
-- useConversations confirmed 244 lines (not 240 as TSB-017 stated — minor delta)`}</Code>
+- useConversations confirmed 244 lines (not 240 as TSB-017 stated — minor delta)
+- TSB-028 (Mar 8, 2026): MBCR v1 DEPLOYED — Message-Based Campaign Recovery. extractMetadataTags inlined in hybridMessage. getThreadSnippets new function (READ-ONLY, no LLM). Trigger: PR2/PR3/locked/receipts/continue/status keywords. Injects THREAD RECOVERY EXCERPTS block as system message. metadata_tags written on every Message save.
+- TSB-029 (Mar 8, 2026): TRH v1 DEPLOYED — Thread Rehydration Worker. New function: threadRehydrate. 2-stage: (1) deterministic freshness check, (2) LLM summarize up to 1000 messages. Output THREAD SUMMARY injected into finalMessages as assistant message AND saved to Message entity with metadata_tags=['THREAD_SUMMARY']. Hard 8s timeout in hybridMessage. Fail-closed.
+- MBCR tag set: PR2, PR3, LOCKED, UNLOCK, ACCEPTANCE, RECEIPTS, EXECUTE_STEP_2, STOP_AFTER_RECEIPTS, APPROVED_SCOPE, WAITING_FOR_APPROVAL
+- TRH trigger keywords: pr2, pr3, continue, where are we, status, locked, receipts, refresh, rehydrate, update summary, what's locked/next/open, what did we decide, catch me up
+- TRH anti-spam: skip if THREAD_SUMMARY found in last 10 messages AND within last 10 minutes (override: say "refresh" or "rehydrate")
+- Chat.jsx link sanitizer updated: extractAndSaveExplicitResources() — only markdown links [text](url) + bare URL lines saved. No prose-embedded links.
+- hybridMessage now 669 lines (grown from 538 — MBCR inline block added Mar 8, 2026 — FROZEN)`}</Code>
           </Section>
 
         </div>
