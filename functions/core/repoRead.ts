@@ -26,16 +26,23 @@ Deno.serve(async (req) => {
         }
 
         // Forward to repoReadGate for allowlist enforcement
-        const gateResult = await base44.functions.invoke('core/repoReadGate', { 
-            path, 
-            max_bytes 
-        });
-
-        // Passthrough gateResult status + data (includes 403/413 errors)
-        return Response.json({
-            ok: gateResult.status === 200,
-            ...gateResult.data
-        }, { status: gateResult.status || 200 });
+        let gateResult;
+        try {
+            gateResult = await base44.functions.invoke('core/repoReadGate', { 
+                path, 
+                max_bytes 
+            });
+            // Success case
+            return Response.json({
+                ok: true,
+                ...gateResult.data
+            }, { status: 200 });
+        } catch (gateError) {
+            // repoReadGate rejected with 403/413 — passthrough error response
+            const statusCode = gateError?.response?.status || 403;
+            const errorData = gateError?.response?.data || { error: gateError.message };
+            return Response.json(errorData, { status: statusCode });
+        }
 
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
