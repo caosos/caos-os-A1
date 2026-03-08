@@ -21,12 +21,16 @@ import BottomNavBar from '@/components/mobile/BottomNavBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
+
+const _DEV_MODE = localStorage.getItem('caos_developer_mode') === 'true';
 import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
 import RedScreenOfDeath from '@/components/chat/RedScreenOfDeath';
 import { classifyError } from '@/components/lib/errorClassifier';
 
 export default function Chat() {
+  const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
+  if (isDeveloperMode) console.count('Chat render');
   const { user, isGuestMode, dataLoaded } = useAuthBootstrap();
 
   const [messages, setMessages] = useState({});
@@ -76,7 +80,6 @@ export default function Chat() {
     }, 0);
   };
   
-  const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
   const isGameMode = localStorage.getItem('caos_game_mode') === 'true';
 
   useEffect(() => {

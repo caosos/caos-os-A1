@@ -5,7 +5,10 @@ import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 
+const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
+
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
+  if (_DEV) console.count('ChatInput render');
   const [message, setMessage] = useState(messageValue);
   const [attachedFiles, setAttachedFiles] = useState([]);
   
@@ -780,10 +783,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           value={message}
           maxLength={1000000}
           onChange={(e) => {
+            if (_DEV) console.time('ChatInput onChange');
             setMessage(e.target.value);
             onMessageChange?.(e.target.value);
             e.target.style.height = 'auto';
             e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+            if (_DEV) console.timeEnd('ChatInput onChange');
           }}
           onKeyPress={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
