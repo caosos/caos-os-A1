@@ -60,6 +60,8 @@ export default function Chat() {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const messageRefs = useRef({});
+  const isAtBottomRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [messageInputValue, setMessageInputValue] = useState('');
   const [inputHeight, setInputHeight] = useState(0);
   const [rsodError, setRsodError] = useState(null);
@@ -126,7 +128,11 @@ export default function Chat() {
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      setShowJumpToLatest(true);
+    }
   }, [currentMessages.length]);
 
   // Track scroll position to show/hide scroll button
@@ -136,7 +142,9 @@ export default function Chat() {
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 80;
+      isAtBottomRef.current = isNearBottom;
+      if (isNearBottom) setShowJumpToLatest(false);
       setShowScrollButton(!isNearBottom && currentMessages.length > 0);
     };
 
