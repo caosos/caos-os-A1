@@ -49,7 +49,19 @@ Deno.serve(async (req) => {
             return Response.json({ error: "MISSING_PATH" }, { status: 400 });
         }
 
-        if (!isAllowlisted(path)) {
+        const allowed = isAllowlisted(path);
+        const denied_reason = isDenied(path) ? "DENYLIST_MATCH" : "NOT_ALLOWLISTED";
+        
+        console.log('[REPO_READ_GATE]', { 
+            request_id, 
+            session_id: user.id,
+            path, 
+            allowed,
+            denied_reason: allowed ? null : denied_reason,
+            ts_iso 
+        });
+
+        if (!allowed) {
             return Response.json({
                 request_id,
                 correlation_id,
@@ -57,7 +69,7 @@ Deno.serve(async (req) => {
                 tool_version: "REPOREAD_GATE_v1_2026-03-08",
                 ts_iso,
                 source: "repo_fs_allowlist",
-                error: "DENIED_PATH",
+                error: denied_reason,
                 path
             }, { status: 403 });
         }
