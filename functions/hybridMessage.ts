@@ -166,6 +166,70 @@ function detectRecallIntent(input) {
 // ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
+// ─── MBCR: THREAD RECOVERY (same-thread v1) ───────────────────────────────────
+// LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08
+// Whole-word, case-insensitive regex markers for metadata_tags extraction.
+// Applied to BOTH user and assistant messages before save.
+const MBCR_TAG_PATTERNS = [
+    { tag: 'PR2',                   re: /\bPR2\b/i },
+    { tag: 'PR3',                   re: /\bPR3\b/i },
+    { tag: 'LOCKED',                re: /\bLOCKED\b/i },
+    { tag: 'UNLOCK',                re: /\bUNLOCK\b/i },
+    { tag: 'ACCEPTANCE',            re: /\bACCEPTANCE\b/i },
+    { tag: 'RECEIPTS',              re: /\bRECEIPTS\b/i },
+    { tag: 'EXECUTE_STEP_2',        re: /\bEXECUTE_STEP_2\b/i },
+    { tag: 'STOP_AFTER_RECEIPTS',   re: /\bSTOP_AFTER_RECEIPTS\b/i },
+    { tag: 'APPROVED_SCOPE',        re: /\bAPPROVED_SCOPE\b/i },
+    { tag: 'WAITING_FOR_APPROVAL',  re: /\bWAITING_FOR_APPROVAL\b/i },
+];
+const MBCR_INJECTION_MAX_CHARS = 6000;
+const MBCR_SNIPPET_MAX_CHARS   = 500;
+
+function extractMetadataTags(content) {
+    if (!content) return [];
+    return MBCR_TAG_PATTERNS.filter(({ re }) => re.test(content)).map(({ tag }) => tag);
+}
+
+// Trigger: detect "thread-reference intent" in user input.
+// Returns { triggered, tags, text_query } — NO network call, pure inline.
+function mbcrTriggerCheck(input) {
+    const t = input || '';
+    const triggered =
+        /\bPR[23]\b/i.test(t) ||
+        /\b(locked|unlock|lock status)\b/i.test(t) ||
+        /\b(receipts|acceptance criteria|rollback plan)\b/i.test(t) ||
+        /\b(continue|where are we|status|next step|what.*plan|approved_scope|waiting_for_approval|stop_after_receipts)\b/i.test(t);
+
+    if (!triggered) return { triggered: false, tags: [], text_query: '' };
+
+    // Infer tags from input
+    const inferredTags = MBCR_TAG_PATTERNS
+        .filter(({ re }) => re.test(t))
+        .map(({ tag }) => tag);
+
+    // Infer a primary keyword for text_query
+    const kwMatch = t.match(/\b(PR[23]|locked|receipts|acceptance|rollback|approved_scope|waiting_for_approval)\b/i);
+    const text_query = kwMatch ? kwMatch[0] : '';
+
+    return { triggered: true, tags: inferredTags, text_query };
+}
+
+// Build the Thread Recovery injection block (raw excerpts — no LLM summarization).
+function buildThreadRecoveryBlock(snippets) {
+    if (!snippets || snippets.length === 0) return '';
+    let block = 'THREAD RECOVERY EXCERPTS (same-thread; auto-selected):\n';
+    let totalChars = block.length;
+    for (const s of snippets) {
+        const date = s.created_date ? new Date(s.created_date).toISOString() : 'unknown';
+        const truncated = (s.content || '').slice(0, MBCR_SNIPPET_MAX_CHARS);
+        const line = `[${s.role} | ${date} | ${s.id}]: ${truncated}\n`;
+        if (totalChars + line.length > MBCR_INJECTION_MAX_CHARS) break;
+        block += line;
+        totalChars += line.length;
+    }
+    return block;
+}
+
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
     const startTime = Date.now();
