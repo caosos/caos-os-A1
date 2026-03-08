@@ -37,11 +37,7 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
                 };
             }
 
-            const repoResult = await base44.functions.invoke('core/repoRead', { 
-                path: path,
-                max_bytes: 200000,
-                ref: 'main'
-            });
+            const repoResult = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
             
             console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
             
