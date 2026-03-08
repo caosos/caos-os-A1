@@ -76,6 +76,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       window.removeEventListener('beforeunload', handleUnload);
       window.speechSynthesis.cancel();
       if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+      if (draftRafRef.current) cancelAnimationFrame(draftRafRef.current);
     };
   }, []);
 
@@ -834,6 +835,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
                 setMessage('');
                 setAttachedFiles([]);
+                // Cancel any pending draft rAF and clear parent immediately
+                if (draftRafRef.current) { cancelAnimationFrame(draftRafRef.current); draftRafRef.current = null; }
+                latestDraftRef.current = '';
                 onMessageChange?.('');
                 if (textareaRef.current) {
                   textareaRef.current.style.height = '24px';
