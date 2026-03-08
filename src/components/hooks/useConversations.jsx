@@ -83,9 +83,9 @@ export function useConversations({
     Promise.all([
       base44.entities.Message.filter(
         { conversation_id: currentConversationId },
-        'timestamp',
+        '-timestamp',
         500
-      ),
+      ).then(msgs => (msgs ? msgs.reverse() : [])),
       base44.entities.DiagnosticReceipt.filter(
         { session_id: currentConversationId },
         '-created_date',
@@ -94,6 +94,15 @@ export function useConversations({
     ])
       .then(([msgs, receipts]) => {
         if (!mounted) return;
+
+        console.log('--- Message Hydration Log ---');
+        console.log('Conversation ID:', currentConversationId);
+        console.log('Messages Returned (chronological):', msgs?.length || 0);
+        if (msgs?.length > 0) {
+          console.log('First Timestamp:', msgs[0].timestamp);
+          console.log('Last Timestamp:', msgs[msgs.length - 1].timestamp);
+        }
+        console.log('-----------------------------');
 
         setMessages(prev => ({
           ...prev,
@@ -111,7 +120,7 @@ export function useConversations({
       .catch(console.error);
 
     return () => { mounted = false; };
-  }, [bootCompleted, currentConversationId, isGuestMode, messages, setMessages, setWcwState]);
+  }, [bootCompleted, currentConversationId, isGuestMode, setMessages, setWcwState]);
 
   // Create new thread
   const handleNewThread = async () => {
