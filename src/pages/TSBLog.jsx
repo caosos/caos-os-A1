@@ -815,6 +815,125 @@ Acceptance Criteria:
 Status: IN PROGRESS 🔧`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-028 — MBCR v1: Message-Based Campaign Recovery — Same-Thread Snippet Injection</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 8, 2026
+Component: functions/hybridMessage (MBCR inline module)
+           functions/getThreadSnippets (NEW — READ-ONLY, no LLM)
+           entities/Message (metadata_tags field now actively written)
+
+Motivation:
+  Long-running campaign threads (PR2, PR3) lose critical context beyond the 40-message
+  hot window. When the user says "continue PR2" or "what's locked", the context
+  that defines the lock table, accepted receipts, and approved scope is in older messages
+  that hybridMessage never sees. MBCR v1 recovers those specific messages deterministically.
+
+Architecture:
+  MBCR module inlined in hybridMessage (no local imports in Deno — platform constraint §16.1).
+  LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08
+
+  extractMetadataTags(content):
+    → Scans content for known campaign tags (PR2, PR3, LOCKED, UNLOCK, ACCEPTANCE,
+       RECEIPTS, EXECUTE_STEP_2, STOP_AFTER_RECEIPTS, APPROVED_SCOPE, WAITING_FOR_APPROVAL)
+    → Called on EVERY user + assistant message at MESSAGE_SAVE stage
+    → Returns matched tags → written to Message.metadata_tags[]
+
+  maybeBuildMbcrInjectedMessage({ thread_id, userText, invokeFn, debugMode }):
+    1. _mbcrTriggerCheck(userText) — regex gate (PR2/PR3/locked/continue/status/etc.)
+    2. If triggered → invoke getThreadSnippets with { thread_id, tags, text_query, limit=20, around=2 }
+    3. _buildThreadRecoveryBlock(snippets) → THREAD RECOVERY EXCERPTS block (max 6000 chars)
+    4. Returns: { message: { role: 'system', content: block }, debug }
+    5. Block injected as system message before conversationHistory in finalMessages
+
+  getThreadSnippets (standalone function):
+    → Fetches up to 500 messages for thread, sorted ascending
+    → Matches by: metadata_tags[] (OR logic) + text_query substring search
+    → Expands ±around neighbors around each match
+    → Deduplicates, limits to 20 results
+    → READ-ONLY: no writes, no LLM calls, no side effects
+
+Injection position in finalMessages:
+  [system prompt] → [TRH summary?] → [MBCR excerpts (system)] → [conversation history] → [user]
+
+Dev diagnostic: debugMode=true → MBCR header prepended to reply:
+  [MBCR] triggered=true retrieved=12 injected=true tags=[PR2,LOCKED] query="PR2"
+
+Non-fatal: any getThreadSnippets failure → pipeline continues without MBCR block.
+Status:    COMPLETE. Deployed and active.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-029 — TRH v1: Thread Rehydration Worker — LLM-Based Campaign State Summary</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 8, 2026
+Component: functions/threadRehydrate (NEW)
+           functions/hybridMessage (TRH pre-gate added)
+           entities/Message (THREAD_SUMMARY messages written)
+
+Motivation:
+  MBCR v1 (TSB-028) recovers raw message excerpts. TRH v1 goes further: it synthesizes
+  a structured THREAD SUMMARY covering campaign state, lock table, TODOs, last accepted
+  plan, next step, and open questions. This gives the LLM a self-consistent campaign
+  snapshot it can reason from directly, not just raw excerpts.
+
+Architecture:
+  TRH_TRIGGER regex in hybridMessage (pre-gate):
+    /\b(pr[23]|continue|where are we|status|locked|receipts|refresh|rehydrate|
+       update summary|what('s| is) (locked|next|open)|what did we decide|catch me up)\b/i
+
+  threadRehydrate function (two stages):
+
+  Stage 1 — Deterministic (no LLM, no writes):
+    → Fetch last 80 messages for thread (base44.asServiceRole, sort by -timestamp)
+    → Scan for most recent message starting with "THREAD SUMMARY (AUTO-GENERATED"
+    → Anti-spam check:
+        hasFreshSummary = lastSummaryAge < 10 minutes AND lastSummaryIndex < 10 turns
+        shouldSkip = hasFreshSummary AND NOT isExplicitRefresh
+    → If shouldSkip → return { should_write_summary: false, meta: { reason: 'fresh_summary_exists' } }
+    → isExplicitRefresh override: user says "refresh" / "rehydrate" / "update summary"
+
+  Stage 2 — LLM Summarize (only if Stage 1 passes):
+    → Fetch up to 1000 messages (base44.asServiceRole)
+    → Sort ascending (oldest → newest)
+    → Build content block capped at 8000 chars (2000 chars/message max)
+    → Call gpt-5.2 (same ACTIVE_MODEL) with structured skeleton prompt:
+        THREAD SUMMARY (AUTO-GENERATED; SAME-THREAD; TRH_v1)
+        GeneratedAt: <iso>
+        Coverage: <first_ts> → <last_ts> | MessagesScanned: <n>
+        Campaign State (PR2/PR3 status)
+        Lock Table (Locked / Unlocked / Unknown)
+        Open TODOs
+        Last Accepted Plan / Receipts
+        Next Step (single concrete action)
+        Open Questions / Missing Anchors
+    → temperature=0.1, max_completion_tokens=1200
+    → Truncate to 6000 chars max
+
+  hybridMessage TRH integration:
+    → Promise.race([threadRehydrate invoke, 8000ms timeout])
+    → If should_write_summary=true AND summary_text present:
+        a. trhSummaryMessage = { role: 'assistant', content: summary_text }
+           (injected at front of finalMessages after system prompt)
+        b. Message.create (async, non-blocking):
+             { conversation_id, role: 'assistant', content: summary_text,
+               metadata_tags: ['THREAD_SUMMARY'], timestamp }
+    → Non-fatal: TRH timeout or error → pipeline continues without summary
+
+Injection position in finalMessages:
+  [system prompt] → [TRH summary (assistant)?] → [MBCR excerpts?] → [history] → [user]
+
+LOCK_SIGNATURE: CAOS_TRH_v1_2026-03-08
+
+Status:    COMPLETE. Both functions deployed. Integrated into hybridMessage pipeline.
+Note:      Acceptance test pending: send "Continue PR2. Where are we, what's locked?"
+           in a live campaign thread and verify THREAD_SUMMARY message appears in DB.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
