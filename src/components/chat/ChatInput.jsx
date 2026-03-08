@@ -13,8 +13,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [attachedFiles, setAttachedFiles] = useState([]);
   
   useEffect(() => {
-    setMessage(messageValue);
-  }, [messageValue]);
+    if (messageValue !== message) setMessage(messageValue);
+  }, [messageValue, message]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingGoogle, setIsPlayingGoogle] = useState(false);
@@ -35,6 +35,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const voiceButtonRef = useRef(null);
   const audioAnalyserRef = useRef(null);
   const audioLevelRafRef = useRef(null);
+  const resizeRafRef = useRef(null);
 
   // Preload voices on mount so they're available synchronously on first click
   useEffect(() => {
@@ -217,6 +218,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const removeFile = (index) => {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  const scheduleResize = () => {
+    if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
+    resizeRafRef.current = requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+      }
+      resizeRafRef.current = null;
+    });
   };
 
   const getCleanText = (text) => text
@@ -786,8 +798,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             if (_DEV) console.time('ChatInput onChange');
             setMessage(e.target.value);
             onMessageChange?.(e.target.value);
-            e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+            scheduleResize();
             if (_DEV) console.timeEnd('ChatInput onChange');
           }}
           onKeyPress={(e) => {
