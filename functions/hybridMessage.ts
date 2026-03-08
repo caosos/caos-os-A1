@@ -223,21 +223,24 @@ function _buildThreadRecoveryBlock(snippets) {
 
 async function maybeBuildMbcrInjectedMessage({ thread_id, userText, invokeFn, debugMode }) {
     const trigger = _mbcrTriggerCheck(userText);
+    const dbg = { triggered: trigger.triggered, tags: trigger.tags, text_query: trigger.text_query, retrievedCount: 0, injected: false };
     if (!trigger.triggered) {
         if (debugMode) console.log('[MBCR_SKIPPED] No thread-reference intent detected');
-        return null;
+        return { message: null, debug: dbg };
     }
     try {
         const snippetRes = await invokeFn('getThreadSnippets', {
             thread_id, tags: trigger.tags, text_query: trigger.text_query, limit: 20, around: 2
         });
         const snippets = snippetRes?.data?.snippets || [];
+        dbg.retrievedCount = snippets.length;
         const block = _buildThreadRecoveryBlock(snippets);
-        if (debugMode) console.log('[MBCR_TRIGGERED]', { tag_count: trigger.tags.length, count: snippets.length, injected_chars: block.length, ids: snippets.map(s => s.id) });
-        return block ? { role: 'system', content: block } : null;
+        dbg.injected = !!block;
+        if (debugMode) console.log('[MBCR_TRIGGERED]', { tag_count: trigger.tags.length, count: snippets.length, injected_chars: block.length });
+        return { message: block ? { role: 'system', content: block } : null, debug: dbg };
     } catch (err) {
         console.warn('⚠️ [MBCR_NONFATAL]', err.message);
-        return null;
+        return { message: null, debug: dbg };
     }
 }
 // ─────────────────────────────────────────────────────────────────────────────
