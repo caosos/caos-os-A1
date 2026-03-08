@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { ref = 'main', prefix = null } = body;
+        const { ref = 'main', prefix = null, max_entries = 10000 } = body;
 
         const token = Deno.env.get('GITHUB_TOKEN');
         const owner = Deno.env.get('GITHUB_OWNER');
@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
         const response = await fetch(treeUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
                 'User-Agent': 'Base44-CAOS'
             }
         });
@@ -54,12 +55,11 @@ Deno.serve(async (req) => {
             tree = tree.filter(item => item.path.startsWith(prefix));
         }
 
-        // Cap at 10k entries to prevent massive payloads
-        const MAX_ENTRIES = 10000;
+        // Cap at max_entries limit to prevent massive payloads
         let truncated = false;
-        if (tree.length > MAX_ENTRIES) {
+        if (tree.length > max_entries) {
             truncated = true;
-            tree = tree.slice(0, MAX_ENTRIES);
+            tree = tree.slice(0, max_entries);
         }
 
         // Transform to clean paths array
@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
             prefix: prefix || null,
             count: paths.length,
             truncated,
-            warning: truncated ? `Results capped at ${MAX_ENTRIES} entries` : null,
             paths
         });
 

@@ -66,6 +66,9 @@ function resolveCapabilities(user) {
         // REPO_READ: admin-only autonomous file read via core/repoReadGate
         repo_read_enabled: is_admin,
 
+        // REPO_LIST: admin-only path discovery via core/repoList
+        repo_list_enabled: is_admin,
+
         // Model
         model_name,
         token_limit,
@@ -92,6 +95,7 @@ Deno.serve(async (req) => {
             tts: capabilities.tts_enabled,
             email: capabilities.email_enabled,
             repo_read_enabled: capabilities.repo_read_enabled,
+            repo_list_enabled: capabilities.repo_list_enabled,
         });
 
         return Response.json({
