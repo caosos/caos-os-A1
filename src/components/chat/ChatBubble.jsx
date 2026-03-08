@@ -34,7 +34,12 @@ let globalAudioCleanup = null;
 const audioCache = new Map();
 
 export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenuTrigger, userInitials = "ME", isNew = false }) {
+  // ── DEV INSTRUMENTATION — COMMIT 1 ─────────────────────────────────────────
+  // Gate: localStorage caos_developer_mode === 'true'
+  // Rules: no raw text, no base64, no render-path logging, bounded scalars only
+  const DEV = localStorage.getItem('caos_developer_mode') === 'true';
   if (DEV) console.count(`ChatBubble render ${message.id?.slice(0,8)}`);
+  // ─────────────────────────────────────────────────────────────────────────────
   const { showSelectionMenu, menuPosition, selectedText, handleTextSelection, closeMenu } = useTextSelectionMenu(closeMenuTrigger);
   const { handleReact, handleReply } = useInlineReactions(message, onUpdateMessage);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -52,11 +57,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const utteranceRef = React.useRef(null);
   const progressInterval = React.useRef(null);
   const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
-
-  // ── DEV INSTRUMENTATION — COMMIT 1 ─────────────────────────────────────────
-  // Gate: localStorage caos_developer_mode === 'true'
-  // Rules: no raw text, no base64, no render-path logging, bounded scalars only
-  const DEV = localStorage.getItem('caos_developer_mode') === 'true';
   const ttsLog = DEV ? (event, payload) => {
       console.log(`[TTS_LIFECYCLE] ${event}`, { msg: message.id?.substring(0, 8), ...payload });
   } : () => {};

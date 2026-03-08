@@ -21,8 +21,6 @@ import BottomNavBar from '@/components/mobile/BottomNavBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-
-const _DEV_MODE = localStorage.getItem('caos_developer_mode') === 'true';
 import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
 import RedScreenOfDeath from '@/components/chat/RedScreenOfDeath';
