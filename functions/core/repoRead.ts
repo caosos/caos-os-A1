@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         return Response.json({
             ok: true,
             path,
-            content,
+            content: fileContent,
             content_length: fileContent.length,
             content_type: path.endsWith('.json') ? 'application/json' : 'text/plain',
             hash: `sha256:${contentHash}`
