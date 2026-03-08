@@ -36,6 +36,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const audioAnalyserRef = useRef(null);
   const audioLevelRafRef = useRef(null);
   const resizeRafRef = useRef(null);
+  const draftRafRef = useRef(null);
+  const latestDraftRef = useRef('');
 
   // Preload voices on mount so they're available synchronously on first click
   useEffect(() => {
@@ -219,6 +221,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const removeFile = (index) => {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  const scheduleDraftPropagation = (value) => {
+    latestDraftRef.current = value;
+    if (draftRafRef.current) return; // already scheduled
+    draftRafRef.current = requestAnimationFrame(() => {
+      onMessageChange?.(latestDraftRef.current);
+      draftRafRef.current = null;
+    });
   };
 
   const scheduleResize = () => {
@@ -595,6 +606,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       setMessage('');
       setAttachedFiles([]);
+      // Cancel any pending draft rAF and clear parent immediately
+      if (draftRafRef.current) { cancelAnimationFrame(draftRafRef.current); draftRafRef.current = null; }
+      latestDraftRef.current = '';
       onMessageChange?.('');
       if (textareaRef.current) {
         textareaRef.current.style.height = '24px';
@@ -798,7 +812,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           onChange={(e) => {
             if (_DEV) console.time('ChatInput onChange');
             setMessage(e.target.value);
-            onMessageChange?.(e.target.value);
+            scheduleDraftPropagation(e.target.value);
             scheduleResize();
             if (_DEV) console.timeEnd('ChatInput onChange');
           }}
