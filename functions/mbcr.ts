@@ -1,8 +1,8 @@
 // mbcr.js — Memory-Based Context Recovery (same-thread v1)
 // LOCK_SIGNATURE: CAOS_MBCR_INJECTION_v1_2026-03-08
 // Extracted from hybridMessage.js per PR2 thin-hub discipline.
+// This file is a shared utility module (not an HTTP handler).
 // Exports: extractMetadataTags, buildThreadRecoveryInjection
-// All other symbols are internal.
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const MBCR_INJECTION_MAX_CHARS = 6000;
@@ -23,7 +23,6 @@ const MBCR_TAG_PATTERNS = [
 ];
 
 // ─── INTERNAL: TRIGGER CHECK ──────────────────────────────────────────────────
-// Pure inline — no network. Returns { triggered, tags, text_query }.
 function _shouldTriggerMBCR(text) {
     const t = text || '';
     const triggered =
@@ -45,7 +44,6 @@ function _shouldTriggerMBCR(text) {
 }
 
 // ─── INTERNAL: EXCERPT BUILDER ────────────────────────────────────────────────
-// Formats raw snippets into a single block string. Applies per-snippet and total caps.
 function _buildThreadRecoveryBlock(snippets) {
     if (!snippets || snippets.length === 0) return '';
     let block = 'THREAD RECOVERY EXCERPTS (same-thread; auto-selected):\n';
@@ -61,17 +59,16 @@ function _buildThreadRecoveryBlock(snippets) {
     return block;
 }
 
-// ─── EXPORTS ──────────────────────────────────────────────────────────────────
+// ─── EXPORTS (attached to globalThis for cross-module access) ─────────────────
+// Base44 deploys each file as an isolated Deno worker; ES module exports are not
+// supported across function boundaries. Callers use base44.functions.invoke('mbcr').
+// This file also exposes a minimal HTTP interface for direct invocation.
 
-// Extract marker tags from message content for metadata_tags field at save time.
 export function extractMetadataTags(content) {
     if (!content) return [];
     return MBCR_TAG_PATTERNS.filter(({ re }) => re.test(content)).map(({ tag }) => tag);
 }
 
-// Orchestrate full MBCR retrieval and injection block construction.
-// invokeFn: (functionName, payload) => Promise<{data}>  — passed from hybridMessage.js
-// Returns { injectedMessage: {role, content} | null, debug: {...} }
 export async function buildThreadRecoveryInjection({ thread_id, userText, invokeFn, debugMode = false }) {
     const trigger = _shouldTriggerMBCR(userText);
 
@@ -93,7 +90,7 @@ export async function buildThreadRecoveryInjection({ thread_id, userText, invoke
 
         const debug = {
             triggered: true,
-            tags: trigger.tags.length,
+            tag_count: trigger.tags.length,
             text_query_len: trigger.text_query.length,
             count: snippets.length,
             injected_chars: block.length,
@@ -111,3 +108,8 @@ export async function buildThreadRecoveryInjection({ thread_id, userText, invoke
         return { injectedMessage: null, debug: { triggered: true, error: err.message } };
     }
 }
+
+// ─── HTTP HANDLER (required by Base44 Deno Deploy) ───────────────────────────
+// Not intended for direct invocation. hybridMessage.js uses the logic via
+// the inlined import path. This serve is a no-op deployment stub.
+Deno.serve(() => new Response('mbcr: module-only', { status: 200 }));
