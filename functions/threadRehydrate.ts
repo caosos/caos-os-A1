@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
         // ── Stage 1: Fetch last 80, run deterministic freshness check ────────
         const last80 = await base44.asServiceRole.entities.Message.filter(
             { conversation_id: thread_id },
-            '-timestamp',
+            '-created_date',
             80
         );
 
