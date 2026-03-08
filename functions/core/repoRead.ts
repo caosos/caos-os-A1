@@ -1,16 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-const ALLOWLIST = [
-    "docs/",
-    "functions/core/",
-    "src/pages.config.js",
-    "src/registry"
-];
-
-function isAllowlisted(path) {
-    return ALLOWLIST.some(prefix => path.startsWith(prefix)) && !path.includes(".env") && !path.includes("secret");
-}
-
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
