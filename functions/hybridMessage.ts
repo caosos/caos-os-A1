@@ -530,6 +530,7 @@ Deno.serve(async (req) => {
         // Inject Thread Recovery block as a separate system message (keeps user_input pristine)
         const finalMessages = [
             { role: 'system', content: systemPrompt },
+            ...(trhSummaryMessage ? [trhSummaryMessage] : []),
             ...(mbcrInjectedMessage ? [mbcrInjectedMessage] : []),
             ...conversationHistory,
             { role: 'user', content: userMessageContent.length === 1 ? input : userMessageContent }
