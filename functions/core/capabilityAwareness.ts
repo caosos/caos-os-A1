@@ -1,4 +1,3 @@
-// EDITABILITY_PROBE_P1
 /**
  * LAYER 1 — Capability Awareness Module
  * CAOS Environment Awareness Layer v1
