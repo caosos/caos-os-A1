@@ -212,6 +212,57 @@ export async function stage6_executeTool(routeResult, intentResult, base44, user
         };
     }
     
+    // ═══════════════════════════════════════════════════════════════
+    // REPO_READ PIPELINE (ADMIN-ONLY) — DIRECT HANDLER
+    // ═══════════════════════════════════════════════════════════════
+    if (routeResult.route === 'REPO_READ_PIPELINE') {
+        if (user?.role !== 'admin') {
+            console.log('🚫 [REPO_READ_DENIED] Non-admin user attempted access:', user?.email);
+            throw {
+                error: 'NO_TOOLS_AUTHORIZED',
+                reason: 'ADMIN_ONLY_TOOL',
+                details: 'REPO_READ requires admin role'
+            };
+        }
+
+        const path = intentResult.extractedTerms?.[0];
+        if (!path) {
+            throw {
+                error: 'REPO_READ_MISSING_PATH',
+                details: 'No file path provided'
+            };
+        }
+
+        try {
+            const repoResult = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
+            
+            const toolResult = {
+                type: 'REPO_READ',
+                executor: 'repoReadGate',
+                path,
+                status: 'success',
+                content_length: repoResult?.data?.content_length ?? (repoResult?.data?.content?.length ?? 0),
+                hash: repoResult?.data?.hash ?? null,
+                raw: repoResult?.data ?? repoResult
+            };
+
+            console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email, content_length: toolResult.content_length });
+
+            return {
+                stage: 'EXECUTE_TOOL',
+                result: toolResult,
+                executor: 'repoReadGate'
+            };
+        } catch (error) {
+            console.error('🚨 [REPO_READ_EXECUTION_FAILED]:', error);
+            throw {
+                error: error.error || 'REPO_READ_EXECUTION_FAILED',
+                details: error.details || error.message,
+                user_visible: 'Failed to read repository file'
+            };
+        }
+    }
+    
     const toolResult = await executeTool(routeResult, intentResult, base44, user);
     
     return {
