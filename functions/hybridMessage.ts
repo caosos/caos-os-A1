@@ -545,14 +545,11 @@ Deno.serve(async (req) => {
         }
 
         // Inject Thread Recovery block as a separate system message (keeps user_input pristine)
-        // TRH silent system marker — only injected when TRH actually ran (pull-only rule)
-        const trhWasTriggered = execution_meta.trh.outcome !== 'not_triggered';
-        const trhMetaMarker = trhWasTriggered
-            ? { role: 'system', content: `EXECUTION_META_TRH:${JSON.stringify(execution_meta.trh)}` }
-            : null;
+        // TRH silent system marker — non-rendered, for assistant self-awareness only
+        const trhMetaMarker = { role: 'system', content: `EXECUTION_META_TRH:${JSON.stringify(execution_meta.trh)}` };
         const finalMessages = [
             { role: 'system', content: systemPrompt },
-            ...(trhMetaMarker ? [trhMetaMarker] : []),
+            trhMetaMarker,
             ...(trhSummaryMessage ? [trhSummaryMessage] : []),
             ...(mbcrInjectedMessage ? [mbcrInjectedMessage] : []),
             ...conversationHistory,
