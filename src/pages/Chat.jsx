@@ -132,6 +132,38 @@ export default function Chat() {
   }, [user, isGuestMode]);
 
   const currentMessages = currentConversationId ? (messages[currentConversationId] || []) : [];
+  const visibleMessages = currentMessages.slice(Math.max(0, currentMessages.length - renderLimit));
+  const hasOlderToShow = currentMessages.length > renderLimit;
+
+  // Reset renderLimit when switching conversations
+  useEffect(() => {
+    setRenderLimit(DEFAULT_RENDER_LIMIT);
+  }, [currentConversationId]);
+
+  // Scroll position preservation after "Load older" (scrollHeight delta method)
+  useLayoutEffect(() => {
+    if (prevScrollHeightRef.current != null && chatContainerRef.current) {
+      const newScrollHeight = chatContainerRef.current.scrollHeight;
+      const delta = newScrollHeight - prevScrollHeightRef.current;
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollTop + delta;
+      prevScrollHeightRef.current = null;
+    }
+  }, [visibleMessages.length]);
+
+  // Handle pending jump-to-message after renderLimit expansion
+  useEffect(() => {
+    if (pendingJumpIdRef.current) {
+      const id = pendingJumpIdRef.current;
+      const element = messageRefs.current[id];
+      if (element) {
+        pendingJumpIdRef.current = null;
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.style.transition = 'background-color 0.3s ease';
+        element.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+        setTimeout(() => { element.style.backgroundColor = ''; }, 2000);
+      }
+    }
+  }, [visibleMessages.length]);
 
   useEffect(() => {
     if (isAtBottomRef.current) {
