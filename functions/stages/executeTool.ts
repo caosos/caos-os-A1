@@ -17,6 +17,48 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
 
     console.log('🔧 [EXECUTE_TOOL] Route:', route, 'forceToolExecution:', forceToolExecution);
 
+    // ========== REPO_READ PIPELINE (ADMIN-ONLY) ==========
+    if (route === 'REPO_READ_PIPELINE') {
+        if (user?.role !== 'admin') {
+            console.log('🚫 [REPO_READ_DENIED] Non-admin user attempted access');
+            throw {
+                error: 'NO_TOOLS_AUTHORIZED',
+                reason: 'ADMIN_ONLY_TOOL',
+                details: 'REPO_READ requires admin role'
+            };
+        }
+
+        try {
+            const path = intentResult.userMessage?.match(/(?:read|get|show|cat)\s+([^\s]+)/i)?.[1] || extractedTerms?.[0];
+            if (!path) {
+                throw {
+                    error: 'REPO_READ_INVALID_PATH',
+                    details: 'No path specified for REPO_READ'
+                };
+            }
+
+            const repoResult = await base44.functions.invoke('core/repoReadGate', { path, max_bytes: 200000 });
+            
+            console.log('✅ [REPO_READ_SUCCESS]', { path, user: user.email });
+            
+            return {
+                type: 'REPO_READ',
+                executor: 'repoReadGate',
+                path,
+                status: 'success',
+                content_length: repoResult?.data?.content?.length || 0,
+                hash: repoResult?.data?.hash || null,
+                executionId: `exec_${Date.now()}`
+            };
+        } catch (error) {
+            console.error('🚨 [REPO_READ_ERROR]:', error);
+            throw {
+                error: 'REPO_READ_EXECUTION_FAILED',
+                details: error.message || error.error
+            };
+        }
+    }
+
     // Check for analyze threads intent (when forceToolExecution=true and wildcard/no terms)
     if (forceToolExecution && (extractedTerms?.includes('*') || extractedTerms?.length === 0)) {
         console.log('🔍 [ANALYZE_THREADS_TRIGGERED]', { request_id });
