@@ -49,6 +49,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: "MISSING_PATH" }, { status: 400 });
         }
 
+        if (max_bytes > 200000) {
+            return Response.json({ 
+                error: "MAX_BYTES_EXCEEDED", 
+                max_allowed: 200000 
+            }, { status: 413 });
+        }
+
         const allowed = isAllowlisted(path);
         const denied_reason = isDenied(path) ? "DENYLIST_MATCH" : "NOT_ALLOWLISTED";
         
