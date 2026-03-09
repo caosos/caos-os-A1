@@ -403,22 +403,40 @@ Deno.serve(async (req) => {
                     base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() })
                 ]);
             }
-            // Observability: repo tool audit log (correlation_id for traceability)
-            console.log('📂 [REPO_TOOL_AUDIT]', JSON.stringify({
-                request_id,
-                correlation_id: request_id,
+
+            // ── Structured repo_tool field — drives UI "Next chunk" button (no text parsing) ──
+            const canonicalPath = cleanPath || '/';
+            const repoToolMeta = repoResult?.ok
+                ? (repoCmd.op === 'read'
+                    ? { op: 'read', path: canonicalPath, done: repoResult.done, next_offset: repoResult.next_offset, total_bytes: repoResult.total_bytes }
+                    : { op: 'list', path: canonicalPath, item_count: repoResult.items?.length || 0 })
+                : null;
+
+            // ── Observability: console + fire-and-forget ErrorLog entity write ──────
+            const latency_ms = Date.now() - startTime;
+            const repoAuditPayload = {
+                request_id, correlation_id: request_id,
                 user: user.email,
                 op: repoCmd.op,
-                path: repoCmd.path,
+                path: canonicalPath,
                 ok: repoResult?.ok,
                 session_id: session_id || null,
-                response_time_ms: Date.now() - startTime
-            }));
+                latency_ms
+            };
+            console.log('📂 [REPO_TOOL_AUDIT]', JSON.stringify(repoAuditPayload));
+            base44.asServiceRole.entities.ErrorLog.create({
+                user_email: user.email,
+                error_type: 'unknown',
+                error_message: `[REPO_AUDIT] op=${repoCmd.op} path=${canonicalPath} ok=${repoResult?.ok}`,
+                request_payload: repoAuditPayload,
+                resolved: true
+            }).catch(() => {});
 
             return Response.json({
                 reply, mode: 'REPO_TOOL', request_id,
-                repo: { op: repoCmd.op, path: repoCmd.path, ok: repoResult?.ok },
-                response_time_ms: Date.now() - startTime, tool_calls: []
+                repo: { op: repoCmd.op, path: canonicalPath, ok: repoResult?.ok },
+                repo_tool: repoToolMeta,
+                response_time_ms: latency_ms, tool_calls: []
             });
         }
 
