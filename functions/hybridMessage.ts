@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
         if (!user || !user.email) {
             return Response.json({ reply: "Authentication required.", error: 'UNAUTHORIZED' }, { status: 401 });
         }
+        const t_auth = Date.now() - startTime;
 
         const { input, session_id, file_urls = [] } = body;
 
@@ -457,6 +458,7 @@ Deno.serve(async (req) => {
             userProfile = profiles?.[0] || null;
             rawHistory = historyMsgs.reverse().map(m => ({ role: m.role, content: m.content }));
         } catch (e) { console.warn('⚠️ [PROFILE_HISTORY_FAILED]', e.message); }
+        const t_profile_and_history_load = Date.now() - startTime;
 
         // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
         setStage(STAGES.MEMORY_WRITE);
@@ -528,7 +530,14 @@ Deno.serve(async (req) => {
 
         // ── STAGE: HISTORY_PREP — history already loaded in PROFILE_LOAD parallel ─
         setStage(STAGES.HISTORY_PREP);
+        // Sanitizer delta: compressHistory is the context-reduction step
+        const preChars = rawHistory.reduce((s, m) => s + (m.content?.length || 0), 0);
         const conversationHistory = compressHistory(rawHistory);
+        const postChars = conversationHistory.reduce((s, m) => s + (m.content?.length || 0), 0);
+        const context_pre_sanitize_tokens_est = Math.round(preChars / 4);
+        const context_post_sanitize_tokens_est = Math.round(postChars / 4);
+        const sanitize_reduction_ratio = preChars > 0 ? parseFloat((1 - postChars / preChars).toFixed(3)) : 0;
+        const t_sanitizer = Date.now() - startTime;
 
         // ── STAGE: CTC — Cross-Thread Context (Phase 3) ───────────────────────
         // G1: Explicit gating — only run if user signal detected
@@ -680,6 +689,7 @@ Deno.serve(async (req) => {
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         const server_time = new Date().toISOString();
         const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
+        const t_prompt_build = Date.now() - startTime;
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         setStage(STAGES.OPENAI_CALL);
@@ -737,6 +747,7 @@ Deno.serve(async (req) => {
             ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000));
         }
         const inferenceMs = Date.now() - inferenceStart;
+        const t_openai_call = inferenceMs;
         if (!reply) throw new Error('No response from OpenAI');
 
         // Dev-only MBCR diagnostic header — prepended to reply content only
@@ -767,6 +778,7 @@ Deno.serve(async (req) => {
                 console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length });
             } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
         }
+        const t_save_messages = Date.now() - startTime;
 
         // ── STAGE: RESPONSE_BUILD (receipt + session context — AWAITED per I2) ─
         setStage(STAGES.RESPONSE_BUILD);
@@ -787,7 +799,16 @@ Deno.serve(async (req) => {
                 ctc_injected: ctcInjectionMeta.length > 0,
                 ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
                 ctc_injection_meta: ctcInjectionMeta,
-                latency_breakdown: { inference_ms: inferenceMs, total_ms: responseTime },
+                latency_breakdown: {
+                    t_auth,
+                    t_profile_and_history_load,
+                    t_sanitizer,
+                    t_prompt_build,
+                    t_openai_call,
+                    t_save_messages,
+                    t_total: responseTime
+                },
+                sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
             token_breakdown: tokenBreakdown,
             user_email: user.email
         }).catch(e => console.error('🔥 [RECEIPT_WRITE_FAIL_NONFATAL]', e?.message || e));
@@ -807,6 +828,16 @@ Deno.serve(async (req) => {
                 matched_memories: matchedMemories.length, heuristics_intent: hIntent,
                 heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
                 model_used: ACTIVE_MODEL, latency_ms: responseTime,
+                latency_breakdown: {
+                    t_auth,
+                    t_profile_and_history_load,
+                    t_sanitizer,
+                    t_prompt_build,
+                    t_openai_call,
+                    t_save_messages,
+                    t_total: responseTime
+                },
+                sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
                 token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
                 wcw_used: promptTokens, wcw_remaining: wcwRemaining,
                 ctc_injected: ctcInjectionMeta.length > 0,
