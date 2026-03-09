@@ -317,7 +317,9 @@ export async function runHybridPipeline(rawInput, options) {
                 inferenceResult = await executeInference({
                     assembledContext,
                     userInput: input,
-                    openaiKey: Deno.env.get('OPENAI_API_KEY')
+                    openaiKey: Deno.env.get('OPENAI_API_KEY'),
+                    base44,
+                    user
                 });
                 
                 latency_breakdown.inference_ms = Date.now() - inferenceStart;
