@@ -455,7 +455,7 @@ export async function runHybridPipeline(rawInput, options) {
 
         // DIAGNOSTIC MODE: Emit detailed diagnostic receipt
         let diagnosticReceipt = null;
-        const diagnostic_mode = isDiagnosticMode(session_id, environmentDeclaration);
+        const diagnostic_mode_check = isDiagnosticMode(session_id, environmentDeclaration);
         if (diagnostic_mode && emitDiagnosticReceipt) {
             try {
                 diagnosticReceipt = await emitDiagnosticReceipt({
