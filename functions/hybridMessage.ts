@@ -778,12 +778,12 @@ Deno.serve(async (req) => {
         if (user.role === 'admin') {
             // Admin: agentic inference with repo_list + repo_read tools
             const riRes = await base44.functions.invoke('core/repoInference', {
-                messages: finalMessages, model: ACTIVE_MODEL, max_tokens: 2000
+                messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000
             });
             reply = riRes?.data?.content;
             openaiUsage = riRes?.data?.usage || null;
         } else {
-            ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000));
+            ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, RESOLVED_MODEL, 2000));
         }
         const inferenceMs = Date.now() - inferenceStart;
         const t_openai_call = inferenceMs;
