@@ -859,6 +859,7 @@ Deno.serve(async (req) => {
 
         const response = {
             reply, mode: 'GEN', request_id, correlation_id,
+            route: routingDecision.route, model_used: RESOLVED_MODEL,
             server_time, response_time_ms: responseTime, tool_calls: [],
             execution_meta,
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
