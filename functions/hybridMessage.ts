@@ -167,13 +167,25 @@ function detectRecallIntent(input) {
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
 // ─── REPO COMMAND DETECTION (pure — no network) ───────────────────────────────
-// Detects: "open <path>", "show <path>", "read <path>", "list <path>", "ls <path>"
+// Accepts: "list [path]", "ls [path]", "open <path> [--offset N]", "show/read/cat <path>"
+// Defaults: list with no path → root; offset defaults to 0
 function detectRepoCommand(input) {
     const t = (input || '').trim();
-    const listMatch = t.match(/^(?:list|ls)\s+(.+)$/i);
-    if (listMatch) return { op: 'list', path: listMatch[1].trim().replace(/^['"]+|['"]+$/g, '') };
-    const readMatch = t.match(/^(?:open|show|read|cat)\s+(.+)$/i);
-    if (readMatch) return { op: 'read', path: readMatch[1].trim().replace(/^['"]+|['"]+$/g, ''), offset: 0 };
+    // list / ls — path optional (defaults to root)
+    const listMatch = t.match(/^(?:list|ls)(?:\s+(.+))?$/i);
+    if (listMatch) {
+        const rawPath = (listMatch[1] || '/').trim().replace(/^['"]+|['"]+$/g, '');
+        return { op: 'list', path: rawPath === '/' ? '' : rawPath };
+    }
+    // open / show / read / cat — path required, optional --offset N
+    const readMatch = t.match(/^(?:open|show|read|cat)\s+(.+?)(?:\s+--offset\s+(\d+))?$/i);
+    if (readMatch) {
+        return {
+            op: 'read',
+            path: readMatch[1].trim().replace(/^['"]+|['"]+$/g, ''),
+            offset: readMatch[2] ? parseInt(readMatch[2], 10) : 0
+        };
+    }
     return null;
 }
 
@@ -263,7 +275,7 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
     const correlation_id = request_id;
-    const debugMode = req.headers.get('x-caos-debug') === 'true' || Deno.env.get('CAOS_DEBUG_MODE') === 'true';
+    const debugMode = req.headers.get('x-caos-debug') === 'true' || (Deno.env.has('CAOS_DEBUG_MODE') && Deno.env.get('CAOS_DEBUG_MODE') === 'true');
     
     // Debug metadata (dev-only tracking)
     const debug_meta = {
@@ -301,34 +313,88 @@ Deno.serve(async (req) => {
         }
 
         // ── REPO COMMAND SHORT-CIRCUIT ────────────────────────────────────────
-        // Intercepts "open/show/read/list/ls <path>" before inference.
-        // Any authenticated user can read the repo — no admin check here.
+        // Option A: inline GitHub API calls — no inter-function invocation needed.
+        // Any authenticated (non-admin) user may read repo. Auth is already confirmed above.
         const repoCmd = detectRepoCommand(input);
         if (repoCmd) {
-            let repoResult;
-            try {
-                const rtRes = await base44.asServiceRole.functions.invoke('core/repoTool', {
-                    op: repoCmd.op, path: repoCmd.path, ref: 'main',
-                    ...(repoCmd.op === 'read' ? { offset: repoCmd.offset || 0, max_bytes: 60000 } : {})
-                });
-                repoResult = rtRes?.data;
-            } catch (e) {
-                repoResult = { ok: false, error: e.message };
+            const ghToken = Deno.env.get('GITHUB_TOKEN');
+            const ghOwner = Deno.env.get('GITHUB_OWNER');
+            const ghRepo  = Deno.env.get('GITHUB_REPO');
+
+            let repoResult = null;
+
+            if (!ghToken || !ghOwner || !ghRepo) {
+                repoResult = { ok: false, error: 'GitHub secrets not configured on server' };
+            } else {
+                const ghHeaders = {
+                    'Authorization': `Bearer ${ghToken}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'User-Agent': 'CAOS-Chat/1.0'
+                };
+                const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
+
+                if (repoCmd.op === 'list') {
+                    const url = cleanPath
+                        ? `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${cleanPath}?ref=main`
+                        : `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents?ref=main`;
+                    const ghRes = await fetch(url, { headers: ghHeaders });
+                    if (!ghRes.ok) {
+                        repoResult = { ok: false, error: `GitHub ${ghRes.status}: ${await ghRes.text()}` };
+                    } else {
+                        const data = await ghRes.json();
+                        const items = (Array.isArray(data) ? data : [data]).map(i => ({
+                            name: i.name, path: i.path, type: i.type, size: i.size || 0
+                        }));
+                        repoResult = { ok: true, path: cleanPath || '/', items };
+                    }
+                } else {
+                    // read
+                    const offset = repoCmd.offset || 0;
+                    const max_bytes = 60000;
+                    const metaRes = await fetch(
+                        `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${cleanPath}?ref=main`,
+                        { headers: ghHeaders }
+                    );
+                    if (!metaRes.ok) {
+                        repoResult = { ok: false, error: `GitHub meta ${metaRes.status}` };
+                    } else {
+                        const meta = await metaRes.json();
+                        if (meta.type !== 'file') {
+                            repoResult = { ok: false, error: `Not a file (${meta.type}) — use \`list ${cleanPath}\` to browse` };
+                        } else {
+                            const rawRes = await fetch(meta.download_url, {
+                                headers: { 'Authorization': `Bearer ${ghToken}`, 'User-Agent': 'CAOS-Chat/1.0' }
+                            });
+                            if (!rawRes.ok) {
+                                repoResult = { ok: false, error: `Download failed: ${rawRes.status}` };
+                            } else {
+                                const full = await rawRes.text();
+                                const chunk = full.slice(offset, offset + max_bytes);
+                                const next_offset = offset + chunk.length;
+                                const done = next_offset >= full.length;
+                                repoResult = { ok: true, path: cleanPath, content: chunk, done, total_bytes: full.length, next_offset, sha: meta.sha };
+                            }
+                        }
+                    }
+                }
             }
 
             let reply;
             if (!repoResult?.ok) {
                 reply = `⚠️ Repo error: ${repoResult?.error || 'unknown error'}`;
             } else if (repoCmd.op === 'list') {
-                const items = repoResult.result || [];
-                const dirs  = items.filter(i => i.type === 'dir').map(i => `📁 ${i.path}/`);
-                const files = items.filter(i => i.type === 'file').map(i => `📄 ${i.path} (${i.size} bytes)`);
-                reply = `**Listing: \`${repoResult.path}\`**\n\n` + [...dirs, ...files].join('\n');
+                const { items, path } = repoResult;
+                const dirs  = items.filter(i => i.type === 'dir').sort((a,b) => a.name.localeCompare(b.name)).map(i => `- 📁 \`${i.path}/\``);
+                const files = items.filter(i => i.type === 'file').sort((a,b) => a.name.localeCompare(b.name)).map(i => `- 📄 \`${i.path}\` (${i.size.toLocaleString()} bytes)`);
+                reply = `**Listing: \`${path}\`** (${items.length} items)\n\n` + [...dirs, ...files].join('\n');
             } else {
-                const content = repoResult.result || '';
-                const ext = repoCmd.path.split('.').pop() || '';
-                const chunkInfo = repoResult.done ? '' : `\n\n_Showing first 60KB. Total: ${repoResult.total_bytes?.toLocaleString()} bytes. Reply \`next ${repoCmd.path} offset:${repoResult.next_offset}\` for more._`;
-                reply = `**File: \`${repoResult.path}\`** (${repoResult.total_bytes?.toLocaleString()} bytes, sha: ${repoResult.sha?.slice(0,8)})\n\n\`\`\`${ext}\n${content}\n\`\`\`` + chunkInfo;
+                const { content, done, total_bytes, next_offset, sha, path } = repoResult;
+                const ext = path.split('.').pop() || '';
+                const chunkInfo = done
+                    ? `\n\n_File complete (${total_bytes?.toLocaleString()} bytes, sha: \`${sha?.slice(0,8)}\`)_`
+                    : `\n\n_Chunk shown: bytes 0–${next_offset?.toLocaleString()} of ${total_bytes?.toLocaleString()} total. Type \`open ${path} --offset ${next_offset}\` for next chunk._`;
+                reply = `**File: \`${path}\`**\n\n\`\`\`${ext}\n${content}\n\`\`\`` + chunkInfo;
             }
 
             if (session_id) {
@@ -337,7 +403,11 @@ Deno.serve(async (req) => {
                     base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() })
                 ]);
             }
-            return Response.json({ reply, mode: 'REPO_TOOL', request_id, repo: { op: repoCmd.op, path: repoCmd.path, ok: repoResult?.ok }, response_time_ms: Date.now() - startTime, tool_calls: [] });
+            return Response.json({
+                reply, mode: 'REPO_TOOL', request_id,
+                repo: { op: repoCmd.op, path: repoCmd.path, ok: repoResult?.ok },
+                response_time_ms: Date.now() - startTime, tool_calls: []
+            });
         }
 
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
