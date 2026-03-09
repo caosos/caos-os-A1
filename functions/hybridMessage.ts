@@ -166,6 +166,17 @@ function detectRecallIntent(input) {
 // ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
+// ─── REPO COMMAND DETECTION (pure — no network) ───────────────────────────────
+// Detects: "open <path>", "show <path>", "read <path>", "list <path>", "ls <path>"
+function detectRepoCommand(input) {
+    const t = (input || '').trim();
+    const listMatch = t.match(/^(?:list|ls)\s+(.+)$/i);
+    if (listMatch) return { op: 'list', path: listMatch[1].trim().replace(/^['"]+|['"]+$/g, '') };
+    const readMatch = t.match(/^(?:open|show|read|cat)\s+(.+)$/i);
+    if (readMatch) return { op: 'read', path: readMatch[1].trim().replace(/^['"]+|['"]+$/g, ''), offset: 0 };
+    return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MBCR MODULE (INLINE)
 // NOTE: Base44 functions are isolated workers; NO LOCAL IMPORTS.
