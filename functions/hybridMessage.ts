@@ -830,7 +830,8 @@ Deno.serve(async (req) => {
 
         // FIX 1: Fire-and-forget — receipt is diagnostic, not functional (I2 → best-effort)
         base44.functions.invoke('core/receiptWriter', {
-            request_id, correlation_id, session_id, model_used: ACTIVE_MODEL,
+            request_id, correlation_id, session_id, model_used: RESOLVED_MODEL,
+            route: routingDecision.route, route_reason: routingDecision.route_reason,
             wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
             heuristics_intent: hIntent, heuristics_depth: hDepth, cognitive_level: cogLevel,
             history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
