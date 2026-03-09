@@ -867,7 +867,10 @@ Deno.serve(async (req) => {
                 history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
                 matched_memories: matchedMemories.length, heuristics_intent: hIntent,
                 heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
-                model_used: ACTIVE_MODEL, latency_ms: responseTime,
+                model_used: RESOLVED_MODEL,
+                route: routingDecision.route,
+                route_reason: routingDecision.route_reason,
+                latency_ms: responseTime,
                 latency_breakdown: {
                     t_auth,
                     t_profile_and_history_load,
