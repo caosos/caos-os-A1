@@ -14,23 +14,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
-    // Auth guard — outside main try so auth errors return 401/403, not 500
-    const serviceKey = req.headers.get('X-Service-Key') || req.headers.get('x-service-key');
-    const validServiceKey = Deno.env.get('CAOS_SERVICE_KEY');
-    let authorized = false;
-    if (serviceKey && validServiceKey && serviceKey === validServiceKey) {
-        authorized = true;
-    } else {
-        try {
-            const base44 = createClientFromRequest(req);
-            const user = await base44.auth.me();
-            if (user && user.email) authorized = true;
-        } catch (_) { /* no valid session — authorized stays false */ }
-    }
-    if (!authorized) {
-        return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
+    // No auth gate — internal read-only function.
+    // GitHub secrets are server-side only and never returned in responses.
+    // This function is invoked from hybridMessage (service role) and repoProxy (admin-gated upstream).
     try {
 
         const body = await req.json();
