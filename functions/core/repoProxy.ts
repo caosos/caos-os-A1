@@ -1,12 +1,12 @@
 /**
  * core/repoProxy
- * Browser-safe proxy: authenticated Base44 users → caosInvoke (server-side key injection).
- * The CAOS_SERVICE_KEY never leaves the server.
+ * Browser-safe proxy: admin user → calls repo functions directly via service role.
+ * No cross-app fetch. No hardcoded URLs.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-const ALLOWED_FNS = new Set(['core/repoList', 'core/repoRead', 'core/repoReadChunked']);
+const ALLOWED_FNS = new Set(['core/repoList', 'core/repoReadChunked']);
 
 Deno.serve(async (req) => {
     try {
@@ -17,27 +17,28 @@ Deno.serve(async (req) => {
 
         const { fn, payload = {} } = await req.json();
         if (!fn || !ALLOWED_FNS.has(fn)) {
-            return Response.json({ error: `fn '${fn}' not allowed` }, { status: 403 });
+            return Response.json({ ok: false, error: `fn '${fn}' not allowed` }, { status: 403 });
         }
 
-        const invokeUrl = Deno.env.get('CAOS_INVOKE_URL') ||
-            'https://caos-chat-9c5683d8.base44.app/api/functions/caosInvoke';
-        const serviceKey = Deno.env.get('CAOS_SERVICE_KEY');
-        if (!serviceKey) return Response.json({ error: 'CAOS_SERVICE_KEY not configured' }, { status: 500 });
+        const res = await base44.asServiceRole.functions.invoke(fn, payload);
+        const data = res?.data;
 
-        const upstream = await fetch(invokeUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CAOS-SERVICE-KEY': serviceKey
-            },
-            body: JSON.stringify({ fn, payload })
-        });
+        // Normalize core/repoList → { ok, result: { items } }
+        if (fn === 'core/repoList') {
+            if (!data?.success) return Response.json({ ok: false, error: data?.error || 'repoList failed' }, { status: 500 });
+            return Response.json({ ok: true, result: { items: data.paths || [] } });
+        }
 
-        const data = await upstream.json();
-        return Response.json(data, { status: upstream.status });
+        // Normalize core/repoReadChunked → { ok, result: { content, done, total_bytes, next_offset } }
+        if (fn === 'core/repoReadChunked') {
+            if (!data?.success) return Response.json({ ok: false, error: data?.error || 'repoReadChunked failed' }, { status: 500 });
+            return Response.json({ ok: true, result: { content: data.chunk || '', done: data.done, total_bytes: data.total_bytes, next_offset: data.next_offset } });
+        }
+
+        return Response.json({ ok: false, error: 'unhandled fn' }, { status: 500 });
+
     } catch (err) {
         console.error('🔥 [REPO_PROXY_ERROR]', err.message);
-        return Response.json({ error: err.message }, { status: 500 });
+        return Response.json({ ok: false, error: err.message }, { status: 500 });
     }
 });
