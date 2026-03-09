@@ -368,3 +368,24 @@ export async function executeTool(routeResult, intentResult, base44, user, reque
         details: 'Unknown route in executeTool'
     };
 }
+
+// ══════════════════════════════════════════════
+// HTTP HANDLER (required by Deno Deploy)
+// ══════════════════════════════════════════════
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const body = await req.json();
+        const { routeResult, intentResult, request_id } = body;
+
+        const result = await executeTool(routeResult, intentResult, base44, user, request_id);
+        return Response.json({ success: true, result });
+    } catch (error) {
+        return Response.json({ error: error.error || error.message, details: error.details }, { status: 500 });
+    }
+});
