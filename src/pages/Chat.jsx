@@ -86,14 +86,21 @@ export default function Chat() {
     }, 0);
   };
 
-  // Listen for repo chunk "Load next chunk" button clicks from MessageContent
+  // Listen for repo "Load next chunk" button — namespaced, validated, throttled
   useEffect(() => {
+    let lastFired = 0;
     const handler = (e) => {
-      const cmd = e.detail?.command;
-      if (cmd) handleSendMessage(cmd, []);
+      const { path, offset } = e.detail || {};
+      // Validate payload shape — reject anything malformed
+      if (typeof path !== 'string' || path.length === 0 || typeof offset !== 'number') return;
+      // Throttle: max 2 fires/sec (also blocks double-clicks)
+      const now = Date.now();
+      if (now - lastFired < 500) return;
+      lastFired = now;
+      handleSendMessage(`open ${path} --offset ${offset}`, []);
     };
-    window.addEventListener('caos-send-command', handler);
-    return () => window.removeEventListener('caos-send-command', handler);
+    window.addEventListener('caos:repoNextChunk', handler);
+    return () => window.removeEventListener('caos:repoNextChunk', handler);
   }, [currentConversationId, user]);
   
   const isGameMode = localStorage.getItem('caos_game_mode') === 'true';
@@ -699,7 +706,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
-          execution_receipt: data.execution_receipt || null
+          execution_receipt: data.execution_receipt || null,
+          repo_tool: data.repo_tool || null
         };
         setMessages(prev => {
           const updated = {
@@ -723,7 +731,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
-          execution_receipt: data.execution_receipt || null
+          execution_receipt: data.execution_receipt || null,
+          repo_tool: data.repo_tool || null
         };
         setMessages(prev => {
           const existing = prev[conversationId] || [];
