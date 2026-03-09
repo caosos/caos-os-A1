@@ -166,6 +166,40 @@ function detectRecallIntent(input) {
 // ─── PRONOUNS (used inline for PRONOUN clarify path) ─────────────────────────
 const PRONOUN_PATTERN = /\b(she|he|they|her|him|them|it)\b/i;
 
+// ─── REQUEST ROUTER (pure — no network) ──────────────────────────────────────
+// Returns { route, model, route_reason }
+// Routes: CHEAP_MODEL | GPT_5_2  (NO_MODEL is handled upstream via REPO_TOOL short-circuit)
+const CHEAP_MODEL_NAME = 'gpt-4o-mini';
+
+function routeRequest(input, hIntent, cogLevel) {
+    const t = (input || '').toLowerCase();
+    const inputLen = input.length;
+
+    // Quality-critical → always GPT_5_2
+    const qualityCritical = (
+        hIntent === 'TECHNICAL_DESIGN' ||
+        cogLevel >= 7 ||
+        /\b(debug|debugging|refactor|refactoring|blueprint|tsb|invariant|governance|root cause|diagnose|stack trace|pipeline design|control law|phase \d|tier \d)\b/i.test(input)
+    );
+    if (qualityCritical) {
+        return { route: 'GPT_5_2', model: 'gpt-5.2', route_reason: `quality_critical hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)}` };
+    }
+
+    // Low-risk formatting/summarisation → CHEAP_MODEL
+    // Guardrails: never cheap for auth/security/arch/write operations
+    const neverCheap = /\b(debug|fix|refactor|architect|deploy|security|auth|permission|role|blueprint|tsb|invariant|schema|contract|phase|pipeline)\b/i.test(t);
+    const cheapSignal = (
+        (hIntent === 'SUMMARY_COMPACT' && inputLen < 1500) ||
+        /\b(reformat|bullet(ed)?|extract links?|extract urls?|rephrase|copy variant|one sentence|tldr|summarize this|list the links|what links|short version)\b/i.test(t) ||
+        (inputLen < 120 && hIntent === 'GENERAL_QUERY' && cogLevel < 4)
+    );
+    if (cheapSignal && !neverCheap) {
+        return { route: 'CHEAP_MODEL', model: CHEAP_MODEL_NAME, route_reason: `low_risk hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)} len=${inputLen}` };
+    }
+
+    return { route: 'GPT_5_2', model: 'gpt-5.2', route_reason: `default hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)}` };
+}
+
 // ─── REPO COMMAND DETECTION (pure — no network) ───────────────────────────────
 // Accepts: "list [path]", "ls [path]", "open <path> [--offset N]", "show/read/cat <path>"
 // Defaults: list with no path → root; offset defaults to 0
