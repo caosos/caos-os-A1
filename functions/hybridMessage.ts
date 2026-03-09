@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
     const startTime = Date.now();
     const request_id = crypto.randomUUID();
     const correlation_id = request_id;
-    const debugMode = req.headers.get('x-caos-debug') === 'true' || (Deno.env.has('CAOS_DEBUG_MODE') && Deno.env.get('CAOS_DEBUG_MODE') === 'true');
+    const debugMode = req.headers.get('x-caos-debug') === 'true';
     
     // Debug metadata (dev-only tracking)
     const debug_meta = {
