@@ -716,10 +716,9 @@ Deno.serve(async (req) => {
         const hDepth = calibrateDepth(hIntent, cogLevel);
         const hDirective = buildDirective(hIntent, hDepth, cogLevel);
 
-        // ── ROUTING ──────────────────────────────────────────────────────────
-        const routingDecision = routeRequest(input, hIntent, cogLevel);
-        const RESOLVED_MODEL = routingDecision.model;
-        console.log('🛣️ [ROUTE]', { route: routingDecision.route, model: RESOLVED_MODEL, reason: routingDecision.route_reason });
+        // ── ROUTING (no dynamic routing — ACTIVE_MODEL only, per Phase 0.1 verified state) ─
+        const RESOLVED_MODEL = ACTIVE_MODEL;
+        const routingDecision = { route: 'standard', route_reason: 'static_model', model: ACTIVE_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
 
         // ── STAGE: PROMPT_BUILD — via core/promptBuilder (TSB-023: 2026-03-05) ─
