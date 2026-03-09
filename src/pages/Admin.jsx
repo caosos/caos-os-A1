@@ -122,6 +122,10 @@ export default function AdminDashboard() {
                     <TabsContent value="pipeline">
                         <PipelineVisualizer />
                     </TabsContent>
+
+                    <TabsContent value="repo" className="h-[75vh]">
+                        <RepoBrowser />
+                    </TabsContent>
                 </Tabs>
             </div>
         </div>
