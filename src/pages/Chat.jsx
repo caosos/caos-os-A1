@@ -85,6 +85,16 @@ export default function Chat() {
       }
     }, 0);
   };
+
+  // Listen for repo chunk "Load next chunk" button clicks from MessageContent
+  useEffect(() => {
+    const handler = (e) => {
+      const cmd = e.detail?.command;
+      if (cmd) handleSendMessage(cmd, []);
+    };
+    window.addEventListener('caos-send-command', handler);
+    return () => window.removeEventListener('caos-send-command', handler);
+  }, [currentConversationId, user]);
   
   const isGameMode = localStorage.getItem('caos_game_mode') === 'true';
 

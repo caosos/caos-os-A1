@@ -2,7 +2,7 @@
 // PR2-A, Mar 7, 2026. DOM-root parity: top-level div.space-y-3 preserved exactly.
 
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getYouTubeId, extractUrls, isVideoUrl, extractFilename } from './MessageHelpers';
 import MarkdownMessage from './MarkdownMessage';
@@ -72,12 +72,28 @@ export default function MessageContent({ message, isUser, downloadFile }) {
     );
   }
 
+  // ── Repo chunk "Next chunk" button ──────────────────────────────────────────
+  // Detects: _Chunk shown: bytes 0–N of M total. Type `open <path> --offset N` for next chunk._
+  const chunkMatch = (cleanContent || '').match(/Type `(open .+? --offset \d+)` for next chunk\._/);
+  const nextChunkCmd = chunkMatch ? chunkMatch[1] : null;
+
   return (
     <div className="space-y-3">
       <VideoEmbeds videoUrls={videoUrls} />
       <RecallResults recallResults={message.recall_results} />
       {cleanContent && cleanContent.trim() && (
         <MarkdownMessage content={cleanContent.trim()} />
+      )}
+      {nextChunkCmd && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-3 text-xs text-blue-300 border-blue-400/40 bg-blue-500/10 hover:bg-blue-500/20 hover:text-blue-200 gap-1.5"
+          onClick={() => window.dispatchEvent(new CustomEvent('caos-send-command', { detail: { command: nextChunkCmd } }))}
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+          Load next chunk
+        </Button>
       )}
       {copyBlocks.map((block, index) => (
         <CopyBlock key={index} content={block.content} title={block.title} />

@@ -403,6 +403,18 @@ Deno.serve(async (req) => {
                     base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() })
                 ]);
             }
+            // Observability: repo tool audit log (correlation_id for traceability)
+            console.log('📂 [REPO_TOOL_AUDIT]', JSON.stringify({
+                request_id,
+                correlation_id: request_id,
+                user: user.email,
+                op: repoCmd.op,
+                path: repoCmd.path,
+                ok: repoResult?.ok,
+                session_id: session_id || null,
+                response_time_ms: Date.now() - startTime
+            }));
+
             return Response.json({
                 reply, mode: 'REPO_TOOL', request_id,
                 repo: { op: repoCmd.op, path: repoCmd.path, ok: repoResult?.ok },
