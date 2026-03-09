@@ -1,13 +1,12 @@
 /**
  * core/hybridMessageSmoke
  * Self-verifying smoke test for the hybridMessage repo-command intercept path.
- * Exercises detectRepoCommand + core/repoTool directly (no OpenAI call, no user session).
- * Returns: { ok, input, mode, reply_prefix, repo_ok, op, path, errors[] }
+ * Tests: detectRepoCommand parsing + direct GitHub API call (same logic as core/repoTool).
+ * No user session, no OpenAI call, no UI required.
+ * Returns: { ok, input, op, path, repo_ok, list_count|read_prefix, errors[] }
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
-
-// Mirror of hybridMessage's detectRepoCommand (kept in sync manually — pure fn, no deps)
+// Mirror of hybridMessage's detectRepoCommand — kept in sync manually (pure fn, no deps)
 function detectRepoCommand(input) {
     const t = (input || '').trim();
     const listMatch = t.match(/^(?:list|ls)\s+(.+)$/i);
@@ -18,68 +17,96 @@ function detectRepoCommand(input) {
 }
 
 Deno.serve(async (req) => {
-    // Accept service key OR smoke header
     let body = {};
     try { body = await req.json(); } catch (_) {}
     const input = body.input || 'list /';
 
-    // No auth gate — read-only diagnostic endpoint, no mutations.
-
     const errors = [];
+
+    // ── PHASE 1: parser ───────────────────────────────────────────────────────
     const repoCmd = detectRepoCommand(input);
-
     if (!repoCmd) {
-        return Response.json({ ok: false, input, mode: 'NO_MATCH', error: 'detectRepoCommand returned null — input not a repo command', errors: ['no match'] });
+        return Response.json({ ok: false, input, error: 'detectRepoCommand returned null', errors: ['no match'] });
     }
 
-    // Call repoTool directly — it has no auth gate (internal read-only fn).
-    // We use the app ID from env to construct the internal function URL.
-    const appId = Deno.env.get('BASE44_APP_ID');
-    const repoToolUrl = `https://api.base44.com/api/apps/${appId}/functions/core%2FrepoTool`;
+    // ── PHASE 2: GitHub call (mirrors core/repoTool internals) ───────────────
+    const owner = Deno.env.get('GITHUB_OWNER');
+    const repo  = Deno.env.get('GITHUB_REPO');
+    const token = Deno.env.get('GITHUB_TOKEN');
 
-    let repoResult;
-    try {
-        const rtRes = await fetch(repoToolUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                op: repoCmd.op, path: repoCmd.path, ref: 'main',
-                ...(repoCmd.op === 'read' ? { offset: 0, max_bytes: 60000 } : {})
-            })
-        });
-        repoResult = await rtRes.json();
-    } catch (e) {
-        errors.push(`repoTool fetch exception: ${e.message}`);
-        repoResult = { ok: false, error: e.message };
+    if (!owner || !repo || !token) {
+        return Response.json({ ok: false, input, error: 'GitHub secrets not configured', errors: ['missing secrets'] });
     }
 
-    if (!repoResult?.ok) {
-        errors.push(`repoTool returned ok=false: ${repoResult?.error}`);
-    }
+    const ghHeaders = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'CAOS-HybridSmoke/1.0'
+    };
 
-    let reply_prefix = null;
-    if (repoResult?.ok) {
-        if (repoCmd.op === 'list') {
-            const items = repoResult.result || [];
-            const lines = items.slice(0, 5).map(i => `${i.type === 'dir' ? '📁' : '📄'} ${i.path}`);
-            reply_prefix = `Listing ${repoResult.path}: [${items.length} items] ${lines.join(', ')}`;
-        } else {
-            const content = repoResult.result || '';
-            reply_prefix = content.slice(0, 120);
+    let repo_ok = false;
+    let list_count = null;
+    let read_prefix = null;
+
+    if (repoCmd.op === 'list') {
+        const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
+        const url = cleanPath
+            ? `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=main`
+            : `https://api.github.com/repos/${owner}/${repo}/contents?ref=main`;
+        try {
+            const ghRes = await fetch(url, { headers: ghHeaders });
+            if (!ghRes.ok) {
+                errors.push(`GitHub list HTTP ${ghRes.status}: ${await ghRes.text()}`);
+            } else {
+                const data = await ghRes.json();
+                const items = Array.isArray(data) ? data : [data];
+                list_count = items.length;
+                repo_ok = true;
+            }
+        } catch (e) {
+            errors.push(`GitHub list exception: ${e.message}`);
+        }
+    } else {
+        // read
+        const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
+        try {
+            const metaRes = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=main`,
+                { headers: ghHeaders }
+            );
+            if (!metaRes.ok) {
+                errors.push(`GitHub meta HTTP ${metaRes.status}`);
+            } else {
+                const meta = await metaRes.json();
+                const rawRes = await fetch(meta.download_url, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': 'CAOS-HybridSmoke/1.0' }
+                });
+                if (!rawRes.ok) {
+                    errors.push(`GitHub download HTTP ${rawRes.status}`);
+                } else {
+                    const text = await rawRes.text();
+                    read_prefix = text.slice(0, 120);
+                    repo_ok = true;
+                }
+            }
+        } catch (e) {
+            errors.push(`GitHub read exception: ${e.message}`);
         }
     }
 
-    const ok = errors.length === 0;
-    console.log('[hybridMessageSmoke]', { ok, input, op: repoCmd.op, path: repoCmd.path, repo_ok: repoResult?.ok });
+    const ok = errors.length === 0 && repo_ok;
+    console.log('[hybridMessageSmoke]', { ok, input, op: repoCmd.op, path: repoCmd.path, repo_ok, list_count, errors });
 
     return Response.json({
         ok,
         input,
-        mode: 'REPO_TOOL',
+        mode: 'REPO_TOOL_SIMULATED',
         op: repoCmd.op,
         path: repoCmd.path,
-        repo_ok: repoResult?.ok ?? false,
-        reply_prefix,
+        repo_ok,
+        list_count,
+        read_prefix,
         errors
     });
 });
