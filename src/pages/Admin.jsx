@@ -93,6 +93,10 @@ export default function AdminDashboard() {
                             <Zap className="h-4 w-4" />
                             Pipeline
                         </TabsTrigger>
+                        <TabsTrigger value="repo" className="gap-2">
+                            <GitBranch className="h-4 w-4" />
+                            Repo
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="health">
