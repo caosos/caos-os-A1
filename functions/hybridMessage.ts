@@ -339,7 +339,6 @@ Deno.serve(async (req) => {
             return Response.json({ reply: "Authentication required.", error: 'UNAUTHORIZED' }, { status: 401 });
         }
         const t_auth = Date.now() - startTime;
-        const t_auth = Date.now() - startTime;
 
         const { input, session_id, file_urls = [] } = body;
 
