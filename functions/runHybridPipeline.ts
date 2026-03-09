@@ -691,61 +691,157 @@ function assembleModelContext(params) {
 }
 
 async function executeInference(params) {
-    const { assembledContext, userInput, openaiKey } = params;
+    const { assembledContext, userInput, openaiKey, base44, user } = params;
 
     if (!openaiKey) {
         console.error('🚨 [OPENAI_KEY_MISSING]');
         throw new Error('OPENAI_API_KEY not configured');
     }
 
-    // Build system prompt from context
-    const systemPrompt = buildSystemPrompt(assembledContext);
+    const isAdmin = user?.role === 'admin';
 
-    // Build user prompt
-    const userPrompt = buildUserPrompt(assembledContext, userInput);
-
-    // Call OpenAI
-    console.log('🤖 [OPENAI_CALL_START]', { model: 'gpt-4o' });
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json'
+    // Repo tools — only injected for admin users
+    const repoTools = isAdmin ? [
+        {
+            type: 'function',
+            function: {
+                name: 'repo_list',
+                description: 'List files and directories in the CAOS GitHub repository. Use to explore repo structure.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        path: { type: 'string', description: 'Directory path to list. Use "" for root.' },
+                        ref:  { type: 'string', description: 'Git ref (branch/tag/sha). Default: main.' }
+                    },
+                    required: ['path']
+                }
+            }
         },
-        body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                ...buildConversationHistory(assembledContext),
-                { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 2000
-        })
-    });
+        {
+            type: 'function',
+            function: {
+                name: 'repo_read',
+                description: 'Read a file from the CAOS GitHub repository, with chunked pagination for large files.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        path:      { type: 'string',  description: 'File path relative to repo root.' },
+                        ref:       { type: 'string',  description: 'Git ref. Default: main.' },
+                        offset:    { type: 'integer', description: 'Byte offset to start reading from. Default: 0.' },
+                        max_bytes: { type: 'integer', description: 'Max bytes to read. Default: 200000.' }
+                    },
+                    required: ['path']
+                }
+            }
+        }
+    ] : [];
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-        console.error('🚨 [OPENAI_API_ERROR]', { 
-            status: response.status, 
-            statusText: response.statusText,
-            body: errorBody
-        });
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    // Execute a single repo tool call via internal SDK
+    async function dispatchRepoTool(name, args) {
+        if (name === 'repo_list') {
+            const result = await base44.asServiceRole.functions.invoke('core/repoList', {
+                path: args.path ?? '',
+                ref:  args.ref  ?? 'main'
+            });
+            return result?.data ?? result;
+        }
+        if (name === 'repo_read') {
+            const result = await base44.asServiceRole.functions.invoke('core/repoReadChunked', {
+                path:      args.path,
+                ref:       args.ref       ?? 'main',
+                offset:    args.offset    ?? 0,
+                max_bytes: args.max_bytes ?? 200000
+            });
+            return result?.data ?? result;
+        }
+        return { error: `Unknown tool: ${name}` };
     }
 
-    const data = await response.json();
-    console.log('✅ [OPENAI_CALL_SUCCESS]', { 
-        usage: data.usage,
-        response_length: data.choices[0].message.content.length
-    });
-    
-    return {
-        content: data.choices[0].message.content,
-        model: data.model,
-        usage: data.usage
-    };
+    const systemPrompt = buildSystemPrompt(assembledContext);
+    const userPrompt   = buildUserPrompt(assembledContext, userInput);
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...buildConversationHistory(assembledContext),
+        { role: 'user', content: userPrompt }
+    ];
+
+    console.log('🤖 [OPENAI_CALL_START]', { model: 'gpt-4o', repo_tools: repoTools.length });
+
+    // Agentic loop: max 5 tool rounds to prevent infinite loops
+    let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+    for (let round = 0; round < 5; round++) {
+        const body = {
+            model: 'gpt-4o',
+            messages,
+            temperature: 0.7,
+            max_tokens: 2000,
+            ...(repoTools.length > 0 ? { tools: repoTools, tool_choice: 'auto' } : {})
+        };
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('🚨 [OPENAI_API_ERROR]', { status: response.status, body: errorBody });
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.usage) {
+            totalUsage.prompt_tokens     += data.usage.prompt_tokens     || 0;
+            totalUsage.completion_tokens += data.usage.completion_tokens || 0;
+            totalUsage.total_tokens      += data.usage.total_tokens      || 0;
+        }
+
+        const choice = data.choices[0];
+
+        // Model returned a final text response
+        if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
+            console.log('✅ [OPENAI_CALL_SUCCESS]', { rounds: round + 1, usage: totalUsage });
+            return {
+                content: choice.message.content,
+                model: data.model,
+                usage: totalUsage
+            };
+        }
+
+        // Model wants to call tools
+        console.log('🔧 [REPO_TOOL_CALLS]', choice.message.tool_calls.map(t => t.function.name));
+        messages.push(choice.message); // append assistant message with tool_calls
+
+        for (const toolCall of choice.message.tool_calls) {
+            const fnName = toolCall.function.name;
+            let fnArgs = {};
+            try { fnArgs = JSON.parse(toolCall.function.arguments); } catch {}
+
+            let toolResult;
+            try {
+                toolResult = await dispatchRepoTool(fnName, fnArgs);
+                console.log('✅ [REPO_TOOL_OK]', { fn: fnName, path: fnArgs.path });
+            } catch (err) {
+                toolResult = { error: err.message };
+                console.error('🚨 [REPO_TOOL_ERROR]', { fn: fnName, error: err.message });
+            }
+
+            messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(toolResult)
+            });
+        }
+        // Loop continues — model will now see tool results and produce final response
+    }
+
+    // Safety exit if loop exhausted
+    throw new Error('INFERENCE_TOOL_LOOP_EXHAUSTED: exceeded 5 tool rounds');
 }
 
 function buildSystemPrompt(context) {
