@@ -574,7 +574,17 @@ Deno.serve(async (req) => {
         });
 
         const inferenceStart = Date.now();
-        let { content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000);
+        let reply, openaiUsage;
+        if (user.role === 'admin') {
+            // Admin: agentic inference with repo_list + repo_read tools
+            const riRes = await base44.functions.invoke('core/repoInference', {
+                messages: finalMessages, model: ACTIVE_MODEL, max_tokens: 2000
+            });
+            reply = riRes?.data?.content;
+            openaiUsage = riRes?.data?.usage || null;
+        } else {
+            ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, ACTIVE_MODEL, 2000));
+        }
         const inferenceMs = Date.now() - inferenceStart;
         if (!reply) throw new Error('No response from OpenAI');
 
