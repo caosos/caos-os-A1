@@ -773,7 +773,7 @@ No code changes required. Documentation only.`}</Code>
               <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-red-300 font-bold text-sm">TSB-027 — PR2: ChatBubble Modularization + Cleanup (400-line hard limit)</span>
-                  <Tag label="IN PROGRESS 🔧" color="yellow" />
+                  <Tag label="COMPLETE ✅" color="green" />
                 </div>
                 <Code>{`Date:      Mar 7, 2026
 Component: components/chat/ChatBubble.jsx + components/chat/bubble/*
@@ -1038,6 +1038,51 @@ Result:
   from the message list render cycle.
 
 Status:    COMPLETE. Confirmed no regression on send, file attach, or voice input paths.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-032 — Boot Failure: Duplicate t_auth Declaration + Dead routeRequest Invocation</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 9, 2026
+Component: functions/hybridMessage
+
+Symptom:
+  Every hybridMessage request returned HTTP 500. Pipeline completely offline.
+  All users received "Something went wrong" with no useful diagnostic output.
+  test_backend_function also returned 500 — confirmed boot-level failure, not runtime.
+
+Root Cause 1 — Duplicate const declaration (BOOT_FAILURE):
+  A prior instrumentation edit introduced a second \`const t_auth\` declaration
+  in the same function scope. JavaScript strict mode (Deno) throws a SyntaxError
+  on duplicate \`const\` in scope — the function cannot even compile, let alone boot.
+  Result: every invocation failed before any pipeline stage could execute.
+
+Root Cause 2 — Dead code: routeRequest() defined but never called:
+  routeRequest(input, hIntent, cogLevel) exists at lines 169–201 — full
+  quality-critical vs. cheap-model routing logic (GPT_5_2 vs. CHEAP_MODEL).
+  During the boot-fail fix, its call site was replaced with static routing:
+    const RESOLVED_MODEL = ACTIVE_MODEL;
+    const routingDecision = { route: 'standard', route_reason: 'static_model', model: ACTIVE_MODEL };
+  The function is now dead code — it compiles and passes lint, but is never invoked.
+
+Fix:
+  Duplicate \`const t_auth\` removed. Static routing installed (Phase 0 stabilization).
+  routeRequest() retained in file — do NOT delete without TSB entry.
+  It contains quality-critical routing guardrails for future dynamic model selection.
+
+Phase 0 Verification (Mar 9, 2026):
+  test_backend_function confirmed 200 response + full execution_receipt with:
+  latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer,
+    t_prompt_build, t_openai_call, t_save_messages, t_total }
+  sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est,
+    sanitize_reduction_ratio }
+  Both fields live in execution_receipt AND in core/receiptWriter invocation payload.
+
+Line count after fix: ~925 lines (grown from 669 — instrumentation + TRH + MBCR + Phase 0)
+
+Status:    FIXED. Pipeline online. Phase 0 observability confirmed. routeRequest preserved.`}</Code>
               </div>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>

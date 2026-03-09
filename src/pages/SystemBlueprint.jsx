@@ -86,7 +86,7 @@ Read ALL of it — especially:
   - The TSB log: know what has broken before and why
 
 LOCKED FILES — DO NOT TOUCH WITHOUT EXPLICIT OWNER APPROVAL + TSB ENTRY:
-  - functions/hybridMessage          (FROZEN — 669 lines, over limit — TSB-021)
+  - functions/hybridMessage          (FROZEN — 925 lines, over limit — TSB-021/TSB-032)
   - functions/textToSpeech           (LOCKED — tts-1-hd — TSB-011)
   - functions/transcribeAudio        (LOCKED)
   - functions/threadRehydrate        (LOCKED — TRH v1 — TSB-029)
@@ -116,7 +116,7 @@ Wait for the owner to tell you what they need.`}</pre>
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint v2</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 8, 2026 · ODEL v1: PHASE 1.4 COMPLETE ✅ · RSoD: ACTIVE ✅ (TSB-024) · errorClassifier: DEPLOYED ✅ · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Active Model: gpt-5.2 (200K) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (~1126 lines remaining) · CTC Phase 1–3: WIRED ✅ · PR1 COMPLETE ✅ (TSB-025) · PR2 COMPLETE ✅ (TSB-027/TSB-028) — ChatBubble ≤400 lines, all bubble/ sub-components extracted · MBCR v1 DEPLOYED ✅ (TSB-028) · TRH v1 DEPLOYED ✅ (TSB-029) · metadata_tags ACTIVE ✅ · UI LAG FIXED ✅ (TSB-030/031) — DISPLAY_LIMIT=50, ChatBubble memoized, ChatInput state isolated · hybridMessage: 669 lines ⚠️ OVER LIMIT — FROZEN (TSB-021 open)</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 9, 2026 · ODEL v1: PHASE 1.4 COMPLETE ✅ · RSoD: ACTIVE ✅ (TSB-024) · errorClassifier: DEPLOYED ✅ · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Active Model: gpt-5.2 (200K) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (~1126 lines remaining) · CTC Phase 1–3: WIRED ✅ · PR1 COMPLETE ✅ (TSB-025) · PR2 COMPLETE ✅ (TSB-027/TSB-028) — ChatBubble ≤400 lines, all bubble/ sub-components extracted · MBCR v1 DEPLOYED ✅ (TSB-028) · TRH v1 DEPLOYED ✅ (TSB-029) · metadata_tags ACTIVE ✅ · UI LAG FIXED ✅ (TSB-030/031) — DISPLAY_LIMIT=50, ChatBubble memoized, ChatInput state isolated · hybridMessage: 925 lines ⚠️ OVER LIMIT — FROZEN (TSB-021/TSB-032) · Phase 0 Observability: LIVE ✅</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="Agent Onboarding Contract: Section 0" color="red" />
               <Tag label="hybridMessage: LOCKED" color="green" />
@@ -281,6 +281,9 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Ask the owner if any of the above is unclear — do not assume
 
   CONFIRMED STACK STATE (as of Mar 8, 2026):
+  functions/hybridMessage      925 lines    ⚠️ OVER LIMIT — FROZEN (TSB-021/TSB-032)
+    routeRequest() exists (lines 169–201) as DEAD CODE — defined, never called (static routing active)
+    latency_breakdown + sanitizer_delta: LIVE in execution_receipt + receiptWriter (Phase 0 ✅)
   pages/Chat.jsx              ~1126 lines   REFACTOR IN PROGRESS
    └─ hooks/useAuthBootstrap   55 lines    EXTRACTED ✅
    └─ hooks/useConversations  244 lines    EXTRACTED ✅
@@ -662,8 +665,16 @@ LAYERED  → Full analytical depth. Architectural/multi-clause inputs with ≥2 
 - Legacy memory_anchors still injected as INFERRED context
 - pages/Chat.jsx is ~1126 lines — FLAGGED FOR REFACTOR (in progress)
 - No ContextSeed records yet — CTC system is wired but not seeded
-- hybridMessage is NOW 669 lines — OVER 400-LINE HARD LIMIT — FROZEN (see TSB-021)
-  (grown further with MBCR inline block — Mar 8, 2026)
+- hybridMessage is NOW 925 lines — OVER 400-LINE HARD LIMIT — FROZEN (see TSB-021/TSB-032)
+  (grown: MBCR Mar 8 → instrumentation + TRH → Phase 0 fix Mar 9)
+- routeRequest() (lines 169–201): DEAD CODE — quality-critical routing logic defined but not called.
+  Static routing active: RESOLVED_MODEL = ACTIVE_MODEL, route_reason='static_model'.
+  Do NOT delete routeRequest without TSB entry — retained for future dynamic model wiring.
+- Phase 0 observability LIVE (Mar 9, 2026 — TSB-032):
+  latency_breakdown: t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build,
+    t_openai_call, t_save_messages, t_total — in execution_receipt + receiptWriter
+  sanitizer_delta: context_pre/post_sanitize_tokens_est, sanitize_reduction_ratio — same
+  NOTE: t_openai_call = raw inference duration (not cumulative from startTime)
 - receiptWriter called fire-and-forget — I2 invariant (must be awaited) now violated (TSB-021)
 - core/memoryEngine and core/heuristicsEngine logic is DUPLICATED inline in spine — modules exist
   but are not called from hybridMessage. Refactor plan must resolve canonical source.
@@ -876,7 +887,7 @@ Backend check:
           <Section title="14. TSB Log — Troubleshooting Bulletins" color="red">
             <p className="text-gray-300 text-xs mb-4">All TSB entries have been moved to a dedicated page for clarity and maintainability.</p>
             <Link to={createPageUrl('TSBLog')} className="inline-block text-blue-300 hover:text-blue-100 underline font-semibold">
-              → View Full TSB Log (TSB-001 through TSB-031)
+              → View Full TSB Log (TSB-001 through TSB-032)
             </Link>
             <p className="text-white/40 text-xs mt-3">TSB entries are permanent records documenting every significant issue, failure, and fix in CAOS development.</p>
           </Section>
@@ -945,6 +956,14 @@ NOTE: Audio work (STT chunking) is deferred until B and C are locked.
      — Console renders structured ErrorLog envelopes
      — Expandable JSON, filter by stage + error_code
      — Query error by error_id
+
+Phase 0 — Pipeline Observability Instrumentation (COMPLETE ✅ — Mar 9, 2026 — TSB-032):
+     — latency_breakdown in execution_receipt + receiptWriter:
+         t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build,
+         t_openai_call (raw inference duration), t_save_messages, t_total
+     — sanitizer_delta in execution_receipt + receiptWriter:
+         context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio
+     — Phase 0.2 (pending): live execution_receipt from UI → paste for stage latency analysis
 
 1.4 Remove UI Generic Masking (COMPLETE ✅ — Mar 6, 2026 — TSB-024)
      — errorClassifier.js: pure utility, classifies errors as blocking or non-blocking
@@ -1631,7 +1650,9 @@ END TOKEN`}</pre>
 - File storage chain: ChatInput → UserFile (on attach) + Chat.jsx → UserFile (post-reply auto-save)
 - Section 0.10: Workflow Etiquette — edit tracking, read-before-write, find_replace-first, no feature creep
 - Chat.jsx refactor stack: ~1126 lines remaining → next extraction is hooks/useSendMessage.js
-- hybridMessage is now 669 lines (⚠️ OVER LIMIT — frozen, refactor pending TSB-021 — further grown with MBCR Mar 8)
+- hybridMessage is now 925 lines (⚠️ OVER LIMIT — frozen — TSB-021/TSB-032 — grown: MBCR+TRH+instrumentation+Phase0fix)
+- routeRequest() is DEAD CODE in hybridMessage (lines 169–201) — defined, not called. Static routing active. Do not delete without TSB.
+- Phase 0 observability live (Mar 9, 2026): latency_breakdown + sanitizer_delta in execution_receipt + receiptWriter
 - externalKnowledgeDetector v2: two-stage browse-verb + sufficiency logic (ACTIVE ✅)
 - selectorEngine v2: explicit browse verb patterns + split trigger logic (ACTIVE ✅)
 - Edit tracking convention: every agent response modifying files MUST end with "Changed: <file> +N lines"
