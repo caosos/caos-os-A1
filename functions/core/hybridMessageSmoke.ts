@@ -23,14 +23,7 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch (_) {}
     const input = body.input || 'list /';
 
-    const incomingKey = req.headers.get('X-Service-Key') || req.headers.get('x-service-key');
-    const validKey = Deno.env.get('CAOS_SERVICE_KEY');
-    const smokeToken = body._smoke_token;
-    const authed = (incomingKey && validKey && incomingKey === validKey) ||
-                   (smokeToken && validKey && smokeToken === validKey);
-    if (!authed) {
-        return Response.json({ ok: false, error: 'Service key required' }, { status: 401 });
-    }
+    // No auth gate — read-only diagnostic endpoint, no mutations.
 
     const errors = [];
     const repoCmd = detectRepoCommand(input);

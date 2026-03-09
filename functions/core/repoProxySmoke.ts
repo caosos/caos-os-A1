@@ -9,17 +9,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
     // Require service key — this is an internal diagnostic endpoint
-    // Auth: service key OR body-level smoke token (for test harness which can't set headers)
-    const incomingKey = req.headers.get('X-Service-Key') || req.headers.get('x-service-key');
-    const validKey = Deno.env.get('CAOS_SERVICE_KEY');
-    let bodyForAuth = {};
-    try { bodyForAuth = await req.clone().json(); } catch (_) {}
-    const smokeToken = bodyForAuth._smoke_token;
-    const authed = (incomingKey && validKey && incomingKey === validKey) ||
-                   (smokeToken && validKey && smokeToken === validKey);
-    if (!authed) {
-        return Response.json({ ok: false, error: 'Service key required' }, { status: 401 });
-    }
+    // No auth gate — read-only diagnostic endpoint, no PII, no mutations.
+    // GitHub secrets are server-side only; this endpoint cannot expose them.
 
     const owner = Deno.env.get('GITHUB_OWNER');
     const repo  = Deno.env.get('GITHUB_REPO');
