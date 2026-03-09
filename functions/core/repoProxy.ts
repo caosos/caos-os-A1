@@ -6,12 +6,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 Deno.serve(async (req) => {
+    // Auth guard — outside main try so auth errors return 401/403, not 500
+    let user;
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-        if (!user) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-        if (user.role !== 'admin') return Response.json({ ok: false, error: 'Forbidden: admin only' }, { status: 403 });
+        user = await base44.auth.me();
+    } catch (_) {
+        return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!user) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'admin') return Response.json({ ok: false, error: 'Forbidden: admin only' }, { status: 403 });
 
+    try {
         const { fn, payload = {} } = await req.json();
 
         const token = Deno.env.get('GITHUB_TOKEN');
