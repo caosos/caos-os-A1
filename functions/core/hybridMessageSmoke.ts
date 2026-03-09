@@ -32,16 +32,24 @@ Deno.serve(async (req) => {
         return Response.json({ ok: false, input, mode: 'NO_MATCH', error: 'detectRepoCommand returned null — input not a repo command', errors: ['no match'] });
     }
 
-    const base44 = createClientFromRequest(req);
+    // Call repoTool directly — it has no auth gate (internal read-only fn).
+    // We use the app ID from env to construct the internal function URL.
+    const appId = Deno.env.get('BASE44_APP_ID');
+    const repoToolUrl = `https://api.base44.com/api/apps/${appId}/functions/core%2FrepoTool`;
+
     let repoResult;
     try {
-        const rtRes = await base44.asServiceRole.functions.invoke('core/repoTool', {
-            op: repoCmd.op, path: repoCmd.path, ref: 'main',
-            ...(repoCmd.op === 'read' ? { offset: 0, max_bytes: 60000 } : {})
+        const rtRes = await fetch(repoToolUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                op: repoCmd.op, path: repoCmd.path, ref: 'main',
+                ...(repoCmd.op === 'read' ? { offset: 0, max_bytes: 60000 } : {})
+            })
         });
-        repoResult = rtRes?.data;
+        repoResult = await rtRes.json();
     } catch (e) {
-        errors.push(`repoTool invoke exception: ${e.message}`);
+        errors.push(`repoTool fetch exception: ${e.message}`);
         repoResult = { ok: false, error: e.message };
     }
 
