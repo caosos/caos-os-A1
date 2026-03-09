@@ -300,6 +300,46 @@ Deno.serve(async (req) => {
             return Response.json({ reply: null, mode: 'SESSION_RESUME_NOOP', request_id });
         }
 
+        // ── REPO COMMAND SHORT-CIRCUIT ────────────────────────────────────────
+        // Intercepts "open/show/read/list/ls <path>" before inference.
+        // Any authenticated user can read the repo — no admin check here.
+        const repoCmd = detectRepoCommand(input);
+        if (repoCmd) {
+            let repoResult;
+            try {
+                const rtRes = await base44.asServiceRole.functions.invoke('core/repoTool', {
+                    op: repoCmd.op, path: repoCmd.path, ref: 'main',
+                    ...(repoCmd.op === 'read' ? { offset: repoCmd.offset || 0, max_bytes: 60000 } : {})
+                });
+                repoResult = rtRes?.data;
+            } catch (e) {
+                repoResult = { ok: false, error: e.message };
+            }
+
+            let reply;
+            if (!repoResult?.ok) {
+                reply = `⚠️ Repo error: ${repoResult?.error || 'unknown error'}`;
+            } else if (repoCmd.op === 'list') {
+                const items = repoResult.result || [];
+                const dirs  = items.filter(i => i.type === 'dir').map(i => `📁 ${i.path}/`);
+                const files = items.filter(i => i.type === 'file').map(i => `📄 ${i.path} (${i.size} bytes)`);
+                reply = `**Listing: \`${repoResult.path}\`**\n\n` + [...dirs, ...files].join('\n');
+            } else {
+                const content = repoResult.result || '';
+                const ext = repoCmd.path.split('.').pop() || '';
+                const chunkInfo = repoResult.done ? '' : `\n\n_Showing first 60KB. Total: ${repoResult.total_bytes?.toLocaleString()} bytes. Reply \`next ${repoCmd.path} offset:${repoResult.next_offset}\` for more._`;
+                reply = `**File: \`${repoResult.path}\`** (${repoResult.total_bytes?.toLocaleString()} bytes, sha: ${repoResult.sha?.slice(0,8)})\n\n\`\`\`${ext}\n${content}\n\`\`\`` + chunkInfo;
+            }
+
+            if (session_id) {
+                await Promise.all([
+                    base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() }),
+                    base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString() })
+                ]);
+            }
+            return Response.json({ reply, mode: 'REPO_TOOL', request_id, repo: { op: repoCmd.op, path: repoCmd.path, ok: repoResult?.ok }, response_time_ms: Date.now() - startTime, tool_calls: [] });
+        }
+
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
         console.log('🚀 [START]', { request_id, user: user.email, session_id });
 
