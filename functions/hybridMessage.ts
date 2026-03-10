@@ -772,6 +772,100 @@ Deno.serve(async (req) => {
             built_via: 'promptBuilder',
         });
 
+        // ── STREAMING BRANCH (STREAMING_V1) ──────────────────────────────────────
+        const shouldStream =
+            body.stream === true ||
+            req.headers.get('Accept') === 'text/event-stream' ||
+            Deno.env.get('HYBRIDMESSAGE_STREAMING_DEFAULT') === 'true' ||
+            (Deno.env.get('HYBRIDMESSAGE_STREAMING_ALLOWLIST_ENABLED') === 'true' && user?.email === 'mytaxicloud@gmail.com');
+
+        if (shouldStream) {
+            const encoder = new TextEncoder();
+            const abortController = new AbortController();
+            req.signal.addEventListener('abort', () => abortController.abort());
+
+            const stream = new ReadableStream({
+                async start(controller) {
+                    const send = (event, data) => {
+                        try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch (_) {}
+                    };
+
+                    let lastDelta = Date.now();
+                    const heartbeatInterval = setInterval(() => {
+                        if (Date.now() - lastDelta > 8000) send('heartbeat', { t: Date.now() });
+                    }, 4000);
+
+                    try {
+                        send('meta', { request_id, correlation_id, model_used: RESOLVED_MODEL, route: routingDecision.route });
+
+                        const oaiRes = await fetch(OPENAI_API, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ model: RESOLVED_MODEL, messages: finalMessages, temperature: 0.7, max_completion_tokens: 2000, stream: true }),
+                            signal: abortController.signal
+                        });
+
+                        if (!oaiRes.ok) {
+                            const err = await oaiRes.json().catch(() => ({}));
+                            send('error', { stage: 'OPENAI_CALL', message: err.error?.message || oaiRes.statusText, correlation_id });
+                            return;
+                        }
+
+                        const reader = oaiRes.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buf = '';
+                        let fullReply = '';
+                        let promptTokens = 0, completionTokens = 0;
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buf += decoder.decode(value, { stream: true });
+                            const lines = buf.split('\n');
+                            buf = lines.pop() || '';
+                            for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const raw = line.slice(6).trim();
+                                if (raw === '[DONE]') continue;
+                                try {
+                                    const chunk = JSON.parse(raw);
+                                    const text = chunk.choices?.[0]?.delta?.content;
+                                    if (text) { fullReply += text; lastDelta = Date.now(); send('delta', { text }); }
+                                    if (chunk.usage) { promptTokens = chunk.usage.prompt_tokens || 0; completionTokens = chunk.usage.completion_tokens || 0; }
+                                } catch (_) {}
+                            }
+                        }
+
+                        // Save messages
+                        if (session_id && fullReply) {
+                            try {
+                                const uTags = extractMetadataTags(input);
+                                const aTags = extractMetadataTags(fullReply);
+                                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: file_urls.length > 0 ? file_urls : undefined, timestamp: new Date().toISOString(), ...(uTags.length > 0 ? { metadata_tags: uTags } : {}) });
+                                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: fullReply, timestamp: new Date().toISOString(), ...(aTags.length > 0 ? { metadata_tags: aTags } : {}) });
+                            } catch (e) { console.warn('⚠️ [STREAM_SAVE_FAILED]', e.message); }
+                        }
+
+                        base44.functions.invoke('autoTitleThread', { session_id, user_input: input }).catch(() => {});
+
+                        const wcwBudget = MODEL_CONTEXT_WINDOW[RESOLVED_MODEL] || 200000;
+                        const latency_ms = Date.now() - startTime;
+                        send('done', { latency_ms, token_usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens, total_tokens: promptTokens + completionTokens }, wcw_used: promptTokens, wcw_remaining: wcwBudget - promptTokens, wcw_budget: wcwBudget, request_id, correlation_id, mode: 'STREAM' });
+                        console.log('✅ [STREAM_COMPLETE]', { request_id, latency_ms, reply_length: fullReply.length });
+
+                    } catch (e) {
+                        if (e.name !== 'AbortError') { console.error('🔥 [STREAM_ERROR]', e.message); send('error', { stage: getStage(), message: e.message, correlation_id }); }
+                    } finally {
+                        clearInterval(heartbeatInterval);
+                        try { controller.close(); } catch (_) {}
+                    }
+                }
+            });
+
+            return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Connection': 'keep-alive' } });
+        }
+        // ── END STREAMING BRANCH ─────────────────────────────────────────────────
+
         const inferenceStart = Date.now();
         let reply, openaiUsage;
         if (user.role === 'admin') {
