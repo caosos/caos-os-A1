@@ -40,11 +40,12 @@ function compressHistory(messages) {
 }
 
 // ─── OPENAI CALL (pure HTTP — stays inline) ───────────────────────────────────
-async function openAICall(key, messages, model, maxTokens = 2000) {
+async function openAICall(key, messages, model, maxTokens = 2000, signal = null) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, temperature: 0.7, max_completion_tokens: maxTokens })
+        body: JSON.stringify({ model, messages, temperature: 0.7, max_completion_tokens: maxTokens }),
+        ...(signal ? { signal } : {})
     });
     if (!response.ok) {
         const err = await response.json();
@@ -774,15 +775,31 @@ Deno.serve(async (req) => {
 
         const inferenceStart = Date.now();
         let reply, openaiUsage;
-        if (user.role === 'admin') {
-            // Admin: agentic inference with repo_list + repo_read tools
-            const riRes = await base44.functions.invoke('core/repoInference', {
-                messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000
-            });
-            reply = riRes?.data?.content;
-            openaiUsage = riRes?.data?.usage || null;
-        } else {
-            ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, RESOLVED_MODEL, 2000));
+        const openaiAbort = new AbortController();
+        const openaiTimeout = setTimeout(() => openaiAbort.abort(), 60000);
+        try {
+            if (user.role === 'admin') {
+                // Admin: agentic inference with repo_list + repo_read tools
+                const riRes = await base44.functions.invoke('core/repoInference', {
+                    messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000
+                });
+                reply = riRes?.data?.content;
+                openaiUsage = riRes?.data?.usage || null;
+            } else {
+                ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, RESOLVED_MODEL, 2000, openaiAbort.signal));
+            }
+            clearTimeout(openaiTimeout);
+        } catch (inferenceError) {
+            clearTimeout(openaiTimeout);
+            const latency_ms = Date.now() - startTime;
+            const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted');
+            const stage = isTimeout ? 'OPENAI_TIMEOUT' : 'OPENAI_CALL';
+            console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, message: inferenceError.message, request_id, correlation_id, latency_ms });
+            return Response.json({
+                ok: false, stage, message: inferenceError.message,
+                request_id, correlation_id, latency_ms,
+                mode: 'ERROR', response_time_ms: latency_ms
+            }, { status: 502 });
         }
         const inferenceMs = Date.now() - inferenceStart;
         const t_openai_call = inferenceMs;
