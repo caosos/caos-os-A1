@@ -44,7 +44,7 @@ async function openAICall(key, messages, model, maxTokens = 2000, signal = null)
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, temperature: 0.7, max_completion_tokens: maxTokens }),
+        body: JSON.stringify({ model, messages, temperature: 0.7, max_tokens: maxTokens }),
         ...(signal ? { signal } : {})
     });
     if (!response.ok) {
