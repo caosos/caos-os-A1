@@ -125,6 +125,7 @@ export default function Chat() {
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('show-continuity-token', handleShowToken);
+      if (streamAbortRef.current) streamAbortRef.current.abort();
     };
   }, []);
 
@@ -1097,7 +1098,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               ))}
               </React.Profiler>
 
-              {isLoading && (
+              {isLoading && !currentMessages.some(m => m.isStreaming) && (
                 <div className="flex justify-start mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
