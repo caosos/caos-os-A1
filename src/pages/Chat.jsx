@@ -32,7 +32,6 @@ import { classifyError } from '@/components/lib/errorClassifier';
 export default function Chat() {
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
   if (isDeveloperMode) console.count('Chat render');
-  const STREAMING_V1 = localStorage.getItem('caos_streaming_v1') !== 'false'; // default ON; set 'false' to disable
   const { user, isGuestMode, dataLoaded } = useAuthBootstrap();
 
   const [messages, setMessages] = useState({});
@@ -73,7 +72,6 @@ export default function Chat() {
   const [inputHeight, setInputHeight] = useState(0);
   const [rsodError, setRsodError] = useState(null);
   const lastSendRef = React.useRef(null);
-  const streamAbortRef = React.useRef(null);
 
   // Helper to set message in input
   const setMessage = (text) => {
@@ -125,7 +123,6 @@ export default function Chat() {
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('show-continuity-token', handleShowToken);
-      if (streamAbortRef.current) streamAbortRef.current.abort();
     };
   }, []);
 
@@ -494,118 +491,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         conversationId, 
         messageLength: fullMessage.length,
         contextSeed: !!contextSeed,
-        currentLane,
-        streaming: STREAMING_V1 && !isGuestMode
+        currentLane
       });
-
-      // ── STREAMING_V1 PATH ─────────────────────────────────────────────────
-      if (STREAMING_V1 && !isGuestMode) {
-        const abortCtrl = new AbortController();
-        streamAbortRef.current = abortCtrl;
-
-        const streamMsgId = 'stream_ai_' + Date.now();
-        // Promote temp user message + add streaming assistant placeholder
-        setMessages(prev => ({
-          ...prev,
-          [conversationId]: [
-            ...(prev[conversationId] || []).map(m => m.id === tempId ? { ...m, id: 'confirmed_user_' + Date.now() } : m),
-            { id: streamMsgId, conversation_id: conversationId, role: 'assistant', content: '', isStreaming: true, timestamp: new Date().toISOString() }
-          ]
-        }));
-        setIsLoading(false);
-
-        let fullContent = '';
-        let currentEvent = '';
-
-        try {
-          const streamRes = await fetch('/api/functions/hybridMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ input: fullMessage, session_id: conversationId, file_urls: fileUrls, stream: true }),
-            signal: abortCtrl.signal
-          });
-
-          if (!streamRes.ok) throw new Error(`Stream HTTP ${streamRes.status}`);
-
-          const reader = streamRes.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buf += decoder.decode(value, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop() || '';
-
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                currentEvent = line.slice(7).trim();
-              } else if (line.startsWith('data: ')) {
-                const raw = line.slice(6).trim();
-                try {
-                  const parsed = JSON.parse(raw);
-                  if (currentEvent === 'delta' && parsed.text) {
-                    fullContent += parsed.text;
-                    const snap = fullContent;
-                    setMessages(prev => ({
-                      ...prev,
-                      [conversationId]: (prev[conversationId] || []).map(m =>
-                        m.id === streamMsgId ? { ...m, content: snap } : m
-                      )
-                    }));
-                  } else if (currentEvent === 'done') {
-                    if (parsed.wcw_budget && parsed.wcw_used !== undefined) {
-                      setWcwState({ used: parsed.wcw_used, budget: parsed.wcw_budget });
-                    }
-                    setMessages(prev => ({
-                      ...prev,
-                      [conversationId]: (prev[conversationId] || []).map(m =>
-                        m.id === streamMsgId ? { ...m, isStreaming: false, response_time_ms: parsed.latency_ms } : m
-                      )
-                    }));
-                    setConversations(prev => {
-                      const updated = [
-                        { ...prev.find(c => c.id === conversationId), last_message_preview: fullContent.substring(0, 100), last_message_time: new Date().toISOString() },
-                        ...prev.filter(c => c.id !== conversationId)
-                      ];
-                      return updated;
-                    });
-                    base44.entities.Conversation.update(conversationId, { last_message_preview: fullContent.substring(0, 100), last_message_time: new Date().toISOString() }).catch(() => {});
-                  } else if (currentEvent === 'error') {
-                    toast.error(`Aria: ${parsed.message || 'Stream error'}`);
-                    setMessages(prev => ({
-                      ...prev,
-                      [conversationId]: (prev[conversationId] || []).map(m =>
-                        m.id === streamMsgId ? { ...m, isStreaming: false, failed: true, content: m.content || 'Stream error — please retry.' } : m
-                      )
-                    }));
-                  }
-                } catch (_) {}
-                currentEvent = '';
-              }
-            }
-          }
-        } catch (e) {
-          if (e.name !== 'AbortError') {
-            toast.error('Stream failed: ' + e.message, { action: { label: 'Retry', onClick: () => handleSendMessage(content, fileUrls, selectedAgents) }, duration: 10000 });
-            setMessages(prev => ({
-              ...prev,
-              [conversationId]: (prev[conversationId] || []).map(m =>
-                m.id === streamMsgId ? { ...m, isStreaming: false, failed: true, content: m.content || 'Connection error.' } : m
-              )
-            }));
-          }
-        } finally {
-          clearTimeout(timeoutId);
-          streamAbortRef.current = null;
-        }
-
-        localStorage.removeItem('caos_last_message_backup');
-        return;
-      }
-      // ── END STREAMING_V1 PATH ─────────────────────────────────────────────
 
       const response = await base44.functions.invoke('hybridMessage', {
         input: fullMessage,
@@ -1098,7 +985,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               ))}
               </React.Profiler>
 
-              {isLoading && !currentMessages.some(m => m.isStreaming) && (
+              {isLoading && (
                 <div className="flex justify-start mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
@@ -1285,7 +1172,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               ))}
               </React.Profiler>
 
-                {isLoading && !currentMessages.some(m => m.isStreaming) && (
+                {isLoading && (
                   <div className="flex justify-start mb-4">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400/30 to-purple-500/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
