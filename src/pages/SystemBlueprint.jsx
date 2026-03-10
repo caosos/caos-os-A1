@@ -106,6 +106,10 @@ RULES (from Section 0):
   4. No silent writes. No background state changes.
   5. Pull-only awareness. No polling, no push-based state injection.
   6. Aria ≠ CAOS. Never conflate the persona with the platform.
+  7. GOV v1.2 Anti-Bloat (Amendment A): If a file is ≥300 lines or locked/monolithic,
+     do NOT add new logic inline. Extract new logic into a new helper/module.
+     Original file change = imports + call-site ONLY. ASK_TO_WRITE must include
+     current line count + justification. Violations → REVERT_ON_FAULT.
 
 Do not confirm you've read it. Do not ask what to do next.
 Wait for the owner to tell you what they need.`}</pre>
@@ -116,7 +120,7 @@ Wait for the owner to tell you what they need.`}</pre>
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint v2</h1>
             <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
-            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 9, 2026 · ODEL v1: PHASE 1.4 COMPLETE ✅ · RSoD: ACTIVE ✅ (TSB-024) · errorClassifier: DEPLOYED ✅ · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Active Model: gpt-5.2 (200K) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (~1126 lines remaining) · CTC Phase 1–3: WIRED ✅ · PR1 COMPLETE ✅ (TSB-025) · PR2 COMPLETE ✅ (TSB-027/TSB-028) — ChatBubble ≤400 lines, all bubble/ sub-components extracted · MBCR v1 DEPLOYED ✅ (TSB-028) · TRH v1 DEPLOYED ✅ (TSB-029) · metadata_tags ACTIVE ✅ · UI LAG FIXED ✅ (TSB-030/031) — DISPLAY_LIMIT=50, ChatBubble memoized, ChatInput state isolated · hybridMessage: 925 lines ⚠️ OVER LIMIT — FROZEN (TSB-021/TSB-032) · Phase 0 Observability: LIVE ✅</p>
+            <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 10, 2026 · GOV v1.2 Amendment A: Anti-Bloat Extraction Rule ACTIVE ✅ · Stabilization Phase: IN PROGRESS 🔧 · Zero-error target: 4xx/5xx elimination underway · ODEL v1: PHASE 1.4 COMPLETE ✅ · RSoD: ACTIVE ✅ (TSB-024) · errorClassifier: DEPLOYED ✅ · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Active Model: gpt-5.2 (200K) ✅ · Chat.jsx Refactor: IN PROGRESS 🔧 (~1126 lines remaining) · CTC Phase 1–3: WIRED ✅ · PR1 COMPLETE ✅ (TSB-025) · PR2 COMPLETE ✅ (TSB-027/TSB-028) — ChatBubble ≤400 lines, all bubble/ sub-components extracted · MBCR v1 DEPLOYED ✅ (TSB-028) · TRH v1 DEPLOYED ✅ (TSB-029) · metadata_tags ACTIVE ✅ · UI LAG FIXED ✅ (TSB-030/031) — DISPLAY_LIMIT=50, ChatBubble memoized, ChatInput state isolated · hybridMessage: 925 lines ⚠️ OVER LIMIT — FROZEN (TSB-021/TSB-032) · Phase 0 Observability: LIVE ✅</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="Agent Onboarding Contract: Section 0" color="red" />
               <Tag label="hybridMessage: LOCKED" color="green" />
@@ -226,6 +230,30 @@ WORKFLOW for code audit:
 
 RULE: selfInspect is the ONLY sanctioned path for Aria to reason about source code.
       Aria must never assume source code content. Always ask for it to be shared.`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">11. GOV v1.2 — Amendment A: Anti-Bloat Extraction Rule (ACTIVE)</h4>
+            <Code>{`LOCK_SIGNATURE: GOV_v1.2_AMENDMENT_A_2026-03-10
+
+RULE: If a target file is ≥300 lines OR already identified as monolithic/locked,
+      NO new logic may be added inline beyond minimal plumbing.
+
+REQUIRED PATTERN:
+  1. Create a new helper/module for the new logic (even 10–50 lines is fine).
+  2. Modify the large file ONLY with:
+       - import(s)
+       - a single call-site (or minimal wiring)
+       - NO refactors unless explicitly approved as a separate change
+
+ASK_TO_WRITE gate MUST include:
+  - current line count of touched files
+  - justification if adding >10 lines to any file ≥300 lines
+
+ENFORCEMENT:
+  - Violations trigger REVERT_ON_FAULT unless explicitly pre-approved.
+  - Every change must include: file sizes/line counts pre/post + rollback diff.
+
+MEMORY: Persisted to UserProfile.structured_memory (id: gov-v1-2-amendment-a-2026-03-10)
+ESTABLISHED: Mar 10, 2026 by system owner.`}</Code>
 
             <h4 className="text-white font-semibold mt-3">10. Workflow Etiquette — Standing Build Conventions</h4>
             <Code>{`These are active workflow conventions established during the Mar 2026 build sprint.
