@@ -575,7 +575,9 @@ Deno.serve(async (req) => {
 
         // ── PHASE 3 THREAD STATE: Cache-only read — no model call, non-blocking ─
         const tsResult = session_id ? await base44.functions.invoke('core/threadStateBuilder', { session_id, fetch_only: true }).catch(() => null) : null;
-        const threadStateBlock = tsResult?.data?.ok ? tsResult.data.block : '';
+        const tsData = tsResult?.data;
+        // Staleness gate: only use state if it covers at least the current history length
+        const threadStateBlock = (tsData?.ok && tsData.last_seq >= rawHistory.length) ? tsData.block : '';
 
         // ── STAGE: CTC — Cross-Thread Context (Phase 3) ───────────────────────
         // G1: Explicit gating — only run if user signal detected
@@ -847,7 +849,8 @@ Deno.serve(async (req) => {
         const responseTime = Date.now() - startTime;
 
         // PHASE 3: Fire-and-forget thread state builder for next turn (non-blocking, swallows errors)
-        if (session_id && rawHistory.length >= 4) base44.functions.invoke('core/threadStateBuilder', { session_id, messages: rawHistory.slice(-30) }).catch(() => {});
+        // Pass last_seq + full 40-message span so builder seq is consistent with hybridMessage window
+        if (session_id && rawHistory.length >= 4) base44.functions.invoke('core/threadStateBuilder', { session_id, last_seq: rawHistory.length, messages: rawHistory.slice(-40) }).catch(() => {});
 
         // AUTO-TITLE: Fire-and-forget — only titles new threads with default titles
         base44.functions.invoke('autoTitleThread', {
