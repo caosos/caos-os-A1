@@ -1,41 +1,27 @@
 import React, { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Clock, Code, Search, List, Zap, ChevronRight, Shield, Lock, AlertTriangle } from 'lucide-react';
+import { Clock, ChevronRight, AlertTriangle, Zap, BarChart2 } from 'lucide-react';
 
-export default function ExecutionReceipt({ receipt }) {
-  const [expanded, setExpanded] = useState(false);
-  
-  // INSTRUMENTATION: Receipt required, always present
+const ms = (v) => v != null ? `${v}ms` : '—';
+const tok = (v) => v != null ? v.toLocaleString() : '—';
+
+const STAGE_LABELS = {
+  t_auth: 'Auth',
+  t_profile_and_history_load: 'Profile + History',
+  t_sanitizer: 'History Compress',
+  t_prompt_build: 'Prompt Build',
+  t_openai_call: 'Inference',
+  t_save_messages: 'Save Messages',
+  t_total: 'Total',
+};
+
+export default function ExecutionReceipt({ receipt, forceExpand = false }) {
+  const [expanded, setExpanded] = useState(forceExpand);
+
   if (!receipt) return null;
 
-  // Schema v1.0 unified format
-  const mode = receipt.execution_mode || receipt.mode || 'UNKNOWN';
-  const intent = receipt.intent?.classification || 'UNKNOWN';
-  const confidence = receipt.intent?.confidence || 0.0;
-  const reason = receipt.intent?.reason;
-  const forceRetrieval = receipt.intent?.force_retrieval || false;
-  const route = receipt.routing?.pipeline || 'UNKNOWN';
-  const formatter = receipt.routing?.formatter;
-  const requiresTool = receipt.routing?.requires_tool || false;
-  const toolInvoked = receipt.tools?.invoked || false;
-  const toolName = receipt.tools?.tool_name;
-  const toolStatus = receipt.tools?.execution_status;
-  const fallback = receipt.fallback || {};
-  const memoryUsed = receipt.memory_access?.used || false;
-  const memorySource = receipt.memory_access?.source;
-  const downgradeBlocked = receipt.guardrails?.downgrade_blocked || false;
-  const policyTriggered = receipt.guardrails?.policy_triggered || false;
-  const latencyMs = receipt.latency_ms || 0;
-
-  const modeIcons = {
-    SEARCH: Search,
-    LIST: List,
-    RETRIEVAL: Search,
-    GEN: Zap,
-    ERROR: AlertTriangle
-  };
-
-  const ModeIcon = modeIcons[mode] || Code;
+  const isError = receipt.mode === 'ERROR' || receipt.ok === false;
+  const lb = receipt.latency_breakdown || {};
+  const tb = receipt.token_breakdown || {};
 
   return (
     <div className="mt-3 border border-white/10 rounded-lg bg-white/5 backdrop-blur-sm overflow-hidden">
@@ -45,161 +31,94 @@ export default function ExecutionReceipt({ receipt }) {
       >
         <div className="flex items-center gap-2">
           <ChevronRight className={`w-3 h-3 text-white/40 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-          <ModeIcon className="w-3 h-3 text-blue-400" />
+          {isError
+            ? <AlertTriangle className="w-3 h-3 text-red-400" />
+            : <Zap className="w-3 h-3 text-blue-400" />}
           <span className="text-white/70 font-semibold text-xs font-mono">EXECUTION TRACE</span>
+          {lb.t_total != null && (
+            <span className={`text-xs font-mono ml-1 ${lb.t_total > 30000 ? 'text-red-400' : lb.t_total > 15000 ? 'text-yellow-400' : 'text-green-400'}`}>
+              {(lb.t_total / 1000).toFixed(1)}s
+            </span>
+          )}
         </div>
-        <span className="text-white/30 text-xs">(Tap to Expand)</span>
+        <span className="text-white/30 text-xs">{expanded ? 'Collapse' : 'Expand'}</span>
       </button>
-      
+
       {expanded && (
         <div className="px-3 pb-3 space-y-3 text-xs font-mono border-t border-white/10 pt-3">
-          {/* Intent Section (Schema v1.0) */}
+
+          {/* Route + Model */}
           <div className="space-y-1">
-            <div className="text-white/50 font-semibold mb-1">Intent Resolution</div>
-            <div className="flex justify-between">
-              <span className="text-white/40">Intent:</span>
-              <Badge variant="outline" className="text-xs">{intent}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/40">Confidence:</span>
-              <span className="text-white/60">{confidence.toFixed(2)}</span>
-            </div>
-            {reason && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Reason:</span>
-                <span className="text-white/60">{reason}</span>
-              </div>
-            )}
-            {forceRetrieval && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Force Retrieval:</span>
-                <span className="text-yellow-400">true</span>
-              </div>
-            )}
+            <div className="text-white/50 font-semibold mb-1">Pipeline</div>
+            <Row label="model" value={receipt.model_used} />
+            <Row label="route" value={receipt.route} />
+            <Row label="route_reason" value={receipt.route_reason} dim />
+            <Row label="intent" value={receipt.heuristics_intent} />
+            <Row label="depth" value={receipt.heuristics_depth} />
+            <Row label="cog_level" value={receipt.cognitive_level?.toFixed(2)} />
           </div>
 
-          {/* Route Section (Schema v1.0) */}
-          <div className="space-y-1 pt-2 border-t border-white/10">
-            <div className="text-white/50 font-semibold mb-1">Route Selection</div>
-            <div className="flex justify-between">
-              <span className="text-white/40">Pipeline:</span>
-              <span className="text-white/60">{route}</span>
-            </div>
-            {formatter && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Formatter:</span>
-                <span className="text-white/60">{formatter}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-white/40">Requires Tool:</span>
-              <span className="text-white/60">{requiresTool ? 'true' : 'false'}</span>
-            </div>
-          </div>
-
-          {/* Tool Execution Section (Schema v1.0) */}
-          <div className="space-y-1 pt-2 border-t border-white/10">
-            <div className="text-white/50 font-semibold mb-1">Tool Execution</div>
-            <div className="flex justify-between">
-              <span className="text-white/40">Invoked:</span>
-              <span className={toolInvoked ? 'text-green-400' : 'text-white/60'}>{toolInvoked ? 'true' : 'false'}</span>
-            </div>
-            {toolName && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Tool Name:</span>
-                <span className="text-white/60">{toolName}</span>
-              </div>
-            )}
-            {toolStatus && (
-              <div className="flex justify-between">
-                <span className="text-white/40">Status:</span>
-                <span className={toolStatus === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}>{toolStatus}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Fallback Section (Schema v1.0) */}
-          {fallback.triggered && (
+          {/* Stage Timings */}
+          {Object.keys(lb).length > 0 && (
             <div className="space-y-1 pt-2 border-t border-white/10">
               <div className="text-white/50 font-semibold mb-1 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-yellow-400" />
-                Fallback
+                <BarChart2 className="w-3 h-3" /> Stage Timings
               </div>
-              <div className="flex justify-between">
-                <span className="text-white/40">Triggered:</span>
-                <span className="text-yellow-400">true</span>
-              </div>
-              {fallback.fallback_type && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Type:</span>
-                  <span className="text-white/60">{fallback.fallback_type}</span>
-                </div>
-              )}
-              {fallback.reason && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Reason:</span>
-                  <span className="text-white/60 text-right max-w-[60%]">{fallback.reason}</span>
-                </div>
-              )}
+              {Object.entries(STAGE_LABELS).map(([key, label]) => {
+                if (lb[key] == null) return null;
+                const val = lb[key];
+                const isSlow = key !== 't_total' && val > 10000;
+                return (
+                  <div key={key} className="flex justify-between items-center">
+                    <span className="text-white/40">{label}</span>
+                    <span className={`tabular-nums ${isSlow ? 'text-yellow-400' : 'text-white/60'}`}>
+                      {ms(val)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Memory Section (Schema v1.0) */}
-          {memoryUsed && (
-            <div className="space-y-1 pt-2 border-t border-white/10">
-              <div className="text-white/50 font-semibold mb-1">Memory Access</div>
-              <div className="flex justify-between">
-                <span className="text-white/40">Used:</span>
-                <span className="text-green-400">true</span>
-              </div>
-              {memorySource && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Source:</span>
-                  <span className="text-white/60">{memorySource}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Guardrails Section (Schema v1.0) */}
-          {(downgradeBlocked || policyTriggered) && (
-            <div className="space-y-1 pt-2 border-t border-white/10">
-              <div className="text-white/50 font-semibold mb-1 flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                Guardrails
-              </div>
-              {downgradeBlocked && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Downgrade Blocked:</span>
-                  <span className="text-yellow-400">true</span>
-                </div>
-              )}
-              {policyTriggered && (
-                <div className="flex justify-between">
-                  <span className="text-white/40">Policy Triggered:</span>
-                  <span className="text-yellow-400">true</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Performance Section (Schema v1.0) */}
+          {/* Tokens + WCW */}
           <div className="space-y-1 pt-2 border-t border-white/10">
-            <div className="text-white/50 font-semibold mb-1">Performance</div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/40">Latency:</span>
-              <span className="flex items-center gap-1 text-white/60">
-                <Clock className="w-3 h-3" />
-                {latencyMs}ms
-              </span>
+            <div className="text-white/50 font-semibold mb-1 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Tokens / WCW
             </div>
-            <div className="flex justify-between">
-              <span className="text-white/40">Execution Mode:</span>
-              <Badge variant="outline" className="text-xs">{mode}</Badge>
-            </div>
+            <Row label="prompt_tokens" value={tok(tb.total_prompt_tokens)} />
+            <Row label="completion_tokens" value={tok(tb.completion_tokens)} />
+            <Row label="total_tokens" value={tok(tb.total_tokens)} />
+            <Row label="wcw_budget" value={tok(receipt.wcw_budget)} />
+            <Row label="wcw_used" value={tok(receipt.wcw_used)} />
+            <Row label="wcw_remaining" value={tok(receipt.wcw_remaining)} />
+          </div>
+
+          {/* Memory + CTC */}
+          <div className="space-y-1 pt-2 border-t border-white/10">
+            <div className="text-white/50 font-semibold mb-1">Context</div>
+            <Row label="history_messages" value={receipt.history_messages} />
+            <Row label="matched_memories" value={receipt.matched_memories} />
+            <Row label="ctc_injected" value={String(receipt.ctc_injected ?? false)} />
+          </div>
+
+          {/* IDs */}
+          <div className="space-y-1 pt-2 border-t border-white/10">
+            <div className="text-white/50 font-semibold mb-1">Identifiers</div>
+            <Row label="request_id" value={receipt.request_id?.slice(0, 16) + '…'} dim />
+            <Row label="session_id" value={receipt.session_id?.slice(0, 16) + '…'} dim />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function Row({ label, value, dim = false }) {
+  if (value == null || value === '—') return null;
+  return (
+    <div className="flex justify-between">
+      <span className="text-white/40">{label}</span>
+      <span className={dim ? 'text-white/30' : 'text-white/60'}>{value}</span>
     </div>
   );
 }

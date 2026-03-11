@@ -1,27 +1,27 @@
 import React from 'react';
 import ExecutionReceipt from '../ExecutionReceipt';
+import ErrorCard from './ErrorCard';
 
-// Verbatim extraction of execution receipt + debug suppressed-log blocks — Commit 8
-// console.log preserved exactly as-is (removal deferred to PR2)
+export default function ReceiptPanel({ isUser, message, showExecution, onRetry }) {
+  if (isUser) return null;
 
-export default function ReceiptPanel({ isUser, message, showExecution }) {
+  const hasError = message.error_code || message.ok === false || message.mode === 'ERROR';
+  const showReceipt = showExecution || hasError;
+
   return (
     <>
-      {/* Execution Receipt - ALWAYS show when execution_receipt exists AND toggle is ON */}
-      {!isUser && message.execution_receipt && showExecution && (
-        <ExecutionReceipt receipt={message.execution_receipt} />
+      {hasError && (
+        <ErrorCard
+          endpoint={message.endpoint || 'hybridMessage'}
+          error_code={message.error_code}
+          stage={message.stage}
+          request_id={message.request_id}
+          retryable={message.retryable !== false}
+          onRetry={onRetry}
+        />
       )}
-
-      {/* DEBUG: Log if receipt exists but not shown */}
-      {!isUser && message.execution_receipt && !showExecution && (
-        <div className="hidden">
-          {console.log('🔍 [RECEIPT_SUPPRESSED]', {
-            message_id: message.id,
-            has_receipt: !!message.execution_receipt,
-            showExecution,
-            receipt_keys: Object.keys(message.execution_receipt)
-          })}
-        </div>
+      {message.execution_receipt && showReceipt && (
+        <ExecutionReceipt receipt={message.execution_receipt} forceExpand={hasError} />
       )}
     </>
   );
