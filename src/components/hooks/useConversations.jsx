@@ -47,10 +47,13 @@ export function useConversations({
         if (!mounted) return;
         setConversations(userConvos || []);
 
-        // Deterministic boot: only restore if user explicitly saved a last conversation
+        // Per-window restore: sessionStorage wins (survives refresh, isolated per tab/window)
+        // Cross-device fallback: localStorage (last conversation where a message was sent)
+        const windowId = sessionStorage.getItem('caos_window_conversation');
         const lastId = localStorage.getItem('caos_last_conversation');
-        if (lastId && (userConvos || []).some(c => c.id === lastId)) {
-          setCurrentConversationId(lastId);
+        const restoreId = windowId || lastId;
+        if (restoreId && (userConvos || []).some(c => c.id === restoreId)) {
+          setCurrentConversationId(restoreId);
         } else {
           setCurrentConversationId(null);
         }
@@ -63,6 +66,13 @@ export function useConversations({
 
     return () => { mounted = false; };
   }, [user, isGuestMode]);
+
+  // Persist active conversation to sessionStorage (per-window, survives refresh)
+  useEffect(() => {
+    if (currentConversationId) {
+      sessionStorage.setItem('caos_window_conversation', currentConversationId);
+    }
+  }, [currentConversationId]);
 
   // Reset WCW on thread switch
   useEffect(() => {
