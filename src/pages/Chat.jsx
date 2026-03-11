@@ -1303,6 +1303,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         onSelectConversation={(id) => {
           setCurrentConversationId(id);
           localStorage.setItem('caos_last_conversation', id);
+          sessionStorage.setItem('caos_window_conversation', id);
           handleSessionResume(id);
         }}
         onDeleteConversation={handleDeleteConversation}
