@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         const token = Deno.env.get('GITHUB_TOKEN');
 
         if (!owner || !repo || !token) {
-            return Response.json({ error: 'GitHub secrets not configured' }, { status: 500 });
+            return Response.json({ error_code: 'REPO_NOT_CONFIGURED', error: 'GitHub secrets not configured', user_action: 'Admin must configure GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO in Base44 secrets.' }, { status: 500 });
         }
 
         // Step 1: get metadata + download_url
