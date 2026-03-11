@@ -24,12 +24,13 @@ const openai = new OpenAI({
 });
 
 Deno.serve(async (req) => {
+  const request_id = crypto.randomUUID();
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ ok: false, error_code: 'UNAUTHORIZED', stage: 'AUTH', message: 'Unauthorized', request_id, retryable: false }, { status: 401 });
     }
 
     let audioBuffer;
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
       // TSB-019 | LOCK_SIGNATURE: CAOS_STT_BASE64_TRANSPORT_v1_2026-03-03
       const body = await req.json();
       if (!body.audio_base64) {
-        return Response.json({ error: 'audio_base64 field required in JSON payload. base44 SDK cannot send binary — use base64 encoding.' }, { status: 400 });
+        return Response.json({ ok: false, error_code: 'MISSING_AUDIO', stage: 'INPUT_VALIDATION', message: 'audio_base64 field required', request_id, retryable: false }, { status: 400 });
       }
       const binaryStr = atob(body.audio_base64);
       const bytes = new Uint8Array(binaryStr.length);
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
     }
 
     if (!audioBuffer || audioBuffer.byteLength === 0) {
-      return Response.json({ error: 'Audio buffer is empty' }, { status: 400 });
+      return Response.json({ ok: false, error_code: 'EMPTY_AUDIO', stage: 'INPUT_VALIDATION', message: 'Audio buffer is empty', request_id, retryable: true }, { status: 400 });
     }
 
     // Convert to File object for OpenAI
@@ -77,15 +78,18 @@ Deno.serve(async (req) => {
       timestamp_granularities: ['segment']
     });
 
-    return Response.json({ 
-      text: transcription.text,
-      success: true 
-    });
+    return Response.json({ ok: true, text: transcription.text, success: true, request_id });
   } catch (error) {
     console.error('Transcription error:', error);
-    return Response.json({ 
-      error: error.message,
-      success: false 
+    const isWhisper = error.message?.includes('openai') || error.message?.includes('whisper') || error.status;
+    return Response.json({
+      ok: false,
+      error_code: isWhisper ? 'WHISPER_FAILED' : 'TRANSCRIBE_FAILED',
+      stage: isWhisper ? 'WHISPER_CALL' : 'PROCESSING',
+      message: error.message,
+      request_id,
+      retryable: true,
+      success: false
     }, { status: 500 });
   }
 });
