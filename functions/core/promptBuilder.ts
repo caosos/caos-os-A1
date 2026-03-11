@@ -29,7 +29,7 @@ const AUTHORITY_KV = [
   'inference_enabled=true',
   'web_search_enabled=true',
   'web_search_trigger=NEEDS_BASED_AUTOMATIC_OR_EXPLICIT',
-  'web_search_provider=bing_api',
+  'web_search_provider=gemini_3_flash_via_base44',
   'file_read_enabled=true',
   'file_write_enabled=true',
   'image_parse_enabled=true',
@@ -129,7 +129,7 @@ When asked about a person's sex, biology, or identity, answer using BIOLOGICAL S
 
         // ── 5. WEB SEARCH RESULTS ─────────────────────────────────────────────
         if (webSearchEnabled && webSearchResults.length > 0) {
-            p += `WEB SEARCH RESULTS (from Bing — cite sources):\n`;
+            p += `WEB SEARCH RESULTS (from Gemini/Base44 — cite sources):\n`;
             for (const r of webSearchResults) {
                 p += `- **${r.title}** (${r.url})\n  Snippet: ${r.snippet}\n`;
             }
