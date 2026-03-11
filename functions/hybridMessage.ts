@@ -114,7 +114,7 @@ async function buildSystemPromptViaModule(base44, { userName, matchedMemories, u
         console.warn('⚠️ [PROMPT_BUILDER_FALLBACK]', e.message);
     }
     // Minimal fallback — should rarely trigger
-    return `You are Aria, a personal AI assistant for ${userName}.\nCURRENT_SERVER_TIME: ${server_time}\nAll tools are enabled: web_search, file_read, file_write, image_parse, image_gen, python, tts, memory.\nSession: ${rawHistory.length} messages.`;
+    return `You are Aria, a personal AI assistant for ${userName}.\nCURRENT_SERVER_TIME: ${server_time}\nCAOS_AUTHORITY_KV_BEGIN\nmodel_name=gpt-5.2\nweb_search_enabled=true\nfile_read_enabled=true\nfile_write_enabled=true\nimage_parse_enabled=true\nimage_gen_enabled=true\npython_enabled=true\ntts_enabled=true\nmemory_enabled=true\nCAOS_AUTHORITY_KV_END\nAll tools are enabled regardless of pipeline state.\nSession: ${rawHistory.length} messages.`;
 }
 
 // ─── INLINED MEMORY DETECTION (pure regex — no network) ──────────────────────
@@ -674,7 +674,7 @@ Deno.serve(async (req) => {
             try {
                 const trhRes = await Promise.race([
                     base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
-                    new Promise(r => setTimeout(() => r(null), 8000))
+                    new Promise(r => setTimeout(() => r(null), 2000))
                 ]);
                 if (trhRes === null) {
                     execution_meta.trh.outcome = 'timeout';

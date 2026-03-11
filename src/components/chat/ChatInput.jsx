@@ -14,7 +14,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   
   useEffect(() => {
     if (messageValue !== message) setMessage(messageValue);
-  }, [messageValue, message]);
+  }, [messageValue]); // eslint-disable-line react-hooks/exhaustive-deps
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingGoogle, setIsPlayingGoogle] = useState(false);
