@@ -62,6 +62,17 @@ const REPO_TOOLS = [WEB_SEARCH_TOOL,
 ];
 
 async function dispatchTool(name, args, base44) {
+    if (name === 'web_search') {
+        const query = args.query || '';
+        if (!query) return { error: 'web_search: query is required' };
+        console.log('🔍 [WEB_SEARCH_DISPATCH]', { query: query.substring(0, 120) });
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Search the web for: "${query}". Return a factual, well-sourced summary. Include source URLs where available.`,
+            add_context_from_internet: true,
+            model: 'gemini_3_flash'
+        });
+        return { tool: 'web_search', query, result };
+    }
     if (name === 'repo_list') {
         const res = await base44.asServiceRole.functions.invoke('core/repoList', {
             path: args.path ?? '',
