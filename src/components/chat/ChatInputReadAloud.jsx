@@ -1,10 +1,38 @@
 import { toast } from 'sonner';
 
+// Module-level ref prevents Chrome from GC'ing the utterance before onstart fires
+let _activeUtterance = null;
+let _keepAliveInterval = null;
+
+function clearKeepAlive() {
+  if (_keepAliveInterval) {
+    clearInterval(_keepAliveInterval);
+    _keepAliveInterval = null;
+  }
+}
+
+// Chrome bug: speechSynthesis pauses after ~15s in background tabs
+// Fix: pause/resume every 10s to keep it alive
+function startKeepAlive() {
+  clearKeepAlive();
+  _keepAliveInterval = setInterval(() => {
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    } else {
+      clearKeepAlive();
+    }
+  }, 10000);
+}
+
 export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
   if (!lastAIMessage || !lastAIMessage.trim()) return;
 
-  if (window.speechSynthesis.speaking) {
+  // If already speaking — stop
+  if (window.speechSynthesis.speaking || isPlaying) {
     window.speechSynthesis.cancel();
+    clearKeepAlive();
+    _activeUtterance = null;
     setIsPlaying(false);
     return;
   }
@@ -27,6 +55,8 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       .substring(0, 4096);
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
+    _activeUtterance = utterance; // prevent GC
+
     const speed = parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0');
     utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
     utterance.pitch = 1.0;
@@ -42,38 +72,54 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     };
     const langCode = voiceMap[voicePref] || 'en-US';
 
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => {
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      startKeepAlive();
+    };
+    utterance.onend = () => {
+      clearKeepAlive();
+      _activeUtterance = null;
+      setIsPlaying(false);
+    };
+    utterance.onerror = (e) => {
+      // 'interrupted' is not a real error — it means cancel() was called intentionally
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
+      clearKeepAlive();
+      _activeUtterance = null;
       setIsPlaying(false);
       toast.error('Google Voice read-aloud failed');
     };
 
-    // Voices load async — wait for them if not yet available, then speak
     const speakWithVoice = (voices) => {
       const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
       if (selectedVoice) utterance.voice = selectedVoice;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.cancel(); // clear any queue
+      // Small delay after cancel() — Chrome needs a tick before speak() after cancel
+      setTimeout(() => window.speechSynthesis.speak(utterance), 50);
     };
 
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
       speakWithVoice(voices);
     } else {
+      // Voices not loaded yet — wait for the event, with a 500ms hard fallback
+      let spoken = false;
       window.speechSynthesis.onvoiceschanged = () => {
+        if (spoken) return;
+        spoken = true;
         window.speechSynthesis.onvoiceschanged = null;
         speakWithVoice(window.speechSynthesis.getVoices());
       };
-      // Fallback: speak after 300ms even if voices never fire
       setTimeout(() => {
-        if (!window.speechSynthesis.speaking) {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(utterance);
-        }
-      }, 300);
+        if (spoken) return;
+        spoken = true;
+        window.speechSynthesis.onvoiceschanged = null;
+        speakWithVoice(window.speechSynthesis.getVoices());
+      }, 500);
     }
   } catch (error) {
+    clearKeepAlive();
+    _activeUtterance = null;
     setIsPlaying(false);
     console.error('[GOOGLE_VOICE_ERROR]', error.message);
     toast.error('Google Voice failed');
