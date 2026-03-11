@@ -74,7 +74,6 @@ export function buildAuthorityKV() {
     `inference_enabled=${c.inference_enabled}`,
     `web_search_enabled=${c.web_search_enabled}`,
     `web_search_trigger=${c.web_search_trigger}`,
-    `web_search_provider=${c.web_search_provider}`,
     `file_read_enabled=${c.file_read_enabled}`,
     `file_write_enabled=${c.file_write_enabled}`,
     `image_parse_enabled=${c.image_parse_enabled}`,

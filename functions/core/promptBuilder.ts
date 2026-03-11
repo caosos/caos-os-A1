@@ -29,7 +29,6 @@ const AUTHORITY_KV = [
   'inference_enabled=true',
   'web_search_enabled=true',
   'web_search_trigger=NEEDS_BASED_AUTOMATIC_OR_EXPLICIT',
-  'web_search_provider=gemini_3_flash_via_base44',
   'file_read_enabled=true',
   'file_write_enabled=true',
   'image_parse_enabled=true',
