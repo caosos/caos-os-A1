@@ -163,6 +163,7 @@ export function useConversations({
         setCurrentConversationId(newConversation.id);
         setMessages(prev => ({ ...prev, [newConversation.id]: [] }));
         localStorage.setItem('caos_last_conversation', newConversation.id);
+        sessionStorage.setItem('caos_window_conversation', newConversation.id);
       }
     } catch (error) {
       console.error('Error creating conversation:', error);
