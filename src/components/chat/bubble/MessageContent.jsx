@@ -28,7 +28,6 @@ export default function MessageContent({ message, isUser, downloadFile }) {
     const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const markdownLinkRegex = new RegExp(`\\[([^\\]]+)\\]\\(${escapedUrl}\\)`, 'g');
     cleanContent = cleanContent.replace(markdownLinkRegex, '');
-    cleanContent = cleanContent.replace(url, '');
   });
   cleanContent = cleanContent.trim();
 

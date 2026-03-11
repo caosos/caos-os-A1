@@ -136,6 +136,7 @@ const MEMORY_SAVE_TRIGGERS = [
 const MEMORY_RECALL_TRIGGERS = [
     /\b(?:what do you remember about|do you remember|recall|you told me|you mentioned|what did I tell you about)\b/i,
     /\b(?:what do you know about me|what have I told you)\b/i,
+    /\b(?:search saved|search what I saved|what have I saved|find in memory|recall what you saved)\b/i,
 ];
 const VAGUE_WORDS = new Set(['this','these','that','them','it','things','thing','too','also','as','well','please','ok','okay','all','of','right','yes','yep','yeah']);
 
