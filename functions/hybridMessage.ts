@@ -12,7 +12,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
 const ACTIVE_MODEL = 'gpt-5.2';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
-const MAX_HISTORY_MESSAGES = 15;
+const MAX_HISTORY_MESSAGES = 40;
 const HOT_TAIL = 40;
 const HOT_HEAD = 15;
 const BUDGET_MS = 1500;  // Total time budget for optional stages
