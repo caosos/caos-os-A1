@@ -12,7 +12,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
 const ACTIVE_MODEL = 'gpt-5.2';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
-const MAX_HISTORY_MESSAGES = 40;
+const MAX_HISTORY_MESSAGES = 15;
 const HOT_TAIL = 40;
 const HOT_HEAD = 15;
 const BUDGET_MS = 1500;  // Total time budget for optional stages
@@ -105,10 +105,8 @@ function buildDirective(intent, depth, cogLevel) {
 // Fallback: if promptBuilder call fails, use a minimal inline prompt.
 async function buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time }) {
     try {
-        const res = await base44.functions.invoke('core/promptBuilder', {
-            userName, matchedMemories, userProfile, rawHistory,
-            hDirective, hDepth, cogLevel, arcBlock, server_time
-        });
+        const pbPromise = base44.functions.invoke('core/promptBuilder', { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
+        const res = await Promise.race([pbPromise, new Promise(r => setTimeout(() => r(null), 8000))]);
         if (res?.data?.systemPrompt) return res.data.systemPrompt;
     } catch (e) {
         console.warn('⚠️ [PROMPT_BUILDER_FALLBACK]', e.message);
@@ -664,7 +662,7 @@ Deno.serve(async (req) => {
         // Only invoked when input signals campaign continuation / thread recall.
         // Awaited with hard timeout so current turn benefits immediately.
         // Summary also saved to thread so subsequent last-40 loads include it.
-        const TRH_TRIGGER = /\b(pr[23]|continue|where are we|status|locked|receipts|refresh|rehydrate|update summary|what('s| is) (locked|next|open)|what did we decide|catch me up)\b/i;
+        const TRH_TRIGGER = /\b(pr[23]|rehydrate|catch me up|update summary|what did we decide)\b/i;
         let trhSummaryMessage = null;
         // TRH silent receipt — tracks outcome for assistant self-awareness + admin diagnostics
         const execution_meta = { trh: { outcome: 'not_triggered' } };
