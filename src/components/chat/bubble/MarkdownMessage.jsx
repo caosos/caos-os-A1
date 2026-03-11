@@ -12,6 +12,7 @@ export default function MarkdownMessage({ content }) {
   return (
     <ReactMarkdown
       className="text-xs sm:text-sm max-w-full overflow-hidden"
+      remarkPlugins={[remarkGfm]}
       components={{
         p: ({ children }) => (
           <div className="mb-2 sm:mb-3 leading-relaxed text-white/90 break-words">{children}</div>
