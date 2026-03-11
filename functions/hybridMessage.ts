@@ -787,7 +787,11 @@ Deno.serve(async (req) => {
                 reply = riRes?.data?.content;
                 openaiUsage = riRes?.data?.usage || null;
             } else {
-                ({ content: reply, usage: openaiUsage } = await openAICall(openaiKey, finalMessages, RESOLVED_MODEL, 2000, openaiAbort.signal));
+                const giRes = await base44.functions.invoke('core/generalInference', {
+                    messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000
+                });
+                reply = giRes?.data?.content;
+                openaiUsage = giRes?.data?.usage || null;
             }
             clearTimeout(openaiTimeout);
         } catch (inferenceError) {
