@@ -1,7 +1,8 @@
 /**
- * core/repoInference
- * Agentic OpenAI call with repo_list + repo_read tools injected.
- * Admin-only. Called by hybridMessage for admin users instead of bare openAICall.
+ * core/generalInference
+ * Agentic OpenAI call with web_search tool — available to ALL authenticated users.
+ * Admin users get repoInference (repo_list + repo_read + web_search).
+ * Non-admin users get this (web_search only).
  *
  * Input:  { messages, model, max_tokens? }
  * Output: { content, usage, tool_rounds, tool_calls_log }
@@ -11,72 +12,34 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
-const WEB_SEARCH_TOOL = {
-    type: 'function',
-    function: {
-        name: 'web_search',
-        description: 'Search the web for current facts, news, documentation, or anything not in training data. Returns a summarized result with sources.',
-        parameters: {
-            type: 'object',
-            properties: {
-                query: { type: 'string', description: 'The search query string.' }
-            },
-            required: ['query']
-        }
-    }
-};
-
-const REPO_TOOLS = [WEB_SEARCH_TOOL,
+const TOOLS = [
     {
         type: 'function',
         function: {
-            name: 'repo_list',
-            description: 'List files and directories in the CAOS GitHub repository. Use to explore repo structure, find files, or verify paths.',
+            name: 'web_search',
+            description: 'Search the web for current facts, news, documentation, or anything not in training data. Returns a summarized result with sources.',
             parameters: {
                 type: 'object',
                 properties: {
-                    path: { type: 'string', description: 'Directory path to list. Use "" for repo root.' },
-                    ref:  { type: 'string', description: 'Git branch/tag/sha. Default: main.' }
+                    query: { type: 'string', description: 'The search query string.' }
                 },
-                required: ['path']
-            }
-        }
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'repo_read',
-            description: 'Read a file from the CAOS GitHub repository. Supports chunked pagination for large files via offset.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    path:      { type: 'string',  description: 'File path relative to repo root.' },
-                    ref:       { type: 'string',  description: 'Git ref. Default: main.' },
-                    offset:    { type: 'integer', description: 'Byte offset to start reading. Default: 0.' },
-                    max_bytes: { type: 'integer', description: 'Max bytes to read. Default: 200000.' }
-                },
-                required: ['path']
+                required: ['query']
             }
         }
     }
 ];
 
 async function dispatchTool(name, args, base44) {
-    if (name === 'repo_list') {
-        const res = await base44.asServiceRole.functions.invoke('core/repoList', {
-            path: args.path ?? '',
-            ref:  args.ref  ?? 'main'
+    if (name === 'web_search') {
+        const query = args.query || '';
+        if (!query) return { error: 'web_search: query is required' };
+        console.log('🔍 [WEB_SEARCH_DISPATCH]', { query: query.substring(0, 120) });
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Search the web for: "${query}". Return a factual, well-sourced summary. Include source URLs where available.`,
+            add_context_from_internet: true,
+            model: 'gemini_3_flash'
         });
-        return res?.data ?? res;
-    }
-    if (name === 'repo_read') {
-        const res = await base44.asServiceRole.functions.invoke('core/repoReadChunked', {
-            path:      args.path,
-            ref:       args.ref       ?? 'main',
-            offset:    args.offset    ?? 0,
-            max_bytes: args.max_bytes ?? 200000
-        });
-        return res?.data ?? res;
+        return { tool: 'web_search', query, result };
     }
     return { error: `Unknown tool: ${name}` };
 }
@@ -88,9 +51,6 @@ Deno.serve(async (req) => {
 
         if (!user) {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        if (user.role !== 'admin') {
-            return Response.json({ error: 'Forbidden: admin only' }, { status: 403 });
         }
 
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
@@ -122,7 +82,7 @@ Deno.serve(async (req) => {
                     messages: msgs,
                     temperature: 0.7,
                     max_completion_tokens: max_tokens,
-                    tools: REPO_TOOLS,
+                    tools: TOOLS,
                     tool_choice: 'auto'
                 })
             });
@@ -143,7 +103,7 @@ Deno.serve(async (req) => {
 
             // Final answer — no tool calls
             if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
-                console.log('✅ [REPO_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens });
+                console.log('✅ [GENERAL_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens });
                 return Response.json({
                     content: choice.message.content,
                     usage: totalUsage,
@@ -154,7 +114,7 @@ Deno.serve(async (req) => {
 
             // Execute tool calls
             msgs.push(choice.message);
-            console.log('🔧 [REPO_TOOL_ROUND]', { round, tools: choice.message.tool_calls.map(t => t.function.name) });
+            console.log('🔧 [GENERAL_TOOL_ROUND]', { round, tools: choice.message.tool_calls.map(t => t.function.name) });
 
             for (const toolCall of choice.message.tool_calls) {
                 const fnName = toolCall.function.name;
@@ -165,9 +125,9 @@ Deno.serve(async (req) => {
                 let result;
                 try {
                     result = await dispatchTool(fnName, fnArgs, base44);
-                    console.log('✅ [TOOL_OK]', { fn: fnName, path: fnArgs.path, ms: Date.now() - callStart });
+                    console.log('✅ [TOOL_OK]', { fn: fnName, ms: Date.now() - callStart });
                 } catch (err) {
-                    result = { error: err.message };
+                    result = { error: `tool=${fnName} error=${err.message}` };
                     console.error('🚨 [TOOL_ERR]', { fn: fnName, error: err.message });
                 }
 
@@ -184,7 +144,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'TOOL_LOOP_EXHAUSTED: exceeded 5 rounds' }, { status: 500 });
 
     } catch (err) {
-        console.error('🔥 [REPO_INFERENCE_ERROR]', err.message);
+        console.error('🔥 [GENERAL_INFERENCE_ERROR]', err.message);
         return Response.json({ error: err.message }, { status: 500 });
     }
 });
