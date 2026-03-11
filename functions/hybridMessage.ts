@@ -573,6 +573,10 @@ Deno.serve(async (req) => {
         const sanitize_reduction_ratio = preChars > 0 ? parseFloat((1 - postChars / preChars).toFixed(3)) : 0;
         const t_sanitizer = Date.now() - startTime;
 
+        // ── PHASE 3 THREAD STATE: Cache-only read — no model call, non-blocking ─
+        const tsResult = session_id ? await base44.functions.invoke('core/threadStateBuilder', { session_id, fetch_only: true }).catch(() => null) : null;
+        const threadStateBlock = tsResult?.data?.ok ? tsResult.data.block : '';
+
         // ── STAGE: CTC — Cross-Thread Context (Phase 3) ───────────────────────
         // G1: Explicit gating — only run if user signal detected
         // G2: Conditional execution — skip stages if not needed
@@ -726,7 +730,7 @@ Deno.serve(async (req) => {
         // No bootloader injection needed — all tools declared on every session.
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         const server_time = new Date().toISOString();
-        const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time });
+        const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory: threadStateBlock ? rawHistory.slice(-15) : rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock });
         const t_prompt_build = Date.now() - startTime;
 
         // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
@@ -842,6 +846,9 @@ Deno.serve(async (req) => {
         setStage(STAGES.RESPONSE_BUILD);
         const responseTime = Date.now() - startTime;
 
+        // PHASE 3: Fire-and-forget thread state builder for next turn (non-blocking, swallows errors)
+        if (session_id && rawHistory.length >= 4) base44.functions.invoke('core/threadStateBuilder', { session_id, messages: rawHistory.slice(-30) }).catch(() => {});
+
         // AUTO-TITLE: Fire-and-forget — only titles new threads with default titles
         base44.functions.invoke('autoTitleThread', {
             session_id, user_input: input
@@ -905,7 +912,9 @@ Deno.serve(async (req) => {
                 wcw_used: promptTokens, wcw_remaining: wcwRemaining,
                 ctc_injected: ctcInjectionMeta.length > 0,
                 ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
-                ctc_injection_meta: ctcInjectionMeta
+                ctc_injection_meta: ctcInjectionMeta,
+                thread_state_used: !!threadStateBlock,
+                thread_state_seq: tsResult?.data?.last_seq || null
             }
         };
         

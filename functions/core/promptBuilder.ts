@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
             webSearchEnabled = false,
             webSearchResults = [],
             environmentState = null,
+            threadStateBlock = '',
         } = body;
 
         // ── 1. IDENTITY ───────────────────────────────────────────────────────
@@ -124,6 +125,11 @@ When asked about a person's sex, biology, or identity, answer using BIOLOGICAL S
         // ── 4. ARC PACK (CTC cross-thread context, if any) ────────────────────
         if (arcBlock) {
             p += arcBlock + '\n';
+        }
+
+        // ── 4b. THREAD STATE (Phase 3 — compressed context from this session) ─
+        if (threadStateBlock) {
+            p += `THREAD_STATE (compressed context — verified from this session):\n${threadStateBlock}\n\n`;
         }
 
         // ── 5. WEB SEARCH RESULTS ─────────────────────────────────────────────
