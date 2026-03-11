@@ -309,7 +309,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     utterance.onend = () => {
       stopGoogleVoice();
     };
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      // 'interrupted' / 'canceled' fire when cancel() is called intentionally — not a real error
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
       stopGoogleVoice();
       toast.error('Google Voice read-aloud failed');
     };
