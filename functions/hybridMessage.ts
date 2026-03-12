@@ -645,10 +645,11 @@ Deno.serve(async (req) => {
             }
         }
 
-        // ── STAGE: MBCR — Thread Recovery injection (same-thread v1) ────────
+        // ── STAGE: MBCR — delegated to core/mbcrEngine (Phase 4 PR1) ────────
+        const NULL_MBCR = { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
         const mbcrResult = session_id
-            ? await maybeBuildMbcrInjectedMessage({ thread_id: session_id, userText: input, invokeFn: (n, p) => base44.functions.invoke(n, p), debugMode })
-            : { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
+            ? await base44.functions.invoke('core/mbcrEngine', { thread_id: session_id, userText: input, debugMode }).then(r => r?.data ?? NULL_MBCR).catch(() => NULL_MBCR)
+            : NULL_MBCR;
         const mbcrInjectedMessage = mbcrResult.message;
         const mbcrDebug = mbcrResult.debug;
 
