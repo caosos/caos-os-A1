@@ -173,10 +173,10 @@ Deno.serve(async (req) => {
             }
         }
 
-        return Response.json({ error: 'TOOL_LOOP_EXHAUSTED: exceeded 5 rounds' }, { status: 500 });
+        return Response.json({ ok: false, error_code: 'TOOL_LOOP_EXHAUSTED', stage: 'OPENAI_CALL', message: 'Exceeded 5 tool rounds' }, { status: 500 });
 
     } catch (err) {
         console.error('🔥 [GENERAL_INFERENCE_ERROR]', err.message);
-        return Response.json({ error: err.message }, { status: 500 });
+        return Response.json({ ok: false, error_code: 'INTERNAL_ERROR', stage: 'OPENAI_CALL', message: err.message }, { status: 500 });
     }
 });
