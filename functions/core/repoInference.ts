@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         for (let round = 0; round < 5; round++) {
             if (Date.now() - loopStart > WALL_CLOCK_MS) {
                 console.warn('⚠️ [REPO_INFERENCE_TIMEOUT]', { round, elapsed_ms: Date.now() - loopStart, request_id });
-                return Response.json({ ok: false, request_id, error_code: 'REPO_INFERENCE_TIMEOUT', stage: 'REPO_INFERENCE', message: 'PROVIDER_TIMEOUT: repo inference exceeded wall-clock budget', retryable: true, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart }, { status: 504 });
+                return Response.json({ ok: false, request_id, error_code: 'REPO_INFERENCE_TIMEOUT', stage: 'REPO_INFERENCE', message: 'PROVIDER_TIMEOUT: repo inference exceeded wall-clock budget', retryable: true, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart });
             }
 
             const result = await openaiFetchWithTimeout(openaiKey, {
