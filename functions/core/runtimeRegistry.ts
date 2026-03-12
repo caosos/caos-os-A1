@@ -62,13 +62,13 @@ Deno.serve(async (req) => {
             if (existing.length > 0) {
                 await base44.asServiceRole.entities.FunctionManifest.update(existing[0].id, {
                     artifact_hash, deployment_id, deployed_at,
-                    actor: resolved_actor, size_bytes: resolved_size,
+                    actor, size_bytes: resolved_size,
                     notes: notes || null
                 });
             } else {
                 await base44.asServiceRole.entities.FunctionManifest.create({
                     path, artifact_hash, deployment_id, deployed_at,
-                    actor: resolved_actor, size_bytes: resolved_size,
+                    actor, size_bytes: resolved_size,
                     notes: notes || null
                 });
             }
