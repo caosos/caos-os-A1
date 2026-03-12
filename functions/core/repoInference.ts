@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
 
             if (!result.ok) {
                 console.error('🔥 [REPO_INFERENCE_FETCH_FAILED]', { round, timedOut: result.timedOut, status: result.status, request_id });
-                return Response.json({ ok: false, request_id, error_code: result.timedOut ? 'REPO_INFERENCE_TIMEOUT' : 'OPENAI_ERROR', stage: 'REPO_INFERENCE', message: result.timedOut ? 'PROVIDER_TIMEOUT' : result.errorMessage, retryable: result.timedOut, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart }, { status: result.status });
+                return Response.json({ ok: false, request_id, error_code: result.timedOut ? 'REPO_INFERENCE_TIMEOUT' : 'OPENAI_ERROR', stage: 'REPO_INFERENCE', message: result.timedOut ? 'PROVIDER_TIMEOUT' : result.errorMessage, retryable: result.timedOut, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart });
             }
 
             const data = result.data;
