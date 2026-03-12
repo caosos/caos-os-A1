@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         const request_id = crypto.randomUUID();
 
         if (!messages || !Array.isArray(messages)) {
-            return Response.json({ ok: false, request_id, error_code: 'INVALID_INPUT', stage: 'REPO_INFERENCE', message: 'messages array required', retryable: false }, { status: 400 });
+            return Response.json({ ok: false, request_id, error_code: 'INVALID_INPUT', stage: 'REPO_INFERENCE', message: 'messages array required', retryable: false });
         }
 
         const msgs = [...messages];
