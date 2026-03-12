@@ -185,12 +185,15 @@ Deno.serve(async (req) => {
 
             // Final answer — no tool calls
             if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
-                console.log('✅ [REPO_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens });
+                console.log('✅ [REPO_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens, t_ms: Date.now() - loopStart, request_id });
                 return Response.json({
+                    ok: true,
+                    request_id,
                     content: choice.message.content,
                     usage: totalUsage,
-                    tool_rounds: round,
-                    tool_calls_log
+                    tool_rounds: round + 1,
+                    tool_calls_log,
+                    t_repo_tool_total_ms: Date.now() - loopStart
                 });
             }
 
