@@ -44,18 +44,19 @@ Deno.serve(async (req) => {
         // ── LIST ──────────────────────────────────────────────────────────────
         if (op === 'list') {
             const cleanPath = path.replace(/^\/+|\/+$/g, '');
+            // GitHub API supports ?page and ?per_page for directory listings
             const url = cleanPath
-                ? `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=${ref}`
-                : `https://api.github.com/repos/${owner}/${repo}/contents?ref=${ref}`;
+                ? `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=${ref}&page=${page}&per_page=${per_page}`
+                : `https://api.github.com/repos/${owner}/${repo}/contents?ref=${ref}&page=${page}&per_page=${per_page}`;
 
             const res = await fetch(url, { headers: ghHeaders });
             if (!res.ok) {
                 const err = await res.text();
-                return Response.json({ ok: false, error: `GitHub error: ${res.status}`, details: err }, { status: res.status });
+                return Response.json({ ok: false, source: 'GITHUB_REPO', error: `GitHub error: ${res.status}`, details: err }, { status: res.status });
             }
 
             const data = await res.json();
-            const items = (Array.isArray(data) ? data : [data]).map(item => ({
+            const allItems = (Array.isArray(data) ? data : [data]).map(item => ({
                 name: item.name,
                 path: item.path,
                 type: item.type,   // "file" | "dir"
@@ -63,16 +64,19 @@ Deno.serve(async (req) => {
                 sha:  item.sha
             }));
 
+            // has_more: if we got exactly per_page items, there may be more
+            const has_more = allItems.length === per_page;
+
             return Response.json({
                 ok: true,
+                source: 'GITHUB_REPO',
                 op: 'list',
                 path: cleanPath || '(root)',
                 ref,
-                result: items,
-                sha: null,
-                total_bytes: null,
-                next_offset: null,
-                done: true
+                items: allItems,
+                page,
+                per_page,
+                has_more
             });
         }
 
