@@ -53,10 +53,18 @@ Deno.serve(async (req) => {
       if (!body.audio_base64) {
         return Response.json({ ok: false, error_code: 'MISSING_AUDIO', stage: 'INPUT_VALIDATION', message: 'audio_base64 field required', request_id, retryable: false }, { status: 400 });
       }
-      const binaryStr = atob(body.audio_base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-      audioBuffer = bytes.buffer;
+      // Size cap: ~10MB base64 ≈ 7.5MB audio — fast-fail before decode
+      const MAX_BASE64_LEN = 10 * 1024 * 1024;
+      if (body.audio_base64.length > MAX_BASE64_LEN) {
+        return Response.json({ ok: false, error_code: 'PAYLOAD_TOO_LARGE', stage: 'INPUT_VALIDATION', message: `Audio base64 exceeds max size (${MAX_BASE64_LEN} chars)`, request_id, retryable: false }, { status: 413 });
+      }
+      // Async decode via fetch data URL — avoids synchronous CPU block (replaces atob+loop)
+      const t_decode_start = Date.now();
+      const dataUrl = `data:audio/webm;base64,${body.audio_base64}`;
+      const decodeRes = await fetch(dataUrl);
+      audioBuffer = await decodeRes.arrayBuffer();
+      const t_decode_ms = Date.now() - t_decode_start;
+      console.log('⏱️ [DECODE_MS]', { t_decode_ms, bytes: audioBuffer.byteLength, request_id });
     } else {
       // SDK binary invocation (application/octet-stream or any other binary content-type)
       audioBuffer = await req.arrayBuffer();
@@ -69,16 +77,24 @@ Deno.serve(async (req) => {
     // Convert to File object for OpenAI
     const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
 
-    // OpenAI Whisper supports files up to 25MB and unlimited duration
-    const transcription = await openai.audio.transcriptions.create({
-      file: file,
-      model: 'whisper-1',
-      language: 'en',
-      response_format: 'verbose_json',
-      timestamp_granularities: ['segment']
-    });
+    // Provider call with hard timeout (20s) — returns typed retryable error before gateway fires
+    const PROVIDER_TIMEOUT_MS = 20000;
+    const t_provider_start = Date.now();
+    const transcription = await Promise.race([
+      openai.audio.transcriptions.create({
+        file: file,
+        model: 'whisper-1',
+        language: 'en',
+        response_format: 'verbose_json',
+        timestamp_granularities: ['segment']
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('PROVIDER_TIMEOUT')), PROVIDER_TIMEOUT_MS))
+    ]);
+    const t_provider_ms = Date.now() - t_provider_start;
+    const t_total_ms = Date.now() - (t_provider_start - (typeof t_decode_ms !== 'undefined' ? t_decode_ms : 0));
+    console.log('⏱️ [TRANSCRIBE_TIMING]', { t_provider_ms, t_total_ms, request_id });
 
-    return Response.json({ ok: true, text: transcription.text, success: true, request_id });
+    return Response.json({ ok: true, text: transcription.text, success: true, request_id, timing: { t_decode_ms: typeof t_decode_ms !== 'undefined' ? t_decode_ms : null, t_provider_ms, t_total_ms } });
   } catch (error) {
     console.error('Transcription error:', error);
     const isWhisper = error.message?.includes('openai') || error.message?.includes('whisper') || error.status;
