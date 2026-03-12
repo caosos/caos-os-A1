@@ -308,7 +308,7 @@ G. BLUEPRINT UPDATES ARE A FIRST-CLASS TASK:
   □ Apply Section 0.10 Workflow Etiquette from the first change (edit tracking, read-before-write, etc.)
   □ Ask the owner if any of the above is unclear — do not assume
 
-  CONFIRMED STACK STATE (as of Mar 8, 2026):
+  CONFIRMED STACK STATE (as of Mar 12, 2026):
   functions/hybridMessage      925 lines    ⚠️ OVER LIMIT — FROZEN (TSB-021/TSB-032)
     routeRequest() exists (lines 169–201) as DEAD CODE — defined, never called (static routing active)
     latency_breakdown + sanitizer_delta: LIVE in execution_receipt + receiptWriter (Phase 0 ✅)
@@ -1654,7 +1654,7 @@ END TOKEN`}</pre>
 - TTS: two locked paths — OpenAI (ChatBubble) + Google (ChatInput)
 - WCW meter: live data from DiagnosticReceipt (TSB-012 fixed)
 - The Python backend blueprint exists but is not deployed
-- TSB-001 through TSB-031 (permanent failure/fix records — full log on TSBLog page)
+- TSB-001 through TSB-034 (permanent failure/fix records — full log on TSBLog page)
 - All localStorage mode flags
 - All active backend functions and their purposes
 - Section 0: Agent Onboarding Contract (standing development principles)
