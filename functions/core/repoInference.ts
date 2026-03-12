@@ -4,12 +4,46 @@
  * Admin-only. Called by hybridMessage for admin users instead of bare openAICall.
  *
  * Input:  { messages, model, max_tokens? }
- * Output: { content, usage, tool_rounds, tool_calls_log }
+ * Output: { ok, request_id, content, usage, tool_rounds, tool_calls_log, t_repo_tool_total_ms }
+ *
+ * UNLOCK_TOKEN: CAOS_REPO_INFERENCE_TIMEOUT_v1_2026-03-12
+ * Changes: inlined openaiFetchWithTimeout helper (AbortController + typed envelope);
+ *          wall-clock budget guard (40s); envelope-consistent responses on all paths.
+ * Note: openaiFetchWithTimeout is inlined here (not a separate import) because Base44
+ *       function isolates do not support cross-file module imports.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+
+// ── openaiFetchWithTimeout (inlined — platform isolate constraint) ─────────────
+// Wraps single OpenAI fetch with AbortController + hard deadline.
+// Returns: { ok, timedOut, status, data?, errorMessage? }
+async function openaiFetchWithTimeout(apiKey, body, timeoutMs = 38000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(OPENAI_API, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+            return { ok: false, timedOut: false, status: response.status, errorMessage: err.error?.message || response.statusText };
+        }
+        const data = await response.json();
+        return { ok: true, timedOut: false, status: 200, data };
+    } catch (err) {
+        clearTimeout(timer);
+        const timedOut = err.name === 'AbortError';
+        return { ok: false, timedOut, status: timedOut ? 504 : 502, errorMessage: timedOut ? 'PROVIDER_TIMEOUT' : err.message };
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const WEB_SEARCH_TOOL = {
     type: 'function',
