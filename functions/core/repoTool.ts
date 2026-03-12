@@ -46,10 +46,9 @@ Deno.serve(async (req) => {
         // ── LIST ──────────────────────────────────────────────────────────────
         if (op === 'list') {
             const cleanPath = path.replace(/^\/+|\/+$/g, '');
-            // GitHub API supports ?page and ?per_page for directory listings
             const url = cleanPath
-                ? `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=${ref}&page=${page}&per_page=${per_page}`
-                : `https://api.github.com/repos/${owner}/${repo}/contents?ref=${ref}&page=${page}&per_page=${per_page}`;
+                ? `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}?ref=${ref}`
+                : `https://api.github.com/repos/${owner}/${repo}/contents?ref=${ref}`;
 
             const res = await fetch(url, { headers: ghHeaders });
             if (!res.ok) {
@@ -66,8 +65,16 @@ Deno.serve(async (req) => {
                 sha:  item.sha
             }));
 
-            // has_more: if we got exactly per_page items, there may be more
-            const has_more = allItems.length === per_page;
+            if (allItems.length > MAX_LIST_ITEMS) {
+                return Response.json({
+                    ok: false,
+                    source: 'GITHUB_REPO',
+                    error_code: 'OUTPUT_TRUNCATION',
+                    retryable: true,
+                    item_count: allItems.length,
+                    hint: `Directory contains ${allItems.length} entries (limit: ${MAX_LIST_ITEMS}). Use a narrower path (e.g. "${cleanPath}/subdir").`
+                });
+            }
 
             return Response.json({
                 ok: true,
@@ -76,9 +83,7 @@ Deno.serve(async (req) => {
                 path: cleanPath || '(root)',
                 ref,
                 items: allItems,
-                page,
-                per_page,
-                has_more
+                item_count: allItems.length
             });
         }
 
