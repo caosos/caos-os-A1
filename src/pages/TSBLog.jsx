@@ -60,7 +60,7 @@ export default function TSBLog() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS TSB Log</h1>
             <p className="text-red-300">Troubleshooting Bulletins — Permanent Failure & Fix Records</p>
-            <p className="text-gray-400 text-xs mt-1">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. TSB-001 through TSB-029.</p>
+            <p className="text-gray-400 text-xs mt-1">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. TSB-001 through TSB-034.</p>
           </div>
 
           <Section title="TSB — Troubleshooting Bulletins (Known Issues and Fixes)" color="red">
@@ -1083,6 +1083,121 @@ Phase 0 Verification (Mar 9, 2026):
 Line count after fix: ~925 lines (grown from 669 — instrumentation + TRH + MBCR + Phase 0)
 
 Status:    FIXED. Pipeline online. Phase 0 observability confirmed. routeRequest preserved.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-033 — generalInference P0 Timeout Patch: Typed Provider Error Taxonomy + AbortController</span>
+                  <Tag label="LIVE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 12, 2026
+Component: functions/core/generalInference
+Proven failure artifact:
+  { error_code: "SERVER_ERROR", stage: "OPENAI_CALL",
+    request_id: "fd7fdb34-69df-4588-a482-5528c2da56c8", response_time_ms: 69210 }
+
+Symptom:
+  Non-admin inference calls (generalInference) stalled for 69s+ before returning
+  a generic SERVER_ERROR at stage OPENAI_CALL. The full platform kill window was
+  consumed before any typed error could surface. hybridMessage had no visibility
+  into whether the failure was a network drop, provider timeout, or HTTP error.
+
+Root Cause:
+  functions/core/generalInference called fetch(OPENAI_API, ...) with NO AbortController
+  and NO timeout. Any slow/hung OpenAI provider response stalled the pipeline indefinitely.
+  The only exit was the platform kill window (~300s) or a TCP-level timeout (OS-dependent).
+  Return on non-2xx was a generic { error: "OpenAI error: ..." } with no typed taxonomy.
+
+  Note: core/repoInference (admin path) already had openaiFetchWithTimeout (TSB-029/032).
+  generalInference was the only unpatched path.
+
+Fix (single-file patch — hybridMessage UNTOUCHED):
+  1. openaiCallWithTimeout(openaiKey, requestBody) inlined in generalInference:
+       — AbortController + timer = setTimeout(() => controller.abort(), 55000)
+       — signal passed to fetch()
+       — clearTimeout on every exit path
+       — payload_bytes_est = JSON.stringify(requestBody).length
+       — provider_request_elapsed_ms = Date.now() - callStart
+
+  2. Typed error taxonomy (deterministic, portable):
+       PROVIDER_TIMEOUT      — err.name === 'AbortError'
+       PROVIDER_HTTP_ERROR   — response.ok === false
+                               includes: provider_http_status, provider_response_received=true
+       PROVIDER_NETWORK_ERROR — non-Abort fetch throw
+                               provider_response_received=false
+
+  3. Success response now includes:
+       ok:true, provider_request_elapsed_ms, provider_timeout_ms, payload_bytes_est
+
+  4. All error returns standardized to envelope:
+       { ok:false, error_code, stage:'OPENAI_CALL', message, provider_* fields }
+
+  5. TOOL_LOOP_EXHAUSTED + INTERNAL_ERROR also standardized to same envelope shape.
+  No retries. No model fallback. No multi-layer changes.
+
+FunctionManifest: core/generalInference → sha256:206ac9dbf7a5df7f661c3a42dd2eb0b7b040516f19a0624acad90b33017b2d80
+
+Acceptance:
+  Test 1 (success): non-error response with provider_request_elapsed_ms present ✅
+  Test 2 (timeout proof): error_code=PROVIDER_TIMEOUT expected before platform kill window
+  Test 3 (heavy): deterministically one of: success | PROVIDER_TIMEOUT | PROVIDER_HTTP_ERROR
+Status:    LIVE ✅ — deployed and registered in FunctionManifest.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-034 — FunctionManifest Governance Purge + runtimeRegistry Actor Hardening</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 12, 2026
+Component: FunctionManifest entity + functions/core/runtimeRegistry + functions/core/repoTool
+
+Symptom 1 — Governance drift:
+  FunctionManifest contained legacy, test, and poison entries with fabricated hashes,
+  wrong deployment timestamps, and caller-provided actor fields (e.g. "system", "test-probe").
+  This violated the governance invariant that every registered function have a verified
+  content hash and a traceable, auth-derived actor.
+
+Symptom 2 — Actor trust gap:
+  runtimeRegistry's 'record' action accepted the caller's actor field from the request body.
+  Any admin user could register a manifest entry with an arbitrary actor value — defeating
+  the audit trail. There was no server-side enforcement that actor = authenticated user.
+
+Root Cause:
+  — FunctionManifest accumulated entries from sessions where content and actor were not
+    verified server-side. Test probes and legacy backfills added arbitrary actor values.
+  — runtimeRegistry trusted caller-supplied actor without any validation against the
+    authenticated identity. This was a latent design gap from initial implementation.
+
+Fix:
+  1. Full FunctionManifest purge: all records deleted. Confirmed empty state before re-registration.
+
+  2. runtimeRegistry hardened (record action):
+       const actor = user.email;  // ALWAYS auth-derived — caller-provided value ignored
+     Any actor field in the request body is silently discarded.
+     This is a breaking change for any client passing actor manually — intentional by design.
+
+  3. Re-registration of production entries with real content hashes:
+       core/repoInference    → sha256:f20904fec9ff650593bac6e9476bb76e794b4bb4c4352548f3233e1108820381
+                               notes: BACKFILLED_REAL_HASH_UNKNOWN_DATE
+       core/repoTool         → sha256:ac0d2d779a692b28e3ec0064755fc16917d9ee807af3a0ff26ffae09f05c6325
+                               notes: BACKFILLED_REAL_HASH_UNKNOWN_DATE
+       core/generalInference → sha256:206ac9dbf7a5df7f661c3a42dd2eb0b7b040516f19a0624acad90b33017b2d80
+                               notes: P0_TIMEOUT_PATCH (see TSB-033)
+       All entries: actor = mytaxicloud@gmail.com (auth-derived)
+
+  4. repoTool incidental hardening:
+     OUTPUT_TRUNCATION guard added — MAX_LIST_ITEMS = 200.
+     Directories with >200 entries now return:
+       { ok:false, source:'GITHUB_REPO', error_code:'OUTPUT_TRUNCATION', retryable:true,
+         item_count:N, hint: "Use a narrower path..." }
+     Previously: silently returned all items with no truncation signal to caller.
+
+Final State:
+  FunctionManifest: exactly 3 records. All with real hashes. All with auth-derived actors.
+  runtimeRegistry: actor enforcement is now server-side and non-bypassable by any admin caller.
+
+Status:    COMPLETE ✅`}</Code>
               </div>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
