@@ -134,12 +134,13 @@ Deno.serve(async (req) => {
 
             // Final answer — no tool calls
             if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
-                console.log('✅ [GENERAL_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens });
+                console.log('✅ [GENERAL_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens, provider_request_elapsed_ms: result.provider_request_elapsed_ms });
                 return Response.json({
-                    content: choice.message.content,
-                    usage: totalUsage,
-                    tool_rounds: round,
-                    tool_calls_log
+                    ok: true, content: choice.message.content, usage: totalUsage,
+                    tool_rounds: round, tool_calls_log,
+                    provider_request_elapsed_ms: result.provider_request_elapsed_ms,
+                    provider_timeout_ms: result.provider_timeout_ms,
+                    payload_bytes_est: result.payload_bytes_est
                 });
             }
 
