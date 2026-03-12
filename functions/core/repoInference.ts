@@ -145,39 +145,36 @@ Deno.serve(async (req) => {
 
         const body = await req.json();
         const { messages, model = 'gpt-5.2', max_tokens = 2000 } = body;
+        const request_id = crypto.randomUUID();
 
         if (!messages || !Array.isArray(messages)) {
-            return Response.json({ error: 'messages array required' }, { status: 400 });
+            return Response.json({ ok: false, request_id, error_code: 'INVALID_INPUT', stage: 'REPO_INFERENCE', message: 'messages array required', retryable: false }, { status: 400 });
         }
 
         const msgs = [...messages];
         let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
         const tool_calls_log = [];
+        const WALL_CLOCK_MS = 40000;
+        const loopStart = Date.now();
 
-        // Agentic loop — max 5 tool rounds
+        // Agentic loop — max 5 tool rounds, hard wall-clock budget of 40s
         for (let round = 0; round < 5; round++) {
-            const response = await fetch(OPENAI_API, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${openaiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model,
-                    messages: msgs,
-                    temperature: 0.7,
-                    max_completion_tokens: max_tokens,
-                    tools: REPO_TOOLS,
-                    tool_choice: 'auto'
-                })
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                return Response.json({ error: `OpenAI error: ${err.error?.message || response.statusText}` }, { status: 502 });
+            if (Date.now() - loopStart > WALL_CLOCK_MS) {
+                console.warn('⚠️ [REPO_INFERENCE_TIMEOUT]', { round, elapsed_ms: Date.now() - loopStart, request_id });
+                return Response.json({ ok: false, request_id, error_code: 'REPO_INFERENCE_TIMEOUT', stage: 'REPO_INFERENCE', message: 'PROVIDER_TIMEOUT: repo inference exceeded wall-clock budget', retryable: true, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart }, { status: 504 });
             }
 
-            const data = await response.json();
+            const result = await openaiFetchWithTimeout(openaiKey, {
+                model, messages: msgs, temperature: 0.7, max_completion_tokens: max_tokens,
+                tools: REPO_TOOLS, tool_choice: 'auto'
+            }, 38000);
+
+            if (!result.ok) {
+                console.error('🔥 [REPO_INFERENCE_FETCH_FAILED]', { round, timedOut: result.timedOut, status: result.status, request_id });
+                return Response.json({ ok: false, request_id, error_code: result.timedOut ? 'REPO_INFERENCE_TIMEOUT' : 'OPENAI_ERROR', stage: 'REPO_INFERENCE', message: result.timedOut ? 'PROVIDER_TIMEOUT' : result.errorMessage, retryable: result.timedOut, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart }, { status: result.status });
+            }
+
+            const data = result.data;
             if (data.usage) {
                 totalUsage.prompt_tokens     += data.usage.prompt_tokens     || 0;
                 totalUsage.completion_tokens += data.usage.completion_tokens || 0;
