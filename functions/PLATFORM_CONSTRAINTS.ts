@@ -1,1 +1,1 @@
-Deno.serve(() => new Response("see components/docs/PlatformConstraints", { status: 200 }));
+Deno.serve(() => new Response("deprecated stub — safe to delete if platform allows", { status: 410 }));
