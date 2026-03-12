@@ -50,6 +50,19 @@ Deno.serve(async (req) => {
         let receipt_written = false;
         let session_context_updated = false;
 
+        // ── Normalise latency_breakdown: hybridMessage sends t_* keys; schema uses *_ms keys ──
+        // TSB-LATENCY-FIX-v1: map t_openai_call → inference_ms, t_total → total_ms
+        // This was the root cause of all-null latency_breakdown in stored receipts.
+        const normalizedLatency = {
+            total_ms:      latency_breakdown?.t_total        ?? latency_breakdown?.total_ms        ?? null,
+            inference_ms:  latency_breakdown?.t_openai_call  ?? latency_breakdown?.inference_ms    ?? null,
+            selector_ms:   latency_breakdown?.selector_ms    ?? null,
+            context_load_ms: latency_breakdown?.t_profile_and_history_load ?? latency_breakdown?.context_load_ms ?? null,
+            recall_ms:     latency_breakdown?.recall_ms      ?? null,
+            boot_validation_ms: latency_breakdown?.boot_validation_ms ?? null,
+            tool_execution_ms:  latency_breakdown?.tool_execution_ms  ?? null,
+        };
+
         // ── DiagnosticReceipt write ──────────────────────────────────────────
         const receiptPayload = {
             request_id,
@@ -67,7 +80,7 @@ Deno.serve(async (req) => {
             matched_memories,
             stage_last: 'RESPONSE_BUILD',
             selector_decision: { stage_last: 'RESPONSE_BUILD' },
-            latency_breakdown,
+            latency_breakdown: normalizedLatency,
             created_at: new Date().toISOString()
         };
 
