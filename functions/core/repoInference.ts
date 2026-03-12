@@ -127,6 +127,7 @@ async function dispatchTool(name, args, base44) {
 }
 
 Deno.serve(async (req) => {
+    const request_id = crypto.randomUUID();
     try {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
