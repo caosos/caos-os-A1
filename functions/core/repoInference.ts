@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
             }
         }
 
-        return Response.json({ ok: false, request_id, error_code: 'TOOL_LOOP_EXHAUSTED', stage: 'REPO_INFERENCE', message: 'Exceeded maximum tool rounds (5)', retryable: false, rounds_used: 5, t_repo_tool_total_ms: Date.now() - loopStart }, { status: 500 });
+        return Response.json({ ok: false, request_id, error_code: 'TOOL_LOOP_EXHAUSTED', stage: 'REPO_INFERENCE', message: 'Exceeded maximum tool rounds (5)', retryable: false, rounds_used: 5, t_repo_tool_total_ms: Date.now() - loopStart });
 
     } catch (err) {
         console.error('🔥 [REPO_INFERENCE_ERROR]', err.message);
