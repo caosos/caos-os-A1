@@ -1,2 +1,1 @@
-// PLATFORM_CONSTRAINTS — see components/docs/PlatformConstraints for canonical doc
-export default {};
+Deno.serve(() => new Response("see components/docs/PlatformConstraints", { status: 200 }));
