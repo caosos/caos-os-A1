@@ -17,7 +17,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 
-// ── openaiFetchWithTimeout (inlined — see PLATFORM_CONSTRAINTS.md) ───────────
+// ── openaiFetchWithTimeout (inlined — see components/docs/PlatformConstraints.jsx) ──
 // Wraps single OpenAI fetch with AbortController + hard deadline.
 // Returns: { ok, timedOut, status, data?, errorMessage? }
 async function openaiFetchWithTimeout(apiKey, body, timeoutMs = 38000) {
