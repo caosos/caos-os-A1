@@ -230,6 +230,6 @@ Deno.serve(async (req) => {
 
     } catch (err) {
         console.error('🔥 [REPO_INFERENCE_ERROR]', err.message);
-        return Response.json({ ok: false, request_id: crypto.randomUUID(), error_code: 'REPO_INFERENCE_ERROR', stage: 'REPO_INFERENCE', message: err.message, retryable: false }, { status: 500 });
+        return Response.json({ ok: false, request_id: crypto.randomUUID(), error_code: 'REPO_INFERENCE_ERROR', stage: 'REPO_INFERENCE', message: err.message, retryable: false });
     }
 });
