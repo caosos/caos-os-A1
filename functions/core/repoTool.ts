@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
 
             return Response.json({
                 ok: true,
+                source: 'GITHUB_REPO',
                 op: 'read',
                 path: cleanPath,
                 ref,
