@@ -4,11 +4,14 @@
  * Auth: any authenticated user OR valid X-Service-Key header (for pipeline calls).
  *
  * Input:
- *   { op: "list", path: string, ref?: string, page?: number, per_page?: number }
+ *   { op: "list", path: string, ref?: string }
+ *   NOTE: GitHub Contents API does not support pagination. Directories with >200
+ *   entries return OUTPUT_TRUNCATION. Use narrower paths to avoid this.
  *   { op: "read", path: string, ref?: string, offset?: number, max_bytes?: number }
  *
  * Output (list):
- *   { ok: true, source: "GITHUB_REPO", op, path, ref, items[], page, per_page, has_more }
+ *   { ok: true, source: "GITHUB_REPO", op, path, ref, items[], item_count }
+ *   { ok: false, source: "GITHUB_REPO", error_code: "OUTPUT_TRUNCATION", retryable: true, hint }
  * Output (read):
  *   { ok: true, source: "GITHUB_REPO", op, path, ref, result, sha, total_bytes, next_offset, done }
  */

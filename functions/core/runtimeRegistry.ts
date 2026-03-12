@@ -35,9 +35,19 @@ Deno.serve(async (req) => {
 
         // ── RECORD ────────────────────────────────────────────────────────────
         if (action === 'record') {
-            const { path, content, size_bytes, actor, notes } = body;
+            const { path, content, size_bytes, notes } = body;
+            // actor is ALWAYS derived from auth context — caller-provided actor is ignored.
+            const actor = user.email;
+
             if (!path) return Response.json({ ok: false, source: 'RUNTIME_MANIFEST', error_code: 'MISSING_PATH', message: 'path is required' }, { status: 400 });
-            if (!content && !body.artifact_hash) return Response.json({ ok: false, source: 'RUNTIME_MANIFEST', error_code: 'MISSING_CONTENT', message: 'content or artifact_hash required' }, { status: 400 });
+
+            // Enforce: content (hash+size computed server-side) OR artifact_hash+size_bytes (both required)
+            const hasContent = typeof content === 'string' && content.length > 0;
+            const hasPrecomputed = typeof body.artifact_hash === 'string' && typeof size_bytes === 'number';
+            if (!hasContent && !hasPrecomputed) {
+                return Response.json({ ok: false, source: 'RUNTIME_MANIFEST', error_code: 'MISSING_CONTENT',
+                    message: 'Provide content (string) for server-side hashing, OR both artifact_hash+size_bytes for precomputed.' }, { status: 400 });
+            }
 
             const artifact_hash = body.artifact_hash
                 ? (body.artifact_hash.startsWith('sha256:') ? body.artifact_hash : `sha256:${body.artifact_hash}`)
@@ -45,8 +55,7 @@ Deno.serve(async (req) => {
 
             const deployment_id = crypto.randomUUID();
             const deployed_at = new Date().toISOString();
-            const resolved_actor = actor || user.email;
-            const resolved_size = size_bytes ?? (content ? new TextEncoder().encode(content).length : 0);
+            const resolved_size = hasContent ? new TextEncoder().encode(content).length : size_bytes;
 
             // Upsert: update existing entry if path already exists
             const existing = await base44.asServiceRole.entities.FunctionManifest.filter({ path });
