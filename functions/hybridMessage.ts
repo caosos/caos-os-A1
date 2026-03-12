@@ -740,14 +740,16 @@ Deno.serve(async (req) => {
         } catch (inferenceError) {
             clearTimeout(openaiTimeout);
             const latency_ms = Date.now() - startTime;
-            const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted');
-            const stage = isTimeout ? 'OPENAI_TIMEOUT' : 'OPENAI_CALL';
-            console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, message: inferenceError.message, request_id, correlation_id, latency_ms });
+            const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
+            const stage = isTimeout ? 'INFERENCE' : 'OPENAI_CALL';
+            const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
+            console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
             return Response.json({
-                ok: false, stage, message: inferenceError.message,
+                ok: false, error_code, stage, message: inferenceError.message,
                 request_id, correlation_id, latency_ms,
+                retryable: isTimeout,
                 mode: 'ERROR', response_time_ms: latency_ms
-            }, { status: 502 });
+            }, { status: isTimeout ? 504 : 502 });
         }
         const inferenceMs = Date.now() - inferenceStart;
         const t_openai_call = inferenceMs;
