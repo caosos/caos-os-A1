@@ -108,28 +108,22 @@ Deno.serve(async (req) => {
 
         // Agentic loop — max 5 tool rounds
         for (let round = 0; round < 5; round++) {
-            const response = await fetch(OPENAI_API, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${openaiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model,
-                    messages: msgs,
-                    temperature: 0.7,
-                    max_completion_tokens: max_tokens,
-                    tools: TOOLS,
-                    tool_choice: 'auto'
-                })
+            const result = await openaiCallWithTimeout(openaiKey, {
+                model, messages: msgs, temperature: 0.7,
+                max_completion_tokens: max_tokens, tools: TOOLS, tool_choice: 'auto'
             });
 
-            if (!response.ok) {
-                const err = await response.json();
-                return Response.json({ error: `OpenAI error: ${err.error?.message || response.statusText}` }, { status: 502 });
+            if (!result.ok) {
+                console.error('🔥 [GENERAL_INFERENCE_PROVIDER_ERR]', { round, error_code: result.error_code, elapsed_ms: result.provider_request_elapsed_ms });
+                return Response.json({ ok: false, error_code: result.error_code, stage: result.stage,
+                    message: result.message, provider_http_status: result.provider_http_status,
+                    provider_response_received: result.provider_response_received,
+                    provider_request_elapsed_ms: result.provider_request_elapsed_ms,
+                    provider_timeout_ms: result.provider_timeout_ms,
+                    payload_bytes_est: result.payload_bytes_est }, { status: 502 });
             }
 
-            const data = await response.json();
+            const data = result.data;
             if (data.usage) {
                 totalUsage.prompt_tokens     += data.usage.prompt_tokens     || 0;
                 totalUsage.completion_tokens += data.usage.completion_tokens || 0;
