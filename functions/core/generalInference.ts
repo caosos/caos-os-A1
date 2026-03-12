@@ -11,6 +11,43 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+const PROVIDER_TIMEOUT_MS = 55000;
+
+async function openaiCallWithTimeout(openaiKey, requestBody) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+    const payload_bytes_est = JSON.stringify(requestBody).length;
+    const callStart = Date.now();
+    try {
+        const response = await fetch(OPENAI_API, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        const provider_request_elapsed_ms = Date.now() - callStart;
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+            return { ok: false, error_code: 'PROVIDER_HTTP_ERROR', stage: 'OPENAI_CALL',
+                message: err.error?.message || response.statusText,
+                provider_http_status: response.status, provider_response_received: true,
+                provider_request_elapsed_ms, provider_timeout_ms: PROVIDER_TIMEOUT_MS, payload_bytes_est };
+        }
+        const data = await response.json();
+        return { ok: true, data, provider_request_elapsed_ms, provider_timeout_ms: PROVIDER_TIMEOUT_MS, payload_bytes_est };
+    } catch (err) {
+        clearTimeout(timer);
+        const provider_request_elapsed_ms = Date.now() - callStart;
+        const timedOut = err.name === 'AbortError';
+        return { ok: false,
+            error_code: timedOut ? 'PROVIDER_TIMEOUT' : 'PROVIDER_NETWORK_ERROR',
+            stage: 'OPENAI_CALL',
+            message: timedOut ? 'PROVIDER_TIMEOUT' : err.message,
+            provider_response_received: false,
+            provider_request_elapsed_ms, provider_timeout_ms: PROVIDER_TIMEOUT_MS, payload_bytes_est };
+    }
+}
 
 const TOOLS = [
     {
