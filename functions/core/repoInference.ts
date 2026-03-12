@@ -10,7 +10,7 @@
  * Changes: inlined openaiFetchWithTimeout helper (AbortController + typed envelope);
  *          wall-clock budget guard (40s); envelope-consistent responses on all paths.
  * Note: openaiFetchWithTimeout is inlined to avoid cross-file import assumptions;
- *       see PLATFORM_CONSTRAINTS.md for runtime import support status.
+ *       see components/docs/PlatformConstraints.jsx for runtime import support status.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
