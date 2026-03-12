@@ -25,9 +25,8 @@ Deno.serve(async (req) => {
     try {
 
         const body = await req.json();
-        const { op, path = '', ref = 'main', offset = 0, max_bytes = 200000,
-                page = 1, per_page: rawPerPage = 50 } = body;
-        const per_page = Math.min(Math.max(1, rawPerPage), 100);
+        const { op, path = '', ref = 'main', offset = 0, max_bytes = 200000 } = body;
+        const MAX_LIST_ITEMS = 200;
 
         const owner = Deno.env.get('GITHUB_OWNER');
         const repo  = Deno.env.get('GITHUB_REPO');

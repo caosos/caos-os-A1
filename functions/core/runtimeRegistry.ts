@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
                 });
             }
 
-            return Response.json({ ok: true, source: 'RUNTIME_MANIFEST', deployment_id, artifact_hash, path, deployed_at, actor: resolved_actor });
+            return Response.json({ ok: true, source: 'RUNTIME_MANIFEST', deployment_id, artifact_hash, path, deployed_at, actor });
         }
 
         // ── LIST ──────────────────────────────────────────────────────────────
