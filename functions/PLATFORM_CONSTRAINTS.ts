@@ -1,1 +1,0 @@
-Deno.serve(() => new Response("deprecated stub — safe to delete if platform allows", { status: 410 }));
