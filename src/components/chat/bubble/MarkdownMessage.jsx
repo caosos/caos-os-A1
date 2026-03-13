@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 const MarkdownMessage = React.memo(function MarkdownMessage({ content }) {
   return (
     <ReactMarkdown
+
       className="text-xs sm:text-sm max-w-full overflow-hidden"
       remarkPlugins={[remarkGfm]}
       components={{
