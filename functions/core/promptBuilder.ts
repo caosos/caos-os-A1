@@ -83,6 +83,87 @@ OUTPUT FORMAT:
 - Match your format to the content. Use lists, headers, bullets, or prose — whatever best serves the response.
 - When asked for manifest/runtime/capability data, output ONLY verbatim key=value lines from the KV block below.
 
+EMOJI USAGE — ALWAYS ON:
+- Emojis are allowed and encouraged as semantic anchors (headers, markers, severity indicators).
+- Max 1 emoji per header.
+- Max 1 emoji per bullet cluster, EXCEPT severity ladders (🔴🟠🟡🟢 may all appear together).
+- Emojis must match the legend meanings below — never use an emoji with a different meaning.
+- Emojis are markers. They never replace technical wording — the word/phrase stands alone even if emoji removed.
+- No decorative or random emojis. Every emoji must carry a specific semantic signal from the legend.
+
+EMOJI LEGEND (canonical — single source of truth):
+🧠 Cognition / reasoning / knowledge
+  🧠 reasoning, synthesis, thinking artifact
+  💡 insight / key idea
+  🧭 intent / goal / direction / priority steering
+  🧩 module / component
+  🧱 architecture / layering
+  🧬 semantics / meaning / schema version
+  🧷 pin / "remember this" (NOT a memory write unless explicitly triggered)
+  🧵 thread / continuity / conversation state / pipeline stages
+  📎 attachment / artifact reference
+
+🔎 Discovery / investigation / inspection
+  🔎 inspect / investigate / look closer
+  🕵️ root-cause analysis
+  🗺️ map / call graph / system topology
+  🧾 receipt / evidence / audit record
+  🧪 experiment / test / test harness
+  🧰 toolbox / utilities
+  📏 measurement / timing / budgets
+  📊 metrics / dashboards
+  🧿 observability / trace correlation (request_id, stage timing)
+
+📋 Planning / execution / governance
+  📋 checklist / runbook
+  🗂️ inventory / file list / scope
+  🏁 stop gate / approval required
+  ✅ done / verified pass
+  ☑️ checked item (lighter-weight than ✅)
+  ⏳ waiting / pending / in progress
+  🔁 retry loop (use only when actually present)
+
+⚙️ Engineering / implementation
+  ⚙️ implementation mechanics
+  🔧 change / patch / fix
+  🔌 integration / adapter
+  🧹 cleanup / simplify / de-bloat
+  🧯 mitigation / containment fix
+  🧵 pipeline / stages
+
+🚨 Risk / severity / constraints
+  ⚠️ caution / constraint
+  🚫 forbidden / do not do
+  ⛔ hard stop / violation
+  🔴 critical / highest severity / dominant culprit
+  🟠 high / likely contributor
+  🟡 medium / possible contributor
+  🟢 low / unlikely contributor
+  🧨 blast radius / dangerous change
+  🛑 rate limit / throttling / backpressure
+
+⏱️ Time / latency / performance
+  ⏱️ timing / latency
+  🕒 elapsed time / wall clock
+  ⌛ timeout / budget exceeded
+  🧊 cold path / cache miss
+  🔥 hot path / critical path
+  🚦 gating / stage budget check
+
+🧾 Data / logging / IDs
+  🧾 receipt / audit
+  🆔 request_id / correlation_id
+  🧬 schema version
+  🗃️ persistence / DB
+
+📎 Communication / UX / docs
+  📣 announce / operator-facing note
+  📝 documentation / spec text
+  📌 important note
+  📍 location / file path / line range
+  📦 pasteable artifact / command block
+  🧑‍⚖️ policy / governance decision
+
 `;
 
         // ── 2. AUTHORITY KV (all capabilities explicit) ───────────────────────
