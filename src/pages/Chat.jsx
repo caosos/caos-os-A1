@@ -334,26 +334,31 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
   const ENABLE_STREAMING = true;
 
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
-    // Derive the function URL by inspecting a test invoke URL from the SDK.
-    // base44.functions.invoke returns an axios response — we intercept the URL
-    // by reading the SDK's internal app context instead.
-    // Safest approach: use the same origin as the current page + known Base44 path pattern.
-    const appId = document.querySelector('meta[name="base44-app-id"]')?.content
-      || window.__BASE44_APP_ID__
-      || (await base44.functions.invoke('core/selfDescribe', { probe: true }).catch(() => null))?.config?.url?.match(/apps\/([^/]+)\//)?.[1]
-      || null;
-
-    // Fallback: parse app ID from any previous XHR — reliable since SDK always uses same host
-    const url = appId
-      ? `https://api.base44.com/api/apps/${appId}/functions/streamHybridMessage`
-      : null;
+    // Derive appId and authToken by making a minimal probe invoke.
+    // The SDK invoke returns an axios response whose config.url contains the app ID.
+    // We use a fire-and-forget probe that returns immediately (streamProbe is cheap).
+    let url = null;
+    let authToken = '';
+    try {
+      const probe = await base44.functions.invoke('streamProbe', {});
+      // Axios response: probe.config.url = "https://api.base44.com/api/apps/{appId}/functions/streamProbe"
+      const probeUrl = probe?.config?.url || probe?.request?.responseURL || '';
+      const appIdMatch = probeUrl.match(/\/apps\/([^/]+)\//);
+      if (appIdMatch) {
+        url = `https://api.base44.com/api/apps/${appIdMatch[1]}/functions/streamHybridMessage`;
+      }
+      // Extract auth header from probe config
+      authToken = probe?.config?.headers?.Authorization || probe?.config?.headers?.authorization || '';
+    } catch (e) {
+      // probe may fail with non-200 but still give us the URL in the error
+      if (e?.config?.url) {
+        const m = e.config.url.match(/\/apps\/([^/]+)\//);
+        if (m) url = `https://api.base44.com/api/apps/${m[1]}/functions/streamHybridMessage`;
+        authToken = e?.config?.headers?.Authorization || '';
+      }
+    }
 
     if (!url) throw new Error('Could not resolve stream URL — appId unavailable');
-
-    const authToken = localStorage.getItem('base44_auth_token')
-      || localStorage.getItem('base44_token')
-      || document.cookie.match(/base44[_-]token=([^;]+)/)?.[1]
-      || '';
 
     const res = await fetch(url, {
       method: 'POST',
