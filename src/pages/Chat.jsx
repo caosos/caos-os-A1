@@ -331,7 +331,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
   // ── STREAMING TOGGLE — flip to false for instant rollback ───────────────────
   // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13
-  const ENABLE_STREAMING = true;
+  const ENABLE_STREAMING = false;
 
   // DEBUG_STREAM: set true to log delta-by-delta in console (temporary diagnostic)
   const DEBUG_STREAM = true;
