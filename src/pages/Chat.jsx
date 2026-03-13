@@ -333,24 +333,22 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
   // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13
   const ENABLE_STREAMING = true;
 
+  // DEBUG_STREAM: set true to log delta-by-delta in console (temporary diagnostic)
+  const DEBUG_STREAM = true;
+
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
     // Derive appId and authToken by making a minimal probe invoke.
-    // The SDK invoke returns an axios response whose config.url contains the app ID.
-    // We use a fire-and-forget probe that returns immediately (streamProbe is cheap).
     let url = null;
     let authToken = '';
     try {
       const probe = await base44.functions.invoke('streamProbe', {});
-      // Axios response: probe.config.url = "https://api.base44.com/api/apps/{appId}/functions/streamProbe"
       const probeUrl = probe?.config?.url || probe?.request?.responseURL || '';
       const appIdMatch = probeUrl.match(/\/apps\/([^/]+)\//);
       if (appIdMatch) {
         url = `https://api.base44.com/api/apps/${appIdMatch[1]}/functions/streamHybridMessage`;
       }
-      // Extract auth header from probe config
       authToken = probe?.config?.headers?.Authorization || probe?.config?.headers?.authorization || '';
     } catch (e) {
-      // probe may fail with non-200 but still give us the URL in the error
       if (e?.config?.url) {
         const m = e.config.url.match(/\/apps\/([^/]+)\//);
         if (m) url = `https://api.base44.com/api/apps/${m[1]}/functions/streamHybridMessage`;
@@ -373,24 +371,53 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    // buf accumulates raw bytes; we split on \n\n to get complete SSE frames
     let buf = '';
+    let deltaCount = 0;
+    let cumulativeLen = 0;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop();
-      let eventType = null;
-      for (const line of lines) {
-        if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); continue; }
-        if (line.startsWith('data: ')) {
-          let parsed;
-          try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
-          if (eventType === 'delta') onDelta(parsed);
-          else if (eventType === 'final') onFinal(parsed);
-          else if (eventType === 'error') onError(parsed);
-          eventType = null;
+
+      // Split on double-newline — the SSE frame boundary
+      const frames = buf.split('\n\n');
+      // Last element may be incomplete — keep it in buf
+      buf = frames.pop();
+
+      for (const frame of frames) {
+        if (!frame.trim()) continue;
+        // Parse each line in the frame
+        let eventType = null;
+        let dataLine = null;
+        for (const line of frame.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+          else if (line.startsWith('data: ')) dataLine = line.slice(6).trim();
+        }
+        if (!dataLine) continue;
+        let parsed;
+        try { parsed = JSON.parse(dataLine); } catch { continue; }
+
+        if (eventType === 'delta') {
+          deltaCount++;
+          cumulativeLen += (parsed.text || '').length;
+          if (DEBUG_STREAM) {
+            console.log('🌊 [STREAM_DELTA]', {
+              request_id: parsed.request_id,
+              delta_len: (parsed.text || '').length,
+              cumulative_len: cumulativeLen,
+              delta_n: deltaCount,
+              text_preview: (parsed.text || '').substring(0, 40)
+            });
+          }
+          onDelta(parsed);
+        } else if (eventType === 'final') {
+          if (DEBUG_STREAM) console.log('🏁 [STREAM_FINAL]', { request_id: parsed.request_id, total_deltas: deltaCount, cumulative_len: cumulativeLen });
+          onFinal(parsed);
+        } else if (eventType === 'error') {
+          if (DEBUG_STREAM) console.warn('🔥 [STREAM_ERROR_EVENT]', parsed);
+          onError(parsed);
         }
       }
     }
