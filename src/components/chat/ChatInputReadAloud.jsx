@@ -39,6 +39,7 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
 
   try {
     const cleanText = lastAIMessage
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
