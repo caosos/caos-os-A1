@@ -14,6 +14,21 @@ import CopyBlock from '@/components/chat/CopyBlock';
 import YouTubeEmbed from '@/components/chat/YouTubeEmbed';
 
 export default function MessageContent({ message, isUser, downloadFile }) {
+  // ── STREAMING FAST PATH ───────────────────────────────────────────────────
+  // While streaming, skip all regex parsing and ReactMarkdown re-renders.
+  // Render plain text with a blinking cursor; switch to full render on completion.
+  if (message.streaming) {
+    return (
+      <div className="space-y-3">
+        <div className="text-xs sm:text-sm leading-relaxed text-white/90 whitespace-pre-wrap break-words">
+          {message.content || ''}
+          <span className="inline-block w-[2px] h-[1em] bg-blue-400 ml-[1px] align-middle animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   let content = message.content || '';
 
   if (content && content.includes('WROTE:')) {
