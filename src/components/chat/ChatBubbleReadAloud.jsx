@@ -24,6 +24,7 @@ export async function handleReadAloud(message, messageId, onPlaybackStart, onPla
     onPlaybackStart?.();
 
     const cleanText = message
+      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
