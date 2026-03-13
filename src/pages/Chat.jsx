@@ -329,6 +329,57 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
     }
   };
 
+  // ── STREAMING TOGGLE — flip to false for instant rollback ───────────────────
+  // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13
+  const ENABLE_STREAMING = true;
+
+  const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
+    const { getFunctionUrl } = await import('@/api/base44Client').then(m => m);
+    const base44mod = await import('@/api/base44Client').then(m => m.base44);
+    // Build the stream URL from the SDK's base URL pattern
+    const sdkBase = base44mod._config?.baseUrl || window.location.origin;
+    const appId = base44mod._config?.appId;
+    // Construct direct fetch URL for SSE — SDK invoke() buffers, so we use fetch directly
+    const url = `https://api.base44.com/api/apps/${appId}/functions/streamHybridMessage`;
+
+    const authToken = base44mod._getAuthToken?.() || localStorage.getItem('base44_token') || '';
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authToken ? `Bearer ${authToken}` : '',
+      },
+      body: JSON.stringify({ input: content, session_id: conversationId, file_urls: fileUrls })
+    });
+
+    if (!res.ok || !res.body) throw new Error(`Stream HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      let eventType = null;
+      for (const line of lines) {
+        if (line.startsWith('event: ')) { eventType = line.slice(7).trim(); continue; }
+        if (line.startsWith('data: ')) {
+          let parsed;
+          try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
+          if (eventType === 'delta') onDelta(parsed);
+          else if (eventType === 'final') onFinal(parsed);
+          else if (eventType === 'error') onError(parsed);
+          eventType = null;
+        }
+      }
+    }
+  };
+
   const handleSendMessage = async (content, fileUrls = [], selectedAgents = null) => {
     if (!user || !content?.trim() && fileUrls?.length === 0) return;
     lastSendRef.current = { content, fileUrls, selectedAgents };
