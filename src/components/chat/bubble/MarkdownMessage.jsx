@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 // Verbatim extraction of the ReactMarkdown block from ChatBubble.jsx — Commit 3
 // No logic changes, no wrapper DOM changes, identical markdown component overrides.
 
-export default function MarkdownMessage({ content }) {
+const MarkdownMessage = React.memo(function MarkdownMessage({ content }) {
   return (
     <ReactMarkdown
       className="text-xs sm:text-sm max-w-full overflow-hidden"
