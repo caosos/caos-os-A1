@@ -81,4 +81,6 @@ const MarkdownMessage = React.memo(function MarkdownMessage({ content }) {
       {content}
     </ReactMarkdown>
   );
-}
+});
+
+export default MarkdownMessage;
