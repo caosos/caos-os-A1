@@ -545,7 +545,68 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         currentLane
       });
 
-      const response = await base44.functions.invoke('hybridMessage', {
+      // ── STREAMING PATH (opt-in, reversible) ─────────────────────────────────
+      let response = null;
+      if (ENABLE_STREAMING && !isGuestMode) {
+        let streamFailed = false;
+        let streamingAiMsgId = 'stream_ai_' + Date.now();
+        // Insert empty assistant bubble immediately
+        setMessages(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []), {
+            id: streamingAiMsgId, conversation_id: conversationId, role: 'assistant',
+            content: '', streaming: true, timestamp: new Date().toISOString()
+          }]
+        }));
+        try {
+          await handleStreamingMessage(
+            fullMessage, fileUrls, conversationId,
+            // onDelta
+            ({ text }) => {
+              setMessages(prev => {
+                const msgs = prev[conversationId] || [];
+                return { ...prev, [conversationId]: msgs.map(m => m.id === streamingAiMsgId ? { ...m, content: m.content + text } : m) };
+              });
+              if (isAtBottomRef.current) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            },
+            // onFinal
+            (finalData) => {
+              setMessages(prev => {
+                const msgs = prev[conversationId] || [];
+                return { ...prev, [conversationId]: msgs.map(m => m.id === streamingAiMsgId ? { ...m, streaming: false, response_time_ms: finalData.response_time_ms } : m) };
+              });
+              if (finalData.token_usage?.prompt_tokens) setWcwState({ used: finalData.token_usage.prompt_tokens, budget: 200000 });
+              setConversations(prev => {
+                const aiMsg = (messages[conversationId] || []).find(m => m.id === streamingAiMsgId);
+                const preview = aiMsg?.content?.substring(0, 100) || '';
+                return [{ ...prev.find(c => c.id === conversationId), last_message_preview: preview, last_message_time: new Date().toISOString() }, ...prev.filter(c => c.id !== conversationId)];
+              });
+              base44.entities.Conversation.update(conversationId, { last_message_preview: '', last_message_time: new Date().toISOString() }).catch(() => {});
+              localStorage.removeItem('caos_last_message_backup');
+              clearTimeout(timeoutId);
+              setIsLoading(false);
+            },
+            // onError
+            ({ error_code, stage }) => {
+              streamFailed = true;
+              console.warn('⚠️ [STREAM_EVENT_ERROR]', { error_code, stage });
+            }
+          );
+        } catch (streamErr) {
+          streamFailed = true;
+          console.warn('⚠️ [STREAM_FETCH_FAILED] Falling back to hybridMessage:', streamErr.message);
+        }
+
+        if (streamFailed) {
+          // Remove the partial streaming bubble and fall through to hybridMessage
+          setMessages(prev => ({ ...prev, [conversationId]: (prev[conversationId] || []).filter(m => m.id !== streamingAiMsgId) }));
+        } else {
+          // Streaming succeeded — skip the hybridMessage invoke below
+          return;
+        }
+      }
+      // ── NON-STREAMING PATH (fallback / ENABLE_STREAMING=false / guest mode) ──
+      response = await base44.functions.invoke('hybridMessage', {
         input: fullMessage,
         session_id: conversationId,
         file_urls: fileUrls
