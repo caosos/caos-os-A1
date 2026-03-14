@@ -34,15 +34,22 @@ Deno.serve(async (req) => {
     const ago7d      = new Date(now - 7  * 24 * 60 * 60 * 1000);
     const ago15min   = new Date(now - 15 * 60 * 1000);
 
-    // Fetch all data in parallel
-    const [users, messages, receipts, errors, loginRecords, supportTickets] = await Promise.all([
+    // Fetch all data in parallel — list() may return array or {results:[]}
+    const unwrap = (r) => Array.isArray(r) ? r : (r?.results || []);
+    const [usersRaw, messagesRaw, receiptsRaw, errorsRaw, loginRecordsRaw, supportTicketsRaw] = await Promise.all([
       base44.asServiceRole.entities.User.list(),
-      base44.asServiceRole.entities.Message.list(),
-      base44.asServiceRole.entities.DiagnosticReceipt.list(),
-      base44.asServiceRole.entities.ErrorLog.list(),
-      base44.asServiceRole.entities.UserLogin.list(),
+      base44.asServiceRole.entities.Message.list('-created_date', 500),
+      base44.asServiceRole.entities.DiagnosticReceipt.list('-created_date', 500),
+      base44.asServiceRole.entities.ErrorLog.list('-created_date', 200),
+      base44.asServiceRole.entities.UserLogin.list('-created_date', 500),
       base44.asServiceRole.entities.SupportTicket.list(),
     ]);
+    const users = unwrap(usersRaw);
+    const messages = unwrap(messagesRaw);
+    const receipts = unwrap(receiptsRaw);
+    const errors = unwrap(errorsRaw);
+    const loginRecords = unwrap(loginRecordsRaw);
+    const supportTickets = unwrap(supportTicketsRaw);
 
     // ── USER METRICS ──────────────────────────────────────────────
     const registeredUsers = users.filter(u => u.email);
