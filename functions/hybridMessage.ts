@@ -243,7 +243,203 @@ async function buildSystemPromptViaModule(base44, { userName, matchedMemories, u
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 5 — SHORT-CIRCUIT HANDLERS
+// SECTION 5 — ORCHESTRATION HANDLERS
+// (Large clusters extracted for main-handler readability. Zero semantic changes.)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── CTC pipeline handler ──────────────────────────────────────────────────────
+async function handleCTC({ base44, user, input, startTime, session_id, debugMode }) {
+    let arcBlock = '';
+    let ctcInjectionMeta = [];
+    const ctcStartTime = Date.now();
+    const ctcSignalDetected = shouldRunCTC(input);
+    const debug_ctc = { ctc_signal_detected: ctcSignalDetected, ctc_skipped_reason: null, ctc_elapsed_ms: 0, intent_truncated: false, intent_chars: 0, budget_exceeded_stages: [], gating_decisions: {} };
+    
+    if (ctcSignalDetected && (Date.now() - startTime) < BUDGET_MS) {
+        try {
+            const ctcInput = input.slice(0, INTENT_MAX_CHARS);
+            debug_ctc.intent_truncated = input.length > INTENT_MAX_CHARS;
+            debug_ctc.intent_chars = ctcInput.length;
+            setStage(STAGES.CTC_INTENT);
+            const intentRes = await base44.functions.invoke('context/crossThreadIntent', { input: ctcInput, session_id, user_email: user.email });
+            const intentData = intentRes?.data || {};
+            const hydrationStartTime = Date.now();
+            if (intentData.cross_thread && intentData.thread_ids?.length > 0 &&
+                (Date.now() - startTime) < BUDGET_MS &&
+                (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
+                setStage(STAGES.CTC_HYDRATE);
+                const hydrateRes = await base44.functions.invoke('context/threadHydrator', { thread_ids: intentData.thread_ids, user_email: user.email });
+                const hydrateData = hydrateRes?.data || {};
+                if (hydrateData.hydrated?.length > 0 && (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
+                    setStage(STAGES.ARC_ASSEMBLE);
+                    const arcRes = await base44.functions.invoke('context/arcAssembler', { hydrated: hydrateData.hydrated, current_session_id: session_id, arc_token_budget: 2000 });
+                    const arcData = arcRes?.data || {};
+                    arcBlock = arcData.arc_block || '';
+                    ctcInjectionMeta = arcData.injection_meta || [];
+                    debug_ctc.ctc_elapsed_ms = Date.now() - ctcStartTime;
+                    console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens, elapsed_ms: debug_ctc.ctc_elapsed_ms });
+                } else if (hydrateData.hydrated?.length > 0) {
+                    debug_ctc.budget_exceeded_stages.push('ARC_ASSEMBLE');
+                    console.log('⏭️ [ARC_ASSEMBLE_SKIPPED] Hydration budget exceeded');
+                }
+            } else if (intentData.cross_thread) {
+                debug_ctc.ctc_skipped_reason = (Date.now() - startTime) >= BUDGET_MS ? 'total_budget_exceeded' : 'hydration_budget_exceeded';
+                debug_ctc.budget_exceeded_stages.push('CTC_HYDRATE');
+                console.log('⏭️ [CTC_HYDRATE_SKIPPED]', debug_ctc.ctc_skipped_reason);
+            }
+        } catch (ctcErr) {
+            console.warn('⚠️ [CTC_NONFATAL]', ctcErr.message);
+            debug_ctc.gating_decisions.ctc_error = ctcErr.message;
+        }
+    } else if (!ctcSignalDetected) {
+        debug_ctc.ctc_skipped_reason = 'no_explicit_signal';
+        debug_ctc.gating_decisions.signal_gate = 'blocked';
+        console.log('⏭️ [CTC_SKIPPED] No explicit signal detected');
+    } else {
+        debug_ctc.ctc_skipped_reason = 'total_budget_exceeded';
+        debug_ctc.gating_decisions.time_gate = 'blocked';
+        console.log('⏭️ [CTC_SKIPPED] Budget exceeded');
+    }
+    debug_ctc.ctc_elapsed_ms = Date.now() - ctcStartTime;
+    return { arcBlock, ctcInjectionMeta, debug_ctc };
+}
+
+// ── Thread augmentations (TRH + MBCR) handler ────────────────────────────────
+async function handleThreadAugmentations({ base44, session_id, input, startTime, debugMode }) {
+    const execution_meta = { trh: { outcome: 'not_triggered' } };
+    let trhSummaryMessage = null;
+    
+    // TRH stage
+    const TRH_TRIGGER = /\b(pr[23]|rehydrate|catch me up|update summary|what did we decide)\b/i;
+    if (session_id && TRH_TRIGGER.test(input)) {
+        execution_meta.trh.triggered = true;
+        execution_meta.trh.invoked = true;
+        try {
+            const trhRes = await Promise.race([
+                base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
+                new Promise(r => setTimeout(() => r(null), 2000))
+            ]);
+            if (trhRes === null) {
+                execution_meta.trh.outcome = 'timeout';
+                console.warn('⚠️ [TRH_TIMEOUT]');
+            } else if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
+                execution_meta.trh.outcome = 'wrote_summary';
+                execution_meta.trh.wrote_summary = true;
+                trhSummaryMessage = { role: 'assistant', content: trhRes.data.summary_text };
+                execution_meta.trh.save_attempted = true;
+                base44.asServiceRole.entities.Message.create({
+                    conversation_id: session_id, role: 'assistant',
+                    content: trhRes.data.summary_text,
+                    timestamp: new Date().toISOString(),
+                    metadata_tags: ['THREAD_SUMMARY']
+                }).catch(e => console.warn('⚠️ [TRH_SAVE_NONFATAL]', e.message));
+                if (debugMode) console.log('[TRH_INJECTED]', { chars: trhRes.data.summary_text.length });
+            } else {
+                const skipReason = trhRes?.data?.meta?.skipReason || trhRes?.data?.meta?.reason || null;
+                execution_meta.trh.outcome = skipReason === 'fresh_summary_exists' ? 'skipped_fresh' : 'no_summary';
+                execution_meta.trh.reason = skipReason;
+                if (debugMode) console.log('[TRH_SKIPPED]', { reason: skipReason || 'null_response' });
+            }
+        } catch (e) {
+            execution_meta.trh.outcome = 'error';
+            execution_meta.trh.error = e.message;
+            console.warn('⚠️ [TRH_NONFATAL]', e.message);
+        }
+    }
+    
+    // MBCR stage
+    const NULL_MBCR = { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
+    const mbcrResult = session_id
+        ? await base44.functions.invoke('core/mbcrEngine', { thread_id: session_id, userText: input, debugMode }).then(r => r?.data ?? NULL_MBCR).catch(() => NULL_MBCR)
+        : NULL_MBCR;
+    
+    return { trhSummaryMessage, mbcrInjectedMessage: mbcrResult.message, mbcrDebug: mbcrResult.debug, execution_meta };
+}
+
+// ── Inference handler ────────────────────────────────────────────────────────
+async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime }) {
+    setStage(STAGES.OPENAI_CALL);
+    let reply, openaiUsage;
+    const inferenceStart = Date.now();
+    const openaiAbort = new AbortController();
+    const INFERENCE_TIMEOUT_MS = 45000;
+    const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
+    emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length } });
+    
+    try {
+        if (user.role === 'admin') {
+            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
+            reply = riRes?.data?.content;
+            openaiUsage = riRes?.data?.usage || null;
+        } else {
+            const giRes = await base44.functions.invoke('core/generalInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
+            reply = giRes?.data?.content;
+            openaiUsage = giRes?.data?.usage || null;
+        }
+        clearTimeout(openaiTimeout);
+        emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference complete', { data: { reply_chars: reply?.length, prompt_tokens: openaiUsage?.prompt_tokens, completion_tokens: openaiUsage?.completion_tokens } });
+    } catch (inferenceError) {
+        clearTimeout(openaiTimeout);
+        const latency_ms = Date.now() - startTime;
+        const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
+        const stage = isTimeout ? 'INFERENCE' : 'OPENAI_CALL';
+        const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
+        console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
+        emitEvent(base44, request_id, session_id, startTime, stage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
+        throw { latency_ms, isTimeout, stage, error_code, message: inferenceError.message };
+    }
+    const inferenceMs = Date.now() - inferenceStart;
+    if (!reply) throw new Error('No response from OpenAI');
+    return { reply, openaiUsage, inferenceMs };
+}
+
+// ── Message save handler ─────────────────────────────────────────────────────
+async function handleMessageSave({ base44, session_id, input, reply, startTime }) {
+    setStage(STAGES.MESSAGE_SAVE);
+    if (!session_id) return { latency: Date.now() - startTime };
+    
+    try {
+        const userTags = extractMetadataTags(input);
+        const asstTags = extractMetadataTags(reply);
+        await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: [], timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) });
+        await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
+        console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length });
+    } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
+    return { latency: Date.now() - startTime };
+}
+
+// ── Response payload builder ─────────────────────────────────────────────────
+function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages }) {
+    const response = {
+        reply, mode: 'GEN', request_id, correlation_id,
+        route: routingDecision.route, model_used: RESOLVED_MODEL,
+        server_time, response_time_ms: responseTime, tool_calls: [],
+        execution_meta,
+        wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+        execution_receipt: {
+            request_id, correlation_id, session_id,
+            history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
+            matched_memories: matchedMemories.length, heuristics_intent: hIntent,
+            heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
+            model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
+            latency_ms: responseTime,
+            latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
+            sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
+            token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
+            wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+            ctc_injected: ctcInjectionMeta.length > 0,
+            ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
+            ctc_injection_meta: ctcInjectionMeta,
+            thread_state_used: !!threadStateBlock,
+            thread_state_seq: tsResult?.data?.last_seq || null
+        }
+    };
+    if (debugMode) response.debug_meta = debug_meta;
+    return response;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 6 — SHORT-CIRCUIT HANDLERS
 // (Extracted from main handler for readability. Same logic, same I/O.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -518,59 +714,9 @@ Deno.serve(async (req) => {
         const threadStateBlock = (tsData?.ok && tsData.last_seq >= rawHistory.length) ? tsData.block : '';
 
         // ── STAGE: CTC — Cross-Thread Context ────────────────────────────────
-        // G1: Explicit gating. G2: Conditional execution. G4: Total budget guard. G5: Hydration budget.
-        let arcBlock = '';
-        let ctcInjectionMeta = [];
-        const ctcStartTime = Date.now();
-        const ctcSignalDetected = shouldRunCTC(input);
-        debug_meta.ctc_signal_detected = ctcSignalDetected;
-
-        if (ctcSignalDetected && (Date.now() - startTime) < BUDGET_MS) {
-            try {
-                const ctcInput = input.slice(0, INTENT_MAX_CHARS);
-                debug_meta.intent_truncated = input.length > INTENT_MAX_CHARS;
-                debug_meta.intent_chars = ctcInput.length;
-                setStage(STAGES.CTC_INTENT);
-                const intentRes = await base44.functions.invoke('context/crossThreadIntent', { input: ctcInput, session_id, user_email: user.email });
-                const intentData = intentRes?.data || {};
-                const hydrationStartTime = Date.now();
-                if (intentData.cross_thread && intentData.thread_ids?.length > 0 &&
-                    (Date.now() - startTime) < BUDGET_MS &&
-                    (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
-                    setStage(STAGES.CTC_HYDRATE);
-                    const hydrateRes = await base44.functions.invoke('context/threadHydrator', { thread_ids: intentData.thread_ids, user_email: user.email });
-                    const hydrateData = hydrateRes?.data || {};
-                    if (hydrateData.hydrated?.length > 0 && (Date.now() - hydrationStartTime) < CTC_HYDRATION_BUDGET_MS) {
-                        setStage(STAGES.ARC_ASSEMBLE);
-                        const arcRes = await base44.functions.invoke('context/arcAssembler', { hydrated: hydrateData.hydrated, current_session_id: session_id, arc_token_budget: 2000 });
-                        const arcData = arcRes?.data || {};
-                        arcBlock = arcData.arc_block || '';
-                        ctcInjectionMeta = arcData.injection_meta || [];
-                        debug_meta.ctc_elapsed_ms = Date.now() - ctcStartTime;
-                        console.log('🏗️ [CTC_INJECTED]', { seeds: arcData.seeds_included, tokens: arcData.estimated_tokens, elapsed_ms: debug_meta.ctc_elapsed_ms });
-                    } else if (hydrateData.hydrated?.length > 0) {
-                        debug_meta.budget_exceeded_stages.push('ARC_ASSEMBLE');
-                        console.log('⏭️ [ARC_ASSEMBLE_SKIPPED] Hydration budget exceeded');
-                    }
-                } else if (intentData.cross_thread) {
-                    debug_meta.ctc_skipped_reason = (Date.now() - startTime) >= BUDGET_MS ? 'total_budget_exceeded' : 'hydration_budget_exceeded';
-                    debug_meta.budget_exceeded_stages.push('CTC_HYDRATE');
-                    console.log('⏭️ [CTC_HYDRATE_SKIPPED]', debug_meta.ctc_skipped_reason);
-                }
-            } catch (ctcErr) {
-                console.warn('⚠️ [CTC_NONFATAL]', ctcErr.message);
-                debug_meta.gating_decisions.ctc_error = ctcErr.message;
-            }
-        } else if (!ctcSignalDetected) {
-            debug_meta.ctc_skipped_reason = 'no_explicit_signal';
-            debug_meta.gating_decisions.signal_gate = 'blocked';
-            console.log('⏭️ [CTC_SKIPPED] No explicit signal detected');
-        } else {
-            debug_meta.ctc_skipped_reason = 'total_budget_exceeded';
-            debug_meta.gating_decisions.time_gate = 'blocked';
-            console.log('⏭️ [CTC_SKIPPED] Budget exceeded');
-        }
-        debug_meta.ctc_elapsed_ms = Date.now() - ctcStartTime;
+        const ctcResult = await handleCTC({ base44, user, input, startTime, session_id, debugMode });
+        const { arcBlock, ctcInjectionMeta } = ctcResult;
+        Object.assign(debug_meta, ctcResult.debug_ctc);
 
         // ── Memory recall (inlined — no network) ─────────────────────────────
         const isRecallQuery = detectRecallIntent(input);
@@ -583,53 +729,9 @@ Deno.serve(async (req) => {
             ).slice(0, 5);
         }
 
-        // ── STAGE: TRH — Thread Rehydration ──────────────────────────────────
-        const TRH_TRIGGER = /\b(pr[23]|rehydrate|catch me up|update summary|what did we decide)\b/i;
-        let trhSummaryMessage = null;
-        const execution_meta = { trh: { outcome: 'not_triggered' } };
-        if (session_id && TRH_TRIGGER.test(input)) {
-            execution_meta.trh.triggered = true;
-            execution_meta.trh.invoked = true;
-            try {
-                const trhRes = await Promise.race([
-                    base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
-                    new Promise(r => setTimeout(() => r(null), 2000))
-                ]);
-                if (trhRes === null) {
-                    execution_meta.trh.outcome = 'timeout';
-                    console.warn('⚠️ [TRH_TIMEOUT]');
-                } else if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
-                    execution_meta.trh.outcome = 'wrote_summary';
-                    execution_meta.trh.wrote_summary = true;
-                    trhSummaryMessage = { role: 'assistant', content: trhRes.data.summary_text };
-                    execution_meta.trh.save_attempted = true;
-                    base44.asServiceRole.entities.Message.create({
-                        conversation_id: session_id, role: 'assistant',
-                        content: trhRes.data.summary_text,
-                        timestamp: new Date().toISOString(),
-                        metadata_tags: ['THREAD_SUMMARY']
-                    }).catch(e => console.warn('⚠️ [TRH_SAVE_NONFATAL]', e.message));
-                    if (debugMode) console.log('[TRH_INJECTED]', { chars: trhRes.data.summary_text.length });
-                } else {
-                    const skipReason = trhRes?.data?.meta?.skipReason || trhRes?.data?.meta?.reason || null;
-                    execution_meta.trh.outcome = skipReason === 'fresh_summary_exists' ? 'skipped_fresh' : 'no_summary';
-                    execution_meta.trh.reason = skipReason;
-                    if (debugMode) console.log('[TRH_SKIPPED]', { reason: skipReason || 'null_response' });
-                }
-            } catch (e) {
-                execution_meta.trh.outcome = 'error';
-                execution_meta.trh.error = e.message;
-                console.warn('⚠️ [TRH_NONFATAL]', e.message);
-            }
-        }
-
-        // ── STAGE: MBCR — delegated to core/mbcrEngine ───────────────────────
-        const NULL_MBCR = { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
-        const mbcrResult = session_id
-            ? await base44.functions.invoke('core/mbcrEngine', { thread_id: session_id, userText: input, debugMode }).then(r => r?.data ?? NULL_MBCR).catch(() => NULL_MBCR)
-            : NULL_MBCR;
-        const mbcrInjectedMessage = mbcrResult.message;
-        const mbcrDebug = mbcrResult.debug;
+        // ── STAGE: TRH + MBCR — Thread Augmentations ────────────────────────
+        const augResult = await handleThreadAugmentations({ base44, session_id, input, startTime, debugMode });
+        const { trhSummaryMessage, mbcrInjectedMessage, mbcrDebug, execution_meta } = augResult;
 
         // ── STAGE: HEURISTICS ─────────────────────────────────────────────────
         setStage(STAGES.HEURISTICS);
@@ -689,41 +791,24 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
-        const inferenceStart = Date.now();
-        let reply, openaiUsage;
-        const openaiAbort = new AbortController();
-        const INFERENCE_TIMEOUT_MS = 45000;
-        const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
-        emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length } });
+        // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
+        let reply, openaiUsage, inferenceMs, t_openai_call;
         try {
-            if (user.role === 'admin') {
-                const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
-                reply = riRes?.data?.content;
-                openaiUsage = riRes?.data?.usage || null;
-            } else {
-                const giRes = await base44.functions.invoke('core/generalInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
-                reply = giRes?.data?.content;
-                openaiUsage = giRes?.data?.usage || null;
-            }
-            clearTimeout(openaiTimeout);
-            emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference complete', { data: { reply_chars: reply?.length, prompt_tokens: openaiUsage?.prompt_tokens, completion_tokens: openaiUsage?.completion_tokens } });
+            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
+            reply = inferResult.reply;
+            openaiUsage = inferResult.openaiUsage;
+            inferenceMs = inferResult.inferenceMs;
+            t_openai_call = inferenceMs;
         } catch (inferenceError) {
-            clearTimeout(openaiTimeout);
-            const latency_ms = Date.now() - startTime;
-            const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
-            const stage = isTimeout ? 'INFERENCE' : 'OPENAI_CALL';
-            const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
-            console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
-            emitEvent(base44, request_id, session_id, startTime, stage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
-            return Response.json({
-                ok: false, error_code, stage, message: inferenceError.message,
-                request_id, correlation_id, latency_ms, retryable: isTimeout,
-                mode: 'ERROR', response_time_ms: latency_ms
-            }, { status: isTimeout ? 504 : 502 });
+            if (inferenceError.latency_ms !== undefined) {
+                return Response.json({
+                    ok: false, error_code: inferenceError.error_code, stage: inferenceError.stage, message: inferenceError.message,
+                    request_id, correlation_id, latency_ms: inferenceError.latency_ms, retryable: inferenceError.isTimeout,
+                    mode: 'ERROR', response_time_ms: inferenceError.latency_ms
+                }, { status: inferenceError.isTimeout ? 504 : 502 });
+            }
+            throw inferenceError;
         }
-        const inferenceMs = Date.now() - inferenceStart;
-        const t_openai_call = inferenceMs;
-        if (!reply) throw new Error('No response from OpenAI');
 
         if (debugMode) {
             const mbcrHeader = `[MBCR] triggered=${mbcrDebug.triggered} retrieved=${mbcrDebug.retrievedCount} injected=${mbcrDebug.injected} tags=[${mbcrDebug.tags.join(',')}] query="${mbcrDebug.text_query}"\n\n`;
@@ -740,22 +825,12 @@ Deno.serve(async (req) => {
         console.log('📊 [WCW]', { wcw_budget: wcwBudget, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length });
 
-        // ── STAGE: MESSAGE_SAVE ───────────────────────────────────────────────
-        setStage(STAGES.MESSAGE_SAVE);
-        if (session_id) {
-            try {
-                const userTags = extractMetadataTags(input);
-                const asstTags = extractMetadataTags(reply);
-                await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: file_urls.length > 0 ? file_urls : undefined, timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) });
-                await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
-                console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length });
-            } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
-        }
-        const t_save_messages = Date.now() - startTime;
-
-        // ── STAGE: RESPONSE_BUILD ─────────────────────────────────────────────
-        setStage(STAGES.RESPONSE_BUILD);
+        // ── MESSAGE_SAVE + RESPONSE_BUILD ────────────────────────────────────
+        const saveResult = await handleMessageSave({ base44, session_id, input, reply, startTime });
+        const t_save_messages = saveResult.latency;
         const responseTime = Date.now() - startTime;
+
+        setStage(STAGES.RESPONSE_BUILD);
 
         // Fire-and-forget: thread state builder for next turn (non-blocking)
         if (session_id && rawHistory.length >= 4) base44.functions.invoke('core/threadStateBuilder', { session_id, last_seq: rawHistory.length, messages: rawHistory.slice(-40) }).catch(() => {});
@@ -785,32 +860,12 @@ Deno.serve(async (req) => {
         emitEvent(base44, request_id, session_id, startTime, 'PIPELINE_COMPLETE', 'Pipeline complete', { data: { duration_ms: responseTime, wcw_used: promptTokens, wcw_remaining: wcwRemaining } });
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
-        const response = {
-            reply, mode: 'GEN', request_id, correlation_id,
-            route: routingDecision.route, model_used: RESOLVED_MODEL,
-            server_time, response_time_ms: responseTime, tool_calls: [],
-            execution_meta,
-            wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-            execution_receipt: {
-                request_id, correlation_id, session_id,
-                history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
-                matched_memories: matchedMemories.length, heuristics_intent: hIntent,
-                heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
-                model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
-                latency_ms: responseTime,
-                latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
-                sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
-                token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
-                wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-                ctc_injected: ctcInjectionMeta.length > 0,
-                ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
-                ctc_injection_meta: ctcInjectionMeta,
-                thread_state_used: !!threadStateBlock,
-                thread_state_seq: tsResult?.data?.last_seq || null
-            }
-        };
-
-        if (debugMode) response.debug_meta = debug_meta;
+        const response = buildResponsePayload({
+            reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
+            wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown,
+            sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock,
+            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages
+        });
 
         return Response.json(response);
 
