@@ -53,7 +53,7 @@ function emitEvent(base44, request_id, session_id, startTime, stage, message, op
         stage, code: opts.code || null,
         message, elapsed_ms: Date.now() - startTime,
         data: opts.data || null
-    }).catch(() {});
+    }).catch(() => {});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
