@@ -39,9 +39,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const draftRafRef = useRef(null);
   const latestDraftRef = useRef('');
 
-  // Preload voices on mount so they're available synchronously on first click
+  // Pre-cache voices on mount. Kept up to date via voiceschanged.
+  const cachedVoicesRef = useRef([]);
   useEffect(() => {
-    window.speechSynthesis.getVoices();
+    const load = () => { cachedVoicesRef.current = window.speechSynthesis.getVoices(); };
+    load();
+    window.speechSynthesis.addEventListener('voiceschanged', load);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
   }, []);
 
   // Chrome speechSynthesis keepalive — prevents engine hibernation after ~15s of inactivity
