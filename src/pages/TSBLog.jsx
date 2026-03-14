@@ -1466,6 +1466,226 @@ Public API (ttsController.jsx exports):
 Status: CLOSED ✅ — build confirmed green, TTS infrastructure stabilized.`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-040 — hybridMessage Refactor Phase 1 (Structural Only) — PROPOSED</span>
+                  <Tag label="PROPOSED 📋" color="yellow" />
+                </div>
+                <Code>{`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TSB-040 — HYBRIDMESSAGE REFACTOR PHASE 1 (STRUCTURAL ONLY)
+DATE: 2026-03-14
+OWNER: MICHAEL / BASE44
+STATUS: PROPOSED
+LOCK_SIGNATURE (target): CAOS_HYBRID_MESSAGE_SPINE_v3_2026-03-14
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏁 STOP GATE 0 — LIVE FILE IDENTITY (MANDATORY RECEIPT)
+  file path:         functions/hybridMessage
+  line count:        924 lines (confirmed Mar 14, 2026)
+  lock signature:    CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01 (line 2)
+  current status:    FROZEN — TSB-021/TSB-032 (⚠️ OVER 400-LINE HARD LIMIT)
+  If any of the above does not match when execution begins → STOP and reconcile.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧭 OBJECTIVE
+Reduce functions/hybridMessage from 924 lines to ≤400 lines
+by extracting inlined pure functions and large helper blocks
+into a new dedicated module: functions/core/pureHelpers
+
+ZERO runtime behavior change. Bit-for-bit identical pipeline output.
+No feature additions. No logic edits. No optimizations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 INVARIANTS (STRICT — MUST HOLD)
+- Pipeline stage order: AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_PREP →
+  CTC_INTENT → CTC_HYDRATE → ARC_ASSEMBLE → HEURISTICS → OPENAI_CALL →
+  MESSAGE_SAVE → RESPONSE_BUILD — IDENTICAL
+- Await vs fire-and-forget semantics: IDENTICAL
+  (receiptWriter remains fire-and-forget — behavior change is Phase 2 scope)
+- All timeouts unchanged (2s TRH, 8s promptBuilder, 45s openaiAbort, 800ms CTC hydration)
+- All error handling unchanged (same envelope fields, same status codes, same Response shapes)
+- All short-circuit paths unchanged:
+    __SESSION_RESUME__ → noop
+    detectRepoCommand → REPO_TOOL short-circuit
+    __VAGUE__ → MEMORY_CLARIFY
+    __PRONOUN__ → MEMORY_CLARIFY_PRONOUN
+    memorySaveSignal → MEMORY_SAVE
+- routeRequest() dead code PRESERVED (do not delete — TSB-032 governance note)
+- No optimization / perf tuning
+- No dependency changes (same SDK version, same imports)
+- No stage reordering
+- No concurrency changes
+- ✅ NO-CLOSURE CAPTURE RULE:
+    Extracted functions must NOT capture outer-scope variables.
+    All dependencies must be explicit parameters or module-level constants.
+    No hidden closures allowed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ ALLOWED OPERATIONS ONLY
+
+1) Create functions/core/pureHelpers — new module containing:
+   All of the following inlined pure functions (no I/O, no side effects,
+   deterministic output — safe to extract per platform constraint §16.1):
+
+   FROM hybridMessage lines 50–56:
+     compressHistory(messages) → compressed array
+       Deps: HOT_HEAD, HOT_TAIL (must be passed as params or re-declared as constants)
+
+   FROM hybridMessage lines 59–72:
+     openAICall(key, messages, model, maxTokens, signal) → { content, usage }
+       Deps: OPENAI_API constant (re-declare in module)
+
+   FROM hybridMessage lines 75–86:
+     shouldRunCTC(input) → boolean
+       Deps: none (patterns are self-contained)
+
+   FROM hybridMessage lines 89–116:
+     classifyIntent(input) → string
+     detectCogLevel(input) → float
+     calibrateDepth(intent, cogLevel) → string
+     buildDirective(intent, depth, cogLevel) → string
+       Deps: none (pure regex/math)
+
+   FROM hybridMessage lines 157–180:
+     detectSaveIntent(input) → string | null
+     detectRecallIntent(input) → boolean
+       Deps: MEMORY_SAVE_TRIGGERS[], MEMORY_RECALL_TRIGGERS[], VAGUE_WORDS Set,
+             PRONOUN_PATTERN — all must be re-declared as module-level constants
+
+   FROM hybridMessage lines 222–240:
+     detectRepoCommand(input) → { op, path, offset } | null
+       Deps: none
+
+   FROM hybridMessage lines 254–257:
+     extractMetadataTags(content) → string[]
+       Deps: MBCR_TAG_PATTERNS[] — must be re-declared as module-level constant
+
+   pureHelpers exports via Deno.serve():
+     Receives: { fn, args } — dispatches to named function, returns result
+     This is the ONLY way to call it from hybridMessage (platform constraint §16.1:
+     no cross-function local imports — must be invoked via SDK)
+
+   ALTERNATIVE (owner decision required):
+     Since these are pure functions with no I/O, they qualify for INLINE per §16.1.
+     The platform constraint explicitly allows inlining pure functions to avoid
+     Deno round-trip latency. If owner decides to keep them inline, this extraction
+     step is SKIPPED and the refactor focuses on:
+       - Adding clear section headers / comments only
+       - Extracting LARGE non-pure blocks (repo path, memory save path) if possible
+     This alternative keeps 924 lines → ~700 lines (section headers + comment cleanup).
+     Full ≤400 line target requires owner decision on repo path and memory path extraction.
+
+2) Extract large helper blocks (non-pure, operate only on passed params):
+   a) REPO_COMMAND block (lines 306–429) → functions/core/repoHandler
+      Input: { repoCmd, ghToken, ghOwner, ghRepo, session_id, user, request_id,
+               correlation_id, startTime, base44 }
+      Output: Response.json(...) directly (handler returns Response)
+      This eliminates ~120 lines from the main handler.
+      Note: this IS I/O-heavy (GitHub API calls) — must be invoked via base44.functions.invoke
+            and the result passed back. hybridMessage then returns the Response.
+
+   b) MEMORY_SAVE block (lines 479–518) → functions/core/memorySaveHandler
+      Input: { memorySaveSignal, userProfile, session_id, user, input, request_id, startTime, base44 }
+      Output: { confirmReply, memory_saved, saved, deduped, rejected, entry_ids }
+      hybridMessage handles the Response.json() construction after receiving this output.
+
+3) Add section header comments within hybridMessage to clarify stage boundaries.
+
+🚫 NOT ALLOWED (EXPLICIT)
+  - Changing receiptWriter to awaited (Phase 2 scope — separate TSB)
+  - Removing routeRequest() (TSB-032 governance — preserved as dead code)
+  - Modifying heuristics/intent classification logic
+  - Altering model selection logic
+  - Changing fallback prompt behavior
+  - Changing concurrency semantics (Promise.all, Promise.race patterns)
+  - Reordering pipeline stages
+  - Adjusting any timeout value
+  - Introducing new external dependencies
+  - Adding logging or observability (Phase 0 is already complete)
+  - Touching any file except hybridMessage and newly created modules
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 SUCCESS CRITERIA (MUST PROVE)
+External behavior bit-for-bit identical for all 7 paths:
+
+  Path 1 — Standard chat request:
+    Input: { input: "what is the capital of France?", session_id: "<id>" }
+    Expected: mode=GEN, reply non-empty, execution_receipt present, status=200
+
+  Path 2 — Repo command:
+    Input: { input: "list", session_id: "<id>" }
+    Expected: mode=REPO_TOOL, reply contains listing, status=200
+
+  Path 3 — Memory save:
+    Input: { input: "remember that my dog's name is Biscuit", session_id: "<id>" }
+    Expected: mode=MEMORY_SAVE, memory_saved=true, status=200
+
+  Path 4 — Memory clarify (vague):
+    Input: { input: "remember this", session_id: "<id>" }
+    Expected: mode=MEMORY_CLARIFY, memory_saved=false, status=200
+
+  Path 5 — Memory clarify (pronoun):
+    Input: { input: "remember that she likes coffee", session_id: "<id>" }
+    Expected: mode=MEMORY_CLARIFY_PRONOUN, memory_saved=false, status=200
+
+  Path 6 — Admin inference:
+    Requires admin auth. Input: standard prompt.
+    Expected: mode=GEN, reply non-empty, invokes core/repoInference path.
+
+  Path 7 — Error path:
+    Kill OPENAI_API_KEY or send malformed input.
+    Expected: status=500 OR 502/504, error_code present, stage present, request_id present.
+
+Receipts required:
+  - Per-file line delta (before → after for every touched file)
+  - Before/after diff showing ONLY: function moves, import additions,
+    call-site replacements, comment additions
+  - 7-path smoke test: { request_id, mode, stage (if error), status }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗂️ CHANGE LOG (FILL IN DURING EXECUTION)
+Files to add:
+  functions/core/pureHelpers     — extracted pure functions dispatcher
+  functions/core/repoHandler     — GitHub API block (if owner approves extraction)
+  functions/core/memorySaveHandler — memory save block (if owner approves extraction)
+
+Files to edit:
+  functions/hybridMessage        — replace inline blocks with invoke calls + section headers
+
+Files to delete:
+  (none planned)
+
+Rollback path:
+  Restore functions/hybridMessage from this TSB's line-count snapshot (924 lines, Mar 14, 2026).
+  Delete any newly created functions/core/* modules added during this refactor.
+  Re-lock signature: CAOS_HYBRID_MESSAGE_SPINE_v2_2026-03-01
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ OPEN OWNER DECISION REQUIRED BEFORE EXECUTION
+  Q1: Pure function extraction (pureHelpers module) vs. keep inline?
+      INLINE is explicitly permitted by §16.1. Adding a round-trip invoke for
+      pure functions that currently run in sub-milliseconds adds latency.
+      RECOMMENDATION: Keep pure functions inline. Focus extraction on the two
+      large I/O blocks (repoHandler ~120 lines, memorySaveHandler ~40 lines)
+      and add section headers throughout. Target: 924 → ~700 lines (Phase 1).
+      Phase 2 (separate TSB): receiptWriter await restoration + further reduction.
+
+  Q2: Full ≤400 line target in one shot or phased?
+      One-shot risks: large diff, harder to review, more rollback surface.
+      Phased: safer, each phase independently verifiable, TSB per phase.
+      RECOMMENDATION: Phase 1 = structural extraction (700 lines target).
+                      Phase 2 = receiptWriter + remaining reduction (≤400 lines).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ DONE RECEIPT (fill in on completion)
+  - Diff link:
+  - Line count before: 924
+  - Line count after:
+  - Proof of invariants (7-path smoke test):
+  - New LOCK_SIGNATURE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
