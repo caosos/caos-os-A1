@@ -8,6 +8,22 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// ── OBSERVABILITY PLANE v1 — pipeline event emitter ───────────────────────────
+// FEATURE FLAG: set false to stop all PipelineEvent writes instantly
+const ENABLE_PIPELINE_EVENTS = true;
+function emitEvent(base44, request_id, session_id, startTime, stage, message, opts = {}) {
+    if (!ENABLE_PIPELINE_EVENTS) return;
+    base44.functions.invoke('core/pipelineEventWriter', {
+        request_id, session_id,
+        level: opts.level || 'INFO',
+        stage,
+        code: opts.code || null,
+        message,
+        elapsed_ms: Date.now() - startTime,
+        data: opts.data || null
+    }).catch(() => {}); // fire-and-forget — never blocks pipeline
+}
+
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
 const ACTIVE_MODEL = 'gpt-5.2';
