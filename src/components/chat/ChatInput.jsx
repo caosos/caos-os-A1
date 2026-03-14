@@ -33,7 +33,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const voiceMenuRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const googleUtteranceRef = useRef(null);
   const voiceButtonRef = useRef(null);
   const audioAnalyserRef = useRef(null);
   const audioLevelRafRef = useRef(null);
