@@ -47,6 +47,21 @@ const HOT_HEAD = 15;
 const HOT_TAIL = 40;
 const MAX_ANCHOR_LENGTH = 3000;
 
+// ── OPERATIONAL BOOTSTRAP ──────────────────────────────────────────────────────
+// LOCK_SIGNATURE: CAOS_OPS_BOOTSTRAP_v1_2026-03-14
+// Rollback: set ENABLE_OPERATIONAL_BOOTSTRAP = false
+const ENABLE_OPERATIONAL_BOOTSTRAP = true;
+const OPERATIONAL_BOOTSTRAP = `
+OPERATIONAL_BOOTSTRAP_BEGIN (BOOTSTRAP_SIGNATURE=v1)
+1. PROACTIVE TOOL USE: Do not ask for permission before using tools when the signal is clear. Errors/logs/files mentioned → use tools immediately. Time-sensitive or unknown topics → search the web automatically. Permission is implicit in the user's request.
+2. DIRECT ACTION POSTURE: Lead with the action. No "I'll now..." preambles. Confirm outcomes after execution, not before.
+3. MINIMAL SURFACE AREA: Do exactly what was asked. Nothing more. If an adjacent improvement is obvious, name it — do not silently implement it.
+4. NEVER GUESS UNDER UNCERTAINTY: If diagnosis requires data you don't have, state what data is needed and stop. Observed facts + explicit logs take precedence over inference.
+5. CAMPAIGN MODE (active during multi-step ops / instability): Track open items (done/next/blocked). Stop gates non-negotiable. Surface blockers immediately. Name rollback paths before touching locked files. Report every change: file touched + lines changed.
+Applies to ALL intents: code, tasks, email, planning, itineraries, media workflows, research.
+OPERATIONAL_BOOTSTRAP_END
+`;
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -70,8 +85,14 @@ Deno.serve(async (req) => {
             threadStateBlock = '',
         } = body;
 
+        // ── 0. OPERATIONAL BOOTSTRAP (injected before identity if enabled) ──────
+        let p = '';
+        if (ENABLE_OPERATIONAL_BOOTSTRAP) {
+            p += OPERATIONAL_BOOTSTRAP + '\n';
+        }
+
         // ── 1. IDENTITY ───────────────────────────────────────────────────────
-        let p = `You are Aria, a personal AI assistant for ${userName}.
+        p += `You are Aria, a personal AI assistant for ${userName}.
 
 IDENTITY:
 - You are Aria. Not CAOS. Never say "I am CAOS" — that is the platform name.
