@@ -1681,6 +1681,135 @@ and must always be able to explain itself deterministically.
 END TOKEN`}</pre>
           </Section>
 
+          {/* ONBOARDING TOUR */}
+          <Section title="20. First-Time User Onboarding Tour — Feature Spec (PENDING IMPLEMENTATION)" color="orange">
+            <p className="text-gray-300 text-xs mb-3">
+              A short, automated product tour for new users. Triggers on first login (and optionally on the first 3–5 logins). Shows the user what they have available and how to use it. Skippable at any time.
+            </p>
+
+            <div className="bg-orange-950/40 border border-orange-500/30 rounded-lg p-4 mb-4">
+              <p className="text-orange-300 font-semibold text-xs">STATUS: NOT YET IMPLEMENTED — Target: April 19, 2026 launch</p>
+            </div>
+
+            <h4 className="text-white font-semibold mt-3">Trigger Logic</h4>
+            <Code>{`Trigger condition:
+  localStorage key: caos_tour_seen_count (integer, default 0)
+  Show tour if: caos_tour_seen_count < 3 AND user is authenticated (not guest)
+  On tour start: increment caos_tour_seen_count
+  On "Don't show again": set caos_tour_seen_count = 99
+
+  First-visit detection:
+    caos_tour_seen_count === 0  → auto-start on mount (500ms delay after dataLoaded)
+    caos_tour_seen_count 1–2    → show subtle "Take the tour" hint button in header
+    caos_tour_seen_count >= 3   → never show again unless manually triggered
+
+  Guest mode: NEVER show the tour (guests don't have persistent accounts)`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Tour Architecture</h4>
+            <Code>{`Component:   components/chat/OnboardingTour.jsx (NEW — ~150 lines)
+State:       Managed entirely inside the component (no Chat.jsx state changes)
+Overlay:     Fixed full-screen backdrop with a spotlight/highlight cutout on the
+             target element (pointer-events: none on backdrop, allows actual clicks)
+Positioning: Uses target element's getBoundingClientRect() to place tooltip
+Animation:   framer-motion fade + slide between steps
+Duration:    Each step auto-advances after 4s OR user clicks "Next"
+Skip:        "Skip tour" button always visible → sets caos_tour_seen_count = 99
+Progress:    Step N of N indicator at bottom of each tooltip card
+
+Integration:
+  Chat.jsx: import OnboardingTour, render after dataLoaded check
+  No state lifted to Chat.jsx — OnboardingTour is fully self-contained
+  Target elements identified by: data-tour="<step-id>" attributes added to existing elements`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Tour Steps (8 steps, ~20–30 seconds total)</h4>
+            <Code>{`STEP 1 — Welcome (no target element, center modal)
+  Title:   "Welcome to CAOS"
+  Body:    "Your personal AI operating space. Let's take 20 seconds to show you around."
+  Action:  "Start" button → advance to step 2
+  data-tour: none (centered overlay)
+
+STEP 2 — The Input Bar
+  Target:  ChatInput textarea (data-tour="input-bar")
+  Title:   "Start here"
+  Body:    "Type anything — questions, tasks, code, plans. Aria reads and responds."
+  Highlight: the white input bar + Send button
+
+STEP 3 — User Menu (dropdown)
+  Target:  User avatar button in ChatHeader (data-tour="user-menu")
+  Title:   "Your menu"
+  Body:    "Click your avatar for New Thread, Previous Threads, Files, Profile, and settings."
+  Action:  Auto-opens the dropdown menu for 2s then closes it
+  Highlight: the avatar button
+
+STEP 4 — Previous Threads
+  Target:  (simulated highlight on left-side panel area)
+  Title:   "Your threads"
+  Body:    "Every conversation is saved. Find and search all past threads from the menu."
+  Highlight: points to where ThreadList slides in
+
+STEP 5 — Token / WCW Meter
+  Target:  TokenMeter component (data-tour="token-meter")
+  Title:   "Context window"
+  Body:    "This bar shows how much of Aria's memory is in use. Green is good. Red means the thread is getting long."
+  Highlight: the green bar in the header
+
+STEP 6 — File Attachments
+  Target:  Plus button in ChatInput (data-tour="attach-button")
+  Title:   "Attach files"
+  Body:    "Send files, images, screenshots, or take a photo directly from the input bar."
+  Highlight: the + button
+
+STEP 7 — Voice (Read Aloud)
+  Target:  Volume2 button in ChatInput (data-tour="voice-button")
+  Title:   "Read aloud"
+  Body:    "Aria can read her last response out loud. Right-click to choose voice and speed."
+  Highlight: the speaker icon
+
+STEP 8 — Profile & Memory
+  Target:  (points toward profile panel area)
+  Title:   "Memory & settings"
+  Body:    "In Profile you can view your saved memories, manage files, and toggle modes."
+  Action:  "Got it" button → ends tour, sets caos_tour_seen_count = 3`}</Code>
+
+            <h4 className="text-white font-semibold mt-3">Implementation Notes</h4>
+            <Code>{`data-tour attributes to add (minimal, non-breaking):
+  ChatInput textarea          → data-tour="input-bar"
+  ChatHeader avatar button    → data-tour="user-menu"
+  TokenMeter wrapper div      → data-tour="token-meter"
+  ChatInput Plus button       → data-tour="attach-button"
+  ChatInput Volume2 button    → data-tour="voice-button"
+
+Tooltip card design:
+  bg-[#0f1f3d]/98 backdrop-blur-xl border border-blue-400/40 rounded-2xl p-5
+  Max width: 300px
+  Arrow pointing to target element
+  Step N/8 progress dots at bottom
+  "Skip tour" text button (top right of card)
+  "Next →" primary button
+
+Spotlight cutout implementation:
+  SVG overlay approach — draw a full-screen SVG with a rect cutout
+  around the target element's bounding box (with 8px padding + border-radius).
+  This creates the "highlighted" appearance without blocking pointer events on target.
+
+Accessibility:
+  Escape key → skip tour
+  Tour does not trap focus (user can still interact with the app while the tour runs)
+  Tour state is visible: "Step 3 of 8" always shown
+
+GOV v1.2 compliance:
+  OnboardingTour.jsx: target ≤150 lines
+  Zero changes to hybridMessage, ChatBubble TTS path, or any locked file
+  data-tour attributes are additive — no existing behavior changed
+  localStorage key: caos_tour_seen_count (new key, no conflicts)`}</Code>
+
+            <div className="bg-yellow-950/50 border border-yellow-500/30 rounded p-3 mt-3">
+              <p className="text-yellow-300 text-xs font-semibold">
+                BUILD ORDER: (1) Add data-tour attributes to target elements. (2) Build OnboardingTour.jsx component. (3) Import + render in Chat.jsx after dataLoaded. (4) Test on fresh account. (5) Verify skip/seen-count logic. Lock after verification.
+              </p>
+            </div>
+          </Section>
+
           {/* 13. ARIA ACCESS NOTE */}
           <Section title="19. How Aria Reads This Blueprint" color="cyan">
             <p>The full text of this blueprint is available to Aria through the system prompt whenever the user asks about CAOS architecture, what has been built, or what the current state of the system is. The blueprint is injected as structured context — not as a URL, but as a summary block in the system prompt when relevant recall is triggered.</p>
