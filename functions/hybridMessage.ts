@@ -742,6 +742,7 @@ Deno.serve(async (req) => {
         const openaiAbort = new AbortController();
         const INFERENCE_TIMEOUT_MS = 45000; // Hard cap — must return before Cloudflare 504
         const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
+        emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length } });
         try {
             if (user.role === 'admin') {
                 // Admin: agentic inference with repo_list + repo_read tools
