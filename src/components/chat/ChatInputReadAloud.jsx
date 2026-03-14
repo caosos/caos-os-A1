@@ -38,8 +38,11 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
   }
 
   try {
-    const cleanText = lastAIMessage
-      .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    const stripEmojis = (s) => (s || '')
+      .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
+      .replace(/[\uFE0E\uFE0F\u200D]/g, '');
+
+    const cleanText = stripEmojis(lastAIMessage)
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
