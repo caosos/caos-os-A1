@@ -207,8 +207,8 @@ export default function Console() {
             </Card>
 
             {/* Errors */}
-            <Card className={`col-span-4 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden ${
-              m.errors.count_24h > 0 ? 'border-red-500/50' : 'border-green-500/30'
+            <Card onClick={() => setShowAlerts(true)} className={`col-span-4 row-span-2 bg-[#0a1628]/90 backdrop-blur-sm overflow-hidden cursor-pointer transition-all hover:bg-red-500/5 ${
+              m.errors.count_24h > 0 ? 'border-red-500/50 hover:border-red-400' : 'border-green-500/30 hover:border-green-400'
             }`}>
               <CardHeader className="pb-1">
                 <CardTitle className={`text-xs font-bold tracking-wider flex items-center gap-2 ${
