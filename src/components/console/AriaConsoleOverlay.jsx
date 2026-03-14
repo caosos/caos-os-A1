@@ -81,9 +81,9 @@ export default function AriaConsoleOverlay({ metrics: initialMetrics, onClose })
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
             <span className="text-cyan-400 text-sm font-bold tracking-wider">ARIA — CONSOLE MODE</span>
-            {metrics && (
+            {liveMetrics && (
               <span className="text-white/30 text-xs">
-                {metrics.users?.total_active ?? 0} active · ${metrics.tokens?.estimated_cost_today?.toFixed(3) ?? '0.000'} today
+                {liveMetrics.users?.total_active ?? 0} active · ${liveMetrics.tokens?.estimated_cost_today?.toFixed(3) ?? '0.000'} today · {liveMetrics.errors?.unresolved_count ?? 0} unresolved errors
               </span>
             )}
           </div>
