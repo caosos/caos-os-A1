@@ -68,6 +68,12 @@ export default function Console() {
           onClose={() => setShowAria(false)}
         />
       )}
+      {showCostReport && (
+        <CostReportModal metrics={metricsRef.current} onClose={() => setShowCostReport(false)} />
+      )}
+      {showAlerts && (
+        <SystemAlertsModal metrics={metricsRef.current} onClose={() => setShowAlerts(false)} />
+      )}
 
       <div className="relative z-10 h-full flex flex-col p-4">
         {/* Header */}
