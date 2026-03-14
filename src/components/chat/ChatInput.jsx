@@ -41,33 +41,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const draftRafRef = useRef(null);
   const latestDraftRef = useRef('');
 
-  // Pre-cache voices on mount. Kept up to date via voiceschanged.
-  const cachedVoicesRef = useRef([]);
-  useEffect(() => {
-    const load = () => { cachedVoicesRef.current = window.speechSynthesis.getVoices(); };
-    load();
-    window.speechSynthesis.addEventListener('voiceschanged', load);
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
-  }, []);
-
-  // Chrome speechSynthesis keepalive — prevents engine hibernation after ~15s of inactivity
-  // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_KEEPALIVE_v1_2026-03-04
-  useEffect(() => {
-    const keepAlive = setInterval(() => {
-      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    }, 10000);
-    return () => clearInterval(keepAlive);
-  }, []);
-
-  // Re-warm voice cache when a new AI message arrives.
-  useEffect(() => {
-    if (!lastAssistantMessage) return;
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) cachedVoicesRef.current = voices;
-  }, [lastAssistantMessage]);
+  // Warm controller voice cache on mount and when new AI message arrives.
+  useEffect(() => { ttsWarmVoices(); }, []);
+  useEffect(() => { if (lastAssistantMessage) ttsWarmVoices(); }, [lastAssistantMessage]);
 
   // Stop speech synthesis on unmount
   useEffect(() => {
