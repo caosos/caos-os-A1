@@ -3,7 +3,7 @@
 // Sanitization: ttsTextSanitizer. Prefs: ttsPrefs (canonical keys).
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { ttcSpeak, ttsStop } from './ttsController';
+import { ttcSpeak, ttsStop } from './ttsController.jsx';
 
 export async function handleReadAloud(message, messageId, onPlaybackStart, onPlaybackEnd) {
   if (!message) return;

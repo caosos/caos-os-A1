@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
+import { getTTSPrefs, setTTSPrefs } from './ttsPrefs.js';
 
 // ██████████████████████████████████████████████████████████████████
 // ██  FORT KNOX LOCK — DO NOT TOUCH — OPENAI TTS VOICE SETTINGS    ██
