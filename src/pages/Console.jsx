@@ -319,7 +319,7 @@ export default function Console() {
             {/* BOTTOM ROW */}
 
             {/* Cost Analysis */}
-            <Card className="col-span-3 row-span-2 bg-[#0a1628]/90 border-green-500/30 backdrop-blur-sm overflow-hidden">
+            <Card onClick={() => setShowCostReport(true)} className="col-span-3 row-span-2 bg-[#0a1628]/90 border-green-500/30 backdrop-blur-sm overflow-hidden cursor-pointer hover:border-green-400/60 hover:bg-green-500/5 transition-all">
               <CardHeader className="pb-1">
                 <CardTitle className="text-xs font-bold text-green-400 tracking-wider flex items-center gap-2">
                   <DollarSign className="w-3 h-3" /> COST ANALYSIS
