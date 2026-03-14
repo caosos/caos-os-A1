@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices } from './tts/ttsController.js';
-import { sanitizeForTTS } from './tts/ttsTextSanitizer.js';
+import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices } from './ttsController';
+import { sanitizeForTTS } from './ttsTextSanitizer';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
 
