@@ -221,29 +221,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     });
   };
 
-  const stripEmojis = (s) => (s || '')
-    .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
-    .replace(/[\uFE0E\uFE0F\u200D]/g, '');
-
-  const getCleanText = (text) => stripEmojis(text)
-    .replace(/#{1,6}\s/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/^[-*+]\s/gm, '')
-    .replace(/^\d+\.\s/gm, '')
-    .replace(/>/g, '')
-    .replace(/\|/g, '')
-    .replace(/---+/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .substring(0, 4096);
-
+  // ── TTS_UNIFICATION_v1 (2026-03-14) ─────────────────────────────────────────
+  // sanitization + engine selection + exclusivity now owned by ttsController.
+  // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (refactored 2026-03-14)
+  // ─────────────────────────────────────────────────────────────────────────────
   const stopGoogleVoice = () => {
-    window.speechSynthesis.cancel();
-    googleUtteranceRef.current = null;
+    ttsStop();
     setIsPlayingGoogle(false);
     setIsPausedGoogle(false);
     setGoogleSpeechProgress(0);
@@ -252,66 +235,39 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const toggleGoogleVoicePlay = () => {
     if (!lastAssistantMessage) return;
 
-    // If already speaking, pause/resume
+    // Pause / resume toggle
     if (isPlayingGoogle) {
       if (isPausedGoogle) {
-        window.speechSynthesis.resume();
+        ttsResume();
         setIsPausedGoogle(false);
       } else {
-        window.speechSynthesis.pause();
+        ttsPause();
         setIsPausedGoogle(true);
       }
       return;
     }
 
-    // ── RELIABLE SPEAK ────────────────────────────────────────────────────────
-    // Chrome drops utterances when cancel() fires immediately before speak() in
-    // the same tick on an idle engine. Fix: cancel first, then speak after a
-    // zero-delay timeout to let the engine flush before the new speak() call.
-    // Gesture law is preserved — the timeout fires within the same gesture epoch.
-    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (reliability fix 2026-03-14)
-    // ─────────────────────────────────────────────────────────────────────────
-    const cleanText = getCleanText(lastAssistantMessage);
-    const voicePref = localStorage.getItem('caos_google_voice') || 'Google US English';
-    const voiceMap = {
-      'Google US English': 'en-US',
-      'Google UK English': 'en-GB',
-      'Google US Spanish': 'es-ES',
-      'Google French': 'fr-FR',
-      'Google German': 'de-DE',
-    };
-    const langCode = voiceMap[voicePref] || 'en-US';
-
-    // Resolve voice from persistent cache (populated on mount + voiceschanged)
-    let voices = cachedVoicesRef.current;
-    if (!voices.length) voices = window.speechSynthesis.getVoices();
-    const selectedVoice = voices.find(v => v.lang.startsWith(langCode)) || voices[0] || null;
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    if (selectedVoice) utterance.voice = selectedVoice;
-    utterance.rate = Math.max(0.1, Math.min(parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0'), 2.0));
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    utterance.lang = selectedVoice?.lang || langCode;
-
-    utterance.onstart = () => {
-      googleUtteranceRef.current = utterance;
-      setIsPlayingGoogle(true);
-      setIsPausedGoogle(false);
-    };
-    utterance.onend = () => { stopGoogleVoice(); };
-    utterance.onerror = (e) => {
-      if (e.error === 'interrupted' || e.error === 'canceled') return;
-      stopGoogleVoice();
-      toast.error('Voice read-aloud failed — try again');
-    };
-    utterance.onboundary = () => {
-      setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
-    };
-
-    // Cancel any prior speech, then give the engine one tick to flush before speaking.
-    window.speechSynthesis.cancel();
-    setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
+    // Start — ttsController stops any prior audio (bubble, other input) before speaking
+    ttcSpeak(lastAssistantMessage, {
+      engine: 'webspeech',
+      onStart: () => {
+        setIsPlayingGoogle(true);
+        setIsPausedGoogle(false);
+      },
+      onEnd: () => {
+        setIsPlayingGoogle(false);
+        setIsPausedGoogle(false);
+        setGoogleSpeechProgress(0);
+      },
+      onError: (err) => {
+        if (err?.message?.includes('interrupted') || err?.message?.includes('canceled')) return;
+        setIsPlayingGoogle(false);
+        setIsPausedGoogle(false);
+        setGoogleSpeechProgress(0);
+        toast.error('Voice read-aloud failed — try again');
+      },
+      onBoundary: () => setGoogleSpeechProgress(prev => Math.min(prev + 2, 90)),
+    });
   };
 
   const handleVoiceButtonContextMenu = (e) => {
