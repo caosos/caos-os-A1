@@ -106,8 +106,8 @@ export default function VoiceSettings({ isOpen, onClose }) {
   };
 
   const saveSettings = () => {
-    localStorage.setItem('caos_voice_preference_message', selectedVoice);
-    localStorage.setItem('caos_speech_rate', rate.toString());
+    // Write canonical keys — both server path and bubble path pick these up
+    setTTSPrefs({ voice: selectedVoice, rate });
     toast.success('Voice settings saved');
     onClose();
   };
