@@ -911,8 +911,37 @@ Backend check:
             </div>
           </Section>
 
+          {/* OPERATIONAL BOOTSTRAP */}
+          <Section title="14. Operational Bootstrap v1 — Baseline Behavior Contract" color="blue">
+            <p className="text-gray-300 text-xs mb-3">
+              Runtime-injected behavior contract. Applies to all user intents across all sessions.
+              Enforcement via <code className="text-blue-300">ENABLE_OPERATIONAL_BOOTSTRAP</code> flag in{' '}
+              <code className="text-blue-300">functions/core/promptBuilder</code>.{' '}
+              LOCK_SIGNATURE: CAOS_OPS_BOOTSTRAP_v1_2026-03-14.
+            </p>
+            <div className="bg-yellow-950/40 border border-yellow-500/30 rounded p-3 mb-3">
+              <p className="text-yellow-300 text-xs font-semibold">
+                BOOTSTRAP_SIGNATURE=v1 · ENABLE_OPERATIONAL_BOOTSTRAP=true · Rollback: flip flag to false (single edit in promptBuilder)
+              </p>
+            </div>
+            <p className="text-gray-300 text-xs">
+              <strong className="text-white">Five operational defaults (all turns):</strong>{' '}
+              (1) Proactive tool use — no permission needed when signal is clear.{' '}
+              (2) Direct action posture — execute then report, no preambles.{' '}
+              (3) Minimal surface area — do exactly what was asked.{' '}
+              (4) Never guess under uncertainty — state what data is needed, stop.{' '}
+              (5) Campaign Mode — track open items, enforce stop gates, name rollback paths.
+            </p>
+            <p className="text-gray-300 text-xs mt-2">
+              <strong className="text-white">Scope:</strong> Code · Tasks · Email · Planning · Itineraries · Media workflows · Research · All other intents.
+            </p>
+            <p className="text-gray-300 text-xs mt-2">
+              Full doc: <code className="text-blue-300">components/docs/OperationalBootstrap.jsx</code> · Protected: <code className="text-blue-300">ProtectedFilesRegistry v1.1</code>
+            </p>
+          </Section>
+
           {/* TSB — Troubleshooting Bulletins — Now on separate page */}
-          <Section title="14. TSB Log — Troubleshooting Bulletins" color="red">
+          <Section title="15. TSB Log — Troubleshooting Bulletins" color="red">
             <p className="text-gray-300 text-xs mb-4">All TSB entries have been moved to a dedicated page for clarity and maintainability.</p>
             <Link to={createPageUrl('TSBLog')} className="inline-block text-blue-300 hover:text-blue-100 underline font-semibold">
               → View Full TSB Log (TSB-001 through TSB-037)
