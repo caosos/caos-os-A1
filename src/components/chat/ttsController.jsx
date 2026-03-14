@@ -2,8 +2,8 @@
 // Single audio authority for all TTS in CAOS.
 // ROLLBACK: Delete this file + revert ChatInput, ChatBubbleReadAloud, VoiceSettings.
 
-import { sanitizeForTTS } from './ttsTextSanitizer.jsx';
-import { getTTSPrefs } from './ttsPrefs.jsx';
+import { sanitizeForTTS } from './ttsTextSanitizer';
+import { getTTSPrefs } from './ttsPrefs';
 
 let _state = {
   engine: null,
