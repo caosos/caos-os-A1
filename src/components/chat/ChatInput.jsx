@@ -60,14 +60,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     return () => clearInterval(keepAlive);
   }, []);
 
-  // Pre-warm Chrome TTS engine when a new AI message arrives.
-  // We trigger a getVoices() call to ensure the voice list is populated before user clicks.
-  // We do NOT call cancel() here — that kills the voice engine on some browsers and
-  // causes getVoices() to return [] on the next synchronous click, resulting in silence.
+  // Re-warm voice cache when a new AI message arrives.
   useEffect(() => {
     if (!lastAssistantMessage) return;
-    // Just warm the voice list — no cancel
-    window.speechSynthesis.getVoices();
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) cachedVoicesRef.current = voices;
   }, [lastAssistantMessage]);
 
   // Stop speech synthesis on unmount
