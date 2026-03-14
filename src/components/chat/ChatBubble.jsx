@@ -138,7 +138,11 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     audioRef.current = audio;
     globalAudioInstance = audio;
 
-    const cleanText = (message.content || '')
+    const stripEmojis = (s) => (s || '')
+      .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
+      .replace(/[\uFE0E\uFE0F\u200D]/g, '');
+
+    const cleanText = stripEmojis(message.content || '')
       .replace(/#{1,6}\s/g, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
