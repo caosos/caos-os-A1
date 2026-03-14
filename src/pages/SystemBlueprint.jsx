@@ -938,6 +938,14 @@ Backend check:
             <p className="text-gray-300 text-xs mt-2">
               Full doc: <code className="text-blue-300">components/docs/OperationalBootstrap.jsx</code> · Protected: <code className="text-blue-300">ProtectedFilesRegistry v1.1</code>
             </p>
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-gray-300 text-xs font-semibold mb-1">🔎 Observability Plane v1 — Request Inspector</p>
+              <p className="text-gray-300 text-xs mb-2">Full pipeline stage timeline per request_id. No log scrolling.</p>
+              <Link to={createPageUrl('RequestInspector')} className="inline-block text-blue-300 hover:text-blue-100 underline text-xs font-semibold">
+                → Open Request Inspector
+              </Link>
+              <span className="text-white/30 text-xs ml-3">Entity: PipelineEvent · Flag: ENABLE_PIPELINE_EVENTS · Function: getRequestTrace</span>
+            </div>
           </Section>
 
           {/* TSB — Troubleshooting Bulletins — Now on separate page */}
