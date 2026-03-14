@@ -447,6 +447,7 @@ Deno.serve(async (req) => {
             rawHistory = historyMsgs.reverse().map(m => ({ role: m.role, content: m.content }));
         } catch (e) { console.warn('⚠️ [PROFILE_HISTORY_FAILED]', e.message); }
         const t_profile_and_history_load = Date.now() - startTime;
+        emitEvent(base44, request_id, session_id, startTime, 'PROFILE_LOAD', 'Profile + history loaded', { data: { history_count: rawHistory.length, has_profile: !!userProfile } });
 
         // ── STAGE: MEMORY_WRITE (Phase A) ─────────────────────────────────────
         setStage(STAGES.MEMORY_WRITE);
