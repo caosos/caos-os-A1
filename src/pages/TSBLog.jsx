@@ -1394,6 +1394,78 @@ Acceptance:
 Status:    LIVE ✅`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-039 — TTS Unification v1: Module Consolidation + Duplicate Directory Purge</span>
+                  <Tag label="CLOSED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 14, 2026
+Components: components/chat/ttsController.jsx  (CANONICAL — 165 lines)
+            components/chat/ttsPrefs.jsx        (CANONICAL — 63 lines)
+            components/chat/ttsTextSanitizer.jsx (CANONICAL — 25 lines)
+            components/chat/tts/ directory      (DELETED — all 3 duplicate files removed)
+            components/chat/ttsPrefs.js         (DELETED — stale .js duplicate)
+            components/chat/ttsTextSanitizer.js (DELETED — stale .js duplicate)
+
+Symptom:
+  Build failed repeatedly:
+    Could not resolve "./ttsPrefs.jsx" from VoiceSettings.jsx
+    Could not resolve "./ttsTextSanitizer.jsx" from ttsController.jsx
+  Root cause was a cascading import path problem caused by duplicate files
+  at conflicting paths and extensions (.js vs .jsx vs no extension).
+
+Root Cause (multi-layer):
+  1. Original TTS modules existed as .js files in components/chat/
+  2. A prior session created a components/chat/tts/ subdirectory with .js copies
+     of all three modules (ttsController, ttsPrefs, ttsTextSanitizer)
+  3. A subsequent session deleted the .js originals, leaving only the tts/ copies
+  4. VoiceSettings.jsx and ttsController were importing with explicit .jsx extension
+     which resolved to nothing — the canonical files had been deleted
+  5. Result: build pipeline broken, imports unresolvable, app offline
+
+Fix:
+  1. Deleted stale .js duplicates in components/chat/ (ttsPrefs.js, ttsTextSanitizer.js)
+  2. Recreated canonical .jsx versions in components/chat/:
+       ttsPrefs.jsx        — canonical prefs R/W (getTTSPrefs, setTTSPrefs)
+                             includes one-time migration from legacy localStorage keys
+       ttsTextSanitizer.jsx — canonical sanitizer (sanitizeForTTS)
+                              strips emojis + markdown + enforces 4096 char limit
+  3. Changed all imports in ttsController.jsx and VoiceSettings.jsx
+     from explicit .jsx extension → extensionless (Vite resolves automatically)
+  4. Deleted entire components/chat/tts/ subdirectory (3 files, all duplicates)
+
+Final canonical state:
+  components/chat/ttsController.jsx    165 lines  LOCK: CAOS_TTS_CONTROLLER_v1_2026-03-14
+  components/chat/ttsPrefs.jsx          63 lines  LOCK: CAOS_TTS_PREFS_v1_2026-03-14
+  components/chat/ttsTextSanitizer.jsx  25 lines  LOCK: CAOS_TTS_SANITIZER_v1_2026-03-14
+  components/chat/tts/                  DOES NOT EXIST
+
+Import graph (all extensionless):
+  ChatInput.jsx              → ttsController
+  ChatBubbleReadAloud.jsx    → ttsController
+  VoiceSettings.jsx          → ttsPrefs
+  ttsController.jsx          → ttsTextSanitizer, ttsPrefs
+
+Governance rule (enforced by deletion):
+  🚫 No components/chat/tts/ subdirectory
+  🚫 No duplicate ttsController|ttsPrefs|ttsTextSanitizer at any path or extension
+  ✅ All imports extensionless
+  ✅ Single audio authority (ttsController._stopAll(true) at top of every ttcSpeak())
+  ✅ WebSpeech keep-alive (setInterval 10s pause/resume prevents Chrome GC kill)
+  ✅ Voice cache warmed on mount + on every new AI message (ttsWarmVoices())
+  ✅ Sanitization gated (empty result = early return, no TTS call)
+  ✅ interrupted/canceled errors silently dropped (not real errors)
+
+Public API (ttsController.jsx exports):
+  ttcSpeak(text, options)   — play (stops any prior session first)
+  ttsStop()                 — stop + fire onEnd
+  ttsPause()                — pause
+  ttsResume()               — resume
+  ttsWarmVoices()           — refresh voice cache
+
+Status: CLOSED ✅ — build confirmed green, TTS infrastructure stabilized.`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>

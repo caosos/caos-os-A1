@@ -54,11 +54,11 @@ import Implementation from './pages/Implementation';
 import Logs from './pages/Logs';
 import MemoryIsolation from './pages/MemoryIsolation';
 import News from './pages/News';
+import RequestInspector from './pages/RequestInspector';
 import SystemBlueprint from './pages/SystemBlueprint';
 import TSBLog from './pages/TSBLog';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
-import RequestInspector from './pages/RequestInspector';
 
 
 export const PAGES = {
@@ -69,11 +69,11 @@ export const PAGES = {
     "Logs": Logs,
     "MemoryIsolation": MemoryIsolation,
     "News": News,
+    "RequestInspector": RequestInspector,
     "SystemBlueprint": SystemBlueprint,
     "TSBLog": TSBLog,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
-    "RequestInspector": RequestInspector,
 }
 
 export const pagesConfig = {
