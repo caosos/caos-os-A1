@@ -11,6 +11,8 @@ import { base44 } from '@/api/base44Client';
 import SSHConsole from '@/components/console/SSHConsole';
 import WebSocketAttach from '@/components/console/WebSocketAttach';
 import AriaConsoleOverlay from '@/components/console/AriaConsoleOverlay';
+import CostReportModal from '@/components/console/CostReportModal';
+import SystemAlertsModal from '@/components/console/SystemAlertsModal';
 
 export default function Console() {
   const navigate = useNavigate();
