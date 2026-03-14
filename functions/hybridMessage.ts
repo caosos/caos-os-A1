@@ -759,6 +759,7 @@ Deno.serve(async (req) => {
                 openaiUsage = giRes?.data?.usage || null;
             }
             clearTimeout(openaiTimeout);
+            emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference complete', { data: { reply_chars: reply?.length, prompt_tokens: openaiUsage?.prompt_tokens, completion_tokens: openaiUsage?.completion_tokens } });
         } catch (inferenceError) {
             clearTimeout(openaiTimeout);
             const latency_ms = Date.now() - startTime;
@@ -766,6 +767,7 @@ Deno.serve(async (req) => {
             const stage = isTimeout ? 'INFERENCE' : 'OPENAI_CALL';
             const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
             console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
+            emitEvent(base44, request_id, session_id, startTime, stage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
             return Response.json({
                 ok: false, error_code, stage, message: inferenceError.message,
                 request_id, correlation_id, latency_ms,
