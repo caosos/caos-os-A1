@@ -735,6 +735,8 @@ Deno.serve(async (req) => {
             built_via: 'promptBuilder',
         });
 
+        emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
+
         const inferenceStart = Date.now();
         let reply, openaiUsage;
         const openaiAbort = new AbortController();
