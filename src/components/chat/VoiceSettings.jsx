@@ -66,11 +66,9 @@ export default function VoiceSettings({ isOpen, onClose }) {
   const audioRef = React.useRef(null);
 
   useEffect(() => {
-    const savedVoice = localStorage.getItem('caos_voice_preference_message');
-    if (savedVoice) setSelectedVoice(savedVoice);
-
-    const savedRate = localStorage.getItem('caos_speech_rate');
-    if (savedRate) setRate(parseFloat(savedRate));
+    const prefs = getTTSPrefs();
+    setSelectedVoice(prefs.voice || 'nova');
+    setRate(prefs.rate || 1.0);
   }, []);
 
   const playBase64Audio = async (voiceId, text) => {
