@@ -244,7 +244,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     });
   };
 
-  const getCleanText = (text) => text
+  const stripEmojis = (s) => (s || '')
+    .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
+    .replace(/[\uFE0E\uFE0F\u200D]/g, '');
+
+  const getCleanText = (text) => stripEmojis(text)
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\*(.+?)\*/g, '$1')
@@ -334,16 +338,20 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     } else {
-      // Voices not loaded yet — wait for voiceschanged then speak
-      const onVoicesChanged = () => {
-        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+      // Voices not loaded yet — wait for voiceschanged, with 500ms hard fallback
+      let spoken = false;
+      const speakNow = () => {
+        if (spoken) return;
+        spoken = true;
+        window.speechSynthesis.removeEventListener('voiceschanged', speakNow);
         const loadedVoices = window.speechSynthesis.getVoices();
         const selectedVoice = loadedVoices.find(v => v.lang.startsWith(langCode));
         if (selectedVoice) utterance.voice = selectedVoice;
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
       };
-      window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+      window.speechSynthesis.addEventListener('voiceschanged', speakNow);
+      setTimeout(speakNow, 500);
     }
   };
 
