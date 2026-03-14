@@ -68,7 +68,7 @@ export default function TSBLog() {
             <div className="space-y-3">
               <div className="bg-yellow-950/40 border border-yellow-500/20 rounded-lg p-4 text-gray-200 text-xs space-y-2">
                 <p><strong>1) Current Campaign:</strong> HYBRIDMESSAGE REFACTOR</p>
-                <p><strong>2) Current Phase:</strong> Phase 2 — Modularization (structural-only, within-file extraction focus)</p>
+                <p><strong>2) Current Phase:</strong> Phase 2A — Within-file structural extraction (no behavior change). Phase 2C — Cross-file modularization only if Stop Gate 0 proves imports already work.</p>
                 <p><strong>3) Current Scope Lock:</strong> <br/>— Today: functions/hybridMessage only<br/>— No new features, no behavior changes, structural cleanup only<br/>— Stop Gate 0: verify live file paths + line count before edits<br/>— All changes must include TSB entry with receipts (before/after deltas, smoke tests, rollback path)</p>
                 <p><strong>4) Canonical File Paths (exact):</strong><br/>— functions/hybridMessage (924 lines, Mar 14, 2026)<br/>— components/chat/ttsController.jsx (165 lines — LOCKED §11)<br/>— components/chat/ttsPrefs.jsx (63 lines — CANONICAL)<br/>— components/chat/ttsTextSanitizer.jsx (25 lines — CANONICAL)<br/>🚫 Rule: NO components/chat/tts/ directory exists. Must not be created.</p>
                 <p><strong>5) Locked Modules (do not edit without owner unlock):</strong><br/>— functions/hybridMessage (FROZEN per TSB-021 until refactor approved)<br/>— components/chat/ttsController.jsx (TTS path LOCKED per TSB-039)<br/>— functions/core/promptBuilder (LOCKED per TSB-023)</p>
