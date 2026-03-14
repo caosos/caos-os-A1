@@ -910,6 +910,7 @@ Deno.serve(async (req) => {
         } catch (_) { /* envelope write failed — already logged inside module */ }
 
         console.error('🔥 [PIPELINE_ERROR]', { stage: getStage(), message: error.message, latency_ms });
+        try { emitEvent(createClientFromRequest(req), request_id, body?.session_id || null, startTime, getStage() || 'UNKNOWN', error.message, { level: 'ERROR', code: 'PIPELINE_ERROR', data: { latency_ms } }); } catch (_) {}
 
         return Response.json({
             reply: "Something went wrong. Please try again.",
