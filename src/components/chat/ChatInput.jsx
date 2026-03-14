@@ -45,15 +45,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   useEffect(() => { ttsWarmVoices(); }, []);
   useEffect(() => { if (lastAssistantMessage) ttsWarmVoices(); }, [lastAssistantMessage]);
 
-  // Stop speech synthesis on unmount
+  // Stop TTS on unmount / page unload
   useEffect(() => {
-    const handleUnload = () => {
-      window.speechSynthesis.cancel();
-    };
+    const handleUnload = () => ttsStop();
     window.addEventListener('beforeunload', handleUnload);
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
-      window.speechSynthesis.cancel();
+      ttsStop();
       if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
       if (draftRafRef.current) cancelAnimationFrame(draftRafRef.current);
     };
