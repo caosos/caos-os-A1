@@ -207,6 +207,7 @@ Deno.serve(async (req) => {
         unresolved_count: unresolvedErrors,
         support_tickets_open: openTickets,
       },
+      error_records: errorRecords,
       performance: {
         avg_response_time_ms: avgLatency,
         p95_response_time_ms: p95Latency,
