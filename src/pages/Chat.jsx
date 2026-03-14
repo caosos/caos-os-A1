@@ -914,10 +914,12 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       });
 
       if (!isGuestMode) {
-        await base44.entities.Conversation.update(conversationId, {
+        // Fire-and-forget — hybridMessage already updates Conversation server-side.
+        // A platform 500 here is non-critical and must not surface to the user.
+        base44.entities.Conversation.update(conversationId, {
           last_message_preview: reply.substring(0, 100),
           last_message_time: new Date().toISOString()
-        });
+        }).catch((e) => console.warn('[CONV_UPDATE_NONFATAL]', e?.message));
       }
 
       // Clear backup on success
