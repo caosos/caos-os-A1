@@ -849,6 +849,7 @@ Deno.serve(async (req) => {
 
         // 3.1: Background anchor auto-extraction DISABLED.
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
+        emitEvent(base44, request_id, session_id, startTime, 'PIPELINE_COMPLETE', 'Pipeline complete', { data: { duration_ms: responseTime, wcw_used: promptTokens, wcw_remaining: wcwRemaining } });
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
         const response = {
