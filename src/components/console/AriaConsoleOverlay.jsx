@@ -3,15 +3,28 @@ import { X, Send, Mic, MicOff, Volume2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { ttcSpeak, ttsStop } from '@/components/chat/ttsController';
 
-export default function AriaConsoleOverlay({ metrics, onClose }) {
+export default function AriaConsoleOverlay({ metrics: initialMetrics, onClose }) {
   const [messages, setMessages] = useState([
-    { role: 'aria', text: 'ARIA online. Dashboard loaded. Ask me anything about the system.' }
+    { role: 'aria', text: 'ARIA online. Dashboard loaded. Ask me anything about the system — errors, costs, performance, users.' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [liveMetrics, setLiveMetrics] = useState(initialMetrics);
   const recognitionRef = useRef(null);
   const bottomRef = useRef(null);
+
+  // Refresh metrics every 15s so ARIA always has fresh data
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const res = await base44.functions.invoke('getDashboardMetrics', {});
+        if (res.data && !res.data.error) setLiveMetrics(res.data);
+      } catch (_) {}
+    };
+    const interval = setInterval(refresh, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
