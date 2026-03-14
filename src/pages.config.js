@@ -58,6 +58,7 @@ import SystemBlueprint from './pages/SystemBlueprint';
 import TSBLog from './pages/TSBLog';
 import TerminalBlueprint from './pages/TerminalBlueprint';
 import Welcome from './pages/Welcome';
+import RequestInspector from './pages/RequestInspector';
 
 
 export const PAGES = {
@@ -72,6 +73,7 @@ export const PAGES = {
     "TSBLog": TSBLog,
     "TerminalBlueprint": TerminalBlueprint,
     "Welcome": Welcome,
+    "RequestInspector": RequestInspector,
 }
 
 export const pagesConfig = {
