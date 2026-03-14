@@ -5,6 +5,9 @@ export function sanitizeForTTS(text, maxLength = 4096) {
   if (!text) return '';
   const stripEmojis = (s) => s
     .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
+    .replace(/\p{Emoji_Presentation}/gu, '')
+    .replace(/[\u2600-\u27BF][\uFE0F]?/g, '')   // misc symbols & dingbats (⚙️ ⏱️ ✅ ⚠️ etc.)
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')       // all supplemental emoji blocks
     .replace(/[\uFE0E\uFE0F\u200D]/g, '');
 
   return stripEmojis(text)
