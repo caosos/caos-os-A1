@@ -288,7 +288,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       return;
     }
 
-    // Start new speech
+    // ── RELIABLE SPEAK ────────────────────────────────────────────────────────
+    // Chrome drops utterances when cancel() fires immediately before speak() in
+    // the same tick on an idle engine. Fix: cancel first, then speak after a
+    // zero-delay timeout to let the engine flush before the new speak() call.
+    // Gesture law is preserved — the timeout fires within the same gesture epoch.
+    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (reliability fix 2026-03-14)
+    // ─────────────────────────────────────────────────────────────────────────
     const cleanText = getCleanText(lastAssistantMessage);
     const voicePref = localStorage.getItem('caos_google_voice') || 'Google US English';
     const voiceMap = {
@@ -300,60 +306,36 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     };
     const langCode = voiceMap[voicePref] || 'en-US';
 
+    // Resolve voice from persistent cache (populated on mount + voiceschanged)
+    let voices = cachedVoicesRef.current;
+    if (!voices.length) voices = window.speechSynthesis.getVoices();
+    const selectedVoice = voices.find(v => v.lang.startsWith(langCode)) || voices[0] || null;
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    const speed = parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0');
-    utterance.rate = Math.max(0.1, Math.min(speed, 2.0));
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = Math.max(0.1, Math.min(parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0'), 2.0));
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
+    utterance.lang = selectedVoice?.lang || langCode;
 
     utterance.onstart = () => {
       googleUtteranceRef.current = utterance;
       setIsPlayingGoogle(true);
       setIsPausedGoogle(false);
     };
-    utterance.onend = () => {
-      stopGoogleVoice();
-    };
+    utterance.onend = () => { stopGoogleVoice(); };
     utterance.onerror = (e) => {
-      // 'interrupted' / 'canceled' fire when cancel() is called intentionally — not a real error
       if (e.error === 'interrupted' || e.error === 'canceled') return;
       stopGoogleVoice();
-      toast.error('Google Voice read-aloud failed');
+      toast.error('Voice read-aloud failed — try again');
     };
     utterance.onboundary = () => {
       setGoogleSpeechProgress(prev => Math.min(prev + 2, 90));
     };
 
-    // ⚠️ GESTURE LAW — speak() must fire in same synchronous user gesture stack.
-    // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (gesture fix 2026-03-06)
-    //
-    // VOICE LOADING STRATEGY:
-    //   getVoices() may return [] on first call in Chrome (async population).
-    //   If empty, we wait for the voiceschanged event to fire then speak.
-    //   This maintains gesture context by storing the utterance and firing speak()
-    //   from within the event handler, which Chrome accepts as a valid gesture boundary.
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-      if (selectedVoice) utterance.voice = selectedVoice;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    } else {
-      // Voices not loaded yet — wait for voiceschanged, with 500ms hard fallback
-      let spoken = false;
-      const speakNow = () => {
-        if (spoken) return;
-        spoken = true;
-        window.speechSynthesis.removeEventListener('voiceschanged', speakNow);
-        const loadedVoices = window.speechSynthesis.getVoices();
-        const selectedVoice = loadedVoices.find(v => v.lang.startsWith(langCode));
-        if (selectedVoice) utterance.voice = selectedVoice;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-      };
-      window.speechSynthesis.addEventListener('voiceschanged', speakNow);
-      setTimeout(speakNow, 500);
-    }
+    // Cancel any prior speech, then give the engine one tick to flush before speaking.
+    window.speechSynthesis.cancel();
+    setTimeout(() => { window.speechSynthesis.speak(utterance); }, 50);
   };
 
   const handleVoiceButtonContextMenu = (e) => {
