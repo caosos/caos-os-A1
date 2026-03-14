@@ -430,6 +430,7 @@ Deno.serve(async (req) => {
 
         const openaiKey = Deno.env.get('OPENAI_API_KEY');
         console.log('🚀 [START]', { request_id, user: user.email, session_id });
+        emitEvent(base44, request_id, session_id, startTime, 'START', 'Pipeline started', { data: { user: user.email, session_id } });
 
         // ── STAGE: PROFILE_LOAD + HISTORY_LOAD in parallel ───────────────────
         setStage(STAGES.PROFILE_LOAD);
