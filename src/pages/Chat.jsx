@@ -34,6 +34,7 @@ export default function Chat() {
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
   if (isDeveloperMode) console.count('Chat render');
   const { user, isGuestMode, dataLoaded } = useAuthBootstrap();
+  useSessionTracker();
 
   const [messages, setMessages] = useState({});
   const [wcwState, setWcwState] = useState({ used: null, budget: null });
