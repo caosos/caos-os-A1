@@ -28,6 +28,7 @@ import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
 import RedScreenOfDeath from '@/components/chat/RedScreenOfDeath';
 import { classifyError } from '@/components/lib/errorClassifier';
+import useSessionTracker from '@/components/hooks/useSessionTracker';
 
 export default function Chat() {
   const isDeveloperMode = localStorage.getItem('caos_developer_mode') === 'true';
