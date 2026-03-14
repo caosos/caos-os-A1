@@ -682,6 +682,7 @@ Deno.serve(async (req) => {
         const RESOLVED_MODEL = ACTIVE_MODEL;
         const routingDecision = { route: 'standard', route_reason: 'static_model', model: ACTIVE_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
+        emitEvent(base44, request_id, session_id, startTime, 'HEURISTICS', `intent=${hIntent} depth=${hDepth} cog=${cogLevel.toFixed(1)}`, { data: { intent: hIntent, depth: hDepth, cognitive_level: cogLevel } });
 
         // ── STAGE: PROMPT_BUILD — via core/promptBuilder (TSB-023: 2026-03-05) ─
         // Delegates to promptBuilder which carries full capability declarations.
