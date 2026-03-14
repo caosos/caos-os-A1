@@ -1720,7 +1720,11 @@ END TOKEN`}</pre>
 - UI render contract: Chat.jsx passes messages.slice(-DISPLAY_LIMIT) to message list — never the full messages[] array
 - TSB-033 (Mar 12, 2026): generalInference P0 timeout patch — PROVIDER_TIMEOUT/HTTP/NETWORK typed errors, AbortController 55s, observability fields (provider_request_elapsed_ms, payload_bytes_est). hybridMessage untouched.
 - TSB-034 (Mar 12, 2026): FunctionManifest governance purge — all legacy/poison entries deleted, rebuilt with real hashes. runtimeRegistry actor always server-derived (auth context). repoTool OUTPUT_TRUNCATION guard added.
-- FunctionManifest: 3 registered entries — core/generalInference (sha256:206ac9db…, P0 patch), core/repoInference (sha256:f20904fe…), core/repoTool (sha256:ac0d2d77…)`}</Code>
+- FunctionManifest: 3 registered entries — core/generalInference (sha256:206ac9db…, P0 patch), core/repoInference (sha256:f20904fe…), core/repoTool (sha256:ac0d2d77…)
+- TSB-035 (Mar 13, 2026): Emoji legend + ALWAYS-ON usage rules added to promptBuilder. 183→264 lines. 8 categories ~55 entries. Single source of truth. No sanitizer strips emojis (confirmed pre-patch). No other files modified.
+- TSB-036 (Mar 13, 2026): SSE streaming shipped via streamHybridMessage (new function). ENABLE_STREAMING=false (kill-switch active). Option A tools (complete loop then stream final). MessageContent streaming fast-path (plain text+cursor). MarkdownMessage React.memo applied.
+- TSB-037 (Mar 13, 2026): stripEmojis() added to cleanText pipeline in ALL four TTS paths — ChatBubble.handleReadAloud (OpenAI), ChatInput.toggleGoogleVoicePlay (Google), ChatInputReadAloud, ChatBubbleReadAloud. Prevents emoji CLDR names being vocalized.
+- streamHybridMessage: new backend SSE function. LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13. Currently disabled via ENABLE_STREAMING=false in pages/Chat.jsx line 334.`}</Code>
           </Section>
 
         </div>
