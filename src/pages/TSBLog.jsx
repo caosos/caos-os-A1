@@ -1200,6 +1200,149 @@ Final State:
 Status:    COMPLETE ✅`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-035 — Emoji Legend + Always-On Structured Markers Added to promptBuilder</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 13, 2026
+Component: functions/core/promptBuilder
+
+Symptom:
+  Aria used no emojis in responses by default. No emoji permission or legend existed
+  in the system prompt. Users had to manually ask for emoji use each session.
+
+Root Cause:
+  The OUTPUT FORMAT block in promptBuilder was permissive but made no affirmative
+  statement about emoji use. No legend, no usage rules, no explicit "ALWAYS ON" flag.
+  Sanitizers (core/sanitizer, context/sanitizer) did NOT strip emojis — they were
+  passing through cleanly. The only issue was absence of instruction.
+
+Fix (single-file patch — Phase 0 discovery confirmed no conflicts):
+  functions/core/promptBuilder OUTPUT FORMAT block expanded from 3 lines to ~81 lines.
+  Added (in order):
+    1. EMOJI USAGE — ALWAYS ON section (6 usage rules):
+       - Max 1 emoji per header
+       - Max 1 emoji per bullet cluster (except severity ladders 🔴🟠🟡🟢)
+       - Emojis must match legend meanings only
+       - Emojis are markers; never replace technical wording
+       - No decorative/random emojis
+    2. Complete EMOJI LEGEND (8 categories, ~55 entries — canonical single source of truth):
+       🧠 Cognition/reasoning | 🔎 Discovery/investigation | 📋 Planning/governance |
+       ⚙️ Engineering | 🚨 Risk/severity | ⏱️ Time/latency | 🧾 Data/logging |
+       📎 Communication/UX | Culprit visual language (🔴🟠🟡🟢)
+
+Before: 183 lines → After: 264 lines (well under 400-line limit)
+Only functions/core/promptBuilder was modified.
+
+Acceptance:
+  - Build passes ✅
+  - Emojis confirmed in live promptBuilder test response payload ✅
+  - Unicode code points confirmed rendering through frontend (ReactMarkdown) ✅
+  - No sanitizer strips emojis (verified pre-patch) ✅
+  - Legend exists in promptBuilder ONLY — not duplicated elsewhere ✅
+
+LOCK: promptBuilder EMOJI LEGEND is the single source of truth.
+Do not duplicate or override in any other file.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-036 — SSE Streaming Path Implemented (Opt-In, Kill-Switch Active)</span>
+                  <Tag label="SHIPPED — DISABLED ⚠️" color="yellow" />
+                </div>
+                <Code>{`Date:      Mar 13, 2026
+Component: functions/streamHybridMessage (NEW)
+           pages/Chat.jsx (MODIFIED — toggle + stream reader)
+           components/chat/bubble/MessageContent.jsx (streaming fast-path)
+           components/chat/bubble/MarkdownMessage.jsx (React.memo)
+
+Objective:
+  Enable incremental word-by-word streaming output (type-on effect) without
+  touching functions/hybridMessage. Streaming is opt-in and instantly reversible.
+
+Architecture:
+  - functions/streamHybridMessage: new standalone SSE function. Performs its own
+    auth + profile load + heuristics + prompt build (same modules as hybridMessage).
+    Calls OpenAI with stream:true. Emits SSE frames:
+      event: meta   data: { request_id, session_id, model_used }
+      event: delta  data: { text, request_id }
+      event: final  data: { request_id, response_time_ms, token_usage, mode: "STREAM" }
+      event: error  data: { error_code, stage, request_id, retryable }
+    Option A tool handling: if tool calls detected, complete tool loop first (via generalInference),
+    then stream final answer as deltas. hybridMessage UNTOUCHED.
+
+  - pages/Chat.jsx: ENABLE_STREAMING toggle added (currently = false).
+    handleStreamingMessage() added: uses fetch + ReadableStream reader.
+    SSE parser splits on \\n\\n frame boundaries (SSE spec — robust to chunk fragmentation).
+    On delta: appends text to streaming assistant bubble via functional setState immediately.
+    On final: marks message complete, updates metadata.
+    On failure: falls back to hybridMessage non-streaming path automatically.
+    DEBUG_STREAM flag: console logs delta_n, cumulative_len, text_preview per delta.
+
+  - MessageContent.jsx streaming fast-path: when message.streaming === true,
+    renders plain whitespace-pre-wrap text + blinking blue cursor (bypasses ReactMarkdown
+    and all regex processing to prevent per-delta re-parse stutter).
+    On completion (streaming=false): switches to full markdown render.
+
+  - MarkdownMessage.jsx: wrapped in React.memo() to prevent re-parse when content
+    is stable (only re-renders when content prop actually changes).
+
+Confirmed working:
+  - streamHybridMessage backend: 200 OK, word-level delta frames confirmed (21+ deltas)
+  - time-to-first-delta: ~1021ms on simple prompt ✅
+  - Stream terminated cleanly with final event ✅
+  - Non-streaming path (ENABLE_STREAMING=false): hybridMessage unchanged ✅
+
+Current status: ENABLE_STREAMING = false (line 334 in pages/Chat.jsx)
+Reason: streaming URL resolution via streamProbe was fragile in some environments.
+        Non-streaming path is stable and users are not blocked.
+
+Rollback: set ENABLE_STREAMING = false (already done). One-line instant rollback.
+To re-enable: set to true + verify streamProbe URL resolution in target environment.
+
+LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-037 — Emoji Stripping Added to Both TTS Read-Aloud Paths</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 13, 2026
+Component: components/chat/ChatBubble.jsx — handleReadAloud() (Path A — OpenAI TTS)
+           components/chat/ChatInput.jsx — toggleGoogleVoicePlay() (Path B — Google Web Speech)
+           components/chat/ChatInputReadAloud.jsx — cleanText pipeline
+           components/chat/ChatBubbleReadAloud.jsx — cleanText pipeline
+
+Symptom:
+  Read-aloud was vocalizing emoji names and descriptions (e.g., "check mark", "magnifying glass",
+  "clipboard"). After TSB-035 added emojis to all responses, this became noticeable on every
+  read-aloud invocation.
+
+Root Cause:
+  The text cleaning pipeline in both TTS paths stripped markdown (headers, bold, lists, etc.)
+  but had no emoji removal step. Unicode emoji characters were passed directly to the TTS
+  provider/engine, which verbalized their CLDR names.
+
+Fix:
+  stripEmojis regex added to cleanText pipeline in all four affected locations:
+    const stripEmojis = (s) => (s || '')
+      .replace(/\\p{Extended_Pictographic}(\\uFE0F|\\uFE0E)?(\\u200D\\p{Extended_Pictographic}(\\uFE0F|\\uFE0E)?)*/gu, '')
+      .replace(/[\\uFE0E\\uFE0F\\u200D]/g, '');
+
+  Applied as first step before all other markdown stripping, ensuring:
+  - All emoji Unicode code points removed (including ZWJ sequences and variation selectors)
+  - Emoji combiners and modifiers stripped independently
+  - Remaining text pipeline unchanged
+
+Both TTS paths now strip emojis before vocalization.
+Path A (OpenAI TTS — ChatBubble speaker icon): confirmed in handleReadAloud()
+Path B (Google Web Speech — ChatInput toolbar): confirmed in toggleGoogleVoicePlay()
+
+Status: COMPLETE ✅`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
