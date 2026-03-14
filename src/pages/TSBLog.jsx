@@ -1343,6 +1343,57 @@ Path B (Google Web Speech — ChatInput toolbar): confirmed in toggleGoogleVoice
 Status: COMPLETE ✅`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-038 — Operational Bootstrap v1 Deployed as Runtime Baseline</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 14, 2026
+Components: functions/core/promptBuilder (LOCKED — minimal plumbing only)
+            components/docs/OperationalBootstrap.jsx (NEW)
+            components/governance/ProtectedFilesRegistry.jsx (doc-only update)
+            pages/SystemBlueprint.jsx (new Section 14 nav entry)
+
+Objective:
+  Make the CAOS / Aria operational behavior contract a canonical, visible,
+  and runtime-enforced baseline across all user intents and sessions.
+  Previously this only existed as chat-level convention — not enforced anywhere.
+
+What was added:
+  1. ENABLE_OPERATIONAL_BOOTSTRAP flag in promptBuilder (true by default).
+  2. OPERATIONAL_BOOTSTRAP constant prepended to every system prompt before the
+     identity block. Contains 5 operational defaults:
+       (1) Proactive tool use (no permission needed when signal is clear)
+       (2) Direct action posture (execute then report, no preambles)
+       (3) Minimal surface area (do exactly what was asked)
+       (4) Never guess under uncertainty (state data needed, stop)
+       (5) Campaign Mode (lock table, stop gates, rollback paths, edit tracking)
+     Applies to ALL intents: code, tasks, email, planning, media, research.
+  3. BOOTSTRAP_SIGNATURE=v1 emitted in every prompt for log traceability.
+  4. OperationalBootstrap.jsx — full UI doc page with expandable sections,
+     verbatim bootstrap text, and copy button.
+  5. ProtectedFilesRegistry updated to v1.1 — OperationalBootstrap.jsx added
+     with rationale: "Baseline assistant behavior contract".
+  6. SystemBlueprint Section 14 added — nav entry with flag status and scope.
+
+GOV v1.2 Amendment A compliance:
+  promptBuilder: 264 lines → ~285 lines (under 400-line limit ✅).
+  Change is imports + constant + single conditional block ONLY.
+  No restructuring. No logic changes. No other files in spine touched.
+
+Rollback:
+  Set ENABLE_OPERATIONAL_BOOTSTRAP = false in functions/core/promptBuilder.
+  Single-line, instant rollback. No other files need changing.
+
+Acceptance:
+  - BOOTSTRAP_SIGNATURE=v1 present in every promptBuilder output ✅
+  - OperationalBootstrap.jsx renders in docs UI ✅
+  - ProtectedFilesRegistry v1.1 includes new entry ✅
+  - SystemBlueprint Section 14 shows Operational Bootstrap ✅
+
+Status:    LIVE ✅`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
