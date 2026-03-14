@@ -149,6 +149,18 @@ Deno.serve(async (req) => {
     });
     const unresolvedErrors = errors.filter(e => !e.resolved).length;
     const openTickets      = supportTickets.filter(t => t.status === 'open').length;
+    // Include full error records for drill-down (most recent 100)
+    const errorRecords = errors.slice(0, 100).map(e => ({
+      id: e.id,
+      user_email: e.user_email,
+      error_type: e.error_type,
+      error_message: e.error_message,
+      error_code: e.error_code,
+      stage: e.stage,
+      resolved: e.resolved,
+      created_date: e.created_date,
+      conversation_id: e.conversation_id,
+    }));
 
     // ── MEMORY METRICS ────────────────────────────────────────────
     const recallRequests     = receipts.filter(r => r.recall_executed).length;
