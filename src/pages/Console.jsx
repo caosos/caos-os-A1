@@ -21,6 +21,8 @@ export default function Console() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [terminalMode, setTerminalMode] = useState('metrics');
   const [showAria, setShowAria] = useState(false);
+  const [showCostReport, setShowCostReport] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
   const metricsRef = useRef(null);
 
   useEffect(() => {
