@@ -1009,11 +1009,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
               <button
                 type="button"
                 onClick={() => {
-                  // Rewind by cancelling and replaying from start (Web Speech API limitation)
-                  window.speechSynthesis.cancel();
-                  setGoogleSpeechProgress(0);
-                  setIsPausedGoogle(false);
-                  toggleGoogleVoicePlay();
+                  stopGoogleVoice();
+                  setTimeout(() => toggleGoogleVoicePlay(), 80);
                 }}
                 className="p-1 rounded hover:bg-gray-100 transition-colors"
                 title="Restart"
