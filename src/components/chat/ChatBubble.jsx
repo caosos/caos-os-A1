@@ -56,7 +56,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const audioRef = React.useRef(null);
   const utteranceRef = React.useRef(null);
   const progressInterval = React.useRef(null);
-  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}`;
+  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}_v2`;
   const ttsLog = DEV ? (event, payload) => {
       console.log(`[TTS_LIFECYCLE] ${event}`, { msg: message.id?.substring(0, 8), ...payload });
   } : () => {};
