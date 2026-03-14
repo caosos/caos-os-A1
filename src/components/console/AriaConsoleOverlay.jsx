@@ -38,7 +38,7 @@ export default function AriaConsoleOverlay({ metrics: initialMetrics, onClose })
     setLoading(true);
 
     try {
-      const res = await base44.functions.invoke('consoleChat', { message: msg, metrics });
+      const res = await base44.functions.invoke('consoleChat', { message: msg, metrics: liveMetrics });
       const reply = res.data?.reply || 'No response.';
       setMessages(prev => [...prev, { role: 'aria', text: reply }]);
       ttsStop();
