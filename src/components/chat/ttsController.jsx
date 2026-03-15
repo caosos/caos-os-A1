@@ -88,13 +88,14 @@ function _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, 
   return utt;
 }
 
-function _resurrectAndSpeak(utt) {
-  // Cancel any queued speech, then speak directly — no double-cancel that races with _state.utterance checks
+function _resurrectAndSpeak(utt, onAfterSpeak) {
   try { window.speechSynthesis.cancel(); } catch (_) {}
+  try { window.speechSynthesis.resume(); } catch (_) {}
   setTimeout(() => {
     if (_state.utterance === utt) {
       if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${utt.text.length}`);
       window.speechSynthesis.speak(utt);
+      onAfterSpeak?.();
     }
   }, 100);
 }
