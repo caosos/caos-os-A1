@@ -854,7 +854,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </div>
       )}
 
-
+      {/* Voice Settings Menu */}
+      {showVoiceMenu && <VoiceSettingsMenu onClose={() => setShowVoiceMenu(false)} />}
     </form>
   );
 }
