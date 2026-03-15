@@ -138,32 +138,44 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     };
 
     const speakWithVoice = (voices) => {
+      if (sid !== _sessionId) return;
+      if (_activeUtterance !== utterance) return;
       const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
       if (selectedVoice) utterance.voice = selectedVoice;
       window.speechSynthesis.cancel(); // clear any queue
       // Small delay after cancel() — Chrome needs a tick before speak() after cancel
-      setTimeout(() => window.speechSynthesis.speak(utterance), 50);
+      setTimeout(() => {
+        if (sid !== _sessionId) return;
+        if (_activeUtterance !== utterance) return;
+        try { window.speechSynthesis.speak(utterance); } catch (e) {}
+      }, 75);
     };
 
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      speakWithVoice(voices);
-    } else {
-      // Voices not loaded yet — wait for the event, with a 500ms hard fallback
-      let spoken = false;
-      window.speechSynthesis.onvoiceschanged = () => {
-        if (spoken) return;
-        spoken = true;
-        window.speechSynthesis.onvoiceschanged = null;
-        speakWithVoice(window.speechSynthesis.getVoices());
-      };
+    // Fetch voices and start playback
+    (async () => {
+      const voices = await waitForVoices();
+      if (sid !== _sessionId) return;
+      if (_activeUtterance !== utterance) return;
+      speakWithVoice(voices || window.speechSynthesis.getVoices());
+
+      // Watchdog: if speech never started, clean up and notify
       setTimeout(() => {
-        if (spoken) return;
-        spoken = true;
-        window.speechSynthesis.onvoiceschanged = null;
-        speakWithVoice(window.speechSynthesis.getVoices());
-      }, 500);
-    }
+        if (sid !== _sessionId) return;
+        if (_activeUtterance !== utterance) return;
+
+        const synth = window.speechSynthesis;
+        const started = !!synth.speaking;
+
+        if (!started) {
+          _sessionId++; // invalidate
+          try { synth.cancel(); } catch (e) {}
+          clearKeepAlive();
+          _activeUtterance = null;
+          setIsPlaying(false);
+          try { toast?.error?.('Read aloud failed to start'); } catch (e) {}
+        }
+      }, 1200);
+    })();
   } catch (error) {
     clearKeepAlive();
     _activeUtterance = null;
