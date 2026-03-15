@@ -5,7 +5,9 @@
 import { sanitizeForTTS } from './ttsTextSanitizer';
 import { getTTSPrefs } from './ttsPrefs';
 
+let _sessionId = 0;
 let _state = {
+  sessionId: 0,
   engine: null,
   audio: null,
   utterance: null,
@@ -31,7 +33,8 @@ function _stopAll(silent = false) {
     try {
       _state.audio.pause();
       _state.audio.currentTime = 0;
-      if (_state.audio.src?.startsWith('blob:')) URL.revokeObjectURL(_state.audio.src);
+      _state.audio.src = '';
+      if (_state.audio._blobUrl?.startsWith('blob:')) URL.revokeObjectURL(_state.audio._blobUrl);
     } catch (_) {}
     _state.audio = null;
   }
@@ -104,6 +107,7 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
   const started = { value: false };
   const retried = { value: false };
   const watchdogRef = { id: null };
+  const sessionId = _state.sessionId;
 
   const utt = _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, started, retried, watchdogRef);
   _state.utterance = utt;
@@ -135,7 +139,10 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
   };
 
   // Arm watchdog immediately after speak() is called (via onAfterSpeak callback)
-  _resurrectAndSpeak(utt, () => armWatchdog(utt));
+  _resurrectAndSpeak(utt, () => {
+    if (_state.sessionId !== sessionId) return; // session cancelled
+    armWatchdog(utt);
+  });
 }
 
 async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onError) {
@@ -165,6 +172,8 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
 
 export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, onBoundary } = {}) {
   _stopAll(true);
+  _sessionId++;
+  _state.sessionId = _sessionId;
   const prefs = getTTSPrefs();
   const resolvedEngine = engine || prefs.engine || 'webspeech';
   const cleanText = sanitizeForTTS(text);
@@ -186,15 +195,16 @@ export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, 
 
   if (resolvedEngine === 'auto') {
     if (!base44) { _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary); return; }
+    const sessionId = _state.sessionId;
     let started = false;
     const autoStart = () => { started = true; onStart?.(); };
     _speakWebSpeech(cleanText, prefs, autoStart, onEnd, async () => {
-      if (!started) {
+      if (!started && _state.sessionId === sessionId) {
         try { await _speakServer(cleanText, prefs, base44, onStart, onEnd, onError); } catch (e) { onError?.(e); }
       }
     }, onBoundary);
     setTimeout(async () => {
-      if (!started && _state.engine === 'webspeech') {
+      if (!started && _state.sessionId === sessionId && _state.engine === 'webspeech') {
         _stopAll(true);
         try { await _speakServer(cleanText, prefs, base44, onStart, onEnd, onError); } catch (e) { onError?.(e); }
       }
@@ -213,6 +223,9 @@ export function ttsResume() {
   if (_state.engine === 'webspeech') window.speechSynthesis?.resume();
   else if (_state.engine === 'server' && _state.audio) _state.audio.play().catch(() => {});
 }
+
+export function ttsGetSessionId() { return _state.sessionId; }
+export function ttsIsActive() { return _state.sessionId > 0 && (_state.audio || _state.utterance); }
 
 export function ttsWarmVoices() {
   _cachedVoices = window.speechSynthesis?.getVoices() || [];
