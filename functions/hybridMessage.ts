@@ -914,18 +914,35 @@ Deno.serve(async (req) => {
 
         // Phase 3.1: anchor auto-extraction DISABLED (lock active)
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
-        emitEvent(base44, request_id, session_id, startTime, 'PIPELINE_COMPLETE', 'Pipeline complete', { data: { duration_ms: responseTime, wcw_used: promptTokens, wcw_remaining: wcwRemaining } });
-        console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
         const wcw_audit = buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAdmin: user.role === 'admin' });
 
         // Admin-only WCW telemetry — inline pure calls, zero network overhead
-        const wcw_state = user.role === 'admin'
-            ? buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, request_id, session_id, model: RESOLVED_MODEL })
+        // LOCK_SIGNATURE: CAOS_WCW_TELEMETRY_v1_2026-03-15 (builders defined in SECTION 4)
+        const isAdmin = user.role === 'admin';
+        const _wcwPressureScore = Math.round(100 * promptTokens / wcwBudget);
+        const _wcwZone = _wcwPressureScore >= 85 ? 'red' : _wcwPressureScore >= 70 ? 'yellow' : _wcwPressureScore >= 50 ? 'blue' : 'green';
+        const wcw_state = isAdmin
+            ? { ...buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, request_id, session_id, model: RESOLVED_MODEL }),
+                schema: 'wcw_state.v1', context_pressure_score: _wcwPressureScore, zone: _wcwZone,
+                inventory: [], telemetry_missing_fields: ['inventory', 'sanitizer_delta_tokens'] }
             : null;
-        const wcw_turn = user.role === 'admin'
-            ? buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id })
+        const wcw_turn = isAdmin
+            ? { ...buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id }),
+                schema: 'wcw_turn.v1', context_pressure_score: _wcwPressureScore, zone: _wcwZone }
             : null;
+
+        // PIPELINE_COMPLETE emitEvent — after builders so wcw_turn/wcw_state are in scope
+        // Admin turns include full wcw telemetry; non-admin turns omit keys entirely
+        emitEvent(base44, request_id, session_id, startTime, 'PIPELINE_COMPLETE', 'Pipeline complete', {
+            data: {
+                duration_ms: responseTime,
+                wcw_used: promptTokens,
+                wcw_remaining: wcwRemaining,
+                ...(isAdmin ? { wcw_turn, wcw_state } : {})
+            }
+        });
+        console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
         const response = buildResponsePayload({
             reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
