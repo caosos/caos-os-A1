@@ -247,9 +247,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       return;
     }
 
-    // Start — ttsController stops any prior audio (bubble, other input) before speaking
+    // Start — optimistic UI: show player immediately, don't wait for onStart
+    setIsPlayingGoogle(true);
+    setIsPausedGoogle(false);
+    // engine:'auto' allows server TTS fallback if WebSpeech gets stuck
     ttcSpeak(lastAssistantMessage, {
-      engine: 'webspeech',
+      engine: 'auto',
+      base44,
       onStart: () => {
         setIsPlayingGoogle(true);
         setIsPausedGoogle(false);
