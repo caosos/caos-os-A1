@@ -54,39 +54,100 @@ function _startKeepAlive() {
   }, 10000);
 }
 
-function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) {
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  _state.utterance = utterance;
-  _state.engine = 'webspeech';
+const WATCHDOG_MS = 800;
+const _dev = () => localStorage.getItem('caos_developer_mode') === 'true';
 
-  let voices = _cachedVoices.length ? _cachedVoices : (window.speechSynthesis?.getVoices() || []);
+function _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, started, retried, watchdogRef) {
+  const voices = _cachedVoices.length ? _cachedVoices : (window.speechSynthesis?.getVoices() || []);
   const lang = prefs.wsLang || 'en-US';
   const voice = voices.find(v => v.lang.startsWith(lang)) || voices[0] || null;
-  if (voice) utterance.voice = voice;
-  utterance.lang = voice?.lang || lang;
-  utterance.rate = Math.max(0.1, Math.min(prefs.rate, 2.0));
-  utterance.pitch = 1.0;
-  utterance.volume = 1.0;
 
-  utterance.onstart = () => { _startKeepAlive(); onStart?.(); };
-  utterance.onend = () => { _stopAll(true); onEnd?.(); _state.onEnd = null; };
-  utterance.onerror = (e) => {
+  const utt = new SpeechSynthesisUtterance(cleanText);
+  if (voice) utt.voice = voice;
+  utt.lang = voice?.lang || lang;
+  utt.rate = Math.max(0.1, Math.min(prefs.rate, 2.0));
+  utt.pitch = 1.0;
+  utt.volume = 1.0;
+
+  utt.onstart = () => {
+    started.value = true;
+    if (watchdogRef.id) { clearTimeout(watchdogRef.id); watchdogRef.id = null; }
+    if (_dev()) console.log('[TTS] TTS_WEBSPEECH_ONSTART');
+    _startKeepAlive();
+    onStart?.();
+  };
+  utt.onend = () => { _stopAll(true); onEnd?.(); _state.onEnd = null; };
+  utt.onerror = (e) => {
     if (e.error === 'interrupted' || e.error === 'canceled') return;
+    if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_ONERROR: ${e.error}`);
     _stopAll(true);
     onError?.(new Error(`WebSpeech: ${e.error}`));
     _state.onError = null;
   };
-  if (onBoundary) utterance.onboundary = onBoundary;
+  if (onBoundary) utt.onboundary = onBoundary;
+  return utt;
+}
 
-  // Chrome engine resurrection: cancel twice + resume forces engine reinit on idle/backgrounded tabs
+function _resurrectAndSpeak(utt) {
   window.speechSynthesis.cancel();
   window.speechSynthesis.resume();
   setTimeout(() => {
     window.speechSynthesis.cancel();
     setTimeout(() => {
-      if (_state.utterance === utterance) window.speechSynthesis.speak(utterance);
+      if (_state.utterance === utt) {
+        if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${utt.text.length}`);
+        window.speechSynthesis.speak(utt);
+      }
     }, 50);
   }, 50);
+}
+
+function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) {
+  const started = { value: false };
+  const retried = { value: false };
+  const watchdogRef = { id: null };
+
+  const utt = _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, started, retried, watchdogRef);
+  _state.utterance = utt;
+  _state.engine = 'webspeech';
+
+  // Watchdog: fires WATCHDOG_MS after speak() is actually called
+  const armWatchdog = (currentUtt) => {
+    if (watchdogRef.id) clearTimeout(watchdogRef.id);
+    watchdogRef.id = setTimeout(() => {
+      watchdogRef.id = null;
+      if (started.value || _state.utterance !== currentUtt) return;
+
+      if (!retried.value) {
+        // Single retry
+        retried.value = true;
+        if (_dev()) console.log('[TTS] TTS_WEBSPEECH_START_TIMEOUT_RETRY');
+        window.speechSynthesis.cancel();
+        const retryUtt = _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, started, retried, watchdogRef);
+        _state.utterance = retryUtt;
+        const armRetryWatchdog = () => {
+          watchdogRef.id = setTimeout(() => {
+            watchdogRef.id = null;
+            if (started.value || _state.utterance !== retryUtt) return;
+            if (_dev()) console.log('[TTS] TTS_WEBSPEECH_START_TIMEOUT_FAIL');
+            _stopAll(true);
+            onError?.(new Error('WebSpeech: start_timeout'));
+          }, WATCHDOG_MS);
+        };
+        setTimeout(() => {
+          if (_state.utterance === retryUtt) {
+            if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${retryUtt.text.length}`);
+            window.speechSynthesis.speak(retryUtt);
+            armRetryWatchdog();
+          }
+        }, 100);
+      }
+    }, WATCHDOG_MS);
+  };
+
+  // Arm watchdog after speak() is dispatched (100ms after the inner 50ms timer = ~200ms total)
+  _resurrectAndSpeak(utt);
+  setTimeout(() => armWatchdog(utt), 200);
 }
 
 async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onError) {
