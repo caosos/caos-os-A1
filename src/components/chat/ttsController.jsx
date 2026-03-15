@@ -180,6 +180,7 @@ export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, 
   if (resolvedEngine === 'server') {
     if (!base44) throw new Error('ttsController: base44 client required for server engine');
     await _speakServer(cleanText, prefs, base44, onStart, onEnd, onError);
+    _speaking = false;
     return;
   }
 
