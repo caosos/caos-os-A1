@@ -11,6 +11,22 @@
 // GOVERNANCE: No new features. Only permitted change = adding a call/invoke to an external module.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import {
+  compressHistory,
+  openAICall,
+  shouldRunCTC,
+  classifyIntent,
+  detectCogLevel,
+  calibrateDepth,
+  buildDirective,
+  detectSaveIntent,
+  detectRecallIntent,
+  routeRequest,
+  detectRepoCommand,
+  extractMetadataTags,
+  buildSystemPromptViaModule,
+  PRONOUN_PATTERN
+} from './core/hm/pure.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1 — CONSTANTS
