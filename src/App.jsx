@@ -11,6 +11,8 @@ import Welcome from './pages/Welcome';
 import Admin from './pages/Admin';
 import TSBLog1 from './pages/TSBLog';
 import TSBLog2 from './pages/TSBLog2';
+// Note: Individual TSB-041, TSB-042, TSB-043, TSB-044 pages removed from routing.
+// All TSBs consolidated into TSBLog1 (TSB-001–042) and TSBLog2 (TSB-043–048)
 
 const LayoutWrapper = ({ children }) => <>{children}</>;
 const mainPage = 'Chat';
@@ -47,6 +49,7 @@ const AuthenticatedApp = () => {
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
       <Route path="/TSBLog1" element={<LayoutWrapper><TSBLog1 /></LayoutWrapper>} />
       <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
+      {/* Individual TSB pages removed — all content in TSBLog1 + TSBLog2 */}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
