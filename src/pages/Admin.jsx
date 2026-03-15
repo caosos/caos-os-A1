@@ -69,7 +69,7 @@ export default function AdminDashboard() {
 
             <div className="max-w-7xl mx-auto px-6 py-6">
                 <Tabs defaultValue="health" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-7">
+                    <TabsList className="grid w-full grid-cols-8">
                         <TabsTrigger value="health" className="gap-2">
                             <Activity className="h-4 w-4" />
                             Health
@@ -81,6 +81,10 @@ export default function AdminDashboard() {
                         <TabsTrigger value="wcw" className="gap-2">
                             <Database className="h-4 w-4" />
                             WCW
+                        </TabsTrigger>
+                        <TabsTrigger value="wcw_inspector" className="gap-2">
+                            <Zap className="h-4 w-4" />
+                            WCW Inspector
                         </TabsTrigger>
                         <TabsTrigger value="stats" className="gap-2">
                             <Activity className="h-4 w-4" />
