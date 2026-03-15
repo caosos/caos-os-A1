@@ -83,6 +83,12 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     utterance.onstart = () => {
       setIsPlaying(true);
       startKeepAlive();
+      // Force resume in case it starts paused
+      setTimeout(() => {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      }, 100);
     };
     utterance.onend = () => {
       clearKeepAlive();
@@ -95,7 +101,9 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       clearKeepAlive();
       _activeUtterance = null;
       setIsPlaying(false);
-      toast.error('Google Voice read-aloud failed');
+      if (e.error !== 'network_error') {
+        toast.error('Google Voice read-aloud failed');
+      }
     };
 
     const speakWithVoice = (voices) => {
