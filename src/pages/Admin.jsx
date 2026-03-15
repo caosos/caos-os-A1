@@ -10,6 +10,7 @@ import WCWMonitor from '@/components/admin/WCWMonitor';
 import SystemHealth from '@/components/admin/SystemHealth';
 import RecentErrors from '@/components/admin/RecentErrors';
 import PipelineVisualizer from '@/components/admin/PipelineVisualizer';
+import WCWInspector from '@/components/admin/WCWInspector';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
