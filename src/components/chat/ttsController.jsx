@@ -166,6 +166,12 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
   });
 
   try {
+    // Resume AudioContext if suspended (common after tab idle or user gesture gap)
+    if (window.AudioContext || window.webkitAudioContext) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') await ctx.resume();
+      ctx.close();
+    }
     await audio.play();
     if (_dev()) console.log('[TTS] SERVER_AUDIO_PLAY_OK duration=', audio.duration);
     onStart?.();
