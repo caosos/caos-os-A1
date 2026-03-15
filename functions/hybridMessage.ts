@@ -517,13 +517,14 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime }
 }
 
 // ── Response payload builder ─────────────────────────────────────────────────
-function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages }) {
+function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, budgetGovernor }) {
     const response = {
         reply, mode: 'GEN', request_id, correlation_id,
         route: routingDecision.route, model_used: RESOLVED_MODEL,
         server_time, response_time_ms: responseTime, tool_calls: [],
         execution_meta,
         wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+        budget_governor: budgetGovernor,
         execution_receipt: {
             request_id, correlation_id, session_id,
             history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
