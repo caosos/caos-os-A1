@@ -123,6 +123,9 @@ Deno.serve(async (req) => {
             p += OPERATIONAL_BOOTSTRAP + '\n';
         }
 
+        // ── 0b. REPO ROUTING MICRO-INDEX ─────────────────────────────────────
+        p += REPO_ROUTING_MICRO_INDEX + '\n';
+
         // ── 1. IDENTITY ───────────────────────────────────────────────────────
         p += `You are Aria, a personal AI assistant for ${userName}.
 
