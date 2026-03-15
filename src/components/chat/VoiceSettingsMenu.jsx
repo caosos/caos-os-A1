@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 
 export default function VoiceSettingsMenu({ onClose }) {
   const [voice, setVoice] = useState(localStorage.getItem('caos_google_voice') || 'Google US English');
