@@ -437,6 +437,32 @@ function buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAd
     return { enabled: true, max_model_wcw_tokens: wcwBudget, prompt_tokens_post_inference: promptTokens, slots, chars_total: charsTotal, largest_slots: largestSlots };
 }
 
+// ── WCW telemetry builders (pure, no I/O) ────────────────────────────────────
+// LOCK_SIGNATURE: CAOS_WCW_TELEMETRY_v1_2026-03-15
+function buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, session_id, request_id, model }) {
+    const pct_used = wcwBudget > 0 ? parseFloat(((promptTokens / wcwBudget) * 100).toFixed(2)) : 0;
+    const pct_remaining = wcwBudget > 0 ? parseFloat(((wcwRemaining / wcwBudget) * 100).toFixed(2)) : 100;
+    return {
+        snapshot_ts: new Date().toISOString(),
+        request_id, session_id: session_id || null, model: model || null,
+        wcw_budget_tokens: wcwBudget, wcw_used_tokens: promptTokens, wcw_remaining_tokens: wcwRemaining,
+        wcw_pct_used: pct_used, wcw_pct_remaining: pct_remaining,
+        completion_tokens: completionTokens || 0, total_tokens: totalTokens || 0,
+        response_time_ms: responseTime,
+        severity: pct_used >= 90 ? 'CRITICAL' : pct_used >= 75 ? 'HIGH' : pct_used >= 50 ? 'MEDIUM' : 'LOW',
+    };
+}
+function buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id }) {
+    const pct_used = wcwBudget > 0 ? parseFloat(((promptTokens / wcwBudget) * 100).toFixed(2)) : 0;
+    return {
+        event_ts: new Date().toISOString(),
+        request_id, session_id: session_id || null, stage: 'PIPELINE_COMPLETE',
+        wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+        wcw_pct_used: pct_used, completion_tokens: completionTokens || 0, total_tokens: totalTokens || 0,
+        inference_ms: inferenceMs || null, total_response_ms: responseTime,
+    };
+}
+
 // ── Response payload builder ─────────────────────────────────────────────────
 function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn }) {
     const response = {
