@@ -21,6 +21,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [ttsState, setTtsState] = useState({ status: 'idle', source: null });
+  const [googleSpeechProgress, setGoogleSpeechProgress] = useState(0);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
 
   const [selectedAgents, setSelectedAgents] = useState(['all']);
@@ -239,6 +240,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       ttsResume();
     } else {
       // Start playback
+      setGoogleSpeechProgress(0);
       ttcSpeak(lastAssistantMessage, {
         engine: 'auto',
         base44,
