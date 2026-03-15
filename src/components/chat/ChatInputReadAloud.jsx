@@ -34,18 +34,18 @@ function startKeepAlive() {
 export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
   if (!lastAIMessage || !lastAIMessage.trim()) return;
 
-  // If already speaking — stop
-  if (window.speechSynthesis.speaking || isPlaying) {
-    window.speechSynthesis.cancel();
+  // Session semantics: clicking while active = hard stop, and invalidates any pending delayed starts
+  if (_activeUtterance || isPlaying) {
+    _sessionId++;
+    try { window.speechSynthesis.cancel(); } catch (e) {}
     clearKeepAlive();
     _activeUtterance = null;
     setIsPlaying(false);
     return;
   }
 
-  // Always cancel any pending speech before starting new
-  window.speechSynthesis.cancel();
-  clearKeepAlive();
+  _sessionId++;
+  const sid = _sessionId;
 
   try {
     const stripEmojis = (s) => (s || '')
