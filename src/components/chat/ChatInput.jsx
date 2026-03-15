@@ -641,11 +641,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         <button
           type="button"
           onClick={() => toggleGoogleReadAloud(lastAssistantMessage, isPlayingReadAloud, setIsPlayingReadAloud)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setShowVoiceMenu(true);
+          }}
           disabled={!lastAssistantMessage || isLoading}
           className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${
-            isPlayingReadAloud ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'
+            isPlayingReadAloud ? 'bg-green-500 text-white' : 'hover:bg-gray-100 text-gray-700'
           }`}
-          title={isPlayingReadAloud ? 'Stop reading' : 'Read aloud'}
+          title={isPlayingReadAloud ? 'Stop reading (Right-click for settings)' : 'Read aloud (Right-click for settings)'}
         >
           {isPlayingReadAloud ? (
             <Pause className="w-4 h-4" />
