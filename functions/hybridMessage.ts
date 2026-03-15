@@ -1,5 +1,5 @@
 // hybridMessage — CAOS Primary Pipeline
-// LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v5_2026-03-15
+// LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15
 // PIPELINE: AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_PREP → CTC_INTENT → CTC_HYDRATE → ARC_ASSEMBLE → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
 // INVARIANTS: SESSION_RESUME=noop | Memory save=early return | Receipt=fire-and-forget | Model=gpt-5.2 | HOT_HEAD=15 HOT_TAIL=40
 // TSB-040: Phase 1 refactor — within-file structural cleanup only. Zero behavior change.
@@ -30,12 +30,6 @@ const MODEL_CONTEXT_WINDOW = {
     'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
     'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
 };
-
-// Prompt Budget Governor constants
-// 1 token ≈ 2 chars (worst-case floor for code-heavy content — see TSB-042)
-// 182k tokens × 2 = 364k chars. Leaves 18k token headroom below 200k context.
-// RESERVE_FOR_COMPLETION = 8,000 tokens → effective prompt cap = 182,000 tokens.
-const MAX_PROMPT_CHARS = 364000;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 2 — STAGE TRACKER
@@ -219,108 +213,6 @@ function detectRepoCommand(input) {
         };
     }
     return null;
-}
-
-// ── Prompt Budget Governor ────────────────────────────────────────────────────
-// TSB-042: char-budget enforcement. Pure function. No I/O. Safe inline per §16.1.
-// Insertion point: after finalMessages assembly, before handleInference().
-//
-// Message identity (deterministic, position+role+prefix — no fragile name-matching):
-//   [0]   system     systemPrompt               — PROTECTED (never drop)
-//   [1]   system     "EXECUTION_META_TRH:..."   — droppable (lowest priority)
-//   [2?]  assistant  "THREAD SUMMARY..."        — truncatable (TRH)
-//   [3?]  system     "THREAD RECOVERY..."       — truncatable (MBCR)
-//   [4..n-1] user/assistant conversationHistory — oldest pairs droppable
-//   [-1]  user       current input              — truncatable (last resort)
-//
-// Priority order (what gets cut first):
-//   1. trhMetaMarker (pure metadata, no model value)
-//   2. Oldest conversation history pairs (drop from front, keep newest)
-//   3. MBCR excerpts truncated to 8k chars
-//   4. TRH summary truncated to 8k chars
-//   5. User input truncated at 32k chars (with explicit marker)
-function applyBudgetGovernor(messages, maxChars) {
-    const countChars = (msgs) => msgs.reduce((s, m) => {
-        const c = m.content;
-        if (!c) return s;
-        if (typeof c === 'string') return s + c.length;
-        if (Array.isArray(c)) return s + c.reduce((a, p) => a + (p.text?.length || 0), 0);
-        return s;
-    }, 0);
-
-    const actions = [];
-    let governed = [...messages];
-    const charsBefore = countChars(governed);
-
-    if (charsBefore <= maxChars) {
-        return { messages: governed, actions, over_budget: false, chars_before: charsBefore, chars_after: charsBefore };
-    }
-
-    // Step 1: Drop trhMetaMarker (role=system, starts with EXECUTION_META_TRH)
-    const metaIdx = governed.findIndex(m => m.role === 'system' && typeof m.content === 'string' && m.content.startsWith('EXECUTION_META_TRH:'));
-    if (metaIdx !== -1 && countChars(governed) > maxChars) {
-        governed.splice(metaIdx, 1);
-        actions.push('dropped_trh_meta_marker');
-    }
-
-    // Step 2: Drop oldest conversation pairs from the middle (history is between injections and last user msg)
-    // Find the boundary: everything between injected system blocks and the last user message
-    if (countChars(governed) > maxChars) {
-        // History entries are role=user or role=assistant with content not matching injection prefixes
-        const isInjected = (m) => m.role === 'system' || (typeof m.content === 'string' && (m.content.startsWith('THREAD SUMMARY') || m.content.startsWith('EXECUTION_META')));
-        const lastIdx = governed.length - 1;
-        let droppedPairs = 0;
-        while (countChars(governed) > maxChars) {
-            // Find the first non-injected, non-last message
-            const dropIdx = governed.findIndex((m, i) => i > 0 && i < governed.length - 1 && !isInjected(m));
-            if (dropIdx === -1) break;
-            governed.splice(dropIdx, 1);
-            droppedPairs++;
-        }
-        if (droppedPairs > 0) actions.push(`dropped_${droppedPairs}_history_messages`);
-    }
-
-    // Step 3: Truncate MBCR excerpts block (role=system, starts with THREAD RECOVERY)
-    if (countChars(governed) > maxChars) {
-        const MBCR_MAX = 16000;
-        const mbcrIdx = governed.findIndex(m => m.role === 'system' && typeof m.content === 'string' && m.content.startsWith('THREAD RECOVERY'));
-        if (mbcrIdx !== -1 && governed[mbcrIdx].content.length > MBCR_MAX) {
-            governed[mbcrIdx] = { ...governed[mbcrIdx], content: governed[mbcrIdx].content.slice(0, MBCR_MAX) + '\n[MBCR_TRUNCATED_BY_BUDGET_GOVERNOR]' };
-            actions.push('truncated_mbcr_excerpts');
-        }
-    }
-
-    // Step 4: Truncate TRH summary (role=assistant, starts with THREAD SUMMARY)
-    if (countChars(governed) > maxChars) {
-        const TRH_MAX = 16000;
-        const trhIdx = governed.findIndex(m => m.role === 'assistant' && typeof m.content === 'string' && m.content.startsWith('THREAD SUMMARY'));
-        if (trhIdx !== -1 && governed[trhIdx].content.length > TRH_MAX) {
-            governed[trhIdx] = { ...governed[trhIdx], content: governed[trhIdx].content.slice(0, TRH_MAX) + '\n[TRH_TRUNCATED_BY_BUDGET_GOVERNOR]' };
-            actions.push('truncated_trh_summary');
-        }
-    }
-
-    // Step 5 (last resort): Truncate user input at 64k chars
-    if (countChars(governed) > maxChars) {
-        const USER_INPUT_MAX = 64000;
-        const lastMsg = governed[governed.length - 1];
-        if (lastMsg?.role === 'user') {
-            if (typeof lastMsg.content === 'string' && lastMsg.content.length > USER_INPUT_MAX) {
-                governed[governed.length - 1] = { ...lastMsg, content: lastMsg.content.slice(0, USER_INPUT_MAX) + '\n[USER_INPUT_TRUNCATED_BY_BUDGET_GOVERNOR]' };
-                actions.push('truncated_user_input');
-            } else if (Array.isArray(lastMsg.content)) {
-                const textPart = lastMsg.content.find(p => p.type === 'text');
-                if (textPart && textPart.text?.length > USER_INPUT_MAX) {
-                    const newContent = lastMsg.content.map(p => p.type === 'text' ? { ...p, text: p.text.slice(0, USER_INPUT_MAX) + '\n[USER_INPUT_TRUNCATED_BY_BUDGET_GOVERNOR]' } : p);
-                    governed[governed.length - 1] = { ...lastMsg, content: newContent };
-                    actions.push('truncated_user_input_multipart');
-                }
-            }
-        }
-    }
-
-    const charsAfter = countChars(governed);
-    return { messages: governed, actions, over_budget: charsAfter > maxChars, chars_before: charsBefore, chars_after: charsAfter };
 }
 
 // ── MBCR tag extraction ───────────────────────────────────────────────────────
@@ -517,14 +409,13 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime }
 }
 
 // ── Response payload builder ─────────────────────────────────────────────────
-function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, budgetGovernor }) {
+function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages }) {
     const response = {
         reply, mode: 'GEN', request_id, correlation_id,
         route: routingDecision.route, model_used: RESOLVED_MODEL,
         server_time, response_time_ms: responseTime, tool_calls: [],
         execution_meta,
         wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-        budget_governor: budgetGovernor,
         execution_receipt: {
             request_id, correlation_id, session_id,
             history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
@@ -900,24 +791,9 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
-        // ── BUDGET GOVERNOR (TSB-042) ─────────────────────────────────────────
-        // Char-budget enforcement pre-inference. Pure function, no I/O.
-        // MAX_PROMPT_CHARS = 364k chars ≈ 182k tokens worst-case (1 token=2 chars floor).
-        const budgetResult = applyBudgetGovernor(finalMessages, MAX_PROMPT_CHARS);
-        if (budgetResult.actions.length > 0) {
-            console.warn('⚠️ [BUDGET_GOVERNOR_APPLIED]', {
-                chars_before: budgetResult.chars_before,
-                chars_after: budgetResult.chars_after,
-                actions: budgetResult.actions,
-                still_over: budgetResult.over_budget
-            });
-            emitEvent(base44, request_id, session_id, startTime, 'BUDGET_GOVERNOR', `Budget applied: ${budgetResult.actions.join(', ')}`, { level: 'WARN', data: { chars_before: budgetResult.chars_before, chars_after: budgetResult.chars_after, actions: budgetResult.actions } });
-        }
-        const governedMessages = budgetResult.messages;
-
         let reply, openaiUsage, inferenceMs, t_openai_call;
         try {
-            const inferResult = await handleInference({ base44, user, finalMessages: governedMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
+            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
             reply = inferResult.reply;
             openaiUsage = inferResult.openaiUsage;
             inferenceMs = inferResult.inferenceMs;
@@ -987,8 +863,7 @@ Deno.serve(async (req) => {
             reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
             wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown,
             sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock,
-            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages,
-            budgetGovernor: { applied: budgetResult.actions.length > 0, actions: budgetResult.actions, chars_before: budgetResult.chars_before, chars_after: budgetResult.chars_after }
+            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages
         });
 
         return Response.json(response);
