@@ -709,9 +709,54 @@ Seamless handoff with context preservation
 
 ---
 
+## SECTION 14: TTS ARCHITECTURE (Updated 2026-03-15)
+
+### TWO DISTINCT TTS SYSTEMS (CRITICAL — DO NOT MIX)
+
+**System 1: Input Bar TTS (Google Web Speech API)**
+- **Component**: components/chat/ChatInputReadAloud.jsx
+- **API**: window.speechSynthesis + SpeechSynthesisUtterance
+- **Trigger**: Click button on far left of input bar
+- **Voice Storage**: localStorage[caos_google_voice] (default: 'Google US English')
+- **Speed Storage**: localStorage[caos_google_speech_rate] (0.5–2.0x)
+- **Content**: Reads lastAssistantMessage prop (user-triggered, not auto-play)
+- **Settings**: Right-click on button → VoiceSettingsMenu modal
+- **Status**: Button turns green while playing
+- **Player**: Native HTML range input (progress bar), play/pause/skip/stop controls
+- **Keep-Alive**: Checks every 5s if paused, resumes if needed (Chrome background optimization fix)
+- **Session Safety**: _sessionId counter prevents ghost playback after stop
+- **Lock**: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15
+
+**System 2: Message Bubble TTS (OpenAI TTS)**
+- **Component**: components/chat/ChatBubble.jsx (lines 110–298)
+- **API**: base44.functions.invoke('textToSpeech', { text, voice, speed })
+- **Trigger**: Click Volume2 icon on hover over assistant message
+- **Voice Storage**: localStorage[caos_voice_preference_message]
+- **Speed Storage**: localStorage[caos_speech_rate]
+- **Content**: Cleans emojis, markdown from message content, caps at 4096 chars
+- **Cache**: audioCache Map by (message.id + voice + speed)
+- **Player**: Full HTML5 Audio with progress scrubbing, ±10s skip, play/pause, stop
+- **Status**: Button turns blue while playing, progress bar shown below message
+- **Global Manager**: Only one audio plays at a time (globalAudioInstance)
+- **Lock**: Inherited from ChatBubble architecture (do not modify)
+
+### CRITICAL RULES
+1. ❌ Do NOT mix Google API with OpenAI API
+2. ❌ Do NOT add OpenAI to input bar (input bar = Google only)
+3. ❌ Do NOT remove input bar button
+4. ❌ Do NOT make input bar auto-play (user-triggered only)
+5. ❌ Do NOT modify message bubble TTS at all
+6. ✅ Right-click input bar button → voice settings (Google Web Speech voices)
+7. ✅ Input bar always available, reads last assistant message, user controls playback
+
+---
+
 ## Last Validated
-- **Date**: 2026-02-28
+- **Date**: 2026-03-15 (Updated: TTS architecture clarified, session-safe implementation)
 - **Status**: System locked for stability
-- **Test Coverage**: All core paths validated
-- **Known Limitations**: ChatBubble/ChatInput missing
-- **Next Critical Task**: Implement missing components without schema changes
+- **Test Coverage**: All core paths validated, TTS dual-system separation confirmed
+- **Recent Work** (TSB-041, TSB-042, TSB-043):
+  - ChatInputReadAloud session-safe refactor (_sessionId counter)
+  - VoiceSettingsMenu component for right-click voice/speed settings
+  - App.jsx manual route rebuilding (removed pages.config dependency)
+- **Next Critical Task**: Update TSBs with documentation of TTS dual-system and recent fixes
