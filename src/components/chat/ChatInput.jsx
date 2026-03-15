@@ -250,9 +250,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     // Start — optimistic UI: show player immediately, don't wait for onStart
     setIsPlayingGoogle(true);
     setIsPausedGoogle(false);
-    // engine:'auto' allows server TTS fallback if WebSpeech gets stuck
+    // Always use server engine — WebSpeech is unreliable (silent starts, tab bg issues)
     ttcSpeak(lastAssistantMessage, {
-      engine: 'auto',
+      engine: 'server',
       base44,
       onStart: () => {
         setIsPlayingGoogle(true);
