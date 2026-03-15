@@ -636,6 +636,22 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
 
+        <button
+          type="button"
+          onClick={() => toggleGoogleReadAloud(lastAssistantMessage, isPlayingReadAloud, setIsPlayingReadAloud)}
+          disabled={!lastAssistantMessage || isLoading}
+          className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${
+            isPlayingReadAloud ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'
+          }`}
+          title={isPlayingReadAloud ? 'Stop reading' : 'Read aloud'}
+        >
+          {isPlayingReadAloud ? (
+            <Pause className="w-4 h-4" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
+        </button>
+
         <textarea
           ref={textareaRef}
           value={message}
