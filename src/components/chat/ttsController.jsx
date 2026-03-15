@@ -117,13 +117,11 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
       if (started.value || _state.utterance !== currentUtt) return;
 
       if (!retried.value) {
-        // Single retry
         retried.value = true;
         if (_dev()) console.log('[TTS] TTS_WEBSPEECH_START_TIMEOUT_RETRY');
-        window.speechSynthesis.cancel();
         const retryUtt = _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, started, retried, watchdogRef);
         _state.utterance = retryUtt;
-        const armRetryWatchdog = () => {
+        _resurrectAndSpeak(retryUtt, () => {
           watchdogRef.id = setTimeout(() => {
             watchdogRef.id = null;
             if (started.value || _state.utterance !== retryUtt) return;
@@ -131,14 +129,7 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
             _stopAll(true);
             onError?.(new Error('WebSpeech: start_timeout'));
           }, WATCHDOG_MS);
-        };
-        setTimeout(() => {
-          if (_state.utterance === retryUtt) {
-            if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${retryUtt.text.length}`);
-            window.speechSynthesis.speak(retryUtt);
-            armRetryWatchdog();
-          }
-        }, 100);
+        });
       }
     }, WATCHDOG_MS);
   };
