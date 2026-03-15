@@ -233,7 +233,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   };
 
   const toggleGoogleVoicePlay = () => {
-    if (!lastAssistantMessage) return;
+    if (!lastAssistantMessage) { toast('No assistant message yet — send a message first'); return; }
 
     // Pause / resume toggle
     if (isPlayingGoogle) {
