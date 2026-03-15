@@ -146,12 +146,15 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
 }
 
 async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onError) {
+  const sid = _state.sessionId;
+
   const { data } = await base44Client.functions.invoke('textToSpeech', {
     text: cleanText,
     voice: prefs.voice || 'nova',
     speed: prefs.rate,
   });
 
+  if (_state.sessionId !== sid) return;
   if (!data?.audio_base64) throw new Error('No audio returned from TTS');
 
   const byteChars = atob(data.audio_base64);
@@ -166,6 +169,7 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
   audio.addEventListener('ended', () => { _stopAll(true); onEnd?.(); _state.onEnd = null; });
   audio.addEventListener('error', () => { _stopAll(true); onError?.(new Error('Audio playback error')); _state.onError = null; });
 
+  if (_state.sessionId !== sid) return;
   await audio.play();
   onStart?.();
 }
@@ -212,7 +216,11 @@ export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, 
   }
 }
 
-export function ttsStop() { _stopAll(false); }
+export function ttsStop() {
+  _sessionId++;
+  _state.sessionId = _sessionId;
+  _stopAll(false);
+}
 
 export function ttsPause() {
   if (_state.engine === 'webspeech') window.speechSynthesis?.pause();

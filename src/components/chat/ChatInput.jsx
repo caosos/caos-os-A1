@@ -252,7 +252,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     setIsPausedGoogle(false);
 
     ttcSpeak(lastAssistantMessage, {
-      engine: 'server',
+      engine: 'webspeech',
       base44,
       onStart: () => {
         setIsPlayingGoogle(true);
