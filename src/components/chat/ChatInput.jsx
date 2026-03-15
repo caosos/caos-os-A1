@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 import PointerEventsGuard from './PointerEventsGuard';
 import { toggleGoogleReadAloud } from './ChatInputReadAloud';
+import VoiceSettingsMenu from './VoiceSettingsMenu';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
 
