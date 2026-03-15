@@ -31,6 +31,12 @@ const MODEL_CONTEXT_WINDOW = {
     'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
 };
 
+// Prompt Budget Governor constants
+// 1 token ≈ 2 chars (worst-case floor for code-heavy content — see TSB-042)
+// 182k tokens × 2 = 364k chars. Leaves 18k token headroom below 200k context.
+// RESERVE_FOR_COMPLETION = 8,000 tokens → effective prompt cap = 182,000 tokens.
+const MAX_PROMPT_CHARS = 364000;
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 2 — STAGE TRACKER
 // ═══════════════════════════════════════════════════════════════════════════════
