@@ -605,7 +605,7 @@ async function handleMemorySave({ memorySaveSignal, userProfile, session_id, inp
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 6 — MAIN HANDLER
+// SECTION 7 — MAIN HANDLER (Deno.serve spine)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 Deno.serve(async (req) => {
