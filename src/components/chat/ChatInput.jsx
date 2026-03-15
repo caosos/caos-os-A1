@@ -684,8 +684,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
              type="button"
              onClick={toggleGoogleVoicePlay}
              onContextMenu={handleVoiceButtonContextMenu}
-             disabled={!lastAssistantMessage}
-             className={`p-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-30 ${isPlayingGoogle ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+             className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${isPlayingGoogle ? 'bg-green-100' : 'hover:bg-gray-100'}`}
              title={isPlayingGoogle ? (isPausedGoogle ? 'Resume' : 'Pause') : 'Read AI response (Right-click for voice settings)'}
            >
              <Volume2 className={`w-4 h-4 ${isPlayingGoogle ? 'text-green-600' : 'text-gray-700'}`} />
