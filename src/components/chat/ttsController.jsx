@@ -89,17 +89,14 @@ function _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, 
 }
 
 function _resurrectAndSpeak(utt) {
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.resume();
+  // Cancel any queued speech, then speak directly — no double-cancel that races with _state.utterance checks
+  try { window.speechSynthesis.cancel(); } catch (_) {}
   setTimeout(() => {
-    window.speechSynthesis.cancel();
-    setTimeout(() => {
-      if (_state.utterance === utt) {
-        if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${utt.text.length}`);
-        window.speechSynthesis.speak(utt);
-      }
-    }, 50);
-  }, 50);
+    if (_state.utterance === utt) {
+      if (_dev()) console.log(`[TTS] TTS_WEBSPEECH_SPEAK_CALLED chars=${utt.text.length}`);
+      window.speechSynthesis.speak(utt);
+    }
+  }, 100);
 }
 
 function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) {
