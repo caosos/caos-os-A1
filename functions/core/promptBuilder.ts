@@ -14,6 +14,38 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// ── REPO ROUTING MICRO-INDEX ───────────────────────────────────────────────────
+// ALWAYS ON — static string, no runtime reads, no tool calls
+// Hard limit: <= 2048 bytes
+const REPO_ROUTING_MICRO_INDEX = `REPO ROUTING MICRO-INDEX (ALWAYS ON)
+
+CHAT_UI:
+- pages/Chat.jsx — send pipeline, message state, WCW meter, thread management
+- components/chat/ChatInput.jsx — input bar, STT recording, input-bar TTS trigger
+
+INPUT_BAR_TTS:
+- components/chat/ChatInput.jsx — TTS play/pause/stop button, isPlayingGoogle state
+- components/chat/ttsController.jsx — WebSpeech engine lifecycle, _speakWebSpeech, keep-alive
+- components/chat/ttsPrefs.jsx — pref keys (caos_tts_voice/rate/engine/ws_lang), migration
+
+MESSAGE_BUBBLE_TTS:
+- components/chat/ChatBubble.jsx — speaker icon, handleReadAloud, OpenAI TTS audio player
+- components/chat/ttsController.jsx — shared engine authority, _stopAll, ttcSpeak
+- components/chat/ttsPrefs.jsx — shared pref R/W
+
+BACKEND_FUNCTIONS:
+- functions/hybridMessage — finalMessages assembly, inference call, WCW instrumentation
+- functions/core/promptBuilder — system prompt assembly (this file)
+
+GOVERNANCE:
+- pages/TSBLog — lock/scope rules, TSB entries, campaign state, recovery header
+
+DEBUG / OBSERVABILITY:
+- functions/core/pipelineEventWriter — stage events, elapsed_ms
+- functions/core/receiptWriter — DiagnosticReceipt, WCW used/remaining
+- functions/hybridMessage — debugMode flag, wcw_audit block (admin only)
+`;
+
 // ── CANONICAL CAPABILITY KV ────────────────────────────────────────────────────
 // This is the authoritative declaration of every tool/capability available.
 // Aria reads this block every session — no bootloader injection needed.
