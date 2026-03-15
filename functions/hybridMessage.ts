@@ -899,9 +899,24 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
+        // ── BUDGET GOVERNOR (TSB-042) ─────────────────────────────────────────
+        // Char-budget enforcement pre-inference. Pure function, no I/O.
+        // MAX_PROMPT_CHARS = 364k chars ≈ 182k tokens worst-case (1 token=2 chars floor).
+        const budgetResult = applyBudgetGovernor(finalMessages, MAX_PROMPT_CHARS);
+        if (budgetResult.actions.length > 0) {
+            console.warn('⚠️ [BUDGET_GOVERNOR_APPLIED]', {
+                chars_before: budgetResult.chars_before,
+                chars_after: budgetResult.chars_after,
+                actions: budgetResult.actions,
+                still_over: budgetResult.over_budget
+            });
+            emitEvent(base44, request_id, session_id, startTime, 'BUDGET_GOVERNOR', `Budget applied: ${budgetResult.actions.join(', ')}`, { level: 'WARN', data: { chars_before: budgetResult.chars_before, chars_after: budgetResult.chars_after, actions: budgetResult.actions } });
+        }
+        const governedMessages = budgetResult.messages;
+
         let reply, openaiUsage, inferenceMs, t_openai_call;
         try {
-            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
+            const inferResult = await handleInference({ base44, user, finalMessages: governedMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
             reply = inferResult.reply;
             openaiUsage = inferResult.openaiUsage;
             inferenceMs = inferResult.inferenceMs;
