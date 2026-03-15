@@ -1216,8 +1216,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
             )}
           </AnimatePresence>
 
-          <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
-            <div className="pointer-events-auto">
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-auto">
+            <div>
               <ChatInput 
                 onSend={handleSendMessage} 
                 isLoading={isLoading}
