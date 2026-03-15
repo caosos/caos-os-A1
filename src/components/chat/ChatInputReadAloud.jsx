@@ -84,12 +84,6 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     utterance.onstart = () => {
       setIsPlaying(true);
       startKeepAlive();
-      // Force resume in case it starts paused
-      setTimeout(() => {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-      }, 100);
     };
     utterance.onend = () => {
       clearKeepAlive();
