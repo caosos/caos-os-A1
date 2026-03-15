@@ -752,7 +752,7 @@ Deno.serve(async (req) => {
         const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory: threadStateBlock ? rawHistory.slice(-15) : rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock });
         const t_prompt_build = Date.now() - startTime;
 
-        // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
+        // ── STAGE: OPENAI_CALL — assemble messages + run inference ──────────────
         setStage(STAGES.OPENAI_CALL);
         const userMessageContent = [];
         userMessageContent.push({ type: 'text', text: input });
@@ -791,7 +791,6 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
-        // ── STAGE: OPENAI_CALL ────────────────────────────────────────────────
         let reply, openaiUsage, inferenceMs, t_openai_call;
         try {
             const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
