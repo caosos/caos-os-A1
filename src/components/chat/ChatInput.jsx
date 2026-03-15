@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices } from './ttsController.jsx';
 import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
+import PointerEventsGuard from './PointerEventsGuard';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
 
