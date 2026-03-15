@@ -794,7 +794,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           <button
             type="button"
             onClick={() => setShowCaptureMenu(!showCaptureMenu)}
-            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+            className="chat-icon-btn p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
             disabled={uploading}
           >
             {uploading ? (
