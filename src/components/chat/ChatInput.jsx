@@ -39,25 +39,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const draftRafRef = useRef(null);
   const latestDraftRef = useRef('');
 
-  // Subscribe to TTS controller state
-  useEffect(() => {
-    const unsubscribe = subscribeToState((state) => {
-      setTtsState({ status: state.status, source: state.source });
-    });
-    return unsubscribe;
-  }, []);
 
-  // Warm controller voice cache on mount and when new AI message arrives.
-  useEffect(() => { ttsWarmVoices(); }, []);
-  useEffect(() => { if (lastAssistantMessage) ttsWarmVoices(); }, [lastAssistantMessage]);
 
-  // Stop TTS on unmount / page unload
+  // Cleanup on unmount
   useEffect(() => {
-    const handleUnload = () => ttsStop();
-    window.addEventListener('beforeunload', handleUnload);
     return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      ttsStop();
       if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
       if (draftRafRef.current) cancelAnimationFrame(draftRafRef.current);
     };
@@ -227,35 +213,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     });
   };
 
-  // TTS controls now driven by controller state
   const handlePlayPause = () => {
-    if (!lastAssistantMessage) { toast('No assistant message yet — send a message first'); return; }
-
-    if (ttsState.status === 'playing') {
-      ttsPause();
-    } else if (ttsState.status === 'paused') {
-      ttsResume();
-    } else {
-      // Start playback
-      setGoogleSpeechProgress(0);
-      ttcSpeak(lastAssistantMessage, {
-        engine: 'auto',
-        base44,
-        source: 'inputbar',
-        onStart: () => {},
-        onEnd: () => { setGoogleSpeechProgress(0); },
-        onError: (err) => {
-          if (err?.message?.includes('interrupted') || err?.message?.includes('canceled')) return;
-          toast.error('Voice read-aloud failed — try again');
-        },
-        onBoundary: () => setGoogleSpeechProgress(prev => Math.min(prev + 2, 90)),
-      });
-    }
-  };
-
-  const handleStopVoice = () => {
-    ttsStop();
-    setGoogleSpeechProgress(0);
+    toast('TTS feature not available');
   };
 
   const handleVoiceButtonContextMenu = (e) => {
