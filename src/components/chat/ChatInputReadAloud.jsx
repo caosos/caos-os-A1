@@ -112,15 +112,21 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     const langCode = voiceMap[voicePref] || 'en-US';
 
     utterance.onstart = () => {
+      if (sid !== _sessionId) return;
+      if (_activeUtterance !== utterance) return;
       setIsPlaying(true);
       startKeepAlive();
     };
     utterance.onend = () => {
+      if (sid !== _sessionId) return;
+      if (_activeUtterance !== utterance) return;
       clearKeepAlive();
       _activeUtterance = null;
       setIsPlaying(false);
     };
     utterance.onerror = (e) => {
+      if (sid !== _sessionId) return;
+      if (_activeUtterance !== utterance) return;
       // 'interrupted' is not a real error — it means cancel() was called intentionally
       if (e.error === 'interrupted' || e.error === 'canceled') return;
       clearKeepAlive();
