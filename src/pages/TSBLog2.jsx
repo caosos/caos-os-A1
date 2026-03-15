@@ -1,0 +1,286 @@
+import React, { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+const Section = ({ title, color = 'blue', children }) => {
+  const [open, setOpen] = useState(false);
+  const colorMap = {
+    blue: { border: 'border-blue-500/30', text: 'text-blue-300', bg: 'bg-blue-950/40' },
+    red: { border: 'border-red-500/30', text: 'text-red-300', bg: 'bg-red-950/40' },
+  };
+  const c = colorMap[color] || colorMap.blue;
+  return (
+    <div className={`${c.bg} border ${c.border} rounded-xl overflow-hidden`}>
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors">
+        <h2 className={`text-xl font-bold ${c.text}`}>{title}</h2>
+        <span className="text-white/50">{open ? '▼' : '▶'}</span>
+      </button>
+      {open && <div className="px-5 pb-5 space-y-4 text-gray-200 text-sm">{children}</div>}
+    </div>
+  );
+};
+
+const Code = ({ children }) => (
+  <pre className="bg-black/40 border border-white/10 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">{children}</pre>
+);
+
+const Tag = ({ label, color = 'blue' }) => {
+  const cls = {
+    blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    green: 'bg-green-500/20 text-green-300 border-green-500/30',
+    red: 'bg-red-500/20 text-red-300 border-red-500/30',
+    yellow: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  }[color];
+  return <span className={`inline-block text-xs px-2 py-0.5 rounded border ${cls} mr-1`}>{label}</span>;
+};
+
+export default function TSBLog2() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-[#0a1628] text-white p-6">
+      <div className="mb-6 flex items-center gap-2">
+        <button
+          onClick={() => navigate('/TSBLog')}
+          className="flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to TSBLog (TSB-001 through TSB-042)
+        </button>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-6rem)]">
+        <div className="max-w-4xl mx-auto space-y-4 pb-8">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">CAOS TSB Log — Part 2</h1>
+            <p className="text-red-300">TSB-043 through current</p>
+            <p className="text-gray-400 text-xs mt-1">Continued from TSBLog (TSB-001–TSB-042). Part 2 covers Mar 15, 2026 onward.</p>
+          </div>
+
+          <Section title="⚠️ KERNELIZED AGENT RECOVERY HEADER (READ FIRST)" color="yellow">
+            <div className="bg-yellow-950/40 border border-yellow-500/20 rounded-lg p-4 text-gray-200 text-xs space-y-2">
+              <p><strong>Last TSB:</strong> TSB-048 (Mar 15, 2026)</p>
+              <p><strong>Scope locks active:</strong><br/>
+                — functions/hybridMessage: LOCKED (CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15)<br/>
+                — functions/core/promptBuilder: LOCKED (CAOS_PROMPT_BUILDER_v2_2026-03-05)<br/>
+                — components/chat/ttsController.jsx: LOCKED (CAOS_TTS_CONTROLLER_v1_2026-03-14)<br/>
+                — components/chat/ChatInputReadAloud.jsx: LOCKED (CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15)</p>
+              <p><strong>Canonical TTS paths:</strong><br/>
+                Input bar = Google Web Speech API (ChatInputReadAloud.jsx)<br/>
+                Message bubble = OpenAI TTS (ChatBubble.jsx → textToSpeech function)</p>
+              <p><strong>Current focus:</strong> Admin WCW Inspector UI (Phase 0 backend complete, UI pending)</p>
+            </div>
+          </Section>
+
+          <Section title="TSB-043 through TSB-048 — Mar 15, 2026 Campaign" color="red">
+            <div className="space-y-4">
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-043 — Lane A: REPO_ROUTING_MICRO_INDEX Added to promptBuilder (Always-On)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Component: functions/core/promptBuilder (ONLY)
+
+Objective:
+  WCW blowups from agents reading entire files to answer routing questions.
+  Micro-index gives always-on routing signal — eliminates speculative reads.
+
+Change:
+  const REPO_ROUTING_MICRO_INDEX = \`...\` added near top of file (1,047 bytes — ≤2,048 limit).
+  Injected into p immediately after OPERATIONAL_BOOTSTRAP, before IDENTITY.
+
+Micro-index covers:
+  CHAT_UI, INPUT_BAR_TTS, MESSAGE_BUBBLE_TTS, BACKEND_FUNCTIONS, GOVERNANCE,
+  DEBUG/OBSERVABILITY — correct actual paths, no src/ prefix, no .ts extension.
+  Explicitly distinguishes INPUT_BAR_TTS vs MESSAGE_BUBBLE_TTS routes.
+
+Line delta: 285 → 308 (+23). No logic changed — additive static text only.
+Rollback: delete const + p+= line.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-044 — Lane B: ttsController Watchdog + resume() + Unified Retry (WebSpeech)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Component: components/chat/ttsController.jsx (ONLY)
+
+Problem: _speakWebSpeech() called speak() but onstart never fired on idle/backgrounded
+Chrome — silent hang with no feedback and no recovery.
+
+Root causes:
+  1. No watchdog to detect speak() called but onstart never fired.
+  2. resume() missing after cancel() — Chrome engine left in suspended state.
+  3. Retry path duplicated speak() logic (two divergent paths → "works sometimes" bugs).
+
+Patches applied:
+  B1 — Watchdog + single retry:
+    WATCHDOG_MS = 800 (configurable constant)
+    _buildUtterance() pure factory (reusable for retry)
+    _resurrectAndSpeak(utt, onAfterSpeak) — cancel + speak(100ms) + callback
+    Watchdog: armed via onAfterSpeak callback (not separate 150ms timer)
+    On timeout: single retry via new utterance + _resurrectAndSpeak
+    Second timeout: _stopAll(true) + onError('WebSpeech: start_timeout')
+    Dev-gated logs: TTS_WEBSPEECH_SPEAK_CALLED, ONSTART, TIMEOUT_RETRY, TIMEOUT_FAIL, ONERROR
+
+  B2 — resume() + unified retry:
+    _resurrectAndSpeak: added try { speechSynthesis.resume(); } after cancel()
+    Retry path now calls _resurrectAndSpeak() (not duplicated setTimeout)
+    Both first attempt and retry use identical execution path
+
+State safety:
+  Rapid clicks: _stopAll(true) nulls _state.utterance → pending timers bail on utt check
+  isPlayingGoogle: only set in onstart → timeout fail never calls it → stays false
+  onError on timeout → ChatInput resets isPlayingGoogle = false → button immediately clickable
+
+Line delta: 174 → 232 (+58). Files: ttsController.jsx ONLY.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-045 — PointerEventsGuard: Dev-Only Regression Detector for TSB-042 Invariant</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Files: components/chat/PointerEventsGuard.jsx (NEW, 46 lines)
+       components/chat/ChatInput.jsx (+2 lines: import + mount)
+
+Purpose: Lock the TSB-042 pointer-events invariant. Any future refactor that
+re-introduces pointer-events-none on the ChatInput wrapper is caught immediately
+in dev mode.
+
+Implementation:
+  - React component, renders null (zero DOM output)
+  - Props: targetRef, label
+  - useEffect: if caos_developer_mode !== 'true' → return immediately (hard gate)
+  - Dev only: walks ancestor chain, getComputedStyle(el).pointerEvents
+  - If 'none' found: console.warn('[POINTER_EVENTS_GUARD] ⚠️ TSB-042 REGRESSION DETECTED')
+  - Runs once on mount, no polling, no listeners
+
+ChatInput integration:
+  import PointerEventsGuard from './PointerEventsGuard';
+  <PointerEventsGuard targetRef={voiceButtonRef} label="TTS speaker button" />
+  (first child of form element)
+
+Zero side effects in production (confirmed: entire useEffect body skipped if not dev).
+
+Rollback: delete file + remove 2 lines from ChatInput.jsx.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-046 — Input Bar TTS Button Always-On: Removed disabled Gate, Added Toast Guard</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Component: components/chat/ChatInput.jsx (ONLY)
+
+Problem: Input bar speaker button was disabled={!lastAssistantMessage} — invisible/
+unclickable on new sessions and empty threads, with no user feedback.
+
+Fix:
+  1. Removed disabled={!lastAssistantMessage} from button.
+  2. Removed disabled:opacity-30 from className.
+  3. In toggleGoogleVoicePlay: if (!lastAssistantMessage) { toast('No assistant
+     message yet — send a message first'); return; }
+
+When lastAssistantMessage exists: behavior identical.
+When no message: button visible + clickable, shows toast, does nothing else.
+
+Line delta: 985 → 984 (-1). No other files changed.
+Rollback: restore disabled attribute + opacity class + revert toast line.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-047 — WCW Telemetry Builders Inlined to hybridMessage (Admin-Only)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Component: functions/hybridMessage (ONLY)
+Lock Sig: CAOS_WCW_TELEMETRY_v1_2026-03-15
+
+Platform constraint: §16.1 prohibits cross-file imports in Deno functions.
+Remote invoke rejected: ~200ms hot-path overhead for pure math. Correct: INLINE.
+
+New functions in SECTION 4 (PURE HELPERS):
+  buildWcwStateV1({...}) → wcw_state (schema: wcw_state.v1)
+    Fields: wcw_budget_tokens, wcw_used_tokens, wcw_remaining_tokens,
+    wcw_pct_used, wcw_pct_remaining, severity (CRITICAL/HIGH/MEDIUM/LOW),
+    context_pressure_score, zone (red/yellow/blue/green), snapshot_ts,
+    completion_tokens, total_tokens, response_time_ms
+
+  buildWcwTurnV1({...}) → wcw_turn (schema: wcw_turn.v1)
+    Fields: wcw_budget, wcw_used, wcw_remaining, wcw_pct_used,
+    completion_tokens, total_tokens, inference_ms, total_response_ms,
+    event_ts, stage: 'PIPELINE_COMPLETE', context_pressure_score, zone
+
+Admin-only gate: user.role === 'admin' — null for non-admin, no overhead.
+Both builders are pure: no I/O, no env, no DB, deterministic.
+wcw_state and wcw_turn conditionally attached to response payload.
+PIPELINE_COMPLETE emitEvent includes both for admin turns.
+
+Line delta: 891 → 959 (+68). hybridMessage ONLY.
+Rollback: remove both builder functions + wiring block + response param additions.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-048 — Dual TTS Architecture Formalized + VoiceSettingsMenu + Session-Safe Refactor</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Files: components/chat/VoiceSettingsMenu.jsx (NEW, ~80 lines)
+       components/chat/ChatInput.jsx (right-click + menu mount)
+       components/chat/ChatInputReadAloud.jsx (session-safe refactor)
+       components/RESTORE_POINT_COMPLETE_SYSTEM_2026_02_28 (Section 14 added)
+
+DUAL TTS ARCHITECTURE (canonical — do not violate):
+
+  SYSTEM 1 — Input Bar (Google Web Speech API)
+    File:    ChatInputReadAloud.jsx
+    API:     window.speechSynthesis + SpeechSynthesisUtterance
+    Trigger: Click Volume2 button (far left of input bar)
+    Prefs:   caos_google_voice, caos_google_speech_rate
+    Settings: Right-click → VoiceSettingsMenu modal
+    Lock:    CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15
+
+  SYSTEM 2 — Message Bubble (OpenAI TTS)
+    File:    ChatBubble.jsx (lines 110–298)
+    API:     base44.functions.invoke('textToSpeech', ...)
+    Trigger: Click Volume2 icon on hover over assistant message
+    Prefs:   caos_voice_preference_message, caos_speech_rate
+    Lock:    DO NOT MODIFY
+
+  ❌ FORBIDDEN: mix APIs, auto-play input bar, remove input bar button,
+                modify bubble TTS, cross-contaminate pref keys.
+
+VoiceSettingsMenu.jsx:
+  Voice: 5 Google preset voices (US English, UK English, Spanish, French, German)
+  Speed: HTML range slider 0.5–2.0x, step 0.1
+  Persists to localStorage on change
+  Uses native HTML range (NOT @/components/ui/slider — doesn't exist)
+  Triggered by: onContextMenu on Volume2 button in ChatInput
+
+ChatInputReadAloud.jsx session-safe refactor:
+  _sessionId module-level counter — increments on stop, captured at play start (sid)
+  waitForVoices() promise: addEventListener/removeEventListener (no global = assignment)
+  All async callbacks guarded: if (sid !== _sessionId) return;
+  1200ms watchdog: if speech never starts → increment _sessionId + toast.error
+  keep-alive: passive 3s check, only resume if paused — no active pause/resume (breaks speech)
+
+System blueprint updated: Section 14 added to RESTORE_POINT documenting dual-TTS.`}</Code>
+              </div>
+
+              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number. Part 1: TSBLog (TSB-001–TSB-042).</p>
+            </div>
+          </Section>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}

@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Chat from './pages/Chat';
 import Welcome from './pages/Welcome';
 import Admin from './pages/Admin';
+import TSBLog2 from './pages/TSBLog2';
 
 const LayoutWrapper = ({ children }) => <>{children}</>;
 const mainPage = 'Chat';
