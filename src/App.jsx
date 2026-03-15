@@ -44,6 +44,7 @@ const AuthenticatedApp = () => {
       <Route path="/Chat" element={<LayoutWrapper><Chat /></LayoutWrapper>} />
       <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
+      <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
