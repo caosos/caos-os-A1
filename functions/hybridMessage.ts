@@ -919,18 +919,13 @@ Deno.serve(async (req) => {
 
         const wcw_audit = buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAdmin: user.role === 'admin' });
 
-        // Admin-only WCW telemetry (wcw_state + wcw_turn) — fire-and-forget, non-blocking
-        let wcw_state = null;
-        let wcw_turn = null;
-        if (user.role === 'admin') {
-            const telArgs = { wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id, model: RESOLVED_MODEL };
-            const [stateRes, turnRes] = await Promise.all([
-                base44.functions.invoke('core/wcwTelemetry', { fn: 'buildWcwStateV1', args: telArgs }).catch(() => null),
-                base44.functions.invoke('core/wcwTelemetry', { fn: 'buildWcwTurnV1', args: telArgs }).catch(() => null),
-            ]);
-            wcw_state = stateRes?.data?.result || null;
-            wcw_turn = turnRes?.data?.result || null;
-        }
+        // Admin-only WCW telemetry — inline pure calls, zero network overhead
+        const wcw_state = user.role === 'admin'
+            ? buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, request_id, session_id, model: RESOLVED_MODEL })
+            : null;
+        const wcw_turn = user.role === 'admin'
+            ? buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id })
+            : null;
 
         const response = buildResponsePayload({
             reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
