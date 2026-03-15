@@ -1,5 +1,5 @@
 // hybridMessage — CAOS Primary Pipeline
-// LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v3_2026-03-14
+// LOCK_SIGNATURE: CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15
 // PIPELINE: AUTH → PROFILE_LOAD → MEMORY_WRITE → HISTORY_PREP → CTC_INTENT → CTC_HYDRATE → ARC_ASSEMBLE → HEURISTICS → PROMPT_BUILD → OPENAI_CALL → MESSAGE_SAVE → RESPONSE_BUILD
 // INVARIANTS: SESSION_RESUME=noop | Memory save=early return | Receipt=fire-and-forget | Model=gpt-5.2 | HOT_HEAD=15 HOT_TAIL=40
 // TSB-040: Phase 1 refactor — within-file structural cleanup only. Zero behavior change.
