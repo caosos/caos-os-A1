@@ -153,33 +153,14 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
   const audioUrl = URL.createObjectURL(new Blob([byteArray], { type: 'audio/mpeg' }));
 
   const audio = new Audio(audioUrl);
-  audio.preload = 'auto';
   _state.audio = audio;
   _state.engine = 'server';
 
   audio.addEventListener('ended', () => { _stopAll(true); onEnd?.(); _state.onEnd = null; });
-  audio.addEventListener('error', (e) => {
-    console.error('[TTS] Audio element error:', e);
-    _stopAll(true);
-    onError?.(new Error('Audio playback error'));
-    _state.onError = null;
-  });
+  audio.addEventListener('error', () => { _stopAll(true); onError?.(new Error('Audio playback error')); _state.onError = null; });
 
-  try {
-    // Resume AudioContext if suspended (common after tab idle or user gesture gap)
-    if (window.AudioContext || window.webkitAudioContext) {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') await ctx.resume();
-      ctx.close();
-    }
-    await audio.play();
-    if (_dev()) console.log('[TTS] SERVER_AUDIO_PLAY_OK duration=', audio.duration);
-    onStart?.();
-  } catch (playErr) {
-    console.error('[TTS] audio.play() rejected:', playErr);
-    _stopAll(true);
-    onError?.(playErr);
-  }
+  await audio.play();
+  onStart?.();
 }
 
 export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, onBoundary } = {}) {
