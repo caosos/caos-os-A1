@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Mic, MicOff, Volume2 } from 'lucide-react';
+import { X, Send, Mic, MicOff } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { ttcSpeak, ttsStop } from '@/components/chat/ttsController';
 
 export default function AriaConsoleOverlay({ metrics: initialMetrics, onClose }) {
   const [messages, setMessages] = useState([
@@ -41,8 +40,6 @@ export default function AriaConsoleOverlay({ metrics: initialMetrics, onClose })
       const res = await base44.functions.invoke('consoleChat', { message: msg, metrics: liveMetrics });
       const reply = res.data?.reply || 'No response.';
       setMessages(prev => [...prev, { role: 'aria', text: reply }]);
-      ttsStop();
-      ttcSpeak(reply, { engine: 'webspeech' });
     } catch (e) {
       setMessages(prev => [...prev, { role: 'aria', text: `Error: ${e.message}` }]);
     } finally {
