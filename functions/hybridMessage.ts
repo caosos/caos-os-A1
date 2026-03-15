@@ -439,7 +439,7 @@ function buildResponsePayload({ reply, request_id, correlation_id, routingDecisi
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 6 — SHORT-CIRCUIT HANDLERS
+// SECTION 6 — SHORT-CIRCUIT HANDLERS (REPO + MEMORY)
 // (Extracted from main handler for readability. Same logic, same I/O.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
