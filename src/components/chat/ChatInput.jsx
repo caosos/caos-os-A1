@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices, ttsGetSessionId, subscribeToState } from './ttsController.js';
 import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 import PointerEventsGuard from './PointerEventsGuard';
 
