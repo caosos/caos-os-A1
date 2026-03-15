@@ -12,17 +12,21 @@ function clearKeepAlive() {
 }
 
 // Chrome bug: speechSynthesis pauses after ~15s in background tabs
-// Fix: pause/resume every 10s to keep it alive
+// Fix: pause/resume every 5s to keep it alive and prevent background pause
 function startKeepAlive() {
   clearKeepAlive();
   _keepAliveInterval = setInterval(() => {
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
-    } else {
-      clearKeepAlive();
+    try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      } else if (!window.speechSynthesis.speaking && _activeUtterance) {
+        // If somehow stopped, restart it
+        window.speechSynthesis.speak(_activeUtterance);
+      }
+    } catch (err) {
+      console.warn('[KEEP_ALIVE]', err.message);
     }
-  }, 10000);
+  }, 5000); // More frequent checks
 }
 
 export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
