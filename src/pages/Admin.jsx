@@ -124,6 +124,10 @@ export default function AdminDashboard() {
                         <RecentErrors />
                     </TabsContent>
 
+                    <TabsContent value="wcw_inspector">
+                        <WCWInspector />
+                    </TabsContent>
+
                     <TabsContent value="pipeline">
                         <PipelineVisualizer />
                     </TabsContent>
