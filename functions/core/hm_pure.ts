@@ -1,0 +1,2 @@
+// LOCK_SIGNATURE: CAOS_HM_PURE_v1_2026-03-15
+export {};
