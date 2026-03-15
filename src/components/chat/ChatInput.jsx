@@ -843,7 +843,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             type="button"
             onClick={toggleVoiceRecording}
             disabled={isTranscribing}
-            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+            className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${
               isTranscribing ? 'bg-blue-100' : 'hover:bg-gray-100'
             }`}
             title={isTranscribing ? 'Transcribing...' : 'Start recording'}
