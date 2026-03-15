@@ -22,6 +22,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingReadAloud, setIsPlayingReadAloud] = useState(false);
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [ttsState, setTtsState] = useState({ status: 'idle', source: null });
   const [googleSpeechProgress, setGoogleSpeechProgress] = useState(0);
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
