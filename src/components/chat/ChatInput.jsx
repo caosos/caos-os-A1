@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices, ttsGetSessionId } from './ttsController.jsx';
+import { ttcSpeak, ttsStop, ttsPause, ttsResume, ttsWarmVoices, ttsGetSessionId, subscribeToState } from './ttsController.jsx';
 import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 import PointerEventsGuard from './PointerEventsGuard';
 
@@ -20,9 +20,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   }, [messageValue]); // eslint-disable-line react-hooks/exhaustive-deps
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isPlayingGoogle, setIsPlayingGoogle] = useState(false);
-  const [isPausedGoogle, setIsPausedGoogle] = useState(false);
-  const [googleSpeechProgress, setGoogleSpeechProgress] = useState(0);
+  const [ttsState, setTtsState] = useState({ status: 'idle', source: null });
   const [showCaptureMenu, setShowCaptureMenu] = useState(false);
 
   const [selectedAgents, setSelectedAgents] = useState(['all']);
@@ -40,6 +38,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const resizeRafRef = useRef(null);
   const draftRafRef = useRef(null);
   const latestDraftRef = useRef('');
+
+  // Subscribe to TTS controller state
+  useEffect(() => {
+    const unsubscribe = subscribeToState((state) => {
+      if (state.source === 'inputbar') {
+        setTtsState({ status: state.status, source: state.source });
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // Warm controller voice cache on mount and when new AI message arrives.
   useEffect(() => { ttsWarmVoices(); }, []);
@@ -221,57 +229,34 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     });
   };
 
-  // ── TTS_UNIFICATION_v1 (2026-03-14) ─────────────────────────────────────────
-  // sanitization + engine selection + exclusivity now owned by ttsController.
-  // LOCK_SIGNATURE: CAOS_GOOGLE_TTS_LOCK_v1_2026-03-01 (refactored 2026-03-14)
-  // ─────────────────────────────────────────────────────────────────────────────
-  const stopGoogleVoice = () => {
-    ttsStop();
-    setIsPlayingGoogle(false);
-    setIsPausedGoogle(false);
-    setGoogleSpeechProgress(0);
-  };
-
-  const toggleGoogleVoicePlay = () => {
+  // TTS controls now driven by controller state
+  const handlePlayPause = () => {
     if (!lastAssistantMessage) { toast('No assistant message yet — send a message first'); return; }
 
-    // Pause / resume toggle
-    if (isPlayingGoogle) {
-      if (isPausedGoogle) {
-        ttsResume();
-        setIsPausedGoogle(false);
-      } else {
-        ttsPause();
-        setIsPausedGoogle(true);
-      }
-      return;
+    if (ttsState.status === 'playing') {
+      ttsPause();
+    } else if (ttsState.status === 'paused') {
+      ttsResume();
+    } else {
+      // Start playback
+      ttcSpeak(lastAssistantMessage, {
+        engine: 'auto',
+        base44,
+        source: 'inputbar',
+        onStart: () => {},
+        onEnd: () => { setGoogleSpeechProgress(0); },
+        onError: (err) => {
+          if (err?.message?.includes('interrupted') || err?.message?.includes('canceled')) return;
+          toast.error('Voice read-aloud failed — try again');
+        },
+        onBoundary: () => setGoogleSpeechProgress(prev => Math.min(prev + 2, 90)),
+      });
     }
+  };
 
-    // Optimistic UI — show player immediately, reset on error
-    setIsPlayingGoogle(true);
-    setIsPausedGoogle(false);
-
-    ttcSpeak(lastAssistantMessage, {
-      engine: 'auto',
-      base44,
-      onStart: () => {
-        setIsPlayingGoogle(true);
-        setIsPausedGoogle(false);
-      },
-      onEnd: () => {
-        setIsPlayingGoogle(false);
-        setIsPausedGoogle(false);
-        setGoogleSpeechProgress(0);
-      },
-      onError: (err) => {
-        if (err?.message?.includes('interrupted') || err?.message?.includes('canceled')) return;
-        setIsPlayingGoogle(false);
-        setIsPausedGoogle(false);
-        setGoogleSpeechProgress(0);
-        toast.error('Voice read-aloud failed — try again');
-      },
-      onBoundary: () => setGoogleSpeechProgress(prev => Math.min(prev + 2, 90)),
-    });
+  const handleStopVoice = () => {
+    ttsStop();
+    setGoogleSpeechProgress(0);
   };
 
   const handleVoiceButtonContextMenu = (e) => {
@@ -686,12 +671,12 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           <button
              ref={voiceButtonRef}
              type="button"
-             onClick={toggleGoogleVoicePlay}
+             onClick={handlePlayPause}
              onContextMenu={handleVoiceButtonContextMenu}
-             className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${isPlayingGoogle ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-             title={isPlayingGoogle ? (isPausedGoogle ? 'Resume' : 'Pause') : 'Read AI response (Right-click for voice settings)'}
+             className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${ttsState.status !== 'idle' ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+             title={ttsState.status === 'playing' ? 'Pause' : ttsState.status === 'paused' ? 'Resume' : 'Read AI response (Right-click for voice settings)'}
            >
-             <Volume2 className={`w-4 h-4 ${isPlayingGoogle ? 'text-green-600' : 'text-gray-700'}`} />
+             <Volume2 className={`w-4 h-4 ${ttsState.status !== 'idle' ? 'text-green-600' : 'text-gray-700'}`} />
            </button>
 
           {showVoiceMenu && (
