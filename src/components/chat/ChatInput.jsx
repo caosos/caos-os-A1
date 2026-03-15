@@ -25,7 +25,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
-  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const fileInputRef = useRef(null);
@@ -59,11 +58,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       }
     };
 
-    if (showCaptureMenu || showVoiceMenu) {
+    if (showCaptureMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showCaptureMenu, showVoiceMenu]);
+  }, [showCaptureMenu]);
   const textareaRef = useRef(null);
   const cameraInputRef = useRef(null);
   const captureMenuRef = useRef(null);
@@ -217,10 +216,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     toast('TTS feature not available');
   };
 
-  const handleVoiceButtonContextMenu = (e) => {
-    e.preventDefault();
-    setShowVoiceMenu(!showVoiceMenu);
-  };
+
 
   // ─────────────────────────────────────────────────────────────────────
   // PHASE A — STT CHUNKING
@@ -625,64 +621,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       )}
       
       <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-3xl px-2 py-1.5 w-full shadow-lg">
-        <div className="relative" ref={voiceMenuRef}>
-          <button
-             ref={voiceButtonRef}
-             type="button"
-             onClick={handlePlayPause}
-             onContextMenu={handleVoiceButtonContextMenu}
-             className={`chat-icon-btn p-1.5 rounded-full transition-colors flex-shrink-0 ${ttsState.status !== 'idle' ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-             title={ttsState.status === 'playing' ? 'Pause' : ttsState.status === 'paused' ? 'Resume' : 'Read AI response (Right-click for voice settings)'}
-           >
-             <Volume2 className={`w-4 h-4 ${ttsState.status !== 'idle' ? 'text-green-600' : 'text-gray-700'}`} />
-           </button>
-
-          {showVoiceMenu && (
-            <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[180px] z-50">
-              <div className="px-3 py-2 text-xs font-semibold text-gray-700">Voice</div>
-              {[
-                { label: 'Google US English', lang: 'en-US' },
-                { label: 'Google UK English', lang: 'en-GB' },
-                { label: 'Google US Spanish', lang: 'es-ES' },
-                { label: 'Google French',     lang: 'fr-FR' },
-                { label: 'Google German',     lang: 'de-DE' },
-              ].map(({ label, lang }) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => {
-                    setTTSPrefs({ wsLang: lang });
-                    setShowVoiceMenu(false);
-                    toast.success(`Voice changed to ${label}`);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm rounded transition-colors ${
-                    getTTSPrefs().wsLang === lang
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="border-t border-gray-200 my-1 px-3 py-2">
-                <label className="text-xs text-gray-600 block mb-1">
-                  Speed: {getTTSPrefs().rate.toFixed(1)}x
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.25"
-                  defaultValue={getTTSPrefs().rate}
-                  onChange={(e) => {
-                    setTTSPrefs({ rate: parseFloat(e.target.value) });
-                  }}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          )}
-        </div>
 
         <textarea
           ref={textareaRef}
@@ -880,52 +818,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         </div>
       )}
 
-      {/* TTS Player Bar */}
-      {ttsState.status !== 'idle' && (
-        <div className="mt-1.5 mx-1 bg-white border border-gray-200 rounded-2xl px-3 py-2 shadow-md">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  handleStopVoice();
-                  setTimeout(() => handlePlayPause(), 80);
-                }}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
-                title="Restart"
-              >
-                <SkipBack className="w-4 h-4 text-blue-600" />
-              </button>
-              <button
-                type="button"
-                onClick={handlePlayPause}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
-                title={ttsState.status === 'paused' ? 'Resume' : 'Pause'}
-              >
-                {ttsState.status === 'paused' ? (
-                  <Play className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <Pause className="w-4 h-4 text-blue-600" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleStopVoice}
-                className="p-1 rounded hover:bg-gray-100 transition-colors"
-                title="Stop"
-              >
-                <X className="w-4 h-4 text-red-500" />
-              </button>
-            </div>
-            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden ml-2">
-              <div
-                className="h-full bg-blue-500 transition-all duration-200"
-                style={{ width: `${googleSpeechProgress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
     </form>
   );
 }
