@@ -48,6 +48,31 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
   const sid = _sessionId;
 
   try {
+    const waitForVoices = () =>
+      new Promise((resolve) => {
+        const synth = window.speechSynthesis;
+        const voicesNow = synth.getVoices();
+        if (voicesNow && voicesNow.length > 0) return resolve(voicesNow);
+
+        let done = false;
+        const handler = () => {
+          if (done) return;
+          done = true;
+          synth.removeEventListener('voiceschanged', handler);
+          resolve(synth.getVoices());
+        };
+
+        synth.addEventListener('voiceschanged', handler);
+
+        // Safety timeout: resolve anyway (some browsers never fire voiceschanged)
+        setTimeout(() => {
+          if (done) return;
+          done = true;
+          synth.removeEventListener('voiceschanged', handler);
+          resolve(synth.getVoices());
+        }, 1200);
+      });
+
     const stripEmojis = (s) => (s || '')
       .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
       .replace(/[\uFE0E\uFE0F\u200D]/g, '');
