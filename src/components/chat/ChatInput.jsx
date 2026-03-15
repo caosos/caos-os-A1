@@ -247,8 +247,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       return;
     }
 
-    // Start — let onStart flip the UI once audio is actually ready
-    // Always use server engine — WebSpeech is unreliable (silent starts, tab bg issues)
+    // Optimistic UI — show player immediately, reset on error
+    setIsPlayingGoogle(true);
+    setIsPausedGoogle(false);
+
     ttcSpeak(lastAssistantMessage, {
       engine: 'server',
       base44,
