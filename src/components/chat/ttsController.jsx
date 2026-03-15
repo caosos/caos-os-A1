@@ -14,7 +14,23 @@ let _state = {
   keepAliveId: null,
   onEnd: null,
   onError: null,
+  status: 'idle', // 'idle' | 'starting' | 'playing' | 'paused'
+  source: null,   // 'inputbar' | 'bubble'
 };
+
+let _stateListeners = [];
+export function subscribeToState(callback) {
+  _stateListeners.push(callback);
+  return () => { _stateListeners = _stateListeners.filter(cb => cb !== callback); };
+}
+
+export function getState() {
+  return { ..._state };
+}
+
+function _notifyStateChange() {
+  _stateListeners.forEach(cb => cb({ ..._state }));
+}
 
 let _cachedVoices = [];
 if (typeof window !== 'undefined') {
@@ -38,10 +54,12 @@ function _stopAll(silent = false) {
     } catch (_) {}
     _state.audio = null;
   }
+  _state.status = 'idle';
   if (!silent) _state.onEnd?.();
   _state.engine = null;
   _state.onEnd = null;
   _state.onError = null;
+  _notifyStateChange();
 }
 
 function _startKeepAlive() {
@@ -73,11 +91,13 @@ function _buildUtterance(cleanText, prefs, onStart, onEnd, onError, onBoundary, 
   utt.volume = 1.0;
 
   utt.onstart = () => {
-    started.value = true;
-    if (watchdogRef.id) { clearTimeout(watchdogRef.id); watchdogRef.id = null; }
-    if (_dev()) console.log('[TTS] TTS_WEBSPEECH_ONSTART');
-    _startKeepAlive();
-    onStart?.();
+   started.value = true;
+   if (watchdogRef.id) { clearTimeout(watchdogRef.id); watchdogRef.id = null; }
+   if (_dev()) console.log('[TTS] TTS_WEBSPEECH_ONSTART');
+   _startKeepAlive();
+   _state.status = 'playing';
+   _notifyStateChange();
+   onStart?.();
   };
   utt.onend = () => { _stopAll(true); onEnd?.(); _state.onEnd = null; };
   utt.onerror = (e) => {
@@ -165,16 +185,18 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
   const audio = new Audio(audioUrl);
   _state.audio = audio;
   _state.engine = 'server';
+  _state.status = 'playing';
 
   audio.addEventListener('ended', () => { _stopAll(true); onEnd?.(); _state.onEnd = null; });
   audio.addEventListener('error', () => { _stopAll(true); onError?.(new Error('Audio playback error')); _state.onError = null; });
 
   if (_state.sessionId !== sid) return;
   await audio.play();
+  _notifyStateChange();
   onStart?.();
 }
 
-export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, onBoundary } = {}) {
+export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, onBoundary, source } = {}) {
   _stopAll(true);
   _sessionId++;
   _state.sessionId = _sessionId;
@@ -183,8 +205,11 @@ export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, 
   const cleanText = sanitizeForTTS(text);
   if (!cleanText) return;
 
+  _state.status = 'starting';
+  _state.source = source || 'inputbar';
   _state.onEnd = onEnd;
   _state.onError = onError;
+  _notifyStateChange();
 
   if (resolvedEngine === 'server') {
     if (!base44) throw new Error('ttsController: base44 client required for server engine');
@@ -225,11 +250,15 @@ export function ttsStop() {
 export function ttsPause() {
   if (_state.engine === 'webspeech') window.speechSynthesis?.pause();
   else if (_state.engine === 'server' && _state.audio) _state.audio.pause();
+  _state.status = 'paused';
+  _notifyStateChange();
 }
 
 export function ttsResume() {
   if (_state.engine === 'webspeech') window.speechSynthesis?.resume();
   else if (_state.engine === 'server' && _state.audio) _state.audio.play().catch(() => {});
+  _state.status = 'playing';
+  _notifyStateChange();
 }
 
 export function ttsGetSessionId() { return _state.sessionId; }
