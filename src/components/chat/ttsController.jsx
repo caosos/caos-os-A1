@@ -163,11 +163,7 @@ async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onEr
   onStart?.();
 }
 
-let _speaking = false;
-
 export async function ttcSpeak(text, { engine, base44, onStart, onEnd, onError, onBoundary } = {}) {
-  if (_speaking) { _stopAll(true); }
-  _speaking = true;
   _stopAll(true);
   const prefs = getTTSPrefs();
   const resolvedEngine = engine || prefs.engine || 'webspeech';
