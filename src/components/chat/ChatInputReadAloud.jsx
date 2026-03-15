@@ -12,21 +12,22 @@ function clearKeepAlive() {
 }
 
 // Chrome bug: speechSynthesis pauses after ~15s in background tabs
-// Fix: pause/resume every 5s to keep it alive and prevent background pause
+// CRITICAL: Do NOT pause/resume while speaking—this breaks the utterance
+// Instead: Just monitor and ensure utterance completes without interruption
 function startKeepAlive() {
   clearKeepAlive();
+  // Keep a heartbeat to detect if speech mysteriously stops
   _keepAliveInterval = setInterval(() => {
     try {
-      if (window.speechSynthesis.paused) {
+      // Only resume if explicitly paused by OS/browser
+      // DO NOT pause—that kills the utterance mid-speech
+      if (window.speechSynthesis.paused && !document.hidden) {
         window.speechSynthesis.resume();
-      } else if (!window.speechSynthesis.speaking && _activeUtterance) {
-        // If somehow stopped, restart it
-        window.speechSynthesis.speak(_activeUtterance);
       }
     } catch (err) {
       console.warn('[KEEP_ALIVE]', err.message);
     }
-  }, 5000); // More frequent checks
+  }, 3000); // Check every 3s—lighter touch
 }
 
 export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
