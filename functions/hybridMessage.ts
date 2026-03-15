@@ -408,6 +408,35 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime }
     return { latency: Date.now() - startTime };
 }
 
+// ── WCW Slot Audit ────────────────────────────────────────────────────────────
+function buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAdmin }) {
+    if (!debugMode && !isAdmin) return null;
+    const classifySlot = (msg, idx) => {
+        const c = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
+        if (idx === 0 && msg.role === 'system') return 'system_prompt';
+        if (msg.role === 'system' && c.startsWith('EXECUTION_META_TRH:')) return 'trh_meta';
+        if (msg.role === 'system' && c.startsWith('THREAD RECOVERY EXCERPTS')) return 'mbcr';
+        if (msg.role === 'assistant' && c.startsWith('THREAD SUMMARY')) return 'trh_summary';
+        if (msg.role === 'user') return 'user';
+        if (msg.role === 'system' || msg.role === 'assistant' || msg.role === 'user') return 'history';
+        return 'other';
+    };
+    const simpleHash = (s) => {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < Math.min(s.length, 4096); i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+        return h.toString(16).padStart(8, '0');
+    };
+    const slots = finalMessages.map((msg, idx) => {
+        const c = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
+        const slot = { idx, role: msg.role, bucket: classifySlot(msg, idx), chars: c.length, hash: simpleHash(c) };
+        if (debugMode) slot.preview_200 = c.slice(0, 200);
+        return slot;
+    });
+    const charsTotal = slots.reduce((s, sl) => s + sl.chars, 0);
+    const largestSlots = [...slots].sort((a, b) => b.chars - a.chars).slice(0, 5).map(s => ({ idx: s.idx, bucket: s.bucket, chars: s.chars }));
+    return { enabled: true, max_model_wcw_tokens: wcwBudget, prompt_tokens_post_inference: promptTokens, slots, chars_total: charsTotal, largest_slots: largestSlots };
+}
+
 // ── Response payload builder ─────────────────────────────────────────────────
 function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages }) {
     const response = {
