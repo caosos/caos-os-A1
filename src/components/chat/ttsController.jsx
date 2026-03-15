@@ -142,9 +142,9 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
     }, WATCHDOG_MS);
   };
 
-  // Arm watchdog after speak() is dispatched (100ms after the inner 50ms timer = ~200ms total)
+  // Arm watchdog after speak() is dispatched — speak fires at ~100ms, arm at 150ms
   _resurrectAndSpeak(utt);
-  setTimeout(() => armWatchdog(utt), 200);
+  setTimeout(() => armWatchdog(utt), 150);
 }
 
 async function _speakServer(cleanText, prefs, base44Client, onStart, onEnd, onError) {
