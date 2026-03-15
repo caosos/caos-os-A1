@@ -19,8 +19,8 @@ export default function VoiceSettingsMenu({ onClose }) {
     localStorage.setItem('caos_google_voice', v);
   };
 
-  const handleSpeedChange = (value) => {
-    const newSpeed = value[0];
+  const handleSpeedChange = (e) => {
+    const newSpeed = parseFloat(e.target.value);
     setSpeed(newSpeed);
     localStorage.setItem('caos_google_speech_rate', newSpeed.toString());
   };
