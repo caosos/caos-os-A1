@@ -42,6 +42,10 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     return;
   }
 
+  // Always cancel any pending speech before starting new
+  window.speechSynthesis.cancel();
+  clearKeepAlive();
+
   try {
     const stripEmojis = (s) => (s || '')
       .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
