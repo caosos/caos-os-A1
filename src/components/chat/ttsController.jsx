@@ -78,9 +78,14 @@ function _speakWebSpeech(cleanText, prefs, onStart, onEnd, onError, onBoundary) 
   };
   if (onBoundary) utterance.onboundary = onBoundary;
 
+  // Chrome engine resurrection: cancel twice + resume forces engine reinit on idle/backgrounded tabs
   window.speechSynthesis.cancel();
+  window.speechSynthesis.resume();
   setTimeout(() => {
-    if (_state.utterance === utterance) window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.cancel();
+    setTimeout(() => {
+      if (_state.utterance === utterance) window.speechSynthesis.speak(utterance);
+    }, 50);
   }, 50);
 }
 
