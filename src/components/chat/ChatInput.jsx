@@ -43,9 +43,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   // Subscribe to TTS controller state
   useEffect(() => {
     const unsubscribe = subscribeToState((state) => {
-      if (state.source === 'inputbar') {
-        setTtsState({ status: state.status, source: state.source });
-      }
+      setTtsState({ status: state.status, source: state.source });
     });
     return unsubscribe;
   }, []);
