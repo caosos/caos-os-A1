@@ -1875,6 +1875,77 @@ STOP after Phase 2A. Phase 2B (receiptWriter await semantics) is a separate TSB.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`}</Code>
               </div>
 
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-042 — UI Hit-Test Fix: Input Bar Overlay pointer-events Bug</span>
+                  <Tag label="FIXED ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 15, 2026
+Component: pages/Chat.jsx (ONLY — no other files touched)
+
+Symptom:
+  The input-bar TTS speaker button (Volume2 icon) was intermittently
+  unclickable. Clicks in that region registered as clicks on the page
+  background, not on the button. The failure was positional/layout-dependent:
+  the button appeared visually present but was inside a pointer-events-none
+  ancestor, so the browser's hit-test returned the background, not the button.
+
+  Confirmed via pointer-event probe: elementFromPoint() matched the speaker
+  button visually but the DOM click was routed to the backdrop ancestor.
+
+Root Cause:
+  Both ChatInput wrapper divs in Chat.jsx (dev-mode path and normal path)
+  used this pattern:
+
+    <div className="absolute bottom-0 ... pointer-events-none">   ← outer: dead zone
+      <div className="pointer-events-auto">                        ← inner: interactive
+        <ChatInput ... />
+      </div>
+    </div>
+
+  The outer div had pointer-events-none to allow the gradient background
+  to be purely decorative and non-blocking. The pointer-events-auto was
+  applied only to an inner <div> wrapping ChatInput.
+
+  HOWEVER: if the rendered height of the inner pointer-events-auto div
+  was smaller than the outer wrapper (e.g. single-line input, no attachments),
+  the top portion of the outer div — including the region where the speaker
+  button visually appeared — remained inside the pointer-events-none dead zone.
+  Clicks in that strip went through to the page rather than the button.
+  This was intermittent because it depended on the exact rendered height of the
+  input bar relative to the gradient container's pt-3 pb-20 padding.
+
+Fix (CSS-only, minimal):
+  Both wrapper locations updated identically:
+
+  BEFORE (dev-mode + normal mode):
+    outer div: pointer-events-none
+    inner div: pointer-events-auto
+
+  AFTER:
+    outer div: pointer-events-auto     ← entire overlay region is now interactive
+    inner div: (class removed — redundant)
+
+  No z-index, layout, padding, gradient, logic, or state changes made.
+
+INVARIANT (permanent — do not regress):
+  🔒 The outer absolute wrapper div containing ChatInput MUST be pointer-events-auto.
+  🚫 NEVER set pointer-events-none on any ancestor of the ChatInput form element.
+  The pointer-events-none pattern is only safe when the interactive child div
+  is guaranteed to fill the full height of its pointer-events-none parent.
+  Since ChatInput height varies by content (attachments, agent chips, player bar),
+  this guarantee cannot be made — use pointer-events-auto on the outer wrapper instead.
+
+Files changed:
+  pages/Chat.jsx — 2 locations, class string swap only, 0 line delta
+
+Verification:
+  Speaker button clickable in all input states (single-line, multiline,
+  with attachments, with player bar, with agent chips).
+
+Regression guard: see TSB-042-DEV-GUARD (components/chat/PointerEventsGuard.jsx)`}</Code>
+              </div>
+
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number.</p>
             </div>
           </Section>
