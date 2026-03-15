@@ -620,6 +620,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto px-4 py-2">
+      <PointerEventsGuard targetRef={voiceButtonRef} label="TTS speaker button" />
       {/* Attached Files Display */}
       {attachedFiles.length > 0 && (
         <div className="mb-2 px-3 flex flex-wrap gap-2">
