@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Chat from './pages/Chat';
 import Welcome from './pages/Welcome';
 import Admin from './pages/Admin';
+import TSBLog1 from './pages/TSBLog';
 import TSBLog2 from './pages/TSBLog2';
 
 const LayoutWrapper = ({ children }) => <>{children}</>;
@@ -44,6 +45,7 @@ const AuthenticatedApp = () => {
       <Route path="/Chat" element={<LayoutWrapper><Chat /></LayoutWrapper>} />
       <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
+      <Route path="/TSBLog1" element={<LayoutWrapper><TSBLog1 /></LayoutWrapper>} />
       <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

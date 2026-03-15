@@ -42,11 +42,11 @@ export default function TSBLog2() {
     <div className="min-h-screen bg-[#0a1628] text-white p-6">
       <div className="mb-6 flex items-center gap-2">
         <button
-          onClick={() => navigate('/TSBLog')}
+          onClick={() => navigate('/TSBLog1')}
           className="flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to TSBLog (TSB-001 through TSB-042)
+          Back to TSB Log 1 (TSB-001 through TSB-042)
         </button>
       </div>
 
