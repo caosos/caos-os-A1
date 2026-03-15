@@ -113,8 +113,12 @@
     }
   }
 
-  /* 44px minimum touch target for accessibility */
-  button, [role="button"], a[role="button"], input[type="checkbox"], input[type="radio"] {
+  /* 44px minimum touch target for accessibility — EXCEPT icon buttons in the chat input bar */
+  button:not(.chat-icon-btn), [role="button"]:not(.chat-icon-btn), a[role="button"]:not(.chat-icon-btn), input[type="checkbox"], input[type="radio"] {
     @apply min-w-[44px] min-h-[44px];
+  }
+  button.chat-icon-btn {
+    min-width: unset;
+    min-height: unset;
   }
 }
