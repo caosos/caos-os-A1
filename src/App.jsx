@@ -9,6 +9,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Chat from './pages/Chat';
 import Welcome from './pages/Welcome';
 import Admin from './pages/Admin';
+import SystemBlueprint from './pages/SystemBlueprint';
 import TSBLog1 from './pages/TSBLog';
 import TSBLog2 from './pages/TSBLog2';
 // Note: Individual TSB-041, TSB-042, TSB-043, TSB-044 pages removed from routing.
@@ -47,6 +48,7 @@ const AuthenticatedApp = () => {
       <Route path="/Chat" element={<LayoutWrapper><Chat /></LayoutWrapper>} />
       <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
+      <Route path="/SystemBlueprint" element={<LayoutWrapper><SystemBlueprint /></LayoutWrapper>} />
       <Route path="/TSBLog1" element={<LayoutWrapper><TSBLog1 /></LayoutWrapper>} />
       <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
       {/* Individual TSB pages removed — all content in TSBLog1 + TSBLog2 */}
