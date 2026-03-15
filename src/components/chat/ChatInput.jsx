@@ -44,6 +44,17 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
 
 
+  // Auto-play last AI message when component loads or message changes
+  useEffect(() => {
+    if (lastAssistantMessage && lastAssistantMessage.trim()) {
+      // Small delay to ensure component is fully mounted
+      const timeout = setTimeout(() => {
+        toggleGoogleReadAloud(lastAssistantMessage, isPlayingReadAloud, setIsPlayingReadAloud);
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [lastAssistantMessage]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
