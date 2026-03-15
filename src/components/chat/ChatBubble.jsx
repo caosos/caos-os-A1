@@ -239,10 +239,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     audioRef.current = audio;
     globalAudioInstance = audio;
 
-    setIsSpeaking(true);
-    setIsPausedBySpeech(false);
-    setSpeechProgress(0);
-
     audio.addEventListener('loadedmetadata', () => {
       setAudioDuration(audio.duration);
       ttsLog('audio_loadedmetadata', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
@@ -286,14 +282,18 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setAudioDuration(0);
     };
 
-    // Play immediately — browser will auto-load on demand, just keep player UI alive
+    setIsSpeaking(true);
+    setIsPausedBySpeech(false);
+    setSpeechProgress(0);
+
+    // Wait for metadata before playing to ensure duration is loaded
+    // Play directly — blob URLs are always same-origin, no need for canplay gate
     audio.play().then(() => {
       console.log('[AUDIO_PLAYING]', url.substring(0, 40));
     }).catch((err) => {
       console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
-      // Don't kill UI on play reject — audio may still load and play
-      // setIsSpeaking(false);
-      // toast.error(`Playback blocked: ${err.message}`);
+      setIsSpeaking(false);
+      toast.error(`Playback blocked: ${err.message}`);
     });
   };
 
