@@ -61,13 +61,14 @@ export default function VoiceSettingsMenu({ onClose }) {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Speed: <span className="text-blue-600 font-semibold">{speed.toFixed(1)}x</span>
             </label>
-            <Slider
-              value={[speed]}
-              onValueChange={handleSpeedChange}
-              min={0.5}
-              max={2.0}
-              step={0.1}
-              className="w-full"
+            <input
+              type="range"
+              min="0.5"
+              max="2.0"
+              step="0.1"
+              value={speed}
+              onChange={handleSpeedChange}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-2">
               <span>0.5x</span>
