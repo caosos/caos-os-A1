@@ -167,4 +167,8 @@ export function ttsResume() {
 
 export function ttsWarmVoices() {
   _cachedVoices = window.speechSynthesis?.getVoices() || [];
+  // Nudge Chrome engine to prevent silent death on idle tabs
+  if (window.speechSynthesis && !window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
 }
