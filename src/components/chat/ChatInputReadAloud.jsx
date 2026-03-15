@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 // Module-level ref prevents Chrome from GC'ing the utterance before onstart fires
 let _activeUtterance = null;
 let _keepAliveInterval = null;
+let _sessionId = 0;
 
 function clearKeepAlive() {
   if (_keepAliveInterval) {
