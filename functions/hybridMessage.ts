@@ -464,6 +464,7 @@ function buildResponsePayload({ reply, request_id, correlation_id, routingDecisi
         }
     };
     if (debugMode) response.debug_meta = debug_meta;
+    if (wcw_audit) response.wcw_audit = wcw_audit;
     return response;
 }
 
