@@ -39,22 +39,10 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
+      <Route path="/" element={<Navigate to={`/${mainPage}`} replace />} />
+      <Route path="/Chat" element={<LayoutWrapper><Chat /></LayoutWrapper>} />
+      <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
+      <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
