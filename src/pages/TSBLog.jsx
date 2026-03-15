@@ -58,9 +58,9 @@ export default function TSBLog() {
       <ScrollArea className="h-[calc(100vh-6rem)]">
         <div id="tsb-content" className="max-w-4xl mx-auto space-y-4 pb-8">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">CAOS TSB Log</h1>
-            <p className="text-red-300">Troubleshooting Bulletins — Permanent Failure & Fix Records</p>
-            <p className="text-gray-400 text-xs mt-1">A running log of real issues encountered during CAOS development, what caused them, and what fixed them. TSB-001 through TSB-034.</p>
+            <h1 className="text-4xl font-bold mb-2">CAOS TSB Log — Part 1</h1>
+            <p className="text-red-300">Troubleshooting Bulletins — TSB-001 through TSB-042</p>
+            <p className="text-gray-400 text-xs mt-1">Part 1 of 2. <a href="/TSBLog2" className="text-blue-400 hover:text-blue-200 underline">TSB-043 onward → TSB Log Part 2</a></p>
           </div>
 
           <Section title="⚠️ KERNELIZED AGENT RECOVERY HEADER (READ FIRST IF YOU ARE A FRESH AGENT)" color="yellow">
