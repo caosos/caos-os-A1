@@ -49,7 +49,7 @@ const AuthenticatedApp = () => {
       <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
       <Route path="/SystemBlueprint" element={<LayoutWrapper><SystemBlueprint /></LayoutWrapper>} />
-      <Route path="/TSBLog1" element={<LayoutWrapper><TSBLog1 /></LayoutWrapper>} />
+      <Route path="/TSBLog" element={<LayoutWrapper><TSBLog1 /></LayoutWrapper>} />
       <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
       {/* Individual TSB pages removed — all content in TSBLog1 + TSBLog2 */}
       <Route path="*" element={<PageNotFound />} />
