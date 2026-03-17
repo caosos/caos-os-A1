@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 import PointerEventsGuard from './PointerEventsGuard';
-import { toggleGoogleReadAloud } from './ChatInputReadAloud';
+import { toggleGoogleReadAloud, wakeSpeechSynthesis } from './ChatInputReadAloud';
 import VoiceSettingsMenu from './VoiceSettingsMenu';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
