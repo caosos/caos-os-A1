@@ -19,6 +19,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   useEffect(() => {
     if (messageValue !== message) setMessage(messageValue);
   }, [messageValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Wake Chrome's speech synthesis engine on every new AI message to prevent zombie state
+  useEffect(() => {
+    if (lastAssistantMessage) wakeSpeechSynthesis();
+  }, [lastAssistantMessage]);
   const [uploading, setUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingReadAloud, setIsPlayingReadAloud] = useState(false);
