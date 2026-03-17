@@ -12,23 +12,32 @@ function clearKeepAlive() {
   }
 }
 
-// Chrome bug: speechSynthesis pauses after ~15s in background tabs
-// CRITICAL: Do NOT pause/resume while speaking—this breaks the utterance
-// Instead: Just monitor and ensure utterance completes without interruption
+// Chrome bug: speechSynthesis silently freezes after ~15s — does NOT set .paused=true
+// Fix: forced pause+resume heartbeat every 10s while speaking (proven Chrome workaround)
 function startKeepAlive() {
   clearKeepAlive();
-  // Keep a heartbeat to detect if speech mysteriously stops
   _keepAliveInterval = setInterval(() => {
     try {
-      // Only resume if explicitly paused by OS/browser
-      // DO NOT pause—that kills the utterance mid-speech
-      if (window.speechSynthesis.paused && !document.hidden) {
-        window.speechSynthesis.resume();
+      const synth = window.speechSynthesis;
+      if (synth.speaking) {
+        synth.pause();
+        synth.resume();
       }
     } catch (err) {
       console.warn('[KEEP_ALIVE]', err.message);
     }
-  }, 3000); // Check every 3s—lighter touch
+  }, 10000);
+}
+
+// Wake the synthesis engine — call this on any new AI message to prevent zombie state
+export function wakeSpeechSynthesis() {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth.speaking && !synth.pending) {
+      // Fire a silent cancel to reset internal Chrome state between uses
+      synth.cancel();
+    }
+  } catch (e) {}
 }
 
 export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
@@ -143,12 +152,12 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
       if (selectedVoice) utterance.voice = selectedVoice;
       window.speechSynthesis.cancel(); // clear any queue
-      // Small delay after cancel() — Chrome needs a tick before speak() after cancel
+      // Chrome needs a longer tick after cancel() to fully reset — 250ms is reliable
       setTimeout(() => {
         if (sid !== _sessionId) return;
         if (_activeUtterance !== utterance) return;
         try { window.speechSynthesis.speak(utterance); } catch (e) {}
-      }, 75);
+      }, 250);
     };
 
     // Fetch voices and start playback
