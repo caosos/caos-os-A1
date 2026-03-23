@@ -992,11 +992,14 @@ Deno.serve(async (req) => {
             riaResult = { degraded: inferResult.degraded || false, fallback_tier: inferResult.fallback_tier ?? null, provider: inferResult.provider || preferredProvider };
         } catch (inferenceError) {
             if (inferenceError.latency_ms !== undefined) {
-                return Response.json({
-                    ok: false, error_code: inferenceError.error_code, stage: inferenceError.stage, message: inferenceError.message,
-                    request_id, correlation_id, latency_ms: inferenceError.latency_ms, retryable: inferenceError.isTimeout,
-                    mode: 'ERROR', response_time_ms: inferenceError.latency_ms
-                }, { status: inferenceError.isTimeout ? 504 : 502 });
+                return respondError({
+                    error_code: inferenceError.error_code,
+                    stage: inferenceError.stage,
+                    message: inferenceError.message,
+                    retryable: inferenceError.isTimeout || false,
+                    request_id, correlation_id,
+                    elapsed_ms: inferenceError.latency_ms,
+                });
             }
             throw inferenceError;
         }
