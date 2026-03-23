@@ -465,6 +465,10 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     } catch (inferenceError) {
         clearTimeout(openaiTimeout);
         const latency_ms = Date.now() - startTime;
+        // Preserve pre-classified errors (e.g. UNAUTHENTICATED thrown by auth guard above)
+        if (inferenceError?.error_code && inferenceError?.stage) {
+            throw { ...inferenceError, latency_ms };
+        }
         const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
         const errStage = isTimeout ? 'INFERENCE' : stage;
         const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
