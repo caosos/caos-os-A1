@@ -928,7 +928,7 @@ Deno.serve(async (req) => {
 
         // If Grok selected but feature disabled — explicit error, no silent fallback
         if (FF_PROVIDER_ROUTER && preferredProvider === 'grok' && !FF_GROK_PROVIDER_ENABLED) {
-            return Response.json({ ok: false, stage: 'GROK_CALL', error_code: 'FEATURE_DISABLED', message: 'Grok provider is not yet enabled. Please switch to OpenAI in your profile settings.', retryable: false, request_id }, { status: 503 });
+            return respondError({ error_code: 'FEATURE_DISABLED', stage: 'GROK_CALL', message: 'Grok provider is not yet enabled. Please switch to OpenAI in your profile settings.', retryable: false, request_id, correlation_id, elapsed_ms: Date.now() - startTime });
         }
 
         const providerConfig = { openai: { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 200000 }, grok: { model: userProfile?.preferred_model || 'grok-3', context: 131072 } };
