@@ -38,7 +38,7 @@ const okResponse = (data, receipt) =>
 
 const failResponse = (status, error_code, stage, message, retryable, elapsed_ms, request_id, receiptOverrides = {}) =>
     jsonResponse({
-        ok: false, degraded: false, error_code, stage, message, retryable,
+        ok: false, degraded: false, error_code, stage, message: message || error_code, retryable,
         request_id, elapsed_ms: elapsed_ms ?? null,
         data: { text: null },
         diagnostic_receipt: makeReceipt(stage, elapsed_ms, receiptOverrides),
