@@ -138,10 +138,10 @@ Deno.serve(async (req) => {
         const elapsed_ms = Date.now() - t_start;
         console.log('⏱️ [TRANSCRIBE_TIMING]', { t_provider_ms, elapsed_ms, request_id });
 
-        return jsonResponse({
-            ok: true, text: transcription.text, success: true, request_id,
-            timing: { t_provider_ms, elapsed_ms }
-        });
+        return okResponse(
+            { text: transcription.text },
+            { _request_id: request_id, stage: 'WHISPER_CALL', elapsed_ms, provider_elapsed_ms: t_provider_ms, model: 'whisper-1' }
+        );
 
     } catch (error) {
         const elapsed_ms = Date.now() - t_start;
