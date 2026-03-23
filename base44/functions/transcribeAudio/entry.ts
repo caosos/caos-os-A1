@@ -92,13 +92,13 @@ Deno.serve(async (req) => {
         }
 
         if (!audioBuffer || audioBuffer.byteLength === 0) {
-            return jsonResponse({ ok: false, error_code: 'EMPTY_AUDIO', stage: 'INPUT_VALIDATION', message: 'Audio buffer is empty', request_id, retryable: true }, 400);
+            return failResponse(400, 'EMPTY_AUDIO', 'INPUT_VALIDATION', 'Audio buffer is empty', true, Date.now() - t_start, request_id);
         }
 
         // Validate audio size before sending to provider (~25MB Whisper limit)
         const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
         if (audioBuffer.byteLength > MAX_AUDIO_BYTES) {
-            return jsonResponse({ ok: false, error_code: 'AUDIO_TOO_LARGE', stage: 'INPUT_VALIDATION', message: `Audio too large for provider (${audioBuffer.byteLength} bytes, max ${MAX_AUDIO_BYTES})`, request_id, retryable: false }, 413);
+            return failResponse(413, 'AUDIO_TOO_LARGE', 'INPUT_VALIDATION', `Audio too large for provider (${audioBuffer.byteLength} bytes, max ${MAX_AUDIO_BYTES})`, false, Date.now() - t_start, request_id);
         }
 
         const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' });
