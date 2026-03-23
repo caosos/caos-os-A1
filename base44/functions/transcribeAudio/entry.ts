@@ -151,15 +151,11 @@ Deno.serve(async (req) => {
         const isPayloadTooLarge = error.message?.includes('413') || error.message?.includes('too large') || error.message?.includes('PAYLOAD_TOO_LARGE');
         const isUnsupported = error.message?.toLowerCase().includes('unsupported') || error.message?.toLowerCase().includes('format');
 
-        return jsonResponse({
-            ok: false,
-            error_code: isTimeout ? 'PROVIDER_TIMEOUT' : isPayloadTooLarge ? 'PAYLOAD_TOO_LARGE' : isUnsupported ? 'AUDIO_UNSUPPORTED' : 'TRANSCRIBE_FAILED',
-            stage: 'TRANSCRIPTION',
-            message: error.message,
-            retryable: isTimeout,
-            request_id,
-            elapsed_ms,
-            success: false,
-        }, isPayloadTooLarge ? 413 : isTimeout ? 504 : 500);
+        const error_code = isTimeout ? 'PROVIDER_TIMEOUT' : isPayloadTooLarge ? 'PAYLOAD_TOO_LARGE' : isUnsupported ? 'AUDIO_UNSUPPORTED' : 'TRANSCRIBE_FAILED';
+        return failResponse(
+            isPayloadTooLarge ? 413 : isTimeout ? 504 : 500,
+            error_code, 'TRANSCRIPTION', error.message, isTimeout,
+            elapsed_ms, request_id
+        );
     }
 });
