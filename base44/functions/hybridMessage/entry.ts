@@ -1032,7 +1032,8 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
-        let reply, openaiUsage, inferenceMs, t_openai_call, riaResult;
+        let reply, openaiUsage, inferenceMs, t_openai_call;
+        let riaResult = { degraded: false, fallback_tier: 'TIER_1', provider: preferredProvider };
         try {
             const inferResult = await resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail, base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
             reply = inferResult.reply;
