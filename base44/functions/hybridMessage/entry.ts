@@ -644,8 +644,6 @@ function buildResponsePayload({ reply, request_id, correlation_id, routingDecisi
             heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
             model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
             latency_ms: responseTime,
-            degraded: riaResult?.degraded || false,
-            fallback_tier: riaResult?.fallback_tier ?? null,
             latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
             sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
             token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
