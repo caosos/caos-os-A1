@@ -481,6 +481,52 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     return { reply, openaiUsage, inferenceMs, degraded, fallback_tier, provider: providerUsed };
 }
 
+// ── RIA: Resilient Inference Wrapper ─────────────────────────────────────────
+// Phase 2: wraps handleInference with tiered fallback under FF_RIA_INFERENCE_SPINE.
+// LOCK_SIGNATURE: CAOS_RIA_WRAPPER_v1_2026-03-23
+// Call-site: replace handleInference(...) with resilientInference(...)
+// Tier 1 = primary provider (handleInference)
+// Tier 2 = backup provider (gated by FF_GROK_PROVIDER_ENABLED, currently disabled)
+// Tier 3 = local responder (always succeeds, degraded=true)
+// Dev switch: forceTier1Fail (admin-only, body param _dev_force_tier1_fail)
+async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = false, ...inferArgs }) {
+    let tier1Error = null;
+
+    // ── Tier 1 ───────────────────────────────────────────────────────────────
+    if (!forceTier1Fail) {
+        try {
+            const result = await handleInference(inferArgs);
+            return { ...result, degraded: false, fallback_tier: 'TIER_1' };
+        } catch (e) {
+            tier1Error = e;
+        }
+    } else {
+        tier1Error = { latency_ms: Date.now() - inferArgs.startTime, isTimeout: false, stage: 'OPENAI_CALL', error_code: 'INFERENCE_FAILED', message: '[DEV] Forced Tier 1 failure' };
+        console.warn('⚠️ [RIA_FORCE_TIER1_FAIL] Dev switch active');
+    }
+
+    // If RIA spine is off — propagate Tier 1 error as baseline
+    if (!FF_RIA_INFERENCE_SPINE) {
+        throw tier1Error;
+    }
+
+    // ── Tier 2 (future: backup provider — currently disabled) ────────────────
+    // FF_GROK_PROVIDER_ENABLED=false, so Tier 2 is skipped in all current configs
+    console.warn('⚠️ [RIA_TIER1_FAILED] Tier 2 skipped (provider disabled) → Tier 3', { reason: tier1Error?.message });
+
+    // ── Tier 3: local responder — always succeeds ────────────────────────────
+    console.warn('⚠️ [RIA_TIER3] Activating local responder');
+    const localReply = `⚠️ I'm temporarily unable to reach my inference provider. Please retry in a moment. [request_id: ${inferArgs.request_id}]`;
+    return {
+        reply: localReply,
+        openaiUsage: null,
+        inferenceMs: Date.now() - inferArgs.startTime,
+        degraded: true,
+        fallback_tier: 'TIER_3_LOCAL',
+        provider: 'local',
+    };
+}
+
 // ── Message save handler ─────────────────────────────────────────────────────
 async function handleMessageSave({ base44, session_id, input, reply, startTime }) {
     setStage(STAGES.MESSAGE_SAVE);
