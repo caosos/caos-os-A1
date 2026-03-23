@@ -629,6 +629,26 @@ function respondError({ error_code, stage, message, retryable = false, request_i
     }, { status });
 }
 
+// ── Contract-compliant success response builder ──────────────────────────────
+// Phase 2.1: all hybridMessage success paths must emit the v1 envelope.
+// Contract fields win; ...rest carries backward-compat additive fields.
+function respondOk({ request_id, correlation_id, stage, degraded, message, data, diagnostic_receipt, execution_receipt, ...rest }) {
+    return Response.json({
+        ...rest,
+        ok: true,
+        request_id,
+        correlation_id: correlation_id || request_id,
+        stage,
+        error_code: null,
+        message: message ?? (degraded ? 'Primary inference unavailable; fallback used.' : null),
+        retryable: false,
+        degraded: degraded || false,
+        data,
+        diagnostic_receipt,
+        execution_receipt,
+    });
+}
+
 // ── Response payload builder ─────────────────────────────────────────────────
 function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn }) {
     const response = {
