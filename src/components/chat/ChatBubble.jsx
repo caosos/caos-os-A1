@@ -515,7 +515,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               )}
 
               <ReceiptPanel isUser={isUser} message={message} showExecution={showExecution} />
-              {!isUser && <EvidencePanel message={message} />
+              {!isUser && <EvidencePanel message={message} />}
               </div>
               </div>
               </div>
