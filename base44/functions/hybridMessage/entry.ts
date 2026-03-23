@@ -358,41 +358,114 @@ async function handleThreadAugmentations({ base44, session_id, input, startTime,
     return { trhSummaryMessage, mbcrInjectedMessage: mbcrResult.message, mbcrDebug: mbcrResult.debug, execution_meta };
 }
 
+// ── RIA Feature Flag ─────────────────────────────────────────────────────────
+// ROLLBACK: set FF_RIA_INFERENCE_SPINE = false
+const FF_RIA_INFERENCE_SPINE = true;
+
+// Provider / model config
+const PROVIDER_MODELS = {
+    openai: { default: 'gpt-5.2', context: 200000 },
+    grok:   { default: 'grok-3',   context: 131072 },
+};
+
+// Tier 3 — local responder (no provider, always succeeds)
+function tier3Reply(request_id) {
+    return {
+        content: `⚠️ I'm temporarily unable to reach my inference provider. Please retry in a moment. [request_id: ${request_id}]`,
+        usage: null,
+        degraded: true,
+        fallback_tier: 3,
+        provider: 'local',
+    };
+}
+
 // ── Inference handler ────────────────────────────────────────────────────────
-async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime }) {
-    setStage(STAGES.OPENAI_CALL);
-    let reply, openaiUsage;
+async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider }) {
+    const provider = preferredProvider || 'openai';
+    const stage = provider === 'grok' ? 'GROK_CALL' : 'OPENAI_CALL';
+    setStage(stage);
+    let reply, openaiUsage, degraded = false, fallback_tier = null, providerUsed = provider;
     const inferenceStart = Date.now();
     const openaiAbort = new AbortController();
     const INFERENCE_TIMEOUT_MS = 45000;
     const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
-    emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length } });
-    
-    try {
+    emitEvent(base44, request_id, session_id, startTime, stage, 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length, provider } });
+
+    const invokeInference = async (model) => {
         if (user.role === 'admin') {
-            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
-            reply = riRes?.data?.content;
-            openaiUsage = riRes?.data?.usage || null;
+            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 2000 });
+            return { content: riRes?.data?.content, usage: riRes?.data?.usage || null };
         } else {
-            const giRes = await base44.functions.invoke('core/generalInference', { messages: finalMessages, model: RESOLVED_MODEL, max_tokens: 2000 });
-            reply = giRes?.data?.content;
-            openaiUsage = giRes?.data?.usage || null;
+            const giRes = await base44.functions.invoke('core/generalInference', { messages: finalMessages, model, max_tokens: 2000 });
+            return { content: giRes?.data?.content, usage: giRes?.data?.usage || null };
         }
-        clearTimeout(openaiTimeout);
-        emitEvent(base44, request_id, session_id, startTime, 'OPENAI_CALL', 'Inference complete', { data: { reply_chars: reply?.length, prompt_tokens: openaiUsage?.prompt_tokens, completion_tokens: openaiUsage?.completion_tokens } });
+    };
+
+    try {
+        // ── Tier 1: primary provider ─────────────────────────────────────────
+        let tier1Result = null;
+        let tier1Error = null;
+        try {
+            tier1Result = await invokeInference(RESOLVED_MODEL);
+            clearTimeout(openaiTimeout);
+        } catch (e) {
+            tier1Error = e;
+            clearTimeout(openaiTimeout);
+        }
+
+        if (tier1Result?.content) {
+            reply = tier1Result.content;
+            openaiUsage = tier1Result.usage;
+            providerUsed = provider;
+        } else if (FF_RIA_INFERENCE_SPINE) {
+            // ── Tier 2: backup provider (only if RIA enabled) ────────────────
+            const backupProvider = provider === 'openai' ? 'grok' : 'openai';
+            const backupModel = PROVIDER_MODELS[backupProvider]?.default;
+            console.warn('⚠️ [RIA_TIER2]', { reason: tier1Error?.message || 'empty reply', backup: backupProvider });
+            let tier2Result = null;
+            try {
+                tier2Result = await invokeInference(backupModel);
+            } catch (e) {
+                console.warn('⚠️ [RIA_TIER2_FAIL]', e.message);
+            }
+
+            if (tier2Result?.content) {
+                reply = tier2Result.content;
+                openaiUsage = tier2Result.usage;
+                degraded = true;
+                fallback_tier = 2;
+                providerUsed = backupProvider;
+                console.log('✅ [RIA_TIER2_SUCCESS]', { backup: backupProvider });
+            } else {
+                // ── Tier 3: local responder ──────────────────────────────────
+                console.warn('⚠️ [RIA_TIER3]', 'Both providers failed — using local responder');
+                const t3 = tier3Reply(request_id);
+                reply = t3.content;
+                openaiUsage = null;
+                degraded = true;
+                fallback_tier = 3;
+                providerUsed = 'local';
+            }
+        } else {
+            // RIA disabled — propagate original error
+            if (tier1Error) throw tier1Error;
+            throw new Error('No response from provider');
+        }
+
+        emitEvent(base44, request_id, session_id, startTime, stage, 'Inference complete', { data: { reply_chars: reply?.length, prompt_tokens: openaiUsage?.prompt_tokens, degraded, fallback_tier, provider: providerUsed } });
     } catch (inferenceError) {
         clearTimeout(openaiTimeout);
         const latency_ms = Date.now() - startTime;
         const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
-        const stage = isTimeout ? 'INFERENCE' : 'OPENAI_CALL';
+        const errStage = isTimeout ? 'INFERENCE' : stage;
         const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
-        console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
-        emitEvent(base44, request_id, session_id, startTime, stage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
-        throw { latency_ms, isTimeout, stage, error_code, message: inferenceError.message };
+        console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage: errStage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
+        emitEvent(base44, request_id, session_id, startTime, errStage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
+        throw { latency_ms, isTimeout, stage: errStage, error_code, message: inferenceError.message };
     }
     const inferenceMs = Date.now() - inferenceStart;
-    if (!reply) throw new Error('No response from OpenAI');
-    return { reply, openaiUsage, inferenceMs };
+    if (!reply) throw new Error('No response from provider');
+    return { reply, openaiUsage, inferenceMs, degraded, fallback_tier, provider: providerUsed };
 }
 
 // ── Message save handler ─────────────────────────────────────────────────────
@@ -800,9 +873,22 @@ Deno.serve(async (req) => {
         const hDepth = calibrateDepth(hIntent, cogLevel);
         const hDirective = buildDirective(hIntent, hDepth, cogLevel);
 
-        // Static routing (routeRequest() preserved as dead code — TSB-032)
-        const RESOLVED_MODEL = ACTIVE_MODEL;
-        const routingDecision = { route: 'standard', route_reason: 'static_model', model: ACTIVE_MODEL };
+        // Phase 2.5: provider routing (FF_PROVIDER_ROUTER = off — all flags below)
+        // FF_PROVIDER_TOGGLE_UI=false | FF_GROK_PROVIDER_ENABLED=false | FF_PROVIDER_ROUTER=false | FF_CROSS_PROVIDER_FALLBACK=false
+        const FF_PROVIDER_ROUTER = false;
+        const FF_GROK_PROVIDER_ENABLED = false;
+        const preferredProvider = FF_PROVIDER_ROUTER
+            ? (userProfile?.preferred_provider || 'openai')
+            : 'openai';
+
+        // If Grok selected but feature disabled — explicit error, no silent fallback
+        if (FF_PROVIDER_ROUTER && preferredProvider === 'grok' && !FF_GROK_PROVIDER_ENABLED) {
+            return Response.json({ ok: false, stage: 'GROK_CALL', error_code: 'FEATURE_DISABLED', message: 'Grok provider is not yet enabled. Please switch to OpenAI in your profile settings.', retryable: false, request_id }, { status: 503 });
+        }
+
+        const providerConfig = { openai: { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 200000 }, grok: { model: userProfile?.preferred_model || 'grok-3', context: 131072 } };
+        const RESOLVED_MODEL = providerConfig[preferredProvider]?.model || ACTIVE_MODEL;
+        const routingDecision = { route: 'standard', route_reason: `provider=${preferredProvider}`, model: RESOLVED_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
         emitEvent(base44, request_id, session_id, startTime, 'HEURISTICS', `intent=${hIntent} depth=${hDepth} cog=${cogLevel.toFixed(1)}`, { data: { intent: hIntent, depth: hDepth, cognitive_level: cogLevel } });
 
@@ -851,13 +937,14 @@ Deno.serve(async (req) => {
         });
         emitEvent(base44, request_id, session_id, startTime, 'PROMPT_BUILT', 'System prompt built via promptBuilder', { data: { prompt_chars: systemPrompt.length, thread_state_used: !!threadStateBlock } });
 
-        let reply, openaiUsage, inferenceMs, t_openai_call;
+        let reply, openaiUsage, inferenceMs, t_openai_call, riaResult;
         try {
-            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime });
+            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
             reply = inferResult.reply;
             openaiUsage = inferResult.openaiUsage;
             inferenceMs = inferResult.inferenceMs;
             t_openai_call = inferenceMs;
+            riaResult = { degraded: inferResult.degraded || false, fallback_tier: inferResult.fallback_tier ?? null, provider: inferResult.provider || preferredProvider };
         } catch (inferenceError) {
             if (inferenceError.latency_ms !== undefined) {
                 return Response.json({
@@ -952,6 +1039,25 @@ Deno.serve(async (req) => {
             sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock,
             t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn
         });
+
+        // Phase 2.5 + Phase 3: additive fields — provider, degradation, tool_receipts
+        response.provider = riaResult?.provider || preferredProvider;
+        response.degraded = riaResult?.degraded || false;
+        if (riaResult?.fallback_tier != null) response.fallback_tier = riaResult.fallback_tier;
+        response.execution_receipt.provider = riaResult?.provider || preferredProvider;
+
+        // Phase 3A: ordered tool_receipts summary (additive — never breaks existing consumers)
+        response.tool_receipts = [
+            { tool: 'auth',                 ok: true,  elapsed_ms: t_auth },
+            { tool: 'profile+history',      ok: !!userProfile || rawHistory.length >= 0, elapsed_ms: t_profile_and_history_load, history_count: rawHistory.length },
+            { tool: 'memory_detect',        ok: true,  skipped: !memorySaveSignal },
+            { tool: 'ctc',                  ok: true,  skipped: !ctcInjectionMeta.length, injected: ctcInjectionMeta.length > 0 },
+            { tool: 'memory_recall',        ok: true,  skipped: matchedMemories.length === 0 },
+            { tool: 'trh+mbcr',             ok: true,  elapsed_ms: null },
+            { tool: 'prompt_build',         ok: true,  elapsed_ms: t_prompt_build },
+            { tool: riaResult?.provider || preferredProvider, ok: !riaResult?.degraded, elapsed_ms: t_openai_call, degraded: riaResult?.degraded, fallback_tier: riaResult?.fallback_tier },
+            { tool: 'message_save',         ok: true,  elapsed_ms: t_save_messages },
+        ];
 
         return Response.json(response);
 
