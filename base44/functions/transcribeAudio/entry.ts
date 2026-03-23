@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
         const user = await base44.auth.me();
 
         if (!user) {
-            return jsonResponse({ ok: false, error_code: 'UNAUTHORIZED', stage: 'AUTH', message: 'Unauthorized', request_id, retryable: false }, 401);
+            return failResponse(401, 'UNAUTHORIZED', 'AUTH', 'Unauthorized', false, Date.now() - t_start, request_id);
         }
 
         let audioBuffer;
