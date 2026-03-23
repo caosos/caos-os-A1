@@ -1171,33 +1171,34 @@ Deno.serve(async (req) => {
         });
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
 
-        const response = buildResponsePayload({
+        const { data, diagnostic_receipt, execution_receipt, additive } = buildResponsePayload({
             reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
             wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown,
             sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock,
-            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn
+            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn, riaResult
         });
 
-        // Phase 2.5 + Phase 3: additive fields — provider, degradation, tool_receipts
-        response.provider = riaResult?.provider || preferredProvider;
-        response.degraded = riaResult?.degraded || false;
-        if (riaResult?.fallback_tier != null) response.fallback_tier = riaResult.fallback_tier;
-        response.execution_receipt.provider = riaResult?.provider || preferredProvider;
-
-        // Phase 3A: ordered tool_receipts summary (additive — never breaks existing consumers)
-        response.tool_receipts = [
-            { tool: 'auth',                 ok: true,  elapsed_ms: t_auth },
-            { tool: 'profile+history',      ok: !!userProfile || rawHistory.length >= 0, elapsed_ms: t_profile_and_history_load, history_count: rawHistory.length },
-            { tool: 'memory_detect',        ok: true,  skipped: !memorySaveSignal },
-            { tool: 'ctc',                  ok: true,  skipped: !ctcInjectionMeta.length, injected: ctcInjectionMeta.length > 0 },
-            { tool: 'memory_recall',        ok: true,  skipped: matchedMemories.length === 0 },
-            { tool: 'trh+mbcr',             ok: true,  elapsed_ms: null },
-            { tool: 'prompt_build',         ok: true,  elapsed_ms: t_prompt_build },
+        // Phase 3A: ordered tool_receipts summary (additive)
+        additive.tool_receipts = [
+            { tool: 'auth',            ok: true,  elapsed_ms: t_auth },
+            { tool: 'profile+history', ok: !!userProfile || rawHistory.length >= 0, elapsed_ms: t_profile_and_history_load, history_count: rawHistory.length },
+            { tool: 'memory_detect',   ok: true,  skipped: !memorySaveSignal },
+            { tool: 'ctc',             ok: true,  skipped: !ctcInjectionMeta.length, injected: ctcInjectionMeta.length > 0 },
+            { tool: 'memory_recall',   ok: true,  skipped: matchedMemories.length === 0 },
+            { tool: 'trh+mbcr',        ok: true,  elapsed_ms: null },
+            { tool: 'prompt_build',    ok: true,  elapsed_ms: t_prompt_build },
             { tool: riaResult?.provider || preferredProvider, ok: !riaResult?.degraded, elapsed_ms: t_openai_call, degraded: riaResult?.degraded, fallback_tier: riaResult?.fallback_tier },
-            { tool: 'message_save',         ok: true,  elapsed_ms: t_save_messages },
+            { tool: 'message_save',    ok: true,  elapsed_ms: t_save_messages },
         ];
+        additive.provider = riaResult?.provider || preferredProvider;
 
-        return Response.json(response);
+        return respondOk({
+            request_id, correlation_id, stage: 'INFERENCE',
+            degraded: riaResult?.degraded || false,
+            message: riaResult?.degraded ? 'Primary inference unavailable; fallback used.' : null,
+            data, diagnostic_receipt, execution_receipt,
+            ...additive,
+        });
 
     } catch (error) {
         const latency_ms = Date.now() - startTime;
