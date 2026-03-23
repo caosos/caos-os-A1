@@ -1123,10 +1123,13 @@ Deno.serve(async (req) => {
         } catch (_) {}
         console.error('🔥 [PIPELINE_ERROR]', { stage: getStage(), message: error.message, latency_ms });
         try { emitEvent(createClientFromRequest(req), request_id, body?.session_id || null, startTime, getStage() || 'UNKNOWN', error.message, { level: 'ERROR', code: 'PIPELINE_ERROR', data: { latency_ms } }); } catch (_) {}
-        return Response.json({
-            reply: "Something went wrong. Please try again.",
-            error_code: 'SERVER_ERROR', stage: getStage(),
-            request_id, correlation_id, mode: 'ERROR', response_time_ms: latency_ms,
-        }, { status: 500 });
+        return respondError({
+            error_code: 'SERVER_ERROR',
+            stage: getStage() || 'UNKNOWN',
+            message: error.message || 'Something went wrong. Please try again.',
+            retryable: false,
+            request_id, correlation_id,
+            elapsed_ms: latency_ms,
+        });
     }
 });
