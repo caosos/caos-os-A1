@@ -449,7 +449,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           }
         } catch (error) {
           console.error('Transcription error:', error);
-          alert(`Transcription failed: ${error.message}`);
+          toast.error('Transcription failed — please type your message or try again.', { duration: 4000 });
         } finally {
           setIsTranscribing(false);
         }
