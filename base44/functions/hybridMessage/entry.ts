@@ -505,8 +505,8 @@ async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = fal
         console.warn('⚠️ [RIA_FORCE_TIER1_FAIL] Dev switch active');
     }
 
-    // If RIA spine is off — propagate Tier 1 error as baseline
-    if (!FF_RIA_INFERENCE_SPINE) {
+    // If RIA spine is off AND this is NOT a dev-forced test — propagate Tier 1 error as baseline
+    if (!FF_RIA_INFERENCE_SPINE && !forceTier1Fail) {
         throw tier1Error;
     }
 
