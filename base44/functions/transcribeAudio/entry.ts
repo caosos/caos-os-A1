@@ -125,16 +125,13 @@ Deno.serve(async (req) => {
             const elapsed_ms = Date.now() - t_start;
             const isTimeout = providerError.message === 'PROVIDER_TIMEOUT';
             const isFormat = providerError.message?.toLowerCase().includes('format') || providerError.message?.toLowerCase().includes('unsupported');
-            return jsonResponse({
-                ok: false,
-                error_code: isTimeout ? 'PROVIDER_TIMEOUT' : isFormat ? 'AUDIO_UNSUPPORTED' : 'TRANSCRIBE_FAILED',
-                stage: 'WHISPER_CALL',
-                message: providerError.message,
-                retryable: isTimeout,
-                request_id,
-                elapsed_ms,
-                success: false,
-            }, isTimeout ? 504 : 422);
+            const error_code = isTimeout ? 'PROVIDER_TIMEOUT' : isFormat ? 'AUDIO_UNSUPPORTED' : 'TRANSCRIBE_FAILED';
+            return failResponse(
+                isTimeout ? 504 : 422,
+                error_code, 'WHISPER_CALL', providerError.message, isTimeout,
+                elapsed_ms, request_id,
+                { provider_elapsed_ms: Date.now() - t_provider_start, model: 'whisper-1' }
+            );
         }
 
         const t_provider_ms = Date.now() - t_provider_start;
