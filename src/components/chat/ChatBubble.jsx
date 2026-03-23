@@ -25,6 +25,7 @@ import VoiceSettings from './VoiceSettings';
 import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
+import EvidencePanel from './bubble/EvidencePanel';
 
 // Global audio manager — only one audio plays at a time (PR2-A)
 let globalAudioInstance = null;
@@ -514,6 +515,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
               )}
 
               <ReceiptPanel isUser={isUser} message={message} showExecution={showExecution} />
+              {!isUser && <EvidencePanel message={message} />
               </div>
               </div>
               </div>
