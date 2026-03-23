@@ -360,7 +360,7 @@ async function handleThreadAugmentations({ base44, session_id, input, startTime,
 
 // ── RIA Feature Flag ─────────────────────────────────────────────────────────
 // ROLLBACK: set FF_RIA_INFERENCE_SPINE = false
-const FF_RIA_INFERENCE_SPINE = true;
+const FF_RIA_INFERENCE_SPINE = false; // ROLLBACK: set true to re-enable RIA tiers
 
 // Provider / model config
 const PROVIDER_MODELS = {
