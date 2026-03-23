@@ -22,6 +22,29 @@ const jsonResponse = (body, status = 200) =>
         headers: { 'Content-Type': 'application/json' }
     });
 
+// Contract-complete response helpers (Phase 1.1)
+const makeReceipt = (stage, elapsed_ms, overrides = {}) => ({
+    tool: 'transcribeAudio',
+    stage,
+    elapsed_ms: elapsed_ms ?? null,
+    provider_elapsed_ms: overrides.provider_elapsed_ms ?? null,
+    model: overrides.model ?? null,
+    fallback_tier: null,
+    ...overrides,
+});
+
+const okResponse = (data, receipt) =>
+    jsonResponse({ ok: true, degraded: false, data, request_id: receipt._request_id, diagnostic_receipt: makeReceipt(receipt.stage, receipt.elapsed_ms, receipt) });
+
+const failResponse = (status, error_code, stage, message, retryable, elapsed_ms, request_id, receiptOverrides = {}) =>
+    jsonResponse({
+        ok: false, degraded: false, error_code, stage, message, retryable,
+        request_id, elapsed_ms: elapsed_ms ?? null,
+        data: { text: null },
+        diagnostic_receipt: makeReceipt(stage, elapsed_ms, receiptOverrides),
+        success: false,
+    }, status);
+
 Deno.serve(async (req) => {
     const request_id = crypto.randomUUID();
     const t_start = Date.now();
