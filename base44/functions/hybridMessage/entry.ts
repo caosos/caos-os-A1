@@ -413,6 +413,15 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
             clearTimeout(openaiTimeout);
         }
 
+        // Classify auth failures from upstream invokes before treating as inference errors
+        if (tier1Error) {
+            const errMsg = tier1Error?.message || '';
+            const isUnauth = errMsg.includes('403') || errMsg.includes('401') || errMsg.includes('Forbidden') || errMsg.includes('Unauthorized');
+            if (isUnauth) {
+                throw { latency_ms: Date.now() - startTime, isTimeout: false, stage: 'AUTH', error_code: 'UNAUTHENTICATED', message: tier1Error.message };
+            }
+        }
+
         if (tier1Result?.content) {
             reply = tier1Result.content;
             openaiUsage = tier1Result.usage;
