@@ -71,13 +71,13 @@ Deno.serve(async (req) => {
         } else if (contentType.includes('application/json')) {
             const body = await req.json();
             if (!body.audio_base64) {
-                return jsonResponse({ ok: false, error_code: 'MISSING_AUDIO', stage: 'INPUT_VALIDATION', message: 'audio_base64 field required', request_id, retryable: false }, 400);
+                return failResponse(400, 'MISSING_AUDIO', 'INPUT_VALIDATION', 'audio_base64 field required', false, Date.now() - t_start, request_id);
             }
 
             // Size cap: ~10MB base64 ≈ 7.5MB audio
             const MAX_BASE64_LEN = 10 * 1024 * 1024;
             if (body.audio_base64.length > MAX_BASE64_LEN) {
-                return jsonResponse({ ok: false, error_code: 'AUDIO_TOO_LARGE', stage: 'INPUT_VALIDATION', message: `Audio exceeds max size (${MAX_BASE64_LEN} chars base64)`, request_id, retryable: false }, 413);
+                return failResponse(413, 'AUDIO_TOO_LARGE', 'INPUT_VALIDATION', `Audio exceeds max size (${MAX_BASE64_LEN} chars base64)`, false, Date.now() - t_start, request_id);
             }
 
             const t_decode_start = Date.now();
