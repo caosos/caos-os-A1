@@ -858,7 +858,9 @@ Deno.serve(async (req) => {
         }
         const t_auth = Date.now() - startTime;
 
-        const { input, session_id, file_urls = [] } = body;
+        const { input, session_id, file_urls = [], _dev_force_tier1_fail = false } = body;
+        // Dev-only forced failure: admin-only, requires FF_RIA_INFERENCE_SPINE=true or explicit test
+        const forceTier1Fail = _dev_force_tier1_fail === true && user.role === 'admin';
 
         // ── SHORT-CIRCUIT: SESSION_RESUME sentinel ────────────────────────────
         if (input === '__SESSION_RESUME__') {
