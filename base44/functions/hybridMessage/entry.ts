@@ -551,6 +551,38 @@ function buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens
     };
 }
 
+// ── Contract-compliant error response builder ────────────────────────────────
+// Phase 1.2: all hybridMessage failure paths must emit the v1 envelope
+function respondError({ error_code, stage, message, retryable = false, request_id, correlation_id, elapsed_ms }) {
+    const STATUS_MAP = {
+        UNAUTHENTICATED: 401,
+        INFERENCE_TIMEOUT: 504,
+        FEATURE_DISABLED: 503,
+    };
+    const status = STATUS_MAP[error_code] || 502;
+    return Response.json({
+        ok: false,
+        degraded: false,
+        error_code,
+        stage,
+        message: message || error_code,
+        retryable: !!retryable,
+        request_id,
+        correlation_id: correlation_id || request_id,
+        data: { reply: null },
+        diagnostic_receipt: {
+            tool: 'hybridMessage',
+            stage,
+            elapsed_ms: elapsed_ms ?? null,
+            provider_elapsed_ms: null,
+            model: null,
+            fallback_tier: null,
+        },
+        mode: 'ERROR',
+        response_time_ms: elapsed_ms ?? null,
+    }, { status });
+}
+
 // ── Response payload builder ─────────────────────────────────────────────────
 function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn }) {
     const response = {
