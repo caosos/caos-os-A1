@@ -1032,7 +1032,7 @@ Deno.serve(async (req) => {
 
         let reply, openaiUsage, inferenceMs, t_openai_call, riaResult;
         try {
-            const inferResult = await handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
+            const inferResult = await resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail, base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
             reply = inferResult.reply;
             openaiUsage = inferResult.openaiUsage;
             inferenceMs = inferResult.inferenceMs;
