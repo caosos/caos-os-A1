@@ -650,36 +650,57 @@ function respondOk({ request_id, correlation_id, stage, degraded, message, data,
 }
 
 // ── Response payload builder ─────────────────────────────────────────────────
-function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn }) {
-    const response = {
-        ok: true, reply, mode: 'GEN', request_id, correlation_id,
+function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn, riaResult }) {
+    // Additive / backward-compat fields (never overwrite contract keys)
+    const additive = {
+        mode: 'GEN',
         route: routingDecision.route, model_used: RESOLVED_MODEL,
         server_time, response_time_ms: responseTime, tool_calls: [],
         execution_meta,
         wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-        execution_receipt: {
-            request_id, correlation_id, session_id,
-            history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
-            matched_memories: matchedMemories.length, heuristics_intent: hIntent,
-            heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
-            model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
-            latency_ms: responseTime,
-            latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
-            sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
-            token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
-            wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-            ctc_injected: ctcInjectionMeta.length > 0,
-            ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
-            ctc_injection_meta: ctcInjectionMeta,
-            thread_state_used: !!threadStateBlock,
-            thread_state_seq: tsResult?.data?.last_seq || null
-        }
     };
-    if (debugMode) response.debug_meta = debug_meta;
-    if (wcw_audit) response.wcw_audit = wcw_audit;
-    if (wcw_state) response.wcw_state = wcw_state;
-    if (wcw_turn) response.wcw_turn = wcw_turn;
-    return response;
+    if (debugMode) additive.debug_meta = debug_meta;
+    if (wcw_audit) additive.wcw_audit = wcw_audit;
+    if (wcw_state) additive.wcw_state = wcw_state;
+    if (wcw_turn) additive.wcw_turn = wcw_turn;
+
+    // v1 contract fields
+    const data = { reply, openaiUsage: null, inferenceMs: t_openai_call ?? 0 };
+
+    const diagnostic_receipt = {
+        tool: 'hybridMessage',
+        stage: 'INFERENCE',
+        elapsed_ms: responseTime,
+        provider_elapsed_ms: null,
+        model: RESOLVED_MODEL,
+        fallback_tier: riaResult?.fallback_tier ?? null,
+    };
+
+    const execution_receipt = [
+        { tool: 'resilientInference', ok: true, stage: 'INFERENCE', error_code: null, elapsed_ms: t_openai_call ?? null },
+    ];
+
+    // Legacy full receipt (additive — existing consumers that read execution_receipt fields)
+    additive.legacy_execution_receipt = {
+        request_id, correlation_id, session_id,
+        history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
+        matched_memories: matchedMemories.length, heuristics_intent: hIntent,
+        heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
+        model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
+        latency_ms: responseTime,
+        latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
+        sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
+        token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
+        wcw_used: promptTokens, wcw_remaining: wcwRemaining,
+        ctc_injected: ctcInjectionMeta.length > 0,
+        ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
+        ctc_injection_meta: ctcInjectionMeta,
+        thread_state_used: !!threadStateBlock,
+        thread_state_seq: tsResult?.data?.last_seq || null,
+        provider: riaResult?.provider ?? null,
+    };
+
+    return { data, diagnostic_receipt, execution_receipt, additive };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
