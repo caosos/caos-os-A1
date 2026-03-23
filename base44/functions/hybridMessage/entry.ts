@@ -634,7 +634,6 @@ function respondError({ error_code, stage, message, retryable = false, request_i
 // Contract fields win; ...rest carries backward-compat additive fields.
 function respondOk({ request_id, correlation_id, stage, degraded, message, data, diagnostic_receipt, execution_receipt, ...rest }) {
     return Response.json({
-        ...rest,
         ok: true,
         request_id,
         correlation_id: correlation_id || request_id,
@@ -646,6 +645,7 @@ function respondOk({ request_id, correlation_id, stage, degraded, message, data,
         data,
         diagnostic_receipt,
         execution_receipt,
+        ...rest,
     });
 }
 
