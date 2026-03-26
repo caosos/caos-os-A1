@@ -281,7 +281,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     try {
       const arrayBuffer = await blob.arrayBuffer();
       const { data } = await base44.functions.invoke('transcribeAudio', arrayBuffer);
-      if (data?.success && data?.text?.trim()) {
+      if ((data?.ok || data?.success) && data?.text?.trim()) {
         consecutiveFailsRef.current = 0;
         appendTranscriptSegment(index, data.text.trim());
         setChunkProgress(p => ({ ...p, processed: p.processed + 1 }));
@@ -437,7 +437,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
           const audio_base64 = btoa(binary);
           const { data } = await base44.functions.invoke('transcribeAudio', { audio_base64 });
-          if (data.success && data.text) {
+          if ((data.ok || data.success) && data.text) {
             const updatedMessage = message + (message ? ' ' : '') + data.text;
             setMessage(updatedMessage);
             onMessageChange?.(updatedMessage);
