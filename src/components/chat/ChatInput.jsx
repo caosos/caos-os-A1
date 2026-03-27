@@ -436,9 +436,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           let binary = '';
           for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
           const audio_base64 = btoa(binary);
-          const { data } = await base44.functions.invoke('transcribeAudio', { audio_base64 });
-          if ((data.ok || data.success) && data.text) {
-            const updatedMessage = message + (message ? ' ' : '') + data.text;
+          const _resp = await base44.functions.invoke('transcribeAudio', { audio_base64 });
+          const data = _resp.data;
+          if (data.ok && data.data?.text) {
+            const updatedMessage = message + (message ? ' ' : '') + data.data.text;
             setMessage(updatedMessage);
             onMessageChange?.(updatedMessage);
 
