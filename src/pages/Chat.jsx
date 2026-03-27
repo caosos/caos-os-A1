@@ -764,7 +764,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         reply_preview: data.reply?.substring(0, 100)
       }, null, 2));
 
-      const reply = data.reply || data.response || data.text || '';
+      const reply = data.data?.reply || data.reply || data.response || data.text || '';
       if (!reply) {
         console.error('❌ EMPTY REPLY - Backend returned no content:', data);
         throw new Error('Empty response from server');
