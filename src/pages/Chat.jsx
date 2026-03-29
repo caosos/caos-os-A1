@@ -1097,11 +1097,12 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
             </div>
             {currentConversationId && currentMessages.length > 0 && (
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-32 sm:w-40">
+                <div className="flex-shrink-0">
                   <TokenMeter 
                     messages={currentMessages}
                     wcwUsed={wcwState.used}
                     wcwBudget={wcwState.budget}
+                    provider={sessionProvider}
                   />
                 </div>
               </div>

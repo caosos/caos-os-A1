@@ -1,7 +1,8 @@
 import React from 'react';
 
-export default function TokenMeter({ messages = [], maxTokens = 200000, wcwUsed = null, wcwBudget = null }) {
-  // Prefer real backend data over client-side estimation
+export default function TokenMeter({ messages = [], wcwUsed = null, wcwBudget = null, provider = 'openai' }) {
+  // Budget: 200K for OpenAI, 1M for Gemini
+  const defaultBudget = provider === 'gemini' ? 1000000 : 200000;
   const hasRealData = wcwUsed !== null && wcwBudget !== null && wcwBudget > 0;
 
   let tokens, budget;
@@ -9,12 +10,11 @@ export default function TokenMeter({ messages = [], maxTokens = 200000, wcwUsed 
     tokens = wcwUsed;
     budget = wcwBudget;
   } else {
-    // Fallback: estimate from message content (~4 chars per token)
     tokens = messages.reduce((sum, msg) => {
       if (msg.token_count && msg.token_count > 0) return sum + msg.token_count;
       return sum + Math.ceil((msg.content?.length || 0) / 4);
     }, 0);
-    budget = maxTokens;
+    budget = defaultBudget;
   }
 
   const percentage = (tokens / budget) * 100;
@@ -24,20 +24,19 @@ export default function TokenMeter({ messages = [], maxTokens = 200000, wcwUsed 
   else if (percentage > 50) colorClass = 'bg-yellow-500';
   else if (percentage > 25) colorClass = 'bg-blue-500';
 
-  const fmt = (n) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n;
+  const fmt = (n) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`;
 
   return (
-    <div className="flex items-center gap-1" title={hasRealData ? "Working Context Window (live)" : "Estimated token usage"}>
-      <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+    <div className="flex flex-col items-end gap-0.5" title={hasRealData ? "Working Context Window (live)" : "Estimated token usage"}>
+      <span className="text-[10px] text-white/50 whitespace-nowrap leading-none">
+        {fmt(tokens)} / {fmt(budget)}{!hasRealData && <span className="text-white/30">~</span>}
+      </span>
+      <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full ${colorClass} transition-all duration-300`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
-      <span className="text-[10px] text-white/40 whitespace-nowrap">
-        {fmt(tokens)}
-        {!hasRealData && <span className="text-white/20">~</span>}
-      </span>
     </div>
   );
 }
