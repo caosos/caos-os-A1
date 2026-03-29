@@ -15,6 +15,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1 — CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
+// REDEPLOY: Force env var capture (2026-03-29)
 
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
 const ACTIVE_MODEL = 'gpt-4o';
