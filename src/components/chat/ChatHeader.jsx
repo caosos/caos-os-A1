@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap, Cpu } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
@@ -159,6 +159,22 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             </>
           )}
           <DropdownMenuSeparator className="bg-white/10" />
+          <DropdownMenuItem
+            onClick={onProviderToggle}
+            className="flex items-center gap-2 px-3 py-3 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <Cpu className="w-4 h-4 text-purple-400" />
+            <span className="flex-1">Inference Provider</span>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+              provider === 'gemini'
+                ? 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+                : 'bg-white/10 border-white/20 text-white/70'
+            }`}>
+              {provider === 'gemini' ? 'Gemini' : 'OpenAI'}
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem 
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-3 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
@@ -186,19 +202,6 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
               📁 {sessionFilesCount}
             </button>
           )}
-          {/* Provider Toggle */}
-          <button
-            onClick={onProviderToggle}
-            title={`Switch to ${provider === 'gemini' ? 'OpenAI' : 'Gemini'}`}
-            className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] sm:text-xs font-medium transition-all ${
-              provider === 'gemini'
-                ? 'bg-blue-500/20 border-blue-400/40 text-blue-300 hover:bg-blue-500/30'
-                : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'
-            }`}
-          >
-            {provider === 'gemini' ? '✦ Gemini' : '⬡ OpenAI'}
-          </button>
-
           {currentConversation && (
             <div className="text-right max-w-[80px] sm:max-w-[200px] pointer-events-none">
               <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate">
