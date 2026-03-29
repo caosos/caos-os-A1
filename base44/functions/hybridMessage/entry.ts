@@ -813,9 +813,8 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
 
         if (repoCmd.op === 'list') {
-            const url = cleanPath
-                ? `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${cleanPath}?ref=main`
-                : `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents?ref=main`;
+            const gitPath = cleanPath ? `src/${cleanPath}` : 'src';
+            const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`;
             const ghRes = await fetch(url, { headers: ghHeaders });
             if (!ghRes.ok) {
                 repoResult = { ok: false, error: `GitHub ${ghRes.status}: ${await ghRes.text()}` };
@@ -829,8 +828,9 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         } else {
             const offset = repoCmd.offset || 0;
             const max_bytes = 60000;
+            const gitPath = `src/${cleanPath}`;
             const metaRes = await fetch(
-                `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${cleanPath}?ref=main`,
+                `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`,
                 { headers: ghHeaders }
             );
             if (!metaRes.ok) {
