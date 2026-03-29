@@ -380,7 +380,7 @@ function tier3Reply(request_id) {
 }
 
 // ── Inference handler ────────────────────────────────────────────────────────
-async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider }) {
+async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider, openaiKey }) {
     const provider = preferredProvider || 'openai';
     const stage = provider === 'grok' ? 'GROK_CALL' : 'OPENAI_CALL';
     setStage(stage);
@@ -574,7 +574,8 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
 // Tier 2 = backup provider (gated by FF_GROK_PROVIDER_ENABLED, currently disabled)
 // Tier 3 = local responder (always succeeds, degraded=true)
 // Dev switch: forceTier1Fail (admin-only, body param _dev_force_tier1_fail)
-async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = false, ...inferArgs }) {
+async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = false, openaiKey, ...inferArgs }) {
+    inferArgs.openaiKey = openaiKey;
     let tier1Error = null;
 
     // ── Tier 1 ───────────────────────────────────────────────────────────────
@@ -1167,7 +1168,7 @@ Deno.serve(async (req) => {
         let reply, openaiUsage, inferenceMs, t_openai_call;
         let riaResult = { degraded: false, fallback_tier: 'TIER_1', provider: preferredProvider };
         try {
-            const inferResult = await resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail, base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
+            const inferResult = await resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail, openaiKey, base44, user, finalMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider });
             reply = inferResult.reply;
             openaiUsage = inferResult.openaiUsage;
             inferenceMs = inferResult.inferenceMs;
