@@ -897,7 +897,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null,
-          repo_tool: data.repo_tool || null
+          repo_tool: data.repo_tool || null,
+          inference_provider: data.provider || sessionProvider || 'openai'
         };
         setMessages(prev => {
           const existing = prev[conversationId] || [];

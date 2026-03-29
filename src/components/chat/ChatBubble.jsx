@@ -369,7 +369,7 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
             onContextMenu={handleTextSelection}
           >
 
-          <MessageHeader isUser={isUser} userInitials={userInitials} messageId={message.id} />
+          <MessageHeader isUser={isUser} userInitials={userInitials} messageId={message.id} inferenceProvider={message.inference_provider} />
           {message.failed && (
             <div className="mb-2 flex items-center gap-2 text-red-200 text-sm">
               <AlertCircle className="w-4 h-4" />
