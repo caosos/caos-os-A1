@@ -393,7 +393,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
 
     const invokeInference = async (model) => {
         // Gemini path — route to geminiInference for any gemini model
-        if (model && model.startsWith('gemini')) {
+        if (model && (model.startsWith('gemini') || model.includes('gemini'))) {
             const giRes = await base44.functions.invoke('core/geminiInference', {
                 messages: finalMessages,
                 model,
