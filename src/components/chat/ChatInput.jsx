@@ -25,6 +25,8 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     if (lastAssistantMessage) wakeSpeechSynthesis();
   }, [lastAssistantMessage]);
   const [uploading, setUploading] = useState(false);
+  const [uploadCancelled, setUploadCancelled] = useState(false);
+  const uploadCancelledRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingReadAloud, setIsPlayingReadAloud] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
@@ -76,6 +78,16 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   const cameraInputRef = useRef(null);
   const captureMenuRef = useRef(null);
 
+  const MAX_FILE_SIZE_MB = 50;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+  const cancelUpload = () => {
+    uploadCancelledRef.current = true;
+    setUploadCancelled(true);
+    setUploading(false);
+    toast('Upload cancelled.');
+  };
+
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -88,11 +100,23 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       return;
     }
 
+    // Block oversized files immediately
+    const oversized = files.filter(f => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      toast.error(`File too large: ${oversized.map(f => f.name).join(', ')}. Maximum is ${MAX_FILE_SIZE_MB} MB per file.`, { duration: 6000 });
+      e.target.value = '';
+      return;
+    }
+
+    uploadCancelledRef.current = false;
+    setUploadCancelled(false);
     setUploading(true);
     try {
       const uploadedFiles = [];
       for (const file of files) {
+        if (uploadCancelledRef.current) break;
         const result = await base44.integrations.Core.UploadFile({ file });
+        if (uploadCancelledRef.current) break;
         const isImage = file.type.startsWith('image/');
         
         uploadedFiles.push({
@@ -112,11 +136,18 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           size: file.size
         });
       }
-      setAttachedFiles([...attachedFiles, ...uploadedFiles]);
+      if (!uploadCancelledRef.current) {
+        setAttachedFiles([...attachedFiles, ...uploadedFiles]);
+      }
     } catch (error) {
-      console.error('Error uploading files:', error);
+      if (!uploadCancelledRef.current) {
+        console.error('Error uploading files:', error);
+        toast.error('Upload failed. Try a smaller file.');
+      }
     }
     setUploading(false);
+    uploadCancelledRef.current = false;
+    setUploadCancelled(false);
     e.target.value = '';
   };
 
@@ -718,18 +749,24 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
         />
         
         <div className="relative" ref={captureMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowCaptureMenu(!showCaptureMenu)}
-            className="chat-icon-btn p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
-            disabled={uploading}
-          >
-            {uploading ? (
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-            ) : (
+          {uploading ? (
+            <button
+              type="button"
+              onClick={cancelUpload}
+              className="chat-icon-btn p-1.5 rounded-full bg-red-100 hover:bg-red-200 transition-colors flex-shrink-0"
+              title="Cancel upload"
+            >
+              <X className="w-4 h-4 text-red-600" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCaptureMenu(!showCaptureMenu)}
+              className="chat-icon-btn p-1.5 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+            >
               <Plus className="w-4 h-4 text-gray-700" />
-            )}
-          </button>
+            </button>
+          )}
 
           {showCaptureMenu && (
             <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[160px] z-50">
