@@ -1,14 +1,14 @@
 import React from 'react';
 
 export default function TokenMeter({ messages = [], wcwUsed = null, wcwBudget = null, provider = 'openai' }) {
-  // Budget: 200K for OpenAI, 1M for Gemini
+  // Budget: 200K for OpenAI, 1M for Gemini — always use provider-based budget
   const defaultBudget = provider === 'gemini' ? 1000000 : 200000;
-  const hasRealData = wcwUsed !== null && wcwBudget !== null && wcwBudget > 0;
+  const hasRealData = wcwUsed !== null && wcwUsed > 0;
 
   let tokens, budget;
+  budget = defaultBudget; // always use provider-correct budget
   if (hasRealData) {
     tokens = wcwUsed;
-    budget = wcwBudget;
   } else {
     tokens = messages.reduce((sum, msg) => {
       if (msg.token_count && msg.token_count > 0) return sum + msg.token_count;
@@ -31,7 +31,7 @@ export default function TokenMeter({ messages = [], wcwUsed = null, wcwBudget = 
       <span className="text-[10px] text-white/50 whitespace-nowrap leading-none">
         {fmt(tokens)} / {fmt(budget)}{!hasRealData && <span className="text-white/30">~</span>}
       </span>
-      <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+      <div className="w-14 h-1 bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full ${colorClass} transition-all duration-300`}
           style={{ width: `${Math.min(percentage, 100)}%` }}

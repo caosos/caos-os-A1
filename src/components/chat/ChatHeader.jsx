@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap, Cpu } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap, Cpu, Zap as BoltIcon } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
@@ -164,14 +164,16 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             className="flex items-center gap-2 px-3 py-3 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
             onSelect={(e) => e.preventDefault()}
           >
-            <Cpu className="w-4 h-4 text-purple-400" />
-            <span className="flex-1">Inference Provider</span>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+            <div className="flex flex-col items-center gap-0.5">
+              <Zap className={`w-3.5 h-3.5 ${provider === 'gemini' ? 'text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.9)]' : 'text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.9)]'}`} />
+            </div>
+            <span className="flex-1 text-white/70 text-xs">=</span>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
               provider === 'gemini'
-                ? 'bg-blue-500/20 border-blue-400/40 text-blue-300'
-                : 'bg-white/10 border-white/20 text-white/70'
+                ? 'bg-blue-500/30 border-blue-400/60 text-blue-200 shadow-[0_0_8px_rgba(96,165,250,0.4)]'
+                : 'bg-yellow-500/20 border-yellow-400/50 text-yellow-200 shadow-[0_0_8px_rgba(250,204,21,0.3)]'
             }`}>
-              {provider === 'gemini' ? 'Gemini' : 'OpenAI'}
+              {provider === 'gemini' ? '⚡ Gemini' : '⚡ OpenAI'}
             </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
@@ -186,10 +188,12 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Center - CAOS branding - centered absolutely */}
-        <div className="text-center absolute left-1/2 transform -translate-x-1/2 pointer-events-none flex flex-col items-center">
-          <h1 className="text-white font-bold text-base sm:text-xl">CAOS</h1>
-          <p className="hidden sm:block text-white/60 text-xs">Cognitive Adaptive Operating System</p>
+        {/* Center - CAOS branding - truly centered in viewport */}
+        <div className="fixed left-0 right-0 top-0 flex justify-center items-center pointer-events-none" style={{ height: '48px' }}>
+          <div className="flex flex-col items-center">
+            <h1 className="text-white font-bold text-base sm:text-xl leading-tight">CAOS</h1>
+            <p className="hidden sm:block text-white/60 text-xs leading-tight">Cognitive Adaptive Operating System</p>
+          </div>
         </div>
 
         {/* Right - Thread Title and Files */}
