@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap, Cpu, Zap as BoltIcon } from 'lucide-react';
+import { ChevronDown, MessageSquare, FolderOpen, Folder, Monitor, User, Shield, LogOut, Plus, Image, FileText, ChevronRight, Key, Code, Zap, Cpu, Brain, FlameKindling } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
@@ -153,7 +153,7 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
                 disabled={bootloaderDisabled}
                 className="flex items-center gap-2 px-3 py-3 cursor-pointer text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 focus:text-yellow-300 text-sm"
               >
-                <Zap className="w-4 h-4 text-yellow-400" />
+                <FlameKindling className="w-4 h-4 text-yellow-400" />
                 <span>Inject Bootloader</span>
               </DropdownMenuItem>
             </>
@@ -164,16 +164,16 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             className="flex items-center gap-2 px-3 py-3 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
             onSelect={(e) => e.preventDefault()}
           >
-            <div className="flex flex-col items-center gap-0.5">
-              <Zap className={`w-3.5 h-3.5 ${provider === 'gemini' ? 'text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.9)]' : 'text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.9)]'}`} />
-            </div>
-            <span className="flex-1 text-white/70 text-xs">=</span>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+            <Brain className="w-4 h-4 text-purple-400" />
+            <span className="flex-1 text-white/80 text-sm">Engine</span>
+            <span className="text-white/40 text-sm mx-1">=</span>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
               provider === 'gemini'
                 ? 'bg-blue-500/30 border-blue-400/60 text-blue-200 shadow-[0_0_8px_rgba(96,165,250,0.4)]'
                 : 'bg-yellow-500/20 border-yellow-400/50 text-yellow-200 shadow-[0_0_8px_rgba(250,204,21,0.3)]'
             }`}>
-              {provider === 'gemini' ? '⚡ Gemini' : '⚡ OpenAI'}
+              <Zap className="w-3 h-3" />
+              {provider === 'gemini' ? 'Gemini' : 'OpenAI'}
             </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
