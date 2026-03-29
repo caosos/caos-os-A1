@@ -778,8 +778,10 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         throw new Error('Empty response from server');
       }
 
+
+
       // ── AUTO-EXECUTE REPO COMMANDS from AI output ──────────────────────────────
-      // Detect bare lines matching "open <path>" or "ls <path>" and execute them
+      // Detect bare lines matching "open <path>" or "ls <path>" and execute them autonomously
       const repoCommandRegex = /^(open|ls)\s+(.+?)$/gm;
       let match;
       const repoCommands = [];
@@ -787,13 +789,14 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         repoCommands.push({ op: match[1], path: match[2].trim() });
       }
       if (repoCommands.length > 0) {
-        console.log('🤖 [AUTO_REPO_EXEC] Detected', repoCommands.length, 'command(s) — auto-submitting');
-        // Remove the commands from reply so user doesn't see raw "open ..." text
+        console.log('🤖 [AUTONOMOUS_REPO_EXEC] Detected', repoCommands.length, 'command(s)');
+        // Remove the commands from main reply so they don't appear raw
         reply = reply.replace(repoCommandRegex, '').trim();
-        // Auto-submit each command as a follow-up
+        
+        // Auto-submit each command as a follow-up with clear labeling
+        const autoExecResults = [];
         for (const cmd of repoCommands) {
           const cmdStr = cmd.op === 'open' ? `open ${cmd.path}` : `ls ${cmd.path}`;
-          setIsLoading(true);
           try {
             const cmdResponse = await base44.functions.invoke('hybridMessage', {
               input: cmdStr,
@@ -802,14 +805,38 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               preferred_provider: sessionProvider
             });
             if (cmdResponse?.data?.reply) {
-              // Append the repo result to the reply
-              reply += '\n\n' + cmdResponse.data.reply;
+              autoExecResults.push({
+                command: cmdStr,
+                result: cmdResponse.data.reply
+              });
             }
           } catch (e) {
-            console.error('🔥 [AUTO_REPO_EXEC_FAILED]', e.message);
+            console.error('🔥 [AUTO_EXEC_FAILED]', e.message);
+            autoExecResults.push({
+              command: cmdStr,
+              result: `⚠️ Command failed: ${e.message}`
+            });
           }
         }
-        setIsLoading(false);
+        
+        // Create a single labeled system message showing all auto-executed commands
+        if (autoExecResults.length > 0) {
+          const systemMsg = {
+            id: 'autoxec_' + Date.now(),
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: `**[System: Autonomous Execution]**\n\nI executed ${autoExecResults.length} command(s) on your behalf:\n\n${autoExecResults.map(r => `**Command:** \`${r.command}\`\n\n${r.result}`).join('\n\n---\n\n')}`,
+            timestamp: new Date().toISOString(),
+            is_system_autoxec: true
+          };
+          
+          setMessages(prev => ({
+            ...prev,
+            [conversationId]: [...(prev[conversationId] || []), systemMsg]
+          }));
+          
+          console.log('✅ [AUTOXEC_COMPLETE]', { commands_executed: autoExecResults.length });
+        }
       }
 
       // Auto-save files/photos from user's attached files
