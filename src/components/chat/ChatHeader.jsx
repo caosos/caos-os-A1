@@ -186,10 +186,10 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
         </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Center - CAOS branding - Mobile: compact, Desktop: full */}
-        <div className="text-center absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+        {/* Center - CAOS branding - centered absolutely */}
+        <div className="text-center absolute left-1/2 transform -translate-x-1/2 pointer-events-none flex flex-col items-center">
           <h1 className="text-white font-bold text-base sm:text-xl">CAOS</h1>
-          <p className="hidden sm:block text-white/60 text-xs">Cognitive Adaptive Operating Space</p>
+          <p className="hidden sm:block text-white/60 text-xs">Cognitive Adaptive Operating System</p>
         </div>
 
         {/* Right - Thread Title and Files */}

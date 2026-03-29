@@ -27,16 +27,16 @@ export default function TokenMeter({ messages = [], maxTokens = 200000, wcwUsed 
   const fmt = (n) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n;
 
   return (
-    <div className="flex items-center gap-2" title={hasRealData ? "Working Context Window (live)" : "Estimated token usage"}>
-      <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+    <div className="flex items-center gap-1" title={hasRealData ? "Working Context Window (live)" : "Estimated token usage"}>
+      <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full ${colorClass} transition-all duration-300`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
-      <span className="text-xs text-white/50 whitespace-nowrap">
-        {fmt(tokens)} / {fmt(budget)}
-        {!hasRealData && <span className="text-white/30 ml-1">~</span>}
+      <span className="text-[10px] text-white/40 whitespace-nowrap">
+        {fmt(tokens)}
+        {!hasRealData && <span className="text-white/20">~</span>}
       </span>
     </div>
   );
