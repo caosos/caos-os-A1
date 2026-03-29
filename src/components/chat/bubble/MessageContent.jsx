@@ -35,14 +35,26 @@ export default function MessageContent({ message, isUser, downloadFile }) {
     content = content.replace(/WROTE:[a-f0-9-]+/g, '').trim();
   }
 
+  // Extract bare YouTube URLs on their own line
+  const bareYouTubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|embed\/|v\/|shorts\/)([^&?\s]+)$/gm;
+  const bareYouTubeUrls = [];
+  let bareMatch;
+  const bareYouTubeRegexGlobal = new RegExp(bareYouTubeRegex.source, 'gm');
+  while ((bareMatch = bareYouTubeRegexGlobal.exec(content)) !== null) {
+    bareYouTubeUrls.push(bareMatch[0]);
+  }
+
   const urls = extractUrls(content || '');
-  const videoUrls = urls.filter(isVideoUrl);
+  const videoUrls = [...new Set([...urls, ...bareYouTubeUrls])].filter(isVideoUrl);
 
   let cleanContent = content;
   videoUrls.forEach(url => {
     const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const markdownLinkRegex = new RegExp(`\\[([^\\]]+)\\]\\(${escapedUrl}\\)`, 'g');
     cleanContent = cleanContent.replace(markdownLinkRegex, '');
+    // Also remove bare URLs on their own line
+    const bareLineRegex = new RegExp(`^\\s*${escapedUrl}\\s*$`, 'gm');
+    cleanContent = cleanContent.replace(bareLineRegex, '');
   });
   cleanContent = cleanContent.trim();
 
