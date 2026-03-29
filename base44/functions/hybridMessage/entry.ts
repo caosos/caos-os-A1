@@ -814,12 +814,12 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
 
         if (repoCmd.op === 'list') {
-            // Map 'functions/' to 'base44/' since backend functions live in base44/ folder
+            // Map 'functions/' to 'base44/functions/' — actual GitHub structure
             let gitPath = cleanPath;
             if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
-                gitPath = cleanPath.replace(/^functions\/?/, 'base44/');
+                gitPath = cleanPath.replace(/^functions/, 'base44/functions');
             } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
-                gitPath = cleanPath.replace(/^agents\/?/, 'base44/agents/');
+                gitPath = cleanPath.replace(/^agents/, 'base44/agents');
             } else if (!cleanPath) {
                 gitPath = '';
             } else {
@@ -839,23 +839,41 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         } else {
             const offset = repoCmd.offset || 0;
             const max_bytes = 60000;
-            // Map 'functions/' to 'base44/' since backend functions live in base44/ folder
+            // Map 'functions/' to 'base44/functions/' — actual GitHub structure
             let gitPath = cleanPath;
             if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
-                gitPath = cleanPath.replace(/^functions\/?/, 'base44/');
+                gitPath = cleanPath.replace(/^functions/, 'base44/functions');
             } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
-                gitPath = cleanPath.replace(/^agents\/?/, 'base44/agents/');
+                gitPath = cleanPath.replace(/^agents/, 'base44/agents');
             } else {
                 gitPath = `src/${cleanPath}`;
             }
-            const metaRes = await fetch(
-                `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`,
-                { headers: ghHeaders }
-            );
-            if (!metaRes.ok) {
-                repoResult = { ok: false, error: `GitHub meta ${metaRes.status}` };
+            // Try path as-is, then with .js and .ts extensions if it 404s (Base44 functions have no extension in chat commands but GitHub stores them with extensions)
+            const pathsToTry = [gitPath, `${gitPath}.js`, `${gitPath}.ts`];
+            let metaRes = null;
+            let resolvedGitPath = gitPath;
+            for (const tryPath of pathsToTry) {
+                metaRes = await fetch(
+                    `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${tryPath}?ref=main`,
+                    { headers: ghHeaders }
+                );
+                if (metaRes.ok) { resolvedGitPath = tryPath; break; }
+            }
+            if (!metaRes || !metaRes.ok) {
+                repoResult = { ok: false, error: `GitHub meta 404 — tried: ${pathsToTry.join(', ')}` };
             } else {
-                const meta = await metaRes.json();
+                let meta = await metaRes.json();
+                // If path resolved to a directory, auto-descend into entry.ts (Base44 function convention)
+                if (Array.isArray(meta) || meta.type === 'dir') {
+                    const entryRes = await fetch(
+                        `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${resolvedGitPath}/entry.ts?ref=main`,
+                        { headers: ghHeaders }
+                    );
+                    if (entryRes.ok) {
+                        meta = await entryRes.json();
+                        resolvedGitPath = `${resolvedGitPath}/entry.ts`;
+                    }
+                }
                 if (meta.type !== 'file') {
                     repoResult = { ok: false, error: `Not a file (${meta.type}) — use \`list ${cleanPath}\` to browse` };
                 } else {
