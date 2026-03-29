@@ -984,7 +984,7 @@ Deno.serve(async (req) => {
         }
         const t_auth = Date.now() - startTime;
 
-        const { input, session_id, file_urls = [], _dev_force_tier1_fail = false } = body;
+        const { input, session_id, file_urls = [], _dev_force_tier1_fail = false, preferred_provider: bodyProvider } = body;
         // Dev-only forced failure: admin-only, requires FF_RIA_INFERENCE_SPINE=true or explicit test
         const forceTier1Fail = _dev_force_tier1_fail === true && user.role === 'admin';
 
@@ -1092,13 +1092,11 @@ Deno.serve(async (req) => {
         const hDepth = calibrateDepth(hIntent, cogLevel);
         const hDirective = buildDirective(hIntent, hDepth, cogLevel);
 
-        // Phase 2.5: provider routing (FF_PROVIDER_ROUTER = off — all flags below)
-        // FF_PROVIDER_TOGGLE_UI=false | FF_GROK_PROVIDER_ENABLED=false | FF_PROVIDER_ROUTER=false | FF_CROSS_PROVIDER_FALLBACK=false
-        const FF_PROVIDER_ROUTER = false;
+        // Phase 2.5: provider routing — session toggle enabled
+        const FF_PROVIDER_ROUTER = true;
         const FF_GROK_PROVIDER_ENABLED = false;
-        const preferredProvider = FF_PROVIDER_ROUTER
-            ? (userProfile?.preferred_provider || 'openai')
-            : 'openai';
+        // Priority: per-request body param → userProfile preference → openai default
+        const preferredProvider = bodyProvider || (FF_PROVIDER_ROUTER ? (userProfile?.preferred_provider || 'openai') : 'openai');
 
         // If Grok selected but feature disabled — explicit error, no silent fallback
         if (FF_PROVIDER_ROUTER && preferredProvider === 'grok' && !FF_GROK_PROVIDER_ENABLED) {

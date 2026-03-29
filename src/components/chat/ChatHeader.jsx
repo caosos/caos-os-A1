@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation, sessionFilesCount, onBootloader, bootloaderDisabled }) {
+export default function ChatHeader({ user, onNewThread, onShowThreads, onShowProfile, onShowFiles, currentConversation, sessionFilesCount, onBootloader, bootloaderDisabled, provider, onProviderToggle }) {
   const navigate = useNavigate();
   const [showGuestLogoutDialog, setShowGuestLogoutDialog] = useState(false);
   const [showExecution, setShowExecution] = useState(() => {
@@ -186,6 +186,19 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
               📁 {sessionFilesCount}
             </button>
           )}
+          {/* Provider Toggle */}
+          <button
+            onClick={onProviderToggle}
+            title={`Switch to ${provider === 'gemini' ? 'OpenAI' : 'Gemini'}`}
+            className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] sm:text-xs font-medium transition-all ${
+              provider === 'gemini'
+                ? 'bg-blue-500/20 border-blue-400/40 text-blue-300 hover:bg-blue-500/30'
+                : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'
+            }`}
+          >
+            {provider === 'gemini' ? '✦ Gemini' : '⬡ OpenAI'}
+          </button>
+
           {currentConversation && (
             <div className="text-right max-w-[80px] sm:max-w-[200px] pointer-events-none">
               <p className="text-white/90 text-[10px] sm:text-xs font-medium truncate">

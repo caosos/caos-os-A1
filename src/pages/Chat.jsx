@@ -73,6 +73,13 @@ export default function Chat() {
   const [messageInputValue, setMessageInputValue] = useState('');
   const [inputHeight, setInputHeight] = useState(0);
   const [rsodError, setRsodError] = useState(null);
+  const [sessionProvider, setSessionProvider] = useState(() => localStorage.getItem('caos_session_provider') || 'openai');
+
+  const handleProviderToggle = () => {
+    const next = sessionProvider === 'openai' ? 'gemini' : 'openai';
+    setSessionProvider(next);
+    localStorage.setItem('caos_session_provider', next);
+  };
   const lastSendRef = React.useRef(null);
 
   // Helper to set message in input
@@ -654,7 +661,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       response = await base44.functions.invoke('hybridMessage', {
         input: fullMessage,
         session_id: conversationId,
-        file_urls: fileUrls
+        file_urls: fileUrls,
+        preferred_provider: sessionProvider
       });
 
       console.log('📥 BACKEND RESPONSE - Received:', { 
@@ -1074,6 +1082,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 sessionFilesCount={generatedFiles.length}
                 onBootloader={currentConversationId && currentMessages.length > 0 ? handleBootloaderInject : undefined}
                 bootloaderDisabled={isLoading}
+                provider={sessionProvider}
+                onProviderToggle={handleProviderToggle}
               />
               {currentConversationId && currentMessages.length > 0 && (
                 <div className="z-10 flex items-center gap-2">
