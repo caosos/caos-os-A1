@@ -772,10 +772,44 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         reply_preview: data.reply?.substring(0, 100)
       }, null, 2));
 
-      const reply = data.data?.reply || data.reply || data.response || data.text || '';
+      let reply = data.data?.reply || data.reply || data.response || data.text || '';
       if (!reply) {
         console.error('❌ EMPTY REPLY - Backend returned no content:', data);
         throw new Error('Empty response from server');
+      }
+
+      // ── AUTO-EXECUTE REPO COMMANDS from AI output ──────────────────────────────
+      // Detect bare lines matching "open <path>" or "ls <path>" and execute them
+      const repoCommandRegex = /^(open|ls)\s+(.+?)$/gm;
+      let match;
+      const repoCommands = [];
+      while ((match = repoCommandRegex.exec(reply)) !== null) {
+        repoCommands.push({ op: match[1], path: match[2].trim() });
+      }
+      if (repoCommands.length > 0) {
+        console.log('🤖 [AUTO_REPO_EXEC] Detected', repoCommands.length, 'command(s) — auto-submitting');
+        // Remove the commands from reply so user doesn't see raw "open ..." text
+        reply = reply.replace(repoCommandRegex, '').trim();
+        // Auto-submit each command as a follow-up
+        for (const cmd of repoCommands) {
+          const cmdStr = cmd.op === 'open' ? `open ${cmd.path}` : `ls ${cmd.path}`;
+          setIsLoading(true);
+          try {
+            const cmdResponse = await base44.functions.invoke('hybridMessage', {
+              input: cmdStr,
+              session_id: conversationId,
+              file_urls: [],
+              preferred_provider: sessionProvider
+            });
+            if (cmdResponse?.data?.reply) {
+              // Append the repo result to the reply
+              reply += '\n\n' + cmdResponse.data.reply;
+            }
+          } catch (e) {
+            console.error('🔥 [AUTO_REPO_EXEC_FAILED]', e.message);
+          }
+        }
+        setIsLoading(false);
       }
 
       // Auto-save files/photos from user's attached files
