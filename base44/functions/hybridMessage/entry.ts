@@ -813,9 +813,17 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
 
         if (repoCmd.op === 'list') {
-            // Don't add src/ prefix for functions, agents, or root — only for components/pages/lib
-            const isRootLevel = !cleanPath || cleanPath === 'functions' || cleanPath === 'agents' || cleanPath.startsWith('functions/') || cleanPath.startsWith('agents/');
-            const gitPath = isRootLevel ? (cleanPath || '') : (cleanPath ? `src/${cleanPath}` : 'src');
+            // Map 'functions/' to 'base44/' since backend functions live in base44/ folder
+            let gitPath = cleanPath;
+            if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
+                gitPath = cleanPath.replace(/^functions\/?/, 'base44/');
+            } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
+                gitPath = cleanPath.replace(/^agents\/?/, 'base44/agents/');
+            } else if (!cleanPath) {
+                gitPath = '';
+            } else {
+                gitPath = `src/${cleanPath}`;
+            }
             const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`;
             const ghRes = await fetch(url, { headers: ghHeaders });
             if (!ghRes.ok) {
@@ -830,9 +838,15 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         } else {
             const offset = repoCmd.offset || 0;
             const max_bytes = 60000;
-            // Same logic: don't add src/ for functions or agents
-            const isRootLevel = cleanPath === 'functions' || cleanPath === 'agents' || cleanPath.startsWith('functions/') || cleanPath.startsWith('agents/');
-            const gitPath = isRootLevel ? cleanPath : `src/${cleanPath}`;
+            // Map 'functions/' to 'base44/' since backend functions live in base44/ folder
+            let gitPath = cleanPath;
+            if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
+                gitPath = cleanPath.replace(/^functions\/?/, 'base44/');
+            } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
+                gitPath = cleanPath.replace(/^agents\/?/, 'base44/agents/');
+            } else {
+                gitPath = `src/${cleanPath}`;
+            }
             const metaRes = await fetch(
                 `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`,
                 { headers: ghHeaders }
