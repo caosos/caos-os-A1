@@ -1188,6 +1188,11 @@ Deno.serve(async (req) => {
             throw inferenceError;
         }
 
+        if (!reply) {
+            console.error('🔥 [CRITICAL] Reply is null/undefined after inference', { reply, inferResult: !!inferResult, degraded: riaResult?.degraded });
+            throw new Error('Inference returned empty reply');
+        }
+
         if (debugMode) {
             const mbcrHeader = `[MBCR] triggered=${mbcrDebug.triggered} retrieved=${mbcrDebug.retrievedCount} injected=${mbcrDebug.injected} tags=[${mbcrDebug.tags.join(',')}] query="${mbcrDebug.text_query}"\n\n`;
             reply = mbcrHeader + reply;
