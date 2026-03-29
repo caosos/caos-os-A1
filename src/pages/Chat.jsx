@@ -793,8 +793,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         // Remove the commands from main reply so they don't appear raw
         reply = reply.replace(repoCommandRegex, '').trim();
         
-        // Auto-submit each command as a follow-up with clear labeling
-        const autoExecResults = [];
+        // Auto-submit each command and inline results directly
         for (const cmd of repoCommands) {
           const cmdStr = cmd.op === 'open' ? `open ${cmd.path}` : `ls ${cmd.path}`;
           try {
@@ -805,37 +804,13 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               preferred_provider: sessionProvider
             });
             if (cmdResponse?.data?.reply) {
-              autoExecResults.push({
-                command: cmdStr,
-                result: cmdResponse.data.reply
-              });
+              // Append results directly to the reply — no separate message
+              reply += '\n\n' + cmdResponse.data.reply;
             }
           } catch (e) {
             console.error('🔥 [AUTO_EXEC_FAILED]', e.message);
-            autoExecResults.push({
-              command: cmdStr,
-              result: `⚠️ Command failed: ${e.message}`
-            });
+            reply += `\n\n⚠️ Command \`${cmdStr}\` failed: ${e.message}`;
           }
-        }
-        
-        // Create a single labeled system message showing all auto-executed commands
-        if (autoExecResults.length > 0) {
-          const systemMsg = {
-            id: 'autoxec_' + Date.now(),
-            conversation_id: conversationId,
-            role: 'assistant',
-            content: `**[System: Autonomous Execution]**\n\nI executed ${autoExecResults.length} command(s) on your behalf:\n\n${autoExecResults.map(r => `**Command:** \`${r.command}\`\n\n${r.result}`).join('\n\n---\n\n')}`,
-            timestamp: new Date().toISOString(),
-            is_system_autoxec: true
-          };
-          
-          setMessages(prev => ({
-            ...prev,
-            [conversationId]: [...(prev[conversationId] || []), systemMsg]
-          }));
-          
-          console.log('✅ [AUTOXEC_COMPLETE]', { commands_executed: autoExecResults.length });
         }
       }
 
