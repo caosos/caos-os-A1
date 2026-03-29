@@ -17,7 +17,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
-const ACTIVE_MODEL = 'gpt-5.2';
+const ACTIVE_MODEL = 'gpt-4o';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 40;
 const HOT_TAIL = 40;
@@ -364,7 +364,7 @@ const FF_RIA_INFERENCE_SPINE = false; // ROLLBACK: set true to re-enable RIA tie
 
 // Provider / model config
 const PROVIDER_MODELS = {
-    openai: { default: 'gpt-5.2', context: 200000 },
+    openai: { default: 'gpt-4o', context: 128000 },
     grok:   { default: 'grok-3',   context: 131072 },
 };
 
@@ -393,11 +393,31 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
 
     const invokeInference = async (model) => {
         if (user.role === 'admin') {
+            // Admin: full tool access via repoInference (repo_list, repo_read, web_search)
             const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 2000 });
             return { content: riRes?.data?.content, usage: riRes?.data?.usage || null };
         } else {
-            const giRes = await base44.functions.invoke('core/generalInference', { messages: finalMessages, model, max_tokens: 2000 });
-            return { content: giRes?.data?.content, usage: giRes?.data?.usage || null };
+            // Non-admin: direct OpenAI call — no repo access, no tools, no function hop
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 45000);
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model, messages: finalMessages, temperature: 0.7, max_completion_tokens: 2000 }),
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(`OpenAI ${response.status}: ${err.error?.message || response.statusText}`);
+                }
+                const data = await response.json();
+                return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
+            } catch (err) {
+                clearTimeout(timer);
+                throw err;
+            }
         }
     };
 
@@ -1020,7 +1040,7 @@ Deno.serve(async (req) => {
             return respondError({ error_code: 'FEATURE_DISABLED', stage: 'GROK_CALL', message: 'Grok provider is not yet enabled. Please switch to OpenAI in your profile settings.', retryable: false, request_id, correlation_id, elapsed_ms: Date.now() - startTime });
         }
 
-        const providerConfig = { openai: { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 200000 }, grok: { model: userProfile?.preferred_model || 'grok-3', context: 131072 } };
+        const providerConfig = { openai: { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 128000 }, grok: { model: userProfile?.preferred_model || 'grok-3', context: 131072 } };
         const RESOLVED_MODEL = providerConfig[preferredProvider]?.model || ACTIVE_MODEL;
         const routingDecision = { route: 'standard', route_reason: `provider=${preferredProvider}`, model: RESOLVED_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });

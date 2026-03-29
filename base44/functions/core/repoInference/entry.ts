@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { messages, model = 'gpt-5.2', max_tokens = 2000 } = body;
+        const { messages, model = 'gpt-4o', max_tokens = 2000 } = body;
 
         if (!messages || !Array.isArray(messages)) {
             return Response.json({ ok: false, request_id, error_code: 'INVALID_INPUT', stage: 'REPO_INFERENCE', message: 'messages array required', retryable: false });
