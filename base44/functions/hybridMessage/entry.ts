@@ -1188,9 +1188,12 @@ Deno.serve(async (req) => {
             throw inferenceError;
         }
 
-        if (!reply) {
-            console.error('🔥 [CRITICAL] Reply is null/undefined after inference', { reply, inferResult: !!inferResult, degraded: riaResult?.degraded });
-            throw new Error('Inference returned empty reply');
+        console.log('🔍 [INFERENCE_RESULT_DEBUG]', { replyType: typeof reply, replyLength: reply?.length || 'NULL', hasReply: !!reply });
+        
+        // Fallback if reply is missing — likely inference timeout or malformed response
+        if (!reply || typeof reply !== 'string') {
+            reply = '⚠️ Inference timeout or incomplete response. Please try again.';
+            console.warn('⚠️ [REPLY_RECOVERY] Using fallback message due to missing/invalid reply');
         }
 
         if (debugMode) {
