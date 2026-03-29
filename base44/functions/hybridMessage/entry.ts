@@ -813,7 +813,10 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
 
         if (repoCmd.op === 'list') {
-            const gitPath = cleanPath ? `src/${cleanPath}` : 'src';
+            // Don't add src/ prefix for functions/ or root — only for components/pages/lib
+            const gitPath = cleanPath.startsWith('functions/') || cleanPath.startsWith('agents/') || !cleanPath 
+                ? cleanPath || ''
+                : (cleanPath ? `src/${cleanPath}` : 'src');
             const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`;
             const ghRes = await fetch(url, { headers: ghHeaders });
             if (!ghRes.ok) {
@@ -828,7 +831,10 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         } else {
             const offset = repoCmd.offset || 0;
             const max_bytes = 60000;
-            const gitPath = `src/${cleanPath}`;
+            // Same logic: don't add src/ for functions/ or agents/
+            const gitPath = cleanPath.startsWith('functions/') || cleanPath.startsWith('agents/') 
+                ? cleanPath 
+                : `src/${cleanPath}`;
             const metaRes = await fetch(
                 `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`,
                 { headers: ghHeaders }
