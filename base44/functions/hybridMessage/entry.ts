@@ -392,6 +392,25 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     emitEvent(base44, request_id, session_id, startTime, stage, 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length, provider } });
 
     const invokeInference = async (model) => {
+        // Gemini path — route to geminiInference for any gemini model
+        if (model && model.startsWith('gemini')) {
+            const giRes = await base44.functions.invoke('core/geminiInference', {
+                messages: finalMessages,
+                model,
+                max_tokens: 2000,
+                use_grounding: true,
+            });
+            const giData = giRes?.data || {};
+            if (!giData.ok) throw new Error(giData.error || 'Gemini inference failed');
+            // Append grounding sources to content if present
+            let content = giData.content || '';
+            if (giData.sources?.length > 0) {
+                const srcLines = giData.sources.map(s => `- [${s.title || s.url}](${s.url})`).join('\n');
+                content += `\n\n**Sources:**\n${srcLines}`;
+            }
+            return { content, usage: giData.usage || null };
+        }
+
         if (user.role === 'admin') {
             // Admin: full tool access via repoInference (repo_list, repo_read, web_search)
             const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 2000 });
@@ -1086,7 +1105,11 @@ Deno.serve(async (req) => {
             return respondError({ error_code: 'FEATURE_DISABLED', stage: 'GROK_CALL', message: 'Grok provider is not yet enabled. Please switch to OpenAI in your profile settings.', retryable: false, request_id, correlation_id, elapsed_ms: Date.now() - startTime });
         }
 
-        const providerConfig = { openai: { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 128000 }, grok: { model: userProfile?.preferred_model || 'grok-3', context: 131072 } };
+        const providerConfig = {
+            openai:  { model: userProfile?.preferred_model || ACTIVE_MODEL, context: 128000 },
+            grok:    { model: userProfile?.preferred_model || 'grok-3', context: 131072 },
+            gemini:  { model: userProfile?.preferred_model || 'gemini-2.5-flash', context: 1000000 },
+        };
         const RESOLVED_MODEL = providerConfig[preferredProvider]?.model || ACTIVE_MODEL;
         const routingDecision = { route: 'standard', route_reason: `provider=${preferredProvider}`, model: RESOLVED_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });

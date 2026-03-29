@@ -1,0 +1,122 @@
+{
+  "name": "UserProfile",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user this profile belongs to"
+    },
+    "preferred_name": {
+      "type": "string",
+      "description": "User's preferred name"
+    },
+    "assistant_name": {
+      "type": "string",
+      "default": "Aria",
+      "description": "Name of the assistant personality"
+    },
+    "environment_name": {
+      "type": "string",
+      "default": "CAOS",
+      "description": "Name of the platform environment"
+    },
+    "tone": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "string"
+        },
+        "humor_ok": {
+          "type": "boolean",
+          "default": true
+        },
+        "emoji_light": {
+          "type": "boolean",
+          "default": true
+        },
+        "no_scaffold_titles": {
+          "type": "boolean",
+          "default": true
+        },
+        "no_flattery": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "current_focus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "known_friction_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "memory_anchors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Legacy auto-extracted facts (string array)"
+    },
+    "structured_memory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Explicitly saved structured memory entries (Phase 1 deterministic memory)"
+    },
+    "preferred_provider": {
+      "type": "string",
+      "enum": [
+        "openai",
+        "grok",
+        "gemini"
+      ],
+      "default": "openai",
+      "description": "Preferred inference provider: openai | grok | gemini"
+    },
+    "preferred_model": {
+      "type": "string",
+      "description": "Optional model override for the preferred provider (e.g. gemini-2.5-pro, gpt-4o, grok-3)"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}
