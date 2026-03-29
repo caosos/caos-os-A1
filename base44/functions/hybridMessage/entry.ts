@@ -1107,7 +1107,7 @@ Deno.serve(async (req) => {
         const providerDefaults = {
             openai:  ACTIVE_MODEL,
             grok:    'grok-3',
-            gemini:  'models/gemini-2.5-pro',
+            gemini:  'models/gemini-2.5-flash',
         };
         // Only use preferred_model override if the provider hasn't been explicitly toggled away from openai
         // i.e. if user picked gemini, always use a gemini model — never let preferred_model (which may be an openai model) override it
