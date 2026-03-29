@@ -397,27 +397,73 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
             const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 2000 });
             return { content: riRes?.data?.content, usage: riRes?.data?.usage || null };
         } else {
-            // Non-admin: direct OpenAI call — no repo access, no tools, no function hop
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 45000);
-            try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model, messages: finalMessages, temperature: 0.7, max_completion_tokens: 2000 }),
-                    signal: controller.signal
-                });
-                clearTimeout(timer);
+            // Non-admin: inlined agentic loop with web_search — no repo access, no function hop
+            const NON_ADMIN_TOOLS = [
+                {
+                    type: 'function',
+                    function: {
+                        name: 'web_search',
+                        description: 'Search the web for current facts, news, documentation, or anything not in training data.',
+                        parameters: {
+                            type: 'object',
+                            properties: { query: { type: 'string', description: 'The search query string.' } },
+                            required: ['query']
+                        }
+                    }
+                }
+            ];
+            const msgs = [...finalMessages];
+            let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+            for (let round = 0; round < 5; round++) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 45000);
+                let response;
+                try {
+                    response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model, messages: msgs, temperature: 0.7, max_completion_tokens: 2000, tools: NON_ADMIN_TOOLS, tool_choice: 'auto' }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timer);
+                } catch (err) {
+                    clearTimeout(timer);
+                    throw err;
+                }
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
                     throw new Error(`OpenAI ${response.status}: ${err.error?.message || response.statusText}`);
                 }
                 const data = await response.json();
-                return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
-            } catch (err) {
-                clearTimeout(timer);
-                throw err;
+                if (data.usage) {
+                    totalUsage.prompt_tokens += data.usage.prompt_tokens || 0;
+                    totalUsage.completion_tokens += data.usage.completion_tokens || 0;
+                    totalUsage.total_tokens += data.usage.total_tokens || 0;
+                }
+                const choice = data.choices[0];
+                if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
+                    return { content: choice.message.content, usage: totalUsage };
+                }
+                msgs.push(choice.message);
+                for (const toolCall of choice.message.tool_calls) {
+                    let toolResult = {};
+                    if (toolCall.function.name === 'web_search') {
+                        let args = {};
+                        try { args = JSON.parse(toolCall.function.arguments); } catch {}
+                        try {
+                            toolResult = await base44.integrations.Core.InvokeLLM({
+                                prompt: `Search the web for: "${args.query}". Return a factual, well-sourced summary with source URLs.`,
+                                add_context_from_internet: true,
+                                model: 'gemini_3_flash'
+                            });
+                        } catch (e) {
+                            toolResult = { error: e.message };
+                        }
+                    }
+                    msgs.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(toolResult) });
+                }
             }
+            return { content: 'Tool loop exhausted.', usage: totalUsage };
         }
     };
 
