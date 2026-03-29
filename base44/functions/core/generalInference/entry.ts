@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         // Agentic loop — max 5 tool rounds
         for (let round = 0; round < 5; round++) {
             const result = await openaiCallWithTimeout(openaiKey, {
-                model, messages: msgs, temperature: 0.7,
+                model, messages: msgs, temperature: 0.01,
                 max_completion_tokens: max_tokens, tools: TOOLS, tool_choice: 'auto'
             });
 

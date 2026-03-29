@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
             }
 
             const result = await openaiFetchWithTimeout(openaiKey, {
-                model, messages: msgs, temperature: 0.7, max_completion_tokens: max_tokens,
+                model, messages: msgs, temperature: 0.01, max_completion_tokens: max_tokens,
                 tools: REPO_TOOLS, tool_choice: 'auto'
             }, 38000);
 

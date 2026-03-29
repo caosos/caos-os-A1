@@ -77,20 +77,25 @@ Deno.serve(async (req) => {
         const { systemParts, contents } = convertMessagesToGemini(messages);
 
         // Build request body
+        // Prepend serverless environment context so Gemini understands its execution constraints
+        const serverlessContext = {
+            text: `EXECUTION ENVIRONMENT:
+You are running in a Deno serverless function on the Base44 platform (not in a browser, not in a local Python environment).
+You do NOT have access to a filesystem, shell, subprocess execution, or any local callable APIs.
+There is no file_read() function, no os module, no subprocess — those do not exist here.
+To read files from the GitHub repository, the user must say "open <path>" or "ls <path>" in the chat.
+The GITHUB_OWNER, GITHUB_REPO, and GITHUB_TOKEN environment variables are configured server-side.
+Act immediately and directly on user requests. Do not announce plans — execute and report results.`
+        };
+
         const requestBody = {
             contents,
             generationConfig: {
                 maxOutputTokens: max_tokens,
-                temperature: 0.7,
+                temperature: 0.01,
             },
+            systemInstruction: { parts: [serverlessContext, ...systemParts] },
         };
-
-        // System instruction (Gemini's equivalent of system prompt)
-        if (systemParts.length > 0) {
-            requestBody.systemInstruction = {
-                parts: systemParts
-            };
-        }
 
         // Native Google Search grounding — gives Gemini real-time web access
         if (use_grounding) {
