@@ -12,6 +12,7 @@ import VideoEmbeds from './VideoEmbeds';
 import RecallResults from './RecallResults';
 import CopyBlock from '@/components/chat/CopyBlock';
 import YouTubeEmbed from '@/components/chat/YouTubeEmbed';
+import MemorySaveIndicator, { hasMemorySave, stripMemoryMarker } from './MemorySaveIndicator';
 
 export default function MessageContent({ message, isUser, downloadFile }) {
   // ── STREAMING FAST PATH ───────────────────────────────────────────────────
@@ -30,6 +31,8 @@ export default function MessageContent({ message, isUser, downloadFile }) {
   // ─────────────────────────────────────────────────────────────────────────
 
   let content = message.content || '';
+  const showMemoryBadge = !isUser && hasMemorySave(content);
+  if (showMemoryBadge) content = stripMemoryMarker(content);
 
   if (content && content.includes('WROTE:')) {
     content = content.replace(/WROTE:[a-f0-9-]+/g, '').trim();
@@ -127,6 +130,7 @@ export default function MessageContent({ message, isUser, downloadFile }) {
       {copyBlocks.map((block, index) => (
         <CopyBlock key={index} content={block.content} title={block.title} />
       ))}
+      {showMemoryBadge && <MemorySaveIndicator content={message.content} />}
       <Attachments fileUrls={attachedFiles} />
       <GeneratedFiles files={message.generated_files} downloadFile={downloadFile} />
       {fileBlocks.map((file, index) => (
