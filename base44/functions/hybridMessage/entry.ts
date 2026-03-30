@@ -1142,7 +1142,7 @@ Deno.serve(async (req) => {
         }
 
         const providerDefaults = {
-            openai:  ACTIVE_MODEL,
+            openai:  'gpt-5.2',
             grok:    'grok-3',
             gemini:  'models/gemini-2.5-flash',
         };
@@ -1150,7 +1150,7 @@ Deno.serve(async (req) => {
         // i.e. if user picked gemini, always use a gemini model — never let preferred_model (which may be an openai model) override it
         const RESOLVED_MODEL = preferredProvider === 'openai' && userProfile?.preferred_model
             ? userProfile.preferred_model
-            : providerDefaults[preferredProvider] || ACTIVE_MODEL;
+            : providerDefaults[preferredProvider] || 'gpt-5.2';
         const routingDecision = { route: 'standard', route_reason: `provider=${preferredProvider}`, model: RESOLVED_MODEL };
         console.log('🎛️ [HEURISTICS]', { intent: hIntent, depth: hDepth, cognitive_level: cogLevel });
         emitEvent(base44, request_id, session_id, startTime, 'HEURISTICS', `intent=${hIntent} depth=${hDepth} cog=${cogLevel.toFixed(1)}`, { data: { intent: hIntent, depth: hDepth, cognitive_level: cogLevel } });

@@ -55,7 +55,7 @@ function buildAuthorityKV(resolvedModel, inferenceProvider) {
     : 'OpenAI';
   const contextLimit = resolvedModel?.includes('gemini') ? 1000000 : 200000;
   return [
-    `model_name=${resolvedModel || 'gpt-4o'}`,
+    `model_name=${resolvedModel || 'gpt-5.2'}`,
     `token_limit=${contextLimit}`,
     'platform_name=CAOS',
     'hosting_platform=Base44',
