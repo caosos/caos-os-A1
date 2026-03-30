@@ -234,9 +234,9 @@ function extractMetadataTags(content) {
 
 // ── promptBuilder delegation ──────────────────────────────────────────────────
 // TSB-023: inlined buildSystemPrompt replaced. promptBuilder is canonical source.
-async function buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock }) {
+async function buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock, resolvedModel, inferenceProvider }) {
     try {
-        const pbPromise = base44.functions.invoke('core/promptBuilder', { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock });
+        const pbPromise = base44.functions.invoke('core/promptBuilder', { userName, matchedMemories, userProfile, rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock, resolvedModel, inferenceProvider });
         const res = await Promise.race([pbPromise, new Promise(r => setTimeout(() => r(null), 8000))]);
         if (res?.data?.systemPrompt) return res.data.systemPrompt;
     } catch (e) {
@@ -1158,7 +1158,7 @@ Deno.serve(async (req) => {
         // ── STAGE: PROMPT_BUILD ───────────────────────────────────────────────
         const userName = userProfile?.preferred_name || user.full_name || 'the user';
         const server_time = new Date().toISOString();
-        const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory: threadStateBlock ? rawHistory.slice(-15) : rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock });
+        const systemPrompt = await buildSystemPromptViaModule(base44, { userName, matchedMemories, userProfile, rawHistory: threadStateBlock ? rawHistory.slice(-15) : rawHistory, hDirective, hDepth, cogLevel, arcBlock, server_time, threadStateBlock, resolvedModel: RESOLVED_MODEL, inferenceProvider: preferredProvider });
         const t_prompt_build = Date.now() - startTime;
 
         // ── STAGE: OPENAI_CALL — assemble messages + run inference ──────────────

@@ -47,34 +47,39 @@ DEBUG / OBSERVABILITY:
 `;
 
 // ── CANONICAL CAPABILITY KV ────────────────────────────────────────────────────
-// This is the authoritative declaration of every tool/capability available.
-// Aria reads this block every session — no bootloader injection needed.
-// CHANGE LOG: v2 — all capabilities explicit, open, and gated by policy only.
-const AUTHORITY_KV = [
-  'model_name=gpt-5.2',
-  'token_limit=200000',
-  'platform_name=CAOS',
-  'hosting_platform=Base44',
-  'backend_runtime=Deno',
-  'frontend_framework=React',
-  'inference_provider=OpenAI',
-  'inference_enabled=true',
-  'web_search_enabled=true',
-  'web_search_trigger=NEEDS_BASED_AUTOMATIC_OR_EXPLICIT',
-  'file_read_enabled=true (attached files only — no callable file_read() API)',
-  'repo_access_enabled=true (use chat commands: open <path> | ls <path>)',
-  'file_write_enabled=true',
-  'image_parse_enabled=true',
-  'image_gen_enabled=true',
-  'python_enabled=true',
-  'tts_enabled=true',
-  'stt_enabled=true',
-  'memory_enabled=true',
-  'memory_mode=EXPLICIT_SAVE_EXPLICIT_RECALL',
-  'memory_policy_gating=ACTIVE',
-  'policy_gating=ACTIVE',
-  'context_limit=200000',
-].join('\n');
+// Built dynamically at runtime — model_name and inference_provider reflect the
+// actual provider/model resolved by hybridMessage for this turn.
+function buildAuthorityKV(resolvedModel, inferenceProvider) {
+  const providerLabel = inferenceProvider === 'gemini' ? 'Google Gemini'
+    : inferenceProvider === 'grok' ? 'xAI Grok'
+    : 'OpenAI';
+  const contextLimit = resolvedModel?.includes('gemini') ? 1000000 : 200000;
+  return [
+    `model_name=${resolvedModel || 'gpt-4o'}`,
+    `token_limit=${contextLimit}`,
+    'platform_name=CAOS',
+    'hosting_platform=Base44',
+    'backend_runtime=Deno',
+    'frontend_framework=React',
+    `inference_provider=${providerLabel}`,
+    'inference_enabled=true',
+    'web_search_enabled=true',
+    'web_search_trigger=NEEDS_BASED_AUTOMATIC_OR_EXPLICIT',
+    'file_read_enabled=true (attached files only — no callable file_read() API)',
+    'repo_access_enabled=true (use chat commands: open <path> | ls <path>)',
+    'file_write_enabled=true',
+    'image_parse_enabled=true',
+    'image_gen_enabled=true',
+    'python_enabled=true',
+    'tts_enabled=true',
+    'stt_enabled=true',
+    'memory_enabled=true',
+    'memory_mode=EXPLICIT_SAVE_EXPLICIT_RECALL',
+    'memory_policy_gating=ACTIVE',
+    'policy_gating=ACTIVE',
+    `context_limit=${contextLimit}`,
+  ].join('\n');
+}
 
 const HOT_HEAD = 15;
 const HOT_TAIL = 40;
@@ -121,6 +126,8 @@ Deno.serve(async (req) => {
             webSearchResults = [],
             environmentState = null,
             threadStateBlock = '',
+            resolvedModel = null,
+            inferenceProvider = null,
         } = body;
 
         // ── 0. OPERATIONAL BOOTSTRAP (injected before identity if enabled) ──────
@@ -229,6 +236,7 @@ EMOJI LEGEND (canonical — single source of truth):
 `;
 
         // ── 2. AUTHORITY KV (all capabilities explicit) ───────────────────────
+        const AUTHORITY_KV = buildAuthorityKV(resolvedModel, inferenceProvider);
         p += `CAOS_AUTHORITY_KV_BEGIN
 ${AUTHORITY_KV}
 CAOS_AUTHORITY_KV_END
