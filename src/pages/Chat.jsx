@@ -821,8 +821,15 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               preferred_provider: sessionProvider
             });
             const synthesis = synthesisResponse?.data?.reply || synthesisResponse?.data?.data?.reply || '';
-            if (synthesis) {
+            // Guard: if the synthesis itself looks like a hallucinated failure, skip it and show raw content
+            const SYNTHESIS_FAILURE_SIGNALS = ['404', "can't verify", 'cannot verify', 'repo tool is returning', 'tool returned 404', 'unable to access'];
+            const synthesisFailed = !synthesis || SYNTHESIS_FAILURE_SIGNALS.some(s => synthesis.toLowerCase().includes(s.toLowerCase()));
+            if (!synthesisFailed) {
               reply = reply ? reply + '\n\n' + synthesis : synthesis;
+            } else {
+              console.warn('⚠️ [SYNTHESIS_HALLUCINATION_GUARD] Synthesis looked like a fake failure — showing raw content instead');
+              const fallback = `**File: \`${cmd.path}\`**\n\n${truncated}`;
+              reply = reply ? reply + '\n\n' + fallback : fallback;
             }
           } catch (e) {
             console.error('🔥 [AUTO_EXEC_FAILED]', e.message);
