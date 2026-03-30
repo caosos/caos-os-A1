@@ -627,7 +627,7 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime, 
         const userTags = extractMetadataTags(input);
         const asstTags = extractMetadataTags(reply);
         await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: [], timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) });
-        await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), inference_provider: provider || 'openai', ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
+        await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), inference_provider: provider || 'openai', response_time_ms: Date.now() - startTime, ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
         console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length, provider });
     } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
     return { latency: Date.now() - startTime };
