@@ -781,7 +781,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
 
       // ── AUTO-EXECUTE REPO COMMANDS from AI output ──────────────────────────────
-      // Detect bare lines matching "open <path>" or "ls <path>" and execute them autonomously
+      // Detect bare lines matching "open <path>" or "ls <path>" and execute them autonomously.
+      // After fetching, send result back to AI for synthesis — never dump raw content to user.
       const repoCommandRegex = /^(open|ls)\s+(.+?)$/gm;
       let match;
       const repoCommands = [];
@@ -790,22 +791,38 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       }
       if (repoCommands.length > 0) {
         console.log('🤖 [AUTONOMOUS_REPO_EXEC] Detected', repoCommands.length, 'command(s)');
-        // Remove the commands from main reply so they don't appear raw
+        // Remove the bare command lines from the reply
         reply = reply.replace(repoCommandRegex, '').trim();
-        
-        // Auto-submit each command and inline results directly
+
         for (const cmd of repoCommands) {
           const cmdStr = cmd.op === 'open' ? `open ${cmd.path}` : `ls ${cmd.path}`;
           try {
+            // Step 1: fetch the raw repo result
             const cmdResponse = await base44.functions.invoke('hybridMessage', {
               input: cmdStr,
               session_id: conversationId,
               file_urls: [],
               preferred_provider: sessionProvider
             });
-            if (cmdResponse?.data?.reply) {
-              // Append results directly to the reply — no separate message
-              reply += '\n\n' + cmdResponse.data.reply;
+            const rawContent = cmdResponse?.data?.reply || cmdResponse?.data?.data?.reply || '';
+            if (!rawContent) continue;
+
+            // Step 2: truncate if huge (12k char limit before synthesis)
+            const MAX_REPO_CHARS = 12000;
+            const truncated = rawContent.length > MAX_REPO_CHARS
+              ? rawContent.slice(0, MAX_REPO_CHARS) + '\n...[TRUNCATED — file continues beyond 12k chars]'
+              : rawContent;
+
+            // Step 3: send to AI for synthesis — user gets interpretation, not raw dump
+            const synthesisResponse = await base44.functions.invoke('hybridMessage', {
+              input: `I just read the file \`${cmd.path}\`. Here is its content:\n\n${truncated}\n\nPlease analyze this and explain: what this file does, what's notable or important about it, and what the next logical step would be based on our current conversation.`,
+              session_id: conversationId,
+              file_urls: [],
+              preferred_provider: sessionProvider
+            });
+            const synthesis = synthesisResponse?.data?.reply || synthesisResponse?.data?.data?.reply || '';
+            if (synthesis) {
+              reply = reply ? reply + '\n\n' + synthesis : synthesis;
             }
           } catch (e) {
             console.error('🔥 [AUTO_EXEC_FAILED]', e.message);
