@@ -782,11 +782,27 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
 
 
-      // Auto-exec is disabled — repo commands in AI output are NOT auto-executed.
-      // The model is instructed via promptBuilder to output commands directly, which the
-      // handleRepoCommand() short-circuit in hybridMessage handles on the next user turn.
-      // Auto-exec caused: (a) extra sequential API calls doubling latency, (b) raw file dumps,
-      // (c) hallucinated synthesis failures under high token pressure.
+      // ── REPO COMMAND PASSTHROUGH ─────────────────────────────────────────────
+      // If the AI's entire reply is a bare repo command (open/ls), execute it directly.
+      // This handles rule 6 from promptBuilder: model outputs ONLY the command line.
+      // We re-invoke hybridMessage with that command as the input so handleRepoCommand fires.
+      const bareRepoMatch = reply.trim().match(/^(open|ls)\s+(\S+.*)$/i);
+      if (bareRepoMatch) {
+        const cmdStr = reply.trim();
+        console.log('🤖 [REPO_PASSTHROUGH] Detected bare command:', cmdStr);
+        try {
+          const cmdResponse = await base44.functions.invoke('hybridMessage', {
+            input: cmdStr,
+            session_id: conversationId,
+            file_urls: [],
+            preferred_provider: sessionProvider
+          });
+          const cmdReply = cmdResponse?.data?.reply || cmdResponse?.data?.data?.reply || '';
+          if (cmdReply) reply = cmdReply;
+        } catch (e) {
+          console.error('🔥 [REPO_PASSTHROUGH_FAILED]', e.message);
+        }
+      }
 
       // Auto-save files/photos from user's attached files
       if (!isGuestMode && fileUrls) {
