@@ -167,23 +167,39 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       if (_activeUtterance !== utterance) return;
       speakWithVoice(voices || window.speechSynthesis.getVoices());
 
-      // Watchdog: if speech never started, clean up and notify
+      // Watchdog: if speech never started after a generous window, retry once then give up.
+      // 3000ms accounts for slow Chrome voice load + 250ms post-cancel delay.
       setTimeout(() => {
         if (sid !== _sessionId) return;
         if (_activeUtterance !== utterance) return;
 
         const synth = window.speechSynthesis;
-        const started = !!synth.speaking;
+        if (synth.speaking || synth.pending) return; // started fine
 
-        if (!started) {
-          _sessionId++; // invalidate
-          try { synth.cancel(); } catch (e) {}
-          clearKeepAlive();
-          _activeUtterance = null;
-          setIsPlaying(false);
-          try { toast?.error?.('Read aloud failed to start'); } catch (e) {}
-        }
-      }, 1200);
+        // Retry once: cancel queue and re-speak
+        console.warn('[TTS_WATCHDOG] Speech not started — retrying once');
+        try { synth.cancel(); } catch (e) {}
+        setTimeout(() => {
+          if (sid !== _sessionId) return;
+          if (_activeUtterance !== utterance) return;
+          try {
+            window.speechSynthesis.speak(utterance);
+          } catch (e) {}
+
+          // Final check: if STILL not speaking after retry window, give up cleanly
+          setTimeout(() => {
+            if (sid !== _sessionId) return;
+            if (_activeUtterance !== utterance) return;
+            if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+              _sessionId++;
+              clearKeepAlive();
+              _activeUtterance = null;
+              setIsPlaying(false);
+              try { toast?.error?.('Read aloud failed to start'); } catch (e) {}
+            }
+          }, 1500);
+        }, 300);
+      }, 3000);
     })();
   } catch (error) {
     clearKeepAlive();

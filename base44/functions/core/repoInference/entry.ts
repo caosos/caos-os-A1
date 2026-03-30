@@ -151,82 +151,88 @@ Deno.serve(async (req) => {
             return Response.json({ ok: false, request_id, error_code: 'INVALID_INPUT', stage: 'REPO_INFERENCE', message: 'messages array required', retryable: false });
         }
 
-        const msgs = [...messages];
-        let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-        const tool_calls_log = [];
-        const WALL_CLOCK_MS = 40000;
+        // ── REPO COMMAND MODE ─────────────────────────────────────────────────────
+        // Admin repo access now mirrors Gemini behavior:
+        // The model outputs the raw command string (e.g. "open src/pages/Chat.jsx")
+        // and the frontend auto-executes it via the caos:repoNextChunk / handleSendMessage
+        // auto-exec loop. The model then receives the result and provides a rich response
+        // with a concise receipt on the NEXT turn.
+        //
+        // This replaces the old tool-loop approach which returned raw file content
+        // without a descriptive wrapper, and was inconsistent with Gemini's output.
+        // ─────────────────────────────────────────────────────────────────────────
+        const COMMAND_ENFORCEMENT_SUFFIX = `
+REPO_COMMAND_MODE_ACTIVE:
+- If the user is asking to read or browse a file, respond with ONLY the raw command on its own line.
+  Examples: "open src/pages/Chat.jsx" or "ls functions/core"
+- Do NOT explain, narrate, or wrap the command in markdown.
+- Do NOT say "I will now..." or "Let me...".
+- After the frontend executes the command and returns results, provide a rich, analytical response.
+- Include a concise receipt at the end: [TOOL: repo_access | ACTION: read|list | PATH: <path> | ok: true]
+- DO NOT include the full file content in the receipt — just confirm what was accessed.`;
+
+        const augmentedMessages = [
+            ...messages,
+            { role: 'system', content: COMMAND_ENFORCEMENT_SUFFIX }
+        ];
+
         const loopStart = Date.now();
+        const result = await openaiFetchWithTimeout(openaiKey, {
+            model,
+            messages: augmentedMessages,
+            temperature: 0.3,
+            max_completion_tokens: max_tokens,
+            tools: REPO_TOOLS,
+            tool_choice: 'auto'
+        }, 38000);
 
-        // Agentic loop — max 5 tool rounds, hard wall-clock budget of 40s
-        for (let round = 0; round < 5; round++) {
-            if (Date.now() - loopStart > WALL_CLOCK_MS) {
-                console.warn('⚠️ [REPO_INFERENCE_TIMEOUT]', { round, elapsed_ms: Date.now() - loopStart, request_id });
-                return Response.json({ ok: false, request_id, error_code: 'REPO_INFERENCE_TIMEOUT', stage: 'REPO_INFERENCE', message: 'PROVIDER_TIMEOUT: repo inference exceeded wall-clock budget', retryable: true, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart });
-            }
+        if (!result.ok) {
+            console.error('🔥 [REPO_INFERENCE_FETCH_FAILED]', { timedOut: result.timedOut, status: result.status, request_id });
+            return Response.json({ ok: false, request_id, error_code: result.timedOut ? 'REPO_INFERENCE_TIMEOUT' : 'OPENAI_ERROR', stage: 'REPO_INFERENCE', message: result.timedOut ? 'PROVIDER_TIMEOUT' : result.errorMessage, retryable: result.timedOut, t_repo_tool_total_ms: Date.now() - loopStart });
+        }
 
-            const result = await openaiFetchWithTimeout(openaiKey, {
-                model, messages: msgs, temperature: 0.01, max_completion_tokens: max_tokens,
-                tools: REPO_TOOLS, tool_choice: 'auto'
-            }, 38000);
+        const data = result.data;
+        const totalUsage = data.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+        const choice = data.choices[0];
+        const tool_calls_log = [];
 
-            if (!result.ok) {
-                console.error('🔥 [REPO_INFERENCE_FETCH_FAILED]', { round, timedOut: result.timedOut, status: result.status, request_id });
-                return Response.json({ ok: false, request_id, error_code: result.timedOut ? 'REPO_INFERENCE_TIMEOUT' : 'OPENAI_ERROR', stage: 'REPO_INFERENCE', message: result.timedOut ? 'PROVIDER_TIMEOUT' : result.errorMessage, retryable: result.timedOut, rounds_used: round, t_repo_tool_total_ms: Date.now() - loopStart });
-            }
-
-            const data = result.data;
-            if (data.usage) {
-                totalUsage.prompt_tokens     += data.usage.prompt_tokens     || 0;
-                totalUsage.completion_tokens += data.usage.completion_tokens || 0;
-                totalUsage.total_tokens      += data.usage.total_tokens      || 0;
-            }
-
-            const choice = data.choices[0];
-
-            // Final answer — no tool calls
-            if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
-                console.log('✅ [REPO_INFERENCE_DONE]', { rounds: round + 1, total_tokens: totalUsage.total_tokens, t_ms: Date.now() - loopStart, request_id });
-                return Response.json({
-                    ok: true,
-                    request_id,
-                    content: choice.message.content,
-                    usage: totalUsage,
-                    tool_rounds: round + 1,
-                    tool_calls_log,
-                    t_repo_tool_total_ms: Date.now() - loopStart
-                });
-            }
-
-            // Execute tool calls
-            msgs.push(choice.message);
-            console.log('🔧 [REPO_TOOL_ROUND]', { round, tools: choice.message.tool_calls.map(t => t.function.name) });
-
+        // If model decided to call a tool directly (web_search etc.), execute one round and return
+        if (choice.message.tool_calls?.length > 0) {
+            const msgs = [...augmentedMessages, choice.message];
             for (const toolCall of choice.message.tool_calls) {
                 const fnName = toolCall.function.name;
                 let fnArgs = {};
                 try { fnArgs = JSON.parse(toolCall.function.arguments); } catch {}
-
-                const callStart = Date.now();
-                let result;
+                let toolResult;
                 try {
-                    result = await dispatchTool(fnName, fnArgs, base44);
-                    console.log('✅ [TOOL_OK]', { fn: fnName, path: fnArgs.path, ms: Date.now() - callStart });
+                    toolResult = await dispatchTool(fnName, fnArgs, base44);
+                    tool_calls_log.push({ fn: fnName, args: fnArgs, success: true });
                 } catch (err) {
-                    result = { error: err.message };
-                    console.error('🚨 [TOOL_ERR]', { fn: fnName, error: err.message });
+                    toolResult = { error: err.message };
+                    tool_calls_log.push({ fn: fnName, args: fnArgs, success: false });
                 }
-
-                tool_calls_log.push({ fn: fnName, args: fnArgs, success: !result?.error });
-
-                msgs.push({
-                    role: 'tool',
-                    tool_call_id: toolCall.id,
-                    content: JSON.stringify(result)
-                });
+                msgs.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(toolResult) });
             }
+            // Final synthesis call with tool results
+            const finalResult = await openaiFetchWithTimeout(openaiKey, {
+                model, messages: msgs, temperature: 0.3, max_completion_tokens: max_tokens
+            }, 30000);
+            const finalContent = finalResult.ok ? finalResult.data.choices[0]?.message?.content : choice.message.content;
+            console.log('✅ [REPO_INFERENCE_TOOL_DONE]', { total_tokens: totalUsage.total_tokens, t_ms: Date.now() - loopStart, request_id });
+            return Response.json({ ok: true, request_id, content: finalContent, usage: totalUsage, tool_rounds: 1, tool_calls_log, t_repo_tool_total_ms: Date.now() - loopStart });
         }
 
-        return Response.json({ ok: false, request_id, error_code: 'TOOL_LOOP_EXHAUSTED', stage: 'REPO_INFERENCE', message: 'Exceeded maximum tool rounds (5)', retryable: false, rounds_used: 5, t_repo_tool_total_ms: Date.now() - loopStart });
+        // Model output the raw command string or a rich response — return as-is
+        console.log('✅ [REPO_INFERENCE_DONE]', { total_tokens: totalUsage.total_tokens, t_ms: Date.now() - loopStart, request_id });
+        return Response.json({
+            ok: true,
+            request_id,
+            content: choice.message.content,
+            usage: totalUsage,
+            tool_rounds: 0,
+            tool_calls_log,
+            t_repo_tool_total_ms: Date.now() - loopStart
+        });
 
     } catch (err) {
         console.error('🔥 [REPO_INFERENCE_ERROR]', err.message);
