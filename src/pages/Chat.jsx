@@ -658,6 +658,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         }
       }
       // ── NON-STREAMING PATH (fallback / ENABLE_STREAMING=false / guest mode) ──
+      const inferenceStart = Date.now();
       response = await base44.functions.invoke('hybridMessage', {
         input: fullMessage,
         session_id: conversationId,
@@ -673,7 +674,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       });
 
       clearTimeout(timeoutId);
-      const responseTime = Date.now() - startTime;
+      // Use backend-reported response_time_ms if available (most accurate), else measure from inferenceStart
+      const responseTime = response?.data?.response_time_ms || response?.data?.data?.response_time_ms || (Date.now() - inferenceStart);
 
       // RSoD/ODEL: Classify response errors — blocking vs inline
       if (!response || response.status !== 200) {
@@ -780,63 +782,11 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
 
 
-      // ── AUTO-EXECUTE REPO COMMANDS from AI output ──────────────────────────────
-      // Detect bare lines matching "open <path>" or "ls <path>" and execute them autonomously.
-      // After fetching, send result back to AI for synthesis — never dump raw content to user.
-      const repoCommandRegex = /^(open|ls)\s+(.+?)$/gm;
-      let match;
-      const repoCommands = [];
-      while ((match = repoCommandRegex.exec(reply)) !== null) {
-        repoCommands.push({ op: match[1], path: match[2].trim() });
-      }
-      if (repoCommands.length > 0) {
-        console.log('🤖 [AUTONOMOUS_REPO_EXEC] Detected', repoCommands.length, 'command(s)');
-        // Remove the bare command lines from the reply
-        reply = reply.replace(repoCommandRegex, '').trim();
-
-        for (const cmd of repoCommands) {
-          const cmdStr = cmd.op === 'open' ? `open ${cmd.path}` : `ls ${cmd.path}`;
-          try {
-            // Step 1: fetch the raw repo result
-            const cmdResponse = await base44.functions.invoke('hybridMessage', {
-              input: cmdStr,
-              session_id: conversationId,
-              file_urls: [],
-              preferred_provider: sessionProvider
-            });
-            const rawContent = cmdResponse?.data?.reply || cmdResponse?.data?.data?.reply || '';
-            if (!rawContent) continue;
-
-            // Step 2: truncate if huge (12k char limit before synthesis)
-            const MAX_REPO_CHARS = 12000;
-            const truncated = rawContent.length > MAX_REPO_CHARS
-              ? rawContent.slice(0, MAX_REPO_CHARS) + '\n...[TRUNCATED — file continues beyond 12k chars]'
-              : rawContent;
-
-            // Step 3: send to AI for synthesis — user gets interpretation, not raw dump
-            const synthesisResponse = await base44.functions.invoke('hybridMessage', {
-              input: `I just read the file \`${cmd.path}\`. Here is its content:\n\n${truncated}\n\nPlease analyze this and explain: what this file does, what's notable or important about it, and what the next logical step would be based on our current conversation.`,
-              session_id: conversationId,
-              file_urls: [],
-              preferred_provider: sessionProvider
-            });
-            const synthesis = synthesisResponse?.data?.reply || synthesisResponse?.data?.data?.reply || '';
-            // Guard: if the synthesis itself looks like a hallucinated failure, skip it and show raw content
-            const SYNTHESIS_FAILURE_SIGNALS = ['404', "can't verify", 'cannot verify', 'repo tool is returning', 'tool returned 404', 'unable to access'];
-            const synthesisFailed = !synthesis || SYNTHESIS_FAILURE_SIGNALS.some(s => synthesis.toLowerCase().includes(s.toLowerCase()));
-            if (!synthesisFailed) {
-              reply = reply ? reply + '\n\n' + synthesis : synthesis;
-            } else {
-              console.warn('⚠️ [SYNTHESIS_HALLUCINATION_GUARD] Synthesis looked like a fake failure — showing raw content instead');
-              const fallback = `**File: \`${cmd.path}\`**\n\n${truncated}`;
-              reply = reply ? reply + '\n\n' + fallback : fallback;
-            }
-          } catch (e) {
-            console.error('🔥 [AUTO_EXEC_FAILED]', e.message);
-            reply += `\n\n⚠️ Command \`${cmdStr}\` failed: ${e.message}`;
-          }
-        }
-      }
+      // Auto-exec is disabled — repo commands in AI output are NOT auto-executed.
+      // The model is instructed via promptBuilder to output commands directly, which the
+      // handleRepoCommand() short-circuit in hybridMessage handles on the next user turn.
+      // Auto-exec caused: (a) extra sequential API calls doubling latency, (b) raw file dumps,
+      // (c) hallucinated synthesis failures under high token pressure.
 
       // Auto-save files/photos from user's attached files
       if (!isGuestMode && fileUrls) {

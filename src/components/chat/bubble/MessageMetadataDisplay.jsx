@@ -10,10 +10,10 @@ export default function MessageMetadataDisplay({ isUser, timestamp, response_tim
           {formatDateTime(timestamp)}
         </p>
       )}
-      {!isUser && response_time_ms && (
+      {!isUser && response_time_ms && response_time_ms > 0 && (
         <span className="text-xs text-green-400/70 flex items-center gap-1">
           {timestamp && <span>•</span>}
-          ⏱️ {(response_time_ms / 1000).toFixed(1)}s
+          ⏱️ {response_time_ms < 1000 ? `${response_time_ms}ms` : `${(response_time_ms / 1000).toFixed(1)}s`}
         </span>
       )}
       {/* Latency Indicator */}
