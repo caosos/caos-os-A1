@@ -18,7 +18,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 // REDEPLOY: Force env var capture (2026-03-29)
 
 const BUILD_ID = "HM_SELF_DESCRIBE_V1_2026-03-02";
-const ACTIVE_MODEL = 'gpt-4o';
+const ACTIVE_MODEL = 'gpt-5.2';
 const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 40;
 const HOT_TAIL = 40;
@@ -28,8 +28,9 @@ const CTC_HYDRATION_BUDGET_MS = 800;
 const INTENT_MAX_CHARS = 5000;
 const SANITIZER_MAX_CHARS = 8000;
 const MODEL_CONTEXT_WINDOW = {
+    'gpt-5.2': 200000, 'gpt-5.4': 200000, 'gpt-5': 200000,
     'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
-    'gpt-4': 8192, 'gpt-3.5-turbo': 16385, 'gpt-5.2': 200000, 'gpt-5': 200000,
+    'gpt-4': 8192, 'gpt-3.5-turbo': 16385,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -369,7 +370,7 @@ const FF_RIA_INFERENCE_SPINE = false; // ROLLBACK: set true to re-enable RIA tie
 
 // Provider / model config
 const PROVIDER_MODELS = {
-    openai: { default: 'gpt-4o', context: 128000 },
+    openai: { default: 'gpt-5.2', context: 200000 },
     grok:   { default: 'grok-3',   context: 131072 },
 };
 
@@ -1147,6 +1148,7 @@ Deno.serve(async (req) => {
             openai:  'gpt-5.2',
             grok:    'grok-3',
             gemini:  'models/gemini-2.5-flash',
+            // Note: gpt-5.4 available at higher tier — upgrade path when confirmed cost-neutral
         };
         // Only use preferred_model override if the provider hasn't been explicitly toggled away from openai
         // i.e. if user picked gemini, always use a gemini model — never let preferred_model (which may be an openai model) override it

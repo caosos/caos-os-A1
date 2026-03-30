@@ -68,7 +68,7 @@ export default function TSBLog2() {
                 — components/chat/ttsController.jsx: LOCKED (CAOS_TTS_CONTROLLER_v1_2026-03-14)<br/>
                 — components/chat/ChatInputReadAloud.jsx: LOCKED (CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15)</p>
               <p><strong>Active providers:</strong><br/>
-                OpenAI: gpt-4o (default) | Gemini: models/gemini-2.5-flash<br/>
+                OpenAI: gpt-5.2 (default) | Gemini: models/gemini-2.5-flash<br/>
                 Toggle: Engine menu in ChatHeader → persists to caos_session_provider</p>
               <p><strong>Canonical TTS paths:</strong><br/>
                 Input bar = Google Web Speech API (ChatInputReadAloud.jsx)<br/>

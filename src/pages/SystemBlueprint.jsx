@@ -474,7 +474,7 @@ ESTABLISHED: Mar 1, 2026. Directive from system owner.`}</Code>
             <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
             <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with OpenAI gpt-5.2 as the active inference engine. It has a deterministic memory system, a heuristics formatting layer, and a chat UI with thread management, file support, and developer tools.</p>
             <Code>{`Platform:   Base44 (React + Deno serverless functions)
-AI:         OpenAI gpt-5.2 (primary — ACTIVE_MODEL in hybridMessage)
+AI:         OpenAI gpt-5.2 (primary — ACTIVE_MODEL in hybridMessage; gpt-5.4 available at higher tier)
             Note: TTS uses tts-1-hd (separate model namespace — see TSB-011)
 Storage:    Base44 entities (database)
 Auth:       Base44 built-in auth + guest mode
@@ -526,7 +526,7 @@ Key file:   functions/hybridMessage  ← everything runs through here`}</Code>
   │      └─ Communication style + session length
   │      └─ Heuristics directive (depth + posture)
   │
-  ├─ 9. OPENAI CALL: gpt-5.2, max_tokens=2000
+  ├─ 9. OPENAI CALL: gpt-5.2 (default OpenAI), max_tokens=2000
   │
   ├─ 10. SAVE MESSAGES: Message entity (user + assistant)
   │
