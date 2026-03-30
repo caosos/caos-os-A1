@@ -820,14 +820,12 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         if (repoCmd.op === 'list') {
             // Map 'functions/' to 'base44/functions/' — actual GitHub structure
             let gitPath = cleanPath;
-            if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
-                gitPath = cleanPath.replace(/^functions/, 'base44/functions');
-            } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
-                gitPath = cleanPath.replace(/^agents/, 'base44/agents');
-            } else if (!cleanPath) {
-                gitPath = '';
-            } else {
-                gitPath = `src/${cleanPath}`;
+            if (gitPath === 'functions' || gitPath.startsWith('functions/')) {
+                gitPath = gitPath.replace(/^functions/, 'base44/functions');
+            } else if (gitPath === 'agents' || gitPath.startsWith('agents/')) {
+                gitPath = gitPath.replace(/^agents/, 'base44/agents');
+            } else if (gitPath !== '' && !gitPath.startsWith('base44/') && !gitPath.startsWith('src/')) {
+                gitPath = `src/${gitPath}`;
             }
             const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`;
             const ghRes = await fetch(url, { headers: ghHeaders });
@@ -845,12 +843,12 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
             const max_bytes = 60000;
             // Map 'functions/' to 'base44/functions/' — actual GitHub structure
             let gitPath = cleanPath;
-            if (cleanPath === 'functions' || cleanPath.startsWith('functions/')) {
-                gitPath = cleanPath.replace(/^functions/, 'base44/functions');
-            } else if (cleanPath === 'agents' || cleanPath.startsWith('agents/')) {
-                gitPath = cleanPath.replace(/^agents/, 'base44/agents');
-            } else {
-                gitPath = `src/${cleanPath}`;
+            if (gitPath === 'functions' || gitPath.startsWith('functions/')) {
+                gitPath = gitPath.replace(/^functions/, 'base44/functions');
+            } else if (gitPath === 'agents' || gitPath.startsWith('agents/')) {
+                gitPath = gitPath.replace(/^agents/, 'base44/agents');
+            } else if (!gitPath.startsWith('base44/') && !gitPath.startsWith('src/')) {
+                gitPath = `src/${gitPath}`;
             }
             // Try path as-is, then with .js and .ts extensions if it 404s (Base44 functions have no extension in chat commands but GitHub stores them with extensions)
             const pathsToTry = [gitPath, `${gitPath}.js`, `${gitPath}.ts`];
