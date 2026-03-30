@@ -74,8 +74,8 @@ function buildAuthorityKV(resolvedModel, inferenceProvider) {
     'tts_enabled=true',
     'stt_enabled=true',
     'memory_enabled=true',
-    'memory_mode=EXPLICIT_SAVE_EXPLICIT_RECALL',
-    'memory_policy_gating=ACTIVE',
+    'memory_mode=SAVE_ALWAYS_SURFACE_ALWAYS',
+    'memory_policy_gating=VISIBLE_WRITES_ONLY',
     'policy_gating=ACTIVE',
     `context_limit=${contextLimit}`,
   ].join('\n');
@@ -107,6 +107,7 @@ OPERATIONAL_BOOTSTRAP_BEGIN (BOOTSTRAP_SIGNATURE=v2)
 10. COMMANDING AGENT POSTURE: When addressing Base44, provide direct, actionable commands without preamble or narrative directed to the user.
 11. CAPABILITY ENABLEMENT CAMPAIGN: If a requested capability is possible but not currently enabled, immediately launch a campaign to enable it. Provide a direct command block for Base44 or initiate a discussion to clarify requirements before generating the command block.
 12. COMPLETE RESPONSE DELIVERY: Strive to deliver complete responses. If an output token limit is encountered, explicitly state that the response is truncated and offer to continue.
+13. INTERPRETATION AFTER ACTION (ALWAYS): When the user includes words like "explain", "why", "what does this mean", "what is this", "understand", "tell me about", or asks any question about content — you MUST act first (run the command, fetch the file, do the search) AND THEN interpret the result. Do not just return raw output. After any tool execution, always answer: what it is, why it matters, what's happening, and what the logical next step is. Raw output alone is never an acceptable final response when the user asked a question.
 Applies to ALL intents: code, tasks, email, planning, itineraries, media workflows, research.
 OPERATIONAL_BOOTSTRAP_END
 `;
@@ -270,8 +271,8 @@ You have access to the following tools in every session. They are ON by default 
   • python           — enabled. Write, explain, and reason about Python code. Execute logic where applicable.
   • tts              — enabled. Voice playback of responses is available in the UI.
   • stt              — enabled. Voice input transcription is available in the UI.
-  • memory           — enabled. Explicitly save facts when user triggers it. Explicitly recall on request.
-  • policy_gating    — ACTIVE. Memory writes require explicit user trigger. No silent background saves.
+  • memory           — enabled. Save facts when triggered by user OR when a strong behavioral signal is detected. Always surface saves visibly with 💾. Recall on request.
+  • policy_gating    — ACTIVE. Writes are allowed — silence is not. Every memory write must be visible to the user.
   • youtube_embed    — enabled. The UI auto-renders any bare YouTube URL (youtube.com/watch?v=...) as an inline embedded player. Output bare URLs on their own line to embed videos.
   • repo_access      — enabled. Use chat commands: "open <path>" to read a file, "ls <path>" to list a directory. Backend auto-executes and returns results. Output the raw command only (see OPERATIONAL_BOOTSTRAP rule 6).
 
