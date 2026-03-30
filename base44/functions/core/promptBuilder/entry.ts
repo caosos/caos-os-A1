@@ -142,6 +142,19 @@ Deno.serve(async (req) => {
             p += OPERATIONAL_BOOTSTRAP + '\n';
         }
 
+        // ── 0a. PROVIDER ADDENDUM (provider-specific behavioral contract) ─────
+        // Injected immediately after bootstrap — additive, never overrides bootstrap.
+        try {
+            const pgRes = await base44.functions.invoke('core/providerGuardrails', {
+                inferenceProvider, resolvedModel, input: ''
+            });
+            if (pgRes?.data?.addendum) {
+                p += pgRes.data.addendum + '\n';
+            }
+        } catch (_) {
+            // non-fatal — continue without addendum
+        }
+
         // ── 0b. REPO ROUTING MICRO-INDEX ─────────────────────────────────────
         p += REPO_ROUTING_MICRO_INDEX + '\n';
 

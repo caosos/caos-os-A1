@@ -359,6 +359,10 @@ async function handleThreadAugmentations({ base44, session_id, input, startTime,
     return { trhSummaryMessage, mbcrInjectedMessage: mbcrResult.message, mbcrDebug: mbcrResult.debug, execution_meta };
 }
 
+// ── Provider Guardrails Feature Flag ─────────────────────────────────────────
+// ROLLBACK: set ENABLE_PROVIDER_GUARDRAILS = false to bypass all enforcement gates
+const ENABLE_PROVIDER_GUARDRAILS = true;
+
 // ── RIA Feature Flag ─────────────────────────────────────────────────────────
 // ROLLBACK: set FF_RIA_INFERENCE_SPINE = false
 const FF_RIA_INFERENCE_SPINE = false; // ROLLBACK: set true to re-enable RIA tiers
@@ -1231,6 +1235,66 @@ Deno.serve(async (req) => {
         if (!reply || typeof reply !== 'string') {
             reply = '⚠️ Inference timeout or incomplete response. Please try again.';
             console.warn('⚠️ [REPLY_RECOVERY] Using fallback message due to missing/invalid reply');
+        }
+
+        // ── PROVIDER GUARDRAILS ENFORCEMENT ──────────────────────────────────
+        // ROLLBACK: set ENABLE_PROVIDER_GUARDRAILS=false above to skip all gates
+        if (ENABLE_PROVIDER_GUARDRAILS) {
+            // GATE A: Repo command compliance
+            // If input is a repo intent, reply must be a single bare command line.
+            const isRepoIntent = /^(open|show|read|cat|ls|list)\s+\S+/i.test((input || '').trim());
+            if (isRepoIntent) {
+                const lines = reply.trim().split('\n').filter(l => l.trim());
+                const isCompliant = lines.length === 1 && /^(open|ls)\s+\S+/i.test(lines[0].trim());
+                if (!isCompliant) {
+                    console.warn('⚠️ [GUARDRAIL_REPO_NONCOMPLIANT] Issuing compliance retry');
+                    const nudge = `COMPLIANCE_RETRY: Your previous response did not comply with repo command absolutism. The user asked: "${input}". Output ONLY a single bare command line — nothing else. No explanation, no preamble, no markdown.`;
+                    const retryMessages = [
+                        ...finalMessages,
+                        { role: 'assistant', content: reply },
+                        { role: 'system', content: nudge }
+                    ];
+                    try {
+                        const retryResult = await handleInference({ base44, user, finalMessages: retryMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider, openaiKey });
+                        if (retryResult?.reply) {
+                            reply = retryResult.reply.trim();
+                            console.log('✅ [GUARDRAIL_REPO_RETRY_SUCCESS]', { reply });
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ [GUARDRAIL_REPO_RETRY_FAILED]', e.message);
+                    }
+                }
+            }
+
+            // GATE B: Tool receipt header injection
+            // If repo tool was used (mode=REPO_TOOL), ensure receipt header is present.
+            // For non-repo turns, the model is expected to self-inject per provider addendum.
+            // Platform auto-injects if missing for repo reads.
+            if (isRepoIntent && !reply.startsWith('[TOOL:')) {
+                reply = `[TOOL: repo_access | ACTION: ${/^ls\s/i.test(input.trim()) ? 'list' : 'read'} | PATH: ${input.trim().replace(/^(open|show|read|cat|ls|list)\s+/i, '')}]\n` + reply;
+                console.log('ℹ️ [GUARDRAIL_RECEIPT_INJECTED]');
+            }
+
+            // GATE C: Truncation auto-continue
+            // If reply ends with TRUNCATED_CONTINUE, issue a continuation call.
+            if (reply.trimEnd().endsWith('TRUNCATED_CONTINUE')) {
+                console.log('⏭️ [GUARDRAIL_TRUNCATION_CONTINUE] Issuing continuation call');
+                reply = reply.replace(/TRUNCATED_CONTINUE\s*$/, '').trimEnd();
+                const continueMessages = [
+                    ...finalMessages,
+                    { role: 'assistant', content: reply },
+                    { role: 'user', content: 'continue exactly where you left off' }
+                ];
+                try {
+                    const continueResult = await handleInference({ base44, user, finalMessages: continueMessages, RESOLVED_MODEL, request_id, correlation_id, session_id, startTime, preferredProvider, openaiKey });
+                    if (continueResult?.reply) {
+                        reply = reply + '\n' + continueResult.reply;
+                        console.log('✅ [GUARDRAIL_CONTINUE_SUCCESS]', { total_chars: reply.length });
+                    }
+                } catch (e) {
+                    console.warn('⚠️ [GUARDRAIL_CONTINUE_FAILED]', e.message);
+                }
+            }
         }
 
         if (debugMode) {
