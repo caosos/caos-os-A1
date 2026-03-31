@@ -344,41 +344,75 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
   const DEBUG_STREAM = localStorage.getItem('caos_debug_stream') === 'true';
 
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
-    // V2: Direct invoke to streamHybridMessageV2 backend function (no URL probing)
-    let streamAborted = false;
+    // V2: Use fetch() directly to streamHybridMessageV2 SSE endpoint for true streaming
     try {
-      const res = await base44.functions.invoke('streamHybridMessageV2', {
-        input: content,
-        conversation_id: conversationId,
-        file_urls: fileUrls,
-        preferred_provider: sessionProvider,
+      // Get auth token from a quick SDK probe
+      let authToken = '';
+      try {
+        const probe = await base44.functions.invoke('streamProbe', {});
+        authToken = probe?.config?.headers?.Authorization || '';
+      } catch (e) {
+        // Non-critical — use empty token if probe fails
+      }
+
+      const res = await fetch('/functions/streamHybridMessageV2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': authToken }),
+        },
+        body: JSON.stringify({
+          input: content,
+          conversation_id: conversationId,
+          file_urls: fileUrls,
+          preferred_provider: sessionProvider,
+        }),
       });
 
-      if (!res.ok) throw new Error(`Backend returned ${res.status}: ${res.data?.error || 'Unknown error'}`);
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
-      // Streaming is built into streamHybridMessageV2 — SSE events come via the response body
-      // For SDK invoke, we get the response directly (not streaming body)
-      // Fallback: treat as non-streaming if SDK doesn't support streaming bodies
-      if (res.data?.type === 'meta') {
-        // Metadata received
-        if (DEBUG_STREAM) console.log('🌊 [STREAM_META]', res.data.metadata);
-        onFinal(res.data.metadata); // Finalize with metadata
-      } else if (res.data?.reply) {
-        // Full reply received (SDK invoke doesn't stream bodies, so we get full response)
-        // Simulate streaming by chunking the response
-        const words = res.data.reply.match(/\S+\s*/g) || [];
-        for (const word of words) {
-          if (streamAborted) break;
-          onDelta({ text: word });
-          await new Promise(r => setTimeout(r, 10));
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let deltaCount = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        // Split on \n\n for SSE frames
+        const frames = buf.split('\n\n');
+        buf = frames.pop() || '';
+
+        for (const frame of frames) {
+          if (!frame.trim()) continue;
+          let eventType = null;
+          let dataLine = null;
+          for (const line of frame.split('\n')) {
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+            else if (line.startsWith('data: ')) dataLine = line.slice(6).trim();
+          }
+          if (!dataLine) continue;
+          let parsed;
+          try { parsed = JSON.parse(dataLine); } catch { continue; }
+
+          if (eventType === 'delta') {
+            deltaCount++;
+            if (DEBUG_STREAM) console.log(`🌊 [DELTA ${deltaCount}]`, parsed.text?.substring(0, 40));
+            onDelta(parsed);
+          } else if (eventType === 'final') {
+            if (DEBUG_STREAM) console.log(`🏁 [FINAL]`, { total_deltas: deltaCount });
+            onFinal(parsed);
+          } else if (eventType === 'error') {
+            if (DEBUG_STREAM) console.warn('🔥 [ERROR]', parsed);
+            onError(parsed);
+          }
         }
-        onFinal(res.data);
-      } else {
-        throw new Error('No reply in response');
       }
     } catch (err) {
       if (DEBUG_STREAM) console.warn('⚠️ [STREAM_FAILED]', err.message);
-      throw err; // Bubble up to caller for fallback logic
+      throw err;
     }
   };
 
