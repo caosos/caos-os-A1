@@ -346,16 +346,24 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
     // V2: Use fetch() directly to streamHybridMessageV2 SSE endpoint for true streaming
     try {
-      // Get auth token from a quick SDK probe
+      // Get auth token + app ID from a quick SDK probe
       let authToken = '';
+      let streamUrl = null;
       try {
         const probe = await base44.functions.invoke('streamProbe', {});
         authToken = probe?.config?.headers?.Authorization || '';
+        const probeUrl = probe?.config?.url || '';
+        const appIdMatch = probeUrl.match(/\/apps\/([^/]+)\//);
+        if (appIdMatch) {
+          streamUrl = `https://api.base44.com/api/apps/${appIdMatch[1]}/functions/streamHybridMessageV2`;
+        }
       } catch (e) {
-        // Non-critical — use empty token if probe fails
+        if (DEBUG_STREAM) console.warn('⚠️ [PROBE_FAILED]', e.message);
       }
 
-      const res = await fetch('/functions/streamHybridMessageV2', {
+      if (!streamUrl) throw new Error('Could not resolve stream endpoint');
+
+      const res = await fetch(streamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
