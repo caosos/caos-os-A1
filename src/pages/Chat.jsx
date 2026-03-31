@@ -340,7 +340,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
   // ── STREAMING TOGGLE — flip to false for instant rollback ───────────────────
   // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v2_2026-03-31
-  const ENABLE_STREAMING = true; // Set to false to disable instantly (auto-fallback to non-streaming)
+  const ENABLE_STREAMING = false; // base44.functions.invoke() doesn't support true SSE streaming
   const DEBUG_STREAM = localStorage.getItem('caos_debug_stream') === 'true';
 
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
