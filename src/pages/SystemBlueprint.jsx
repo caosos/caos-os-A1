@@ -122,7 +122,7 @@ Wait for the owner to tell you what they need.`}</pre>
           {/* HEADER */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-2">CAOS System Blueprint v2</h1>
-            <p className="text-blue-300">Cognitive Adaptive Operating Space — Living Architecture Document</p>
+            <p className="text-blue-300">Cognitive Adaptive Operating System — Living Architecture Document</p>
             <p className="text-gray-400 text-xs mt-1">Last Updated: Mar 31, 2026 · GOV v1.2 Amendment A: Anti-Bloat Extraction Rule ACTIVE ✅ · Stabilization Phase: IN PROGRESS 🔧 · Zero-error target: 4xx/5xx elimination underway · ODEL v1: PHASE 1.4 COMPLETE ✅ · RSoD: ACTIVE ✅ (TSB-024) · errorClassifier: DEPLOYED ✅ · Phase A Memory: LOCKED ✅ · Heuristics Engine v1: LOCKED ✅ · TTS (OpenAI + Google): LOCKED ✅ · WCW Meter: FIXED ✅ · Runtime Authority: CENTRALIZED ✅ · Web Search: IMPLEMENTED ✅ · Active Model: gpt-5.2 (200K) ✅ · Gemini Provider: LIVE ✅ (TSB-049) · RIA Tiered Fallback: WIRED ✅ (TSB-050, FF_RIA=false) · Response Reviewer: ACTIVE ✅ (post-inference policy gate) · Chat.jsx Refactor: IN PROGRESS 🔧 (~1126 lines remaining) · CTC Phase 1–3: WIRED ✅ · PR1 COMPLETE ✅ (TSB-025) · PR2 COMPLETE ✅ (TSB-027/TSB-028) — ChatBubble ≤400 lines, all bubble/ sub-components extracted · MBCR v1 DEPLOYED ✅ (TSB-028) · TRH v1 DEPLOYED ✅ (TSB-029) · metadata_tags ACTIVE ✅ · UI LAG FIXED ✅ (TSB-030/031) — DISPLAY_LIMIT=50, ChatBubble memoized, ChatInput state isolated · hybridMessage: REFACTORED ✅ (TSB-040/041) — within-file structural extraction complete · Phase 0 Observability: LIVE ✅ · generalInference P0 Timeout Patch: LIVE ✅ (TSB-033) · FunctionManifest Governance Purge: COMPLETE ✅ (TSB-034) · runtimeRegistry actor: SERVER-ENFORCED ✅ · Emoji Legend: LIVE ✅ (TSB-035) · SSE Streaming: SHIPPED/DISABLED (TSB-036, ENABLE_STREAMING=false) · TTS Emoji Strip: COMPLETE ✅ (TSB-037) · TTS Unification v1: CLOSED ✅ (TSB-039) · WCW Telemetry: ADMIN-LIVE ✅ (TSB-047) · Dual TTS Formalized ✅ (TSB-048) · PointerEvents Invariant: LOCKED ✅ (TSB-042/045) · TokenMeter: Provider-Aware ✅ (TSB-051) · ChatHeader Engine Badge: LIVE ✅ (TSB-052)</p>
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               <Tag label="Agent Onboarding Contract: Section 0" color="red" />
@@ -474,7 +474,7 @@ ESTABLISHED: Mar 1, 2026. Directive from system owner.`}</Code>
 
           {/* 1. WHAT CAOS IS */}
           <Section title="1. What CAOS Is" color="blue">
-            <p>CAOS (Cognitive Adaptive Operating Space) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
+            <p>CAOS (Cognitive Adaptive Operating System) is a personal AI assistant platform. The AI persona is named <strong className="text-white">Aria</strong>. CAOS is the platform name — Aria never introduces herself as "CAOS".</p>
             <p className="mt-2">The system is built on Base44 (React + Deno backend functions) with a multi-provider inference layer. The default provider is OpenAI gpt-5.2; users can toggle to Gemini (models/gemini-2.5-flash) per session via the Engine menu in ChatHeader. It has a deterministic memory system, a heuristics formatting layer, a post-inference response reviewer, and a chat UI with thread management, file support, voice, and developer tools.</p>
             <Code>{`Platform:   Base44 (React + Deno serverless functions)
 AI:         OpenAI gpt-5.2 (default) | Gemini models/gemini-2.5-flash (selectable)
@@ -967,7 +967,7 @@ Backend check:
             </Link>
             <br />
             <Link to={createPageUrl('TSBLog2')} className="inline-block text-blue-300 hover:text-blue-100 underline font-semibold mt-2">
-              → View TSB Log Part 2 (TSB-043 through TSB-052+)
+              → View TSB Log Part 2 (TSB-043 through TSB-055)
             </Link>
             <p className="text-white/40 text-xs mt-3">TSB entries are permanent records documenting every significant issue, failure, and fix in CAOS development.</p>
           </Section>
@@ -1736,7 +1736,7 @@ Integration:
             <h4 className="text-white font-semibold mt-3">Tour Steps (8 steps, ~20–30 seconds total)</h4>
             <Code>{`STEP 1 — Welcome (no target element, center modal)
   Title:   "Welcome to CAOS"
-  Body:    "Your personal AI operating space. Let's take 20 seconds to show you around."
+  Body:    "Your personal AI operating system. Let's take 20 seconds to show you around."
   Action:  "Start" button → advance to step 2
   data-tour: none (centered overlay)
 
