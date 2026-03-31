@@ -5,13 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, Globe, MessageSquare, RefreshCw, TrendingUp, Zap, Clock, Monitor, UserCheck, UserX } from 'lucide-react';
 
-function StatCard({ icon: Icon, label, value, sub, color = 'text-blue-500' }) {
+function StatCard({ icon: Icon, label, value, sub, color = 'text-blue-500', onClick }) {
     return (
-        <Card>
+        <Card
+            className={onClick ? 'cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all' : ''}
+            onClick={onClick}
+        >
             <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-1">
                     <Icon className={`h-4 w-4 ${color}`} />
                     <span className="text-sm text-muted-foreground">{label}</span>
+                    {onClick && <span className="ml-auto text-xs text-primary opacity-60">click to view →</span>}
                 </div>
                 <div className="text-4xl font-bold">{value ?? '—'}</div>
                 {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
@@ -33,7 +37,7 @@ function MiniBar({ label, value, max, color = 'bg-blue-500' }) {
     );
 }
 
-export default function UserInsights() {
+export default function UserInsights({ onErrorDrilldown }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -344,9 +348,12 @@ export default function UserInsights() {
                 <Zap className="h-5 w-5 text-red-500" /> Errors
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard icon={Zap} label="Total Logged" value={data.totalErrors} color="text-red-500" />
-                <StatCard icon={Zap} label="This Week" value={data.errorsThisWeek} color="text-orange-500" />
-                <StatCard icon={Zap} label="Today" value={data.errorsToday} color="text-yellow-500" />
+                <StatCard icon={Zap} label="Total Logged" value={data.totalErrors} color="text-red-500"
+                    onClick={onErrorDrilldown ? () => onErrorDrilldown('all') : undefined} />
+                <StatCard icon={Zap} label="This Week" value={data.errorsThisWeek} color="text-orange-500"
+                    onClick={onErrorDrilldown ? () => onErrorDrilldown('week') : undefined} />
+                <StatCard icon={Zap} label="Today" value={data.errorsToday} color="text-yellow-500"
+                    onClick={onErrorDrilldown ? () => onErrorDrilldown('today') : undefined} />
             </div>
             {Object.keys(data.errorTypes).length > 0 && (
                 <Card>
