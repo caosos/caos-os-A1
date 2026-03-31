@@ -804,8 +804,13 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               file_urls: [],
               preferred_provider: sessionProvider
             });
-            const cmdReply = cmdResponse?.data?.reply || cmdResponse?.data?.data?.reply || '';
-            if (cmdReply) reply = cmdReply;
+            const cmdData = cmdResponse?.data || {};
+            const cmdReply = cmdData.reply || cmdData.data?.reply || '';
+            if (cmdReply) {
+              reply = cmdReply;
+              // Carry structured repo_tool envelope so the "Next chunk" button renders
+              if (cmdData.repo_tool) data.repo_tool = cmdData.repo_tool;
+            }
           } catch (e) {
             console.error('🔥 [REPO_PASSTHROUGH_FAILED]', e.message);
           }
@@ -933,7 +938,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
           execution_receipt: data.execution_receipt || null,
-          repo_tool: data.repo_tool || null,
+          // repo_tool: pull from top-level OR from data — hybridMessage returns at top level
+          repo_tool: data.repo_tool || response?.data?.repo_tool || null,
           inference_provider: data.provider || sessionProvider || 'openai'
         };
         setMessages(prev => {
