@@ -75,7 +75,7 @@ function compressHistory(messages) {
 }
 
 // ── OpenAI HTTP call ──────────────────────────────────────────────────────────
-async function openAICall(key, messages, model, maxTokens = 2000, signal = null) {
+async function openAICall(key, messages, model, maxTokens = 4000, signal = null) {
     const response = await fetch(OPENAI_API, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -419,7 +419,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
 
         if (user.role === 'admin') {
             // Admin: full tool access via repoInference (repo_list, repo_read, web_search)
-            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 2000 });
+            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 4000 });
             return { content: riRes?.data?.content, usage: riRes?.data?.usage || null };
         } else {
             // Non-admin: inlined agentic loop with web_search — no repo access, no function hop
@@ -447,7 +447,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
                     response = await fetch('https://api.openai.com/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model, messages: msgs, temperature: 0.7, max_completion_tokens: 2000, tools: NON_ADMIN_TOOLS, tool_choice: 'auto' }),
+                        body: JSON.stringify({ model, messages: msgs, temperature: 0.7, max_completion_tokens: 4000, tools: NON_ADMIN_TOOLS, tool_choice: 'auto' }),
                         signal: controller.signal
                     });
                     clearTimeout(timer);
