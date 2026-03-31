@@ -42,7 +42,7 @@ export default function TSBLog2() {
     <div className="min-h-screen bg-[#0a1628] text-white p-6">
       <div className="mb-6 flex items-center gap-2">
         <button
-          onClick={() => navigate('/TSBLog1')}
+          onClick={() => navigate('/TSBLog')}
           className="flex items-center gap-2 text-blue-300 hover:text-blue-100 transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -60,11 +60,13 @@ export default function TSBLog2() {
 
           <Section title="⚠️ KERNELIZED AGENT RECOVERY HEADER (READ FIRST)" color="yellow">
             <div className="bg-yellow-950/40 border border-yellow-500/20 rounded-lg p-4 text-gray-200 text-xs space-y-2">
-              <p><strong>Last TSB:</strong> TSB-052 (Mar 29, 2026)</p>
+              <p><strong>Last TSB:</strong> TSB-055 (Mar 31, 2026)</p>
               <p><strong>Scope locks active:</strong><br/>
                 — functions/hybridMessage: LOCKED (CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15 + RIA_WRAPPER_v1_2026-03-23)<br/>
                 — functions/core/promptBuilder: LOCKED (CAOS_PROMPT_BUILDER_v2_2026-03-05)<br/>
                 — functions/core/geminiInference: LOCKED (CAOS_GEMINI_INFERENCE_v1_2026-03-29)<br/>
+                — functions/core/responseReviewer: ACTIVE (post-inference policy gate — fail-open)<br/>
+                — functions/core/mbcrEngine: ACTIVE (extracted from hybridMessage inline — TSB-054)<br/>
                 — components/chat/ttsController.jsx: LOCKED (CAOS_TTS_CONTROLLER_v1_2026-03-14)<br/>
                 — components/chat/ChatInputReadAloud.jsx: LOCKED (CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15)</p>
               <p><strong>Active providers:</strong><br/>
@@ -73,7 +75,7 @@ export default function TSBLog2() {
               <p><strong>Canonical TTS paths:</strong><br/>
                 Input bar = Google Web Speech API (ChatInputReadAloud.jsx)<br/>
                 Message bubble = OpenAI TTS (ChatBubble.jsx → textToSpeech function)</p>
-              <p><strong>Current focus:</strong> Gemini live, RIA tiered fallback wired, UI polish complete</p>
+              <p><strong>Current focus:</strong> Gemini live, RIA tiered fallback wired, response reviewer active, docs synced to Mar 31</p>
             </div>
           </Section>
 
@@ -443,6 +445,117 @@ Changes (UI only — no logic modified):
 Imports added: Brain, FlameKindling (removed: Cpu)
 Line delta: minor. ChatHeader ONLY.
 Rollback: restore Cpu + original label/badge + Zap for bootloader.`}</Code>
+              </div>
+
+              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number. Part 1: TSBLog (TSB-001–TSB-042).</p>
+            </div>
+          </Section>
+
+          <Section title="TSB-053 through TSB-055 — Mar 31, 2026 Campaign" color="blue">
+            <div className="space-y-4">
+
+              <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-blue-300 font-bold text-sm">TSB-053 — responseReviewer: Post-Inference Policy Gate Integrated into hybridMessage</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 31, 2026
+Component: functions/core/responseReviewer (NEW)
+           functions/hybridMessage (call-site addition — post-inference)
+
+Objective:
+  Add a secondary verification pass on all AI responses before they are
+  returned to the user. Prevents autonomous file modifications, stale
+  content injection, and other policy violations from reaching the UI.
+
+responseReviewer function:
+  - Auth: base44.auth.me() required (skips review if no user context)
+  - Short-circuit: skips review for replies < 100 chars (too short to evaluate)
+  - Model: Gemini Flash (cheap, fast reviewer — model-agnostic by design)
+  - Policy checklist injected as system prompt:
+      1. No unauthorized file writes or edits proposed without explicit user instruction
+      2. No stale/fabricated content presented as current fact
+      3. No tool execution claimed without verification receipt
+      4. Handoff instructions present when user action required
+  - Response schema: { clean: boolean, violations: string[], corrected_reply: string | null }
+  - Returns: { ok, clean, violations, corrected_reply } or { ok: false, error }
+
+hybridMessage integration:
+  - Runs AFTER inference, BEFORE message save
+  - If reviewer returns clean=false AND corrected_reply present:
+      reply = corrected_reply (corrected version used going forward)
+      console.warn('[REVIEWER_CORRECTED]' with violations logged)
+  - Fail-open: any reviewer error → pipeline continues with original reply
+  - Non-blocking: reviewer failure never surfaces to user
+
+Migration note:
+  Reviewer model can be swapped to DeepSeek-R1 on self-hosted migration
+  with zero changes to hybridMessage — only responseReviewer needs updating.
+
+Status:    LIVE ✅`}</Code>
+              </div>
+
+              <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-blue-300 font-bold text-sm">TSB-054 — mbcrEngine: MBCR Logic Extracted from hybridMessage into Standalone Module</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 31, 2026
+Component: functions/core/mbcrEngine (NEW)
+           functions/hybridMessage (call-site delegation)
+
+Motivation:
+  MBCR logic (Message-Based Campaign Recovery) was inlined directly into
+  hybridMessage as a large block, contributing to file bloat (TSB-021/028).
+  Extracted to functions/core/mbcrEngine per GOV v1.2 Anti-Bloat rule.
+
+mbcrEngine function:
+  - Accepts: { thread_id, userText, debugMode }
+  - Internally runs: trigger check → getThreadSnippets → block assembly
+  - Returns: { message: { role: 'system', content: block } | null, debug }
+  - Non-fatal: any internal failure → returns NULL_MBCR (no injection)
+  - Fully self-contained: no caller needs to know the MBCR logic
+
+hybridMessage change:
+  - Inline MBCR block replaced with single invoke call to core/mbcrEngine
+  - Return shape identical to prior inline behavior
+  - Zero pipeline behavior change
+
+Status:    COMPLETE ✅`}</Code>
+              </div>
+
+              <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-blue-300 font-bold text-sm">TSB-055 — Blueprint + TSBLog Sync: Mar 31, 2026 Documentation Pass</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Mar 31, 2026
+Component: pages/SystemBlueprint (updated)
+           pages/TSBLog2 (updated — nav bug fixed + TSB-053/054/055 added)
+
+Changes:
+  1. Blueprint header "Last Updated" corrected: Mar 13 → Mar 31, 2026
+  2. Blueprint header tags added:
+       Gemini Provider: LIVE ✅
+       RIA Tiered Fallback: WIRED ✅
+       Response Reviewer: ACTIVE ✅
+       hybridMessage: REFACTORED ✅ (TSB-040/041)
+       WCW Telemetry: ADMIN-LIVE ✅ (TSB-047)
+       Dual TTS Formalized ✅ (TSB-048)
+       PointerEvents Invariant: LOCKED ✅ (TSB-042/045)
+       TokenMeter: Provider-Aware ✅ (TSB-051)
+       ChatHeader Engine Badge: LIVE ✅ (TSB-052)
+  3. Section 1 (What CAOS Is): updated to reflect multi-provider architecture
+  4. Section 2 (Pipeline step 9): updated to reflect provider routing + RIA + reviewer
+  5. Section 7 (Backend Functions): geminiInference + responseReviewer documented
+  6. Section 15 (TSB Log): links updated to include TSBLog2 pointer
+  7. TSBLog2 back-button nav bug fixed: /TSBLog1 → /TSBLog (correct route)
+
+Governance note:
+  Blueprint is the living truth. If it is out of date, the system is out of date.
+  This pass brings documentation current with all work through Mar 31, 2026.
+
+Status:    COMPLETE ✅`}</Code>
               </div>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number. Part 1: TSBLog (TSB-001–TSB-042).</p>
