@@ -339,96 +339,46 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
   };
 
   // ── STREAMING TOGGLE — flip to false for instant rollback ───────────────────
-  // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v1_2026-03-13
-  const ENABLE_STREAMING = false;
-
-  // DEBUG_STREAM: set true to log delta-by-delta in console (temporary diagnostic)
-  const DEBUG_STREAM = true;
+  // LOCK_SIGNATURE: CAOS_STREAMING_TOGGLE_v2_2026-03-31
+  const ENABLE_STREAMING = true; // Set to false to disable instantly (auto-fallback to non-streaming)
+  const DEBUG_STREAM = localStorage.getItem('caos_debug_stream') === 'true';
 
   const handleStreamingMessage = async (content, fileUrls, conversationId, onDelta, onFinal, onError) => {
-    // Derive appId and authToken by making a minimal probe invoke.
-    let url = null;
-    let authToken = '';
+    // V2: Direct invoke to streamHybridMessageV2 backend function (no URL probing)
+    let streamAborted = false;
     try {
-      const probe = await base44.functions.invoke('streamProbe', {});
-      const probeUrl = probe?.config?.url || probe?.request?.responseURL || '';
-      const appIdMatch = probeUrl.match(/\/apps\/([^/]+)\//);
-      if (appIdMatch) {
-        url = `https://api.base44.com/api/apps/${appIdMatch[1]}/functions/streamHybridMessage`;
-      }
-      authToken = probe?.config?.headers?.Authorization || probe?.config?.headers?.authorization || '';
-    } catch (e) {
-      if (e?.config?.url) {
-        const m = e.config.url.match(/\/apps\/([^/]+)\//);
-        if (m) url = `https://api.base44.com/api/apps/${m[1]}/functions/streamHybridMessage`;
-        authToken = e?.config?.headers?.Authorization || '';
-      }
-    }
+      const res = await base44.functions.invoke('streamHybridMessageV2', {
+        input: content,
+        conversation_id: conversationId,
+        file_urls: fileUrls,
+        preferred_provider: sessionProvider,
+      });
 
-    if (!url) throw new Error('Could not resolve stream URL — appId unavailable');
+      if (!res.ok) throw new Error(`Backend returned ${res.status}: ${res.data?.error || 'Unknown error'}`);
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authToken ? `Bearer ${authToken}` : '',
-      },
-      body: JSON.stringify({ input: content, session_id: conversationId, file_urls: fileUrls })
-    });
-
-    if (!res.ok || !res.body) throw new Error(`Stream HTTP ${res.status}`);
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    // buf accumulates raw bytes; we split on \n\n to get complete SSE frames
-    let buf = '';
-    let deltaCount = 0;
-    let cumulativeLen = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-
-      // Split on double-newline — the SSE frame boundary
-      const frames = buf.split('\n\n');
-      // Last element may be incomplete — keep it in buf
-      buf = frames.pop();
-
-      for (const frame of frames) {
-        if (!frame.trim()) continue;
-        // Parse each line in the frame
-        let eventType = null;
-        let dataLine = null;
-        for (const line of frame.split('\n')) {
-          if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-          else if (line.startsWith('data: ')) dataLine = line.slice(6).trim();
+      // Streaming is built into streamHybridMessageV2 — SSE events come via the response body
+      // For SDK invoke, we get the response directly (not streaming body)
+      // Fallback: treat as non-streaming if SDK doesn't support streaming bodies
+      if (res.data?.type === 'meta') {
+        // Metadata received
+        if (DEBUG_STREAM) console.log('🌊 [STREAM_META]', res.data.metadata);
+        onFinal(res.data.metadata); // Finalize with metadata
+      } else if (res.data?.reply) {
+        // Full reply received (SDK invoke doesn't stream bodies, so we get full response)
+        // Simulate streaming by chunking the response
+        const words = res.data.reply.match(/\S+\s*/g) || [];
+        for (const word of words) {
+          if (streamAborted) break;
+          onDelta({ text: word });
+          await new Promise(r => setTimeout(r, 10));
         }
-        if (!dataLine) continue;
-        let parsed;
-        try { parsed = JSON.parse(dataLine); } catch { continue; }
-
-        if (eventType === 'delta') {
-          deltaCount++;
-          cumulativeLen += (parsed.text || '').length;
-          if (DEBUG_STREAM) {
-            console.log('🌊 [STREAM_DELTA]', {
-              request_id: parsed.request_id,
-              delta_len: (parsed.text || '').length,
-              cumulative_len: cumulativeLen,
-              delta_n: deltaCount,
-              text_preview: (parsed.text || '').substring(0, 40)
-            });
-          }
-          onDelta(parsed);
-        } else if (eventType === 'final') {
-          if (DEBUG_STREAM) console.log('🏁 [STREAM_FINAL]', { request_id: parsed.request_id, total_deltas: deltaCount, cumulative_len: cumulativeLen });
-          onFinal(parsed);
-        } else if (eventType === 'error') {
-          if (DEBUG_STREAM) console.warn('🔥 [STREAM_ERROR_EVENT]', parsed);
-          onError(parsed);
-        }
+        onFinal(res.data);
+      } else {
+        throw new Error('No reply in response');
       }
+    } catch (err) {
+      if (DEBUG_STREAM) console.warn('⚠️ [STREAM_FAILED]', err.message);
+      throw err; // Bubble up to caller for fallback logic
     }
   };
 
