@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Shield, Activity, Database, Route, Zap, GitBranch } from 'lucide-react';
+import { Shield, Activity, Database, Route, Zap, GitBranch, Users } from 'lucide-react';
 import RepoBrowser from '@/components/admin/RepoBrowser';
 import RoutesViewer from '@/components/admin/RoutesViewer';
 import StatsViewer from '@/components/admin/StatsViewer';
@@ -11,6 +11,7 @@ import SystemHealth from '@/components/admin/SystemHealth';
 import RecentErrors from '@/components/admin/RecentErrors';
 import PipelineVisualizer from '@/components/admin/PipelineVisualizer';
 import WCWInspector from '@/components/admin/WCWInspector';
+import UserInsights from '@/components/admin/UserInsights';
 
 export default function AdminDashboard() {
     const [user, setUser] = useState(null);
@@ -69,7 +70,11 @@ export default function AdminDashboard() {
 
             <div className="max-w-7xl mx-auto px-6 py-6">
                 <Tabs defaultValue="health" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-8">
+                    <TabsList className="grid w-full grid-cols-9">
+                        <TabsTrigger value="users" className="gap-2">
+                            <Users className="h-4 w-4" />
+                            Users
+                        </TabsTrigger>
                         <TabsTrigger value="health" className="gap-2">
                             <Activity className="h-4 w-4" />
                             Health
@@ -103,6 +108,10 @@ export default function AdminDashboard() {
                             Repo
                         </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="users">
+                        <UserInsights />
+                    </TabsContent>
 
                     <TabsContent value="health">
                         <SystemHealth />
