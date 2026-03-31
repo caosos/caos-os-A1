@@ -1241,6 +1241,23 @@ Deno.serve(async (req) => {
             console.warn('⚠️ [REPLY_RECOVERY] Using fallback message due to missing/invalid reply');
         }
 
+        // ── RESPONSE REVIEWER (post-inference policy gate) ────────────────────
+        // Runs Gemini Flash as a cheap/fast reviewer. Fail-open: never blocks on error.
+        // Swap reviewer model to DeepSeek-R1 on self-hosted migration.
+        try {
+            const reviewRes = await base44.functions.invoke('core/responseReviewer', {
+                reply, request_id, session_id
+            });
+            const reviewData = reviewRes?.data;
+            if (reviewData && !reviewData.clean && reviewData.corrected_reply) {
+                console.warn('🚨 [REVIEWER_CORRECTED]', { violations: reviewData.violations, request_id });
+                reply = reviewData.corrected_reply;
+            }
+        } catch (reviewErr) {
+            // Non-fatal — never block the response
+            console.warn('⚠️ [REVIEWER_SKIPPED]', reviewErr?.message);
+        }
+
         // ── PROVIDER GUARDRAILS ENFORCEMENT ──────────────────────────────────
         // ROLLBACK: set ENABLE_PROVIDER_GUARDRAILS=false above to skip all gates
         if (ENABLE_PROVIDER_GUARDRAILS) {
