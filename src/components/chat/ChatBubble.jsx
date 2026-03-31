@@ -26,6 +26,7 @@ import LatencyIndicator from './LatencyIndicator';
 import WCWStatusBadge from './WCWStatusBadge';
 import DegradationNotice from './DegradationNotice';
 import EvidencePanel from './bubble/EvidencePanel';
+import { chunkTextForTTS, generateChunkAudio } from './ttsChunker';
 
 // Global audio manager — only one audio plays at a time (PR2-A)
 let globalAudioInstance = null;
@@ -57,7 +58,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
   const audioRef = React.useRef(null);
   const utteranceRef = React.useRef(null);
   const progressInterval = React.useRef(null);
-  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}_v2`;
+  const ttsProvider = localStorage.getItem('caos_tts_provider') || 'openai';
+  const cacheKey = `${message.id}_${localStorage.getItem('caos_voice_preference_message') || 'nova'}_${localStorage.getItem('caos_speech_rate') || '1.0'}_${ttsProvider}_v3`;
   const ttsLog = DEV ? (event, payload) => {
       console.log(`[TTS_LIFECYCLE] ${event}`, { msg: message.id?.substring(0, 8), ...payload });
   } : () => {};
@@ -127,7 +129,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
 
     // Check cache — can play immediately, still need gesture unlock
     if (audioCache.has(cacheKey)) {
-      playAudioUrl(audioCache.get(cacheKey));
+      const cached = audioCache.get(cacheKey);
+      if (Array.isArray(cached)) {
+        playSequentialAudio(cached);
+      } else {
+        playAudioUrl(cached);
+      }
       return;
     }
 
@@ -159,57 +166,56 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       .trim()
       .substring(0, 4096);
 
-    const voice = localStorage.getItem('caos_voice_preference_message') || 'nova';
+    const voice = ttsProvider === 'gemini' 
+      ? (localStorage.getItem('caos_voice_preference_gemini') || 'Aoede')
+      : (localStorage.getItem('caos_voice_preference_message') || 'nova');
     const speed = parseFloat(localStorage.getItem('caos_speech_rate') || '1.0');
 
     const input_chars = cleanText.length;
     const input_hash = cleanText.split('').reduce((h, c) => (((h << 5) + h) ^ c.charCodeAt(0)) >>> 0, 5381).toString(16);
-    ttsLog('tts_generate_start', { input_chars, input_hash, voice, speed });
+    ttsLog('tts_generate_start', { input_chars, input_hash, voice, speed, provider: ttsProvider });
 
     setIsGenerating(true);
     setGenerationProgress(0);
 
-    const genInterval = setInterval(() => {
-      setGenerationProgress(prev => Math.min(prev + 4, 90));
-    }, 150);
-
     try {
-      const tts_t0 = Date.now();
-      const { data } = await base44.functions.invoke('textToSpeech', {
-          text: cleanText, voice, speed,
-          ...(DEV ? { dev_mode: true } : {}),
-      });
-      const gen_time_ms = Date.now() - tts_t0;
-      const dbg = data?.debug || null;
-      ttsLog('tts_generate_end', {
-          gen_time_ms,
-          audio_base64_len: data?.audio_base64?.length ?? 0,
-          provider: dbg?.provider ?? null,
-          model: dbg?.model ?? null,
-          input_chars: dbg?.input_chars ?? input_chars,
-          audio_bytes: dbg?.audio_bytes ?? null,
-          mime_type: dbg?.mime_type ?? null,
-          backend_gen_time_ms: dbg?.gen_time_ms ?? null,
-          error: data?.error ?? null,
-      });
-
-      clearInterval(genInterval);
+      const chunks = chunkTextForTTS(cleanText, 500);
+      const totalChunks = chunks.length;
+      
+      // Queue all chunks for sequential playback
+      const audioUrls = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const tts_t0 = Date.now();
+        
+        // Update progress bar
+        setGenerationProgress(Math.floor((i / totalChunks) * 100));
+        
+        try {
+          const audioUrl = await generateChunkAudio(chunk, ttsProvider, voice, speed, DEV);
+          audioUrls.push(audioUrl);
+          
+          const gen_time_ms = Date.now() - tts_t0;
+          ttsLog('tts_chunk_generated', {
+            chunk_index: i + 1,
+            total_chunks: totalChunks,
+            chunk_chars: chunk.length,
+            gen_time_ms,
+          });
+        } catch (chunkErr) {
+          console.error(`[TTS_CHUNK_ERROR] Chunk ${i + 1}/${totalChunks}:`, chunkErr.message);
+          throw chunkErr;
+        }
+      }
+      
       setGenerationProgress(100);
       setIsGenerating(false);
-
-      if (!data?.audio_base64) {
-        throw new Error(data?.error || 'TTS returned no audio');
-      }
-
-      const byteChars = atob(data.audio_base64);
-      const byteArray = new Uint8Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
-      const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audioCache.set(cacheKey, audioUrl);
-
-      // Reuse the already-gesture-unlocked audio element
-      playAudioUrl(audioUrl, audio);
+      
+      // Cache the full sequence and start playback
+      audioCache.set(cacheKey, audioUrls);
+      playSequentialAudio(audioUrls, audio);
+      
     } catch (err) {
       clearInterval(genInterval);
       setIsGenerating(false);
@@ -221,28 +227,67 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
   };
 
-  const playAudioUrl = (url, existingAudio = null) => {
+  const playSequentialAudio = (audioUrls, existingAudio = null) => {
     // Stop any other playing audio
     if (globalAudioInstance && globalAudioInstance !== audioRef.current) {
       globalAudioInstance.pause();
       if (globalAudioCleanup) globalAudioCleanup();
     }
 
-    // Use pre-created gesture-unlocked element if provided, otherwise create new
     if (!existingAudio && audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
+    let currentChunkIndex = 0;
     const audio = existingAudio || new Audio();
-    audio.src = url;
     audio.volume = 1.0;
     audioRef.current = audio;
     globalAudioInstance = audio;
 
+    const loadNextChunk = () => {
+      if (currentChunkIndex >= audioUrls.length) {
+        setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setSpeechProgress(0);
+        setAudioDuration(0);
+        globalAudioInstance = null;
+        ttsLog('sequential_audio_ended', { total_chunks: audioUrls.length });
+        return;
+      }
+
+      const url = audioUrls[currentChunkIndex];
+      audio.src = url;
+      currentChunkIndex++;
+
+      audio.play().then(() => {
+        ttsLog('chunk_playing', { chunk_index: currentChunkIndex, total: audioUrls.length });
+      }).catch((err) => {
+        console.error('[AUDIO_PLAY_REJECTED]', err.message);
+        setIsSpeaking(false);
+        toast.error(`Playback blocked: ${err.message}`);
+      });
+    };
+
+    // Event handlers for chunk transitions
+    const onEnded = () => {
+      if (currentChunkIndex < audioUrls.length) {
+        loadNextChunk();
+      } else {
+        setIsSpeaking(false);
+        setIsPausedBySpeech(false);
+        setSpeechProgress(0);
+        setAudioDuration(0);
+        globalAudioInstance = null;
+        ttsLog('all_chunks_ended', { total_chunks: audioUrls.length });
+      }
+    };
+
+    audio.addEventListener('ended', onEnded, { once: false });
+
     audio.addEventListener('loadedmetadata', () => {
       setAudioDuration(audio.duration);
-      ttsLog('audio_loadedmetadata', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
+      ttsLog('chunk_loadedmetadata', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
     });
 
     audio.addEventListener('timeupdate', () => {
@@ -252,18 +297,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       }
     });
 
-    audio.addEventListener('ended', () => {
-      setIsSpeaking(false);
-      setIsPausedBySpeech(false);
-      setSpeechProgress(0);
-      setAudioDuration(0);
-      globalAudioInstance = null;
-      ttsLog('audio_ended', { duration_sec: parseFloat(audio.duration?.toFixed(2)) });
-    });
-
     audio.addEventListener('pause', () => {
-      if (audio.ended) return;
-      ttsLog('audio_pause', { t: Number(audio.currentTime?.toFixed(2)) });
+      if (!audio.ended) {
+        ttsLog('chunk_pause', { t: Number(audio.currentTime?.toFixed(2)) });
+      }
     });
 
     audio.addEventListener('error', (e) => {
@@ -271,8 +308,8 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
       setAudioDuration(0);
-      console.error('[AUDIO_PLAYBACK_ERROR]', e.type, audio.error?.code, audio.error?.message);
-      ttsLog('audio_error', { code: audio.error?.code, message: audio.error?.message });
+      console.error('[AUDIO_ERROR]', e.type, audio.error?.code);
+      ttsLog('chunk_error', { code: audio.error?.code });
       toast.error('Audio playback failed');
     });
 
@@ -287,15 +324,12 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     setIsPausedBySpeech(false);
     setSpeechProgress(0);
 
-    // Wait for metadata before playing to ensure duration is loaded
-    // Play directly — blob URLs are always same-origin, no need for canplay gate
-    audio.play().then(() => {
-      console.log('[AUDIO_PLAYING]', url.substring(0, 40));
-    }).catch((err) => {
-      console.error('[AUDIO_PLAY_REJECTED]', err.message, err.name);
-      setIsSpeaking(false);
-      toast.error(`Playback blocked: ${err.message}`);
-    });
+    loadNextChunk();
+  };
+
+  const playAudioUrl = (url, existingAudio = null) => {
+    // Single-URL playback for backwards compatibility
+    playSequentialAudio([url], existingAudio);
   };
 
   const handleStopReading = () => {

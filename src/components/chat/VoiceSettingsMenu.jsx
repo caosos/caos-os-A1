@@ -3,27 +3,41 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function VoiceSettingsMenu({ onClose }) {
-  const [voice, setVoice] = useState(localStorage.getItem('caos_google_voice') || 'Google US English');
-  const [speed, setSpeed] = useState(parseFloat(localStorage.getItem('caos_google_speech_rate') || '1.0'));
+  const [ttsProvider, setTtsProvider] = useState(localStorage.getItem('caos_tts_provider') || 'openai');
+  const [speed, setSpeed] = useState(parseFloat(localStorage.getItem('caos_speech_rate') || '1.0'));
+  
+  // OpenAI voices
+  const openaiVoices = ['nova', 'alloy', 'echo', 'fable', 'onyx', 'shimmer'];
+  const [openaiVoice, setOpenaiVoice] = useState(localStorage.getItem('caos_voice_preference_message') || 'nova');
+  
+  // Gemini voices
+  const geminiVoices = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Orpheus'];
+  const [geminiVoice, setGeminiVoice] = useState(localStorage.getItem('caos_voice_preference_gemini') || 'Aoede');
 
-  const voices = [
-    'Google US English',
-    'Google UK English',
-    'Google US Spanish',
-    'Google French',
-    'Google German',
-  ];
+  const voices = ttsProvider === 'gemini' ? geminiVoices : openaiVoices;
+
+  const handleProviderChange = (provider) => {
+    setTtsProvider(provider);
+    localStorage.setItem('caos_tts_provider', provider);
+  };
 
   const handleVoiceChange = (v) => {
-    setVoice(v);
-    localStorage.setItem('caos_google_voice', v);
+    if (ttsProvider === 'gemini') {
+      setGeminiVoice(v);
+      localStorage.setItem('caos_voice_preference_gemini', v);
+    } else {
+      setOpenaiVoice(v);
+      localStorage.setItem('caos_voice_preference_message', v);
+    }
   };
 
   const handleSpeedChange = (e) => {
     const newSpeed = parseFloat(e.target.value);
     setSpeed(newSpeed);
-    localStorage.setItem('caos_google_speech_rate', newSpeed.toString());
+    localStorage.setItem('caos_speech_rate', newSpeed.toString());
   };
+
+  const currentVoice = ttsProvider === 'gemini' ? geminiVoice : openaiVoice;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -36,6 +50,26 @@ export default function VoiceSettingsMenu({ onClose }) {
         </div>
 
         <div className="space-y-6">
+          {/* Provider Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">TTS Provider</label>
+            <div className="space-y-2">
+              {['openai', 'gemini'].map((provider) => (
+                <button
+                  key={provider}
+                  onClick={() => handleProviderChange(provider)}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors capitalize ${
+                    ttsProvider === provider
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {provider === 'openai' ? 'OpenAI TTS' : 'Gemini TTS'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Voice Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Voice</label>
@@ -45,7 +79,7 @@ export default function VoiceSettingsMenu({ onClose }) {
                   key={v}
                   onClick={() => handleVoiceChange(v)}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    voice === v
+                    currentVoice === v
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
