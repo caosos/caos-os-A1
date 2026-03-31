@@ -932,10 +932,14 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
     const latency_ms = Date.now() - startTime;
     const repoAuditPayload = { request_id, correlation_id, user: user.email, op: repoCmd.op, path: canonicalPath, ok: repoResult?.ok, session_id: session_id || null, latency_ms };
     console.log('📂 [REPO_TOOL_AUDIT]', JSON.stringify(repoAuditPayload));
-    base44.asServiceRole.entities.ErrorLog.create({
-        user_email: user.email, error_type: 'unknown',
-        error_message: `[REPO_AUDIT] op=${repoCmd.op} path=${canonicalPath} ok=${repoResult?.ok}`,
-        request_payload: repoAuditPayload, resolved: true
+    // Repo audits go to DiagnosticReceipt, not ErrorLog (ErrorLog is for failures only)
+    base44.asServiceRole.entities.DiagnosticReceipt.create({
+        request_id,
+        session_id: session_id || null,
+        model_used: null,
+        selector_decision: { stage_last: 'REPO_TOOL', op: repoCmd.op, path: canonicalPath, ok: repoResult?.ok },
+        latency_breakdown: { total_ms: latency_ms },
+        created_at: new Date().toISOString()
     }).catch(() => {});
 
     return Response.json({

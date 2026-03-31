@@ -66,7 +66,12 @@ export default function RecentErrors({ initialFilter = null, onFilterUsed }) {
     const toggleExpand = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
     const cutoff = tsFilter(filter);
-    const errors = allErrors.filter(e => new Date(e.created_date).getTime() >= cutoff);
+    const errors = allErrors.filter(e => {
+        if (new Date(e.created_date).getTime() < cutoff) return false;
+        // Filter out REPO_AUDIT noise — successful repo reads logged to wrong entity
+        if (e.error_message?.startsWith('[REPO_AUDIT]') && e.resolved === true) return false;
+        return true;
+    });
 
     if (loading && allErrors.length === 0) {
         return (
