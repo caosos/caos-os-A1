@@ -202,7 +202,9 @@ function routeRequest(input, hIntent, cogLevel) {
 
 // ── Repo command detection ────────────────────────────────────────────────────
 function detectRepoCommand(input) {
-    const t = (input || '').trim();
+    const raw = (input || '').trim();
+    if (!raw || raw.includes('\n')) return null;
+    const t = raw;
     const listMatch = t.match(/^(?:list|ls)(?:\s+(.+))?$/i);
     if (listMatch) {
         const rawPath = (listMatch[1] || '/').trim().replace(/^['"]+|['"]+$/g, '');
@@ -1263,7 +1265,8 @@ Deno.serve(async (req) => {
         if (ENABLE_PROVIDER_GUARDRAILS) {
             // GATE A: Repo command compliance
             // If input is a repo intent, reply must be a single bare command line.
-            const isRepoIntent = /^(open|show|read|cat|ls|list)\s+\S+/i.test((input || '').trim());
+            const trimmedInput = (input || '').trim();
+            const isRepoIntent = !trimmedInput.includes('\n') && /^(open|show|read|cat|ls|list)\s+\S+/i.test(trimmedInput);
             if (isRepoIntent) {
                 const lines = reply.trim().split('\n').filter(l => l.trim());
                 const isCompliant = lines.length === 1 && /^(open|ls)\s+\S+/i.test(lines[0].trim());
