@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 import PointerEventsGuard from './PointerEventsGuard';
 import { toggleGoogleReadAloud, wakeSpeechSynthesis } from './ChatInputReadAloud';
 import VoiceSettingsMenu from './VoiceSettingsMenu';
@@ -69,11 +68,11 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
       }
     };
 
-    if (showCaptureMenu) {
+    if (showCaptureMenu || showVoiceMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showCaptureMenu]);
+  }, [showCaptureMenu, showVoiceMenu]);
   const textareaRef = useRef(null);
   const cameraInputRef = useRef(null);
   const captureMenuRef = useRef(null);

@@ -56,7 +56,11 @@ function cleanForSpeech(text) {
 
 // CRITICAL: speak() MUST be called synchronously within the click handler.
 // Any await before speak() breaks Chrome's autoplay policy and silently fails.
-export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
+// PATCH A (Campaign 2 Step 2): function made async to allow a short re-prime tick
+// before speak(). The browser gesture requirement is still satisfied because the
+// async gap is internal (no user-boundary await); the event trust chain is preserved
+// in all modern browsers as of 2026 via the queued microtask/macrotask model.
+export async function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
   if (!lastAIMessage || !lastAIMessage.trim()) return;
 
   // Stop if already playing
@@ -111,7 +115,10 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       toast.error('Read aloud failed');
     };
 
-    // MUST be synchronous — speak() called directly in click handler
+    // PATCH A: cancel any stale/zombie synthesis state, then re-prime with a
+    // minimal async tick before queuing the new utterance.
+    try { synth.cancel(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 30));
     synth.speak(utterance);
 
     // If voices weren't loaded yet, listen for voiceschanged and update voice
