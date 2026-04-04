@@ -110,15 +110,7 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    const voicePref = localStorage.getItem('caos_google_voice') || 'Google US English';
-    const voiceMap = {
-      'Google US English': 'en-US',
-      'Google UK English': 'en-GB',
-      'Google US Spanish': 'es-ES',
-      'Google French': 'fr-FR',
-      'Google German': 'de-DE',
-    };
-    const langCode = voiceMap[voicePref] || 'en-US';
+    const voicePref = localStorage.getItem('caos_google_voice') || '';
 
     utterance.onstart = () => {
       if (sid !== _sessionId) return;
@@ -149,10 +141,11 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
     const speakWithVoice = (voices) => {
       if (sid !== _sessionId) return;
       if (_activeUtterance !== utterance) return;
-      const selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+      // Match by exact name first, then fall back to any English voice
+      const selectedVoice = voices.find(v => v.name === voicePref)
+        || voices.find(v => v.lang.startsWith('en'));
       if (selectedVoice) utterance.voice = selectedVoice;
       window.speechSynthesis.cancel(); // clear any queue
-      // Chrome needs a longer tick after cancel() to fully reset — 250ms is reliable
       setTimeout(() => {
         if (sid !== _sessionId) return;
         if (_activeUtterance !== utterance) return;
