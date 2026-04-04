@@ -252,21 +252,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     });
   };
 
-  const toggleReadAloud = () => {
-    if (!lastAssistantMessage) {
-      toast('No message to read');
-      return;
-    }
-    
-    // Stop any ongoing speech
-    window.speechSynthesis.cancel();
-    
-    // Create and start utterance
-    const utterance = new SpeechSynthesisUtterance(lastAssistantMessage);
-    const savedRate = parseFloat(localStorage.getItem('caos_google_speech_rate') || '1');
-    utterance.rate = Math.max(0.5, Math.min(2, savedRate));
-    window.speechSynthesis.speak(utterance);
-  };
+  // toggleReadAloud is handled by toggleGoogleReadAloud from ChatInputReadAloud (no API, pure Web Speech API)
 
 
 
@@ -677,6 +663,7 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
 
         <button
           type="button"
+          ref={voiceButtonRef}
           onClick={() => toggleGoogleReadAloud(lastAssistantMessage, isPlayingReadAloud, setIsPlayingReadAloud)}
           onContextMenu={(e) => {
             e.preventDefault();

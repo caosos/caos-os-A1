@@ -47,8 +47,7 @@ import { getTTSPrefs, setTTSPrefs } from './ttsPrefs';
 // ██████████████████████████████████████████████████████████████████
 // CAOS_OPENAI_TTS_LOCK_v1_2026-03-01 (grep anchor — do not remove)
 export default function VoiceSettings({ isOpen, onClose }) {
-  // OpenAI TTS voices - high quality, natural sounding
-  const voices = [
+  const openaiVoices = [
     { id: 'alloy', name: 'Alloy', description: 'Neutral, balanced' },
     { id: 'echo', name: 'Echo', description: 'Male, clear' },
     { id: 'fable', name: 'Fable', description: 'British, expressive' },
@@ -56,10 +55,17 @@ export default function VoiceSettings({ isOpen, onClose }) {
     { id: 'nova', name: 'Nova', description: 'Female, warm (Default)' },
     { id: 'shimmer', name: 'Shimmer', description: 'Female, soft' }
   ];
-  
-  // Note: OpenAI doesn't have a "Maple" voice. Available voices are above.
-  // For similar quality to what you're looking for, Nova or Shimmer are closest.
 
+  const geminiVoices = [
+    { id: 'Aoede', name: 'Aoede', description: 'Female, warm' },
+    { id: 'Charon', name: 'Charon', description: 'Male, deep' },
+    { id: 'Fenrir', name: 'Fenrir', description: 'Male, expressive' },
+    { id: 'Kore', name: 'Kore', description: 'Female, clear' },
+    { id: 'Orpheus', name: 'Orpheus', description: 'Male, natural' },
+  ];
+
+  const [provider, setProvider] = useState(localStorage.getItem('caos_tts_provider') || 'openai');
+  const voices = provider === 'gemini' ? geminiVoices : openaiVoices;
   const [selectedVoice, setSelectedVoice] = useState('nova');
   const [rate, setRate] = useState(1.0);
   const [testingVoice, setTestingVoice] = useState(null);
@@ -67,9 +73,13 @@ export default function VoiceSettings({ isOpen, onClose }) {
 
   useEffect(() => {
     const prefs = getTTSPrefs();
-    setSelectedVoice(prefs.voice || 'nova');
     setRate(prefs.rate || 1.0);
-  }, []);
+    if (provider === 'gemini') {
+      setSelectedVoice(localStorage.getItem('caos_voice_preference_gemini') || 'Aoede');
+    } else {
+      setSelectedVoice(prefs.voice || 'nova');
+    }
+  }, [provider]);
 
   const playBase64Audio = async (voiceId, text) => {
     if (audioRef.current) {
@@ -106,8 +116,12 @@ export default function VoiceSettings({ isOpen, onClose }) {
   };
 
   const saveSettings = () => {
-    // Write canonical keys — both server path and bubble path pick these up
-    setTTSPrefs({ voice: selectedVoice, rate });
+    localStorage.setItem('caos_tts_provider', provider);
+    if (provider === 'gemini') {
+      localStorage.setItem('caos_voice_preference_gemini', selectedVoice);
+    } else {
+      setTTSPrefs({ voice: selectedVoice, rate });
+    }
     toast.success('Voice settings saved');
     onClose();
   };
@@ -128,6 +142,24 @@ export default function VoiceSettings({ isOpen, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Provider Tabs */}
+          <div>
+            <label className="text-sm text-white/70 mb-2 block">TTS Provider</label>
+            <div className="flex gap-2">
+              {['openai', 'gemini'].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setProvider(p)}
+                  className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    provider === p ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+                >
+                  {p === 'openai' ? 'OpenAI TTS' : 'Gemini TTS'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="text-sm text-white/70 mb-2 block">Reading Speed</label>
             <div className="flex items-center gap-3">
