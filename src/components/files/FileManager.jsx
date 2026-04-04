@@ -105,7 +105,7 @@ export default function FileManager({ user, viewType = 'files', conversationId =
           {viewType === 'photos' ? 'Photos' : viewType === 'links' ? 'Saved Links' : 'Files'}
         </span>
         
-        {viewType !== 'links' && (
+        {viewType === 'files' && (
           <label className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors cursor-pointer flex items-center gap-2">
             <Upload className="w-3 h-3" />
             {uploading ? 'Uploading...' : 'Upload'}

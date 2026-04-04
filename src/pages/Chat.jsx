@@ -799,6 +799,17 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       // Extract and save explicitly shared resources from the AI reply (sanitized — no prose links)
       await extractAndSaveExplicitResources(reply);
 
+      // Persist AI-generated files (generatedFiles array) to UserFile storage.
+      // These are only rendered in the bubble — never previously persisted.
+      // Images → type='photo', all others → type='file'.
+      if (!isGuestMode && data.generatedFiles?.length > 0) {
+        for (const gf of data.generatedFiles) {
+          if (!gf.url) continue;
+          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(gf.url.split('?')[0]) || gf.type?.startsWith('image/');
+          await saveToUserFiles(gf.url, isImage ? 'photo' : 'file', gf.name || gf.url.split('/').pop() || 'generated', gf.type || '');
+        }
+      }
+
       // Update WCW meter with real data from backend
       if (data.wcw_budget && data.wcw_used !== undefined) {
         setWcwState({ used: data.wcw_used, budget: data.wcw_budget });
