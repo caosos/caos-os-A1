@@ -904,7 +904,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
-          execution_receipt: data.execution_receipt || null,
+          execution_receipt: data.legacy_execution_receipt || null,
           repo_tool: data.repo_tool || null
         };
         setMessages(prev => {
@@ -929,7 +929,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           tool_calls: data.tool_calls || [],
           response_time_ms: responseTime,
           timestamp: new Date().toISOString(),
-          execution_receipt: data.execution_receipt || null,
+          execution_receipt: data.legacy_execution_receipt || null,
           // repo_tool: pull from top-level OR from data — hybridMessage returns at top level
           repo_tool: data.repo_tool || response?.data?.repo_tool || null,
           inference_provider: data.provider || sessionProvider || 'openai'
