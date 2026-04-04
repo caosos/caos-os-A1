@@ -217,7 +217,6 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       playSequentialAudio(audioUrls, audio);
       
     } catch (err) {
-      clearInterval(genInterval);
       setIsGenerating(false);
       setGenerationProgress(0);
       audioRef.current = null;
