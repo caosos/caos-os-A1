@@ -774,41 +774,15 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
 
 
-      // ── REPO COMMAND PASSTHROUGH (single-command interceptor) ───────────────
-      // Fires ONLY when the entire assistant reply is exactly one bare repo command.
-      // No synthesis, no second AI hop — handleRepoCommand in hybridMessage does all the work.
-      // Guardrails: open/ls only, no path traversal, max path length, no consecutive intercepts.
-      const _repoTrimmed = reply.trim();
-      const bareRepoMatch = _repoTrimmed.match(/^(open|ls)\s+(\S+.{0,200})$/i);
-      const _lastInterceptKey = 'caos_last_repo_intercept';
-      const _lastIntercept = sessionStorage.getItem(_lastInterceptKey);
-      const _interceptAllowed = _lastIntercept !== _repoTrimmed; // no consecutive duplicate intercepts
-      if (bareRepoMatch && _interceptAllowed) {
-        const _path = bareRepoMatch[2].trim();
-        const _pathSafe = !_path.includes('..') && !_path.includes('~') && !_path.match(/^https?:/);
-        if (_pathSafe) {
-          console.log('🤖 [REPO_PASSTHROUGH] Intercepting:', _repoTrimmed);
-          sessionStorage.setItem(_lastInterceptKey, _repoTrimmed);
-          try {
-            const cmdResponse = await base44.functions.invoke('hybridMessage', {
-              input: _repoTrimmed,
-              session_id: conversationId,
-              file_urls: [],
-              preferred_provider: sessionProvider
-            });
-            const cmdData = cmdResponse?.data || {};
-            const cmdReply = cmdData.reply || cmdData.data?.reply || '';
-            if (cmdReply) {
-              reply = cmdReply;
-              // Carry structured repo_tool envelope so the "Next chunk" button renders
-              if (cmdData.repo_tool) data.repo_tool = cmdData.repo_tool;
-            }
-          } catch (e) {
-            console.error('🔥 [REPO_PASSTHROUGH_FAILED]', e.message);
-          }
+      // ── REPO COMMAND PASSTHROUGH — LOCKED ──────────────────────────────────
+      // Plain-text repo commands from assistant reply are NEVER executed.
+      // Only a structured backend repo_tool envelope may be honored.
+      const hasStructuredRepoTool = !!(data.repo_tool && typeof data.repo_tool === 'object');
+
+      if (!hasStructuredRepoTool) {
+        if (/^(open|ls)\s+(\S+.{0,200})$/i.test(reply.trim())) {
+          console.warn('[REPO_PASSTHROUGH_BLOCKED] Ignored plain-text repo command in assistant reply');
         }
-      } else if (bareRepoMatch && !_interceptAllowed) {
-        console.warn('⚠️ [REPO_PASSTHROUGH_THROTTLED] Duplicate intercept blocked:', _repoTrimmed);
       }
 
       // Auto-save files/photos from user's attached files
