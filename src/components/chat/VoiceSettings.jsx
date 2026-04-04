@@ -71,13 +71,18 @@ export default function VoiceSettings({ isOpen, onClose }) {
   const [testingVoice, setTestingVoice] = useState(null);
   const audioRef = React.useRef(null);
 
+  const validOpenaiVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash', 'sage', 'coral'];
+  const validGeminiVoices = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Orpheus'];
+
   useEffect(() => {
     const prefs = getTTSPrefs();
     setRate(prefs.rate || 1.0);
     if (provider === 'gemini') {
-      setSelectedVoice(localStorage.getItem('caos_voice_preference_gemini') || 'Aoede');
+      const saved = localStorage.getItem('caos_voice_preference_gemini') || 'Aoede';
+      setSelectedVoice(validGeminiVoices.includes(saved) ? saved : 'Aoede');
     } else {
-      setSelectedVoice(prefs.voice || 'nova');
+      const saved = prefs.voice || 'nova';
+      setSelectedVoice(validOpenaiVoices.includes(saved) ? saved : 'nova');
     }
   }, [provider]);
 

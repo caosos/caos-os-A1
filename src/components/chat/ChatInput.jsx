@@ -676,9 +676,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           title={isPlayingReadAloud ? 'Stop reading (Right-click for settings)' : 'Read aloud (Right-click for settings)'}
         >
           {isPlayingReadAloud ? (
-            <Pause className="w-4 h-4" />
+            <Pause className="w-4 h-4 pointer-events-none" />
           ) : (
-            <Volume2 className="w-4 h-4" />
+            <Volume2 className="w-4 h-4 pointer-events-none" />
           )}
         </button>
 
