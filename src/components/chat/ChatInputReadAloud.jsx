@@ -145,12 +145,8 @@ export function toggleGoogleReadAloud(lastAIMessage, isPlaying, setIsPlaying) {
       const selectedVoice = voices.find(v => v.name === voicePref)
         || voices.find(v => v.lang.startsWith('en'));
       if (selectedVoice) utterance.voice = selectedVoice;
-      window.speechSynthesis.cancel(); // clear any queue
-      setTimeout(() => {
-        if (sid !== _sessionId) return;
-        if (_activeUtterance !== utterance) return;
-        try { window.speechSynthesis.speak(utterance); } catch (e) {}
-      }, 250);
+      // Do NOT cancel before speak — cancel() kills the pending utterance in Chrome
+      try { window.speechSynthesis.speak(utterance); } catch (e) {}
     };
 
     // Fetch voices and start playback

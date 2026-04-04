@@ -36,9 +36,11 @@ export function chunkTextForTTS(text, maxChunkSize = 500) {
  * Generates TTS audio for a single chunk via the backend
  * Provider can be 'openai' or 'gemini'
  */
+import { base44 } from '@/api/base44Client';
+
 export async function generateChunkAudio(text, provider, voice, speed, devMode = false) {
   const functionName = provider === 'gemini' ? 'googleTTSGemini' : 'textToSpeech';
-  const { data } = await window.base44.functions.invoke(functionName, {
+  const { data } = await base44.functions.invoke(functionName, {
     text,
     voice,
     speed,
