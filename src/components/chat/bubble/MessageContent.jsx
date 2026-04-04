@@ -107,12 +107,34 @@ export default function MessageContent({ message, isUser, downloadFile }) {
     ? { path: message.repo_tool.path, offset: message.repo_tool.next_offset }
     : null;
 
+  // ── REPO OUTPUT GUARD — bounded by default ────────────────────────────────
+  // If a structured repo_tool envelope is present, truncate raw content display.
+  // Full file bodies must not auto-render. Snippet-first only.
+  const REPO_SNIPPET_LIMIT = 800;
+  const isRepoOutput = !isUser && message.repo_tool && typeof message.repo_tool === 'object';
+  const [repoExpanded, setRepoExpanded] = React.useState(false);
+
+  let displayContent = cleanContent?.trim() || '';
+  let repoTruncated = false;
+  if (isRepoOutput && displayContent.length > REPO_SNIPPET_LIMIT && !repoExpanded) {
+    displayContent = displayContent.slice(0, REPO_SNIPPET_LIMIT);
+    repoTruncated = true;
+  }
+
   return (
     <div className="space-y-3">
       <VideoEmbeds videoUrls={videoUrls} />
       <RecallResults recallResults={message.recall_results} />
-      {cleanContent && cleanContent.trim() && (
-        <MarkdownMessage content={cleanContent.trim()} />
+      {displayContent && (
+        <MarkdownMessage content={displayContent} />
+      )}
+      {repoTruncated && (
+        <button
+          onClick={() => setRepoExpanded(true)}
+          className="text-xs text-blue-400 hover:text-blue-300 underline mt-1"
+        >
+          Show full output…
+        </button>
       )}
       {nextChunk && (
         <Button
