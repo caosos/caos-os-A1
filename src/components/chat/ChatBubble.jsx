@@ -138,13 +138,24 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       return;
     }
 
-    // Pre-create and gesture-unlock the Audio element NOW (synchronous, inside gesture)
-    const audio = new Audio();
-    audio.volume = 1.0;
-    // Calling play() on a silent/empty element unlocks autoplay for this instance
-    audio.play().catch(() => {}); // will fail silently — that's expected
-    audioRef.current = audio;
-    globalAudioInstance = audio;
+    // Gesture-unlock: create a throwaway Audio element synchronously inside the gesture
+    // to satisfy browser autoplay policy. This element is NEVER used for real playback.
+    // A fresh Audio() is created inside playSequentialAudio when generation completes.
+    const unlockAudio = new Audio();
+    unlockAudio.volume = 0;
+    unlockAudio.play().catch(() => {}); // expected to fail silently — gesture unlock only
+
+    // Register global state immediately so a second click before generation completes
+    // can deterministically stop this path.
+    globalAudioCleanup = () => {
+      setIsGenerating(false);
+      setGenerationProgress(0);
+      setIsSpeaking(false);
+      setIsPausedBySpeech(false);
+      setSpeechProgress(0);
+      setAudioDuration(0);
+    };
+    globalAudioInstance = unlockAudio;
 
     const stripEmojis = (s) => (s || '')
       .replace(/\p{Extended_Pictographic}(\uFE0F|\uFE0E)?(\u200D\p{Extended_Pictographic}(\uFE0F|\uFE0E)?)*/gu, '')
@@ -212,9 +223,10 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
       setGenerationProgress(100);
       setIsGenerating(false);
       
-      // Cache the full sequence and start playback
+      // Cache the full sequence and start playback.
+      // Pass NO existingAudio — playSequentialAudio creates a fresh element.
       audioCache.set(cacheKey, audioUrls);
-      playSequentialAudio(audioUrls, audio);
+      playSequentialAudio(audioUrls);
       
     } catch (err) {
       setIsGenerating(false);
@@ -226,23 +238,35 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     }
   };
 
-  const playSequentialAudio = (audioUrls, existingAudio = null) => {
-    // Stop any other playing audio
-    if (globalAudioInstance && globalAudioInstance !== audioRef.current) {
+  const playSequentialAudio = (audioUrls) => {
+    // Stop any other playing audio (including the gesture-unlock throwaway element)
+    if (globalAudioInstance) {
       globalAudioInstance.pause();
-      if (globalAudioCleanup) globalAudioCleanup();
+      globalAudioInstance.src = '';
     }
-
-    if (!existingAudio && audioRef.current) {
+    if (globalAudioCleanup) {
+      globalAudioCleanup();
+      globalAudioCleanup = null;
+    }
+    if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
+    // Always create a FRESH Audio element for real playback.
+    // The gesture-unlock element created in handleReadAloud is discarded.
     let currentChunkIndex = 0;
-    const audio = existingAudio || new Audio();
+    const audio = new Audio();
     audio.volume = 1.0;
     audioRef.current = audio;
     globalAudioInstance = audio;
+
+    globalAudioCleanup = () => {
+      setIsSpeaking(false);
+      setIsPausedBySpeech(false);
+      setSpeechProgress(0);
+      setAudioDuration(0);
+    };
 
     const loadNextChunk = () => {
       if (currentChunkIndex >= audioUrls.length) {
@@ -251,38 +275,29 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
         setSpeechProgress(0);
         setAudioDuration(0);
         globalAudioInstance = null;
+        globalAudioCleanup = null;
         ttsLog('sequential_audio_ended', { total_chunks: audioUrls.length });
         return;
       }
 
       const url = audioUrls[currentChunkIndex];
-      audio.src = url;
       currentChunkIndex++;
+      audio.src = url;
+
+      // Register a PER-CHUNK { once: true } 'ended' listener.
+      // This is deterministic: fires exactly once per chunk, then self-removes.
+      // No lingering listener can spuriously advance the chunk index.
+      audio.addEventListener('ended', loadNextChunk, { once: true });
 
       audio.play().then(() => {
         ttsLog('chunk_playing', { chunk_index: currentChunkIndex, total: audioUrls.length });
       }).catch((err) => {
+        audio.removeEventListener('ended', loadNextChunk);
         console.error('[AUDIO_PLAY_REJECTED]', err.message);
         setIsSpeaking(false);
         toast.error(`Playback blocked: ${err.message}`);
       });
     };
-
-    // Event handlers for chunk transitions
-    const onEnded = () => {
-      if (currentChunkIndex < audioUrls.length) {
-        loadNextChunk();
-      } else {
-        setIsSpeaking(false);
-        setIsPausedBySpeech(false);
-        setSpeechProgress(0);
-        setAudioDuration(0);
-        globalAudioInstance = null;
-        ttsLog('all_chunks_ended', { total_chunks: audioUrls.length });
-      }
-    };
-
-    audio.addEventListener('ended', onEnded, { once: false });
 
     audio.addEventListener('loadedmetadata', () => {
       setAudioDuration(audio.duration);
@@ -303,21 +318,17 @@ export default function ChatBubble({ message, isUser, onUpdateMessage, closeMenu
     });
 
     audio.addEventListener('error', (e) => {
+      audio.removeEventListener('ended', loadNextChunk);
       setIsSpeaking(false);
       setIsPausedBySpeech(false);
       setSpeechProgress(0);
       setAudioDuration(0);
+      globalAudioInstance = null;
+      globalAudioCleanup = null;
       console.error('[AUDIO_ERROR]', e.type, audio.error?.code);
       ttsLog('chunk_error', { code: audio.error?.code });
       toast.error('Audio playback failed');
     });
-
-    globalAudioCleanup = () => {
-      setIsSpeaking(false);
-      setIsPausedBySpeech(false);
-      setSpeechProgress(0);
-      setAudioDuration(0);
-    };
 
     setIsSpeaking(true);
     setIsPausedBySpeech(false);
