@@ -796,6 +796,9 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           }
         }
       }
+      // Extract and save explicitly provided links from the user's own message text.
+      // Uses the same strict sanitizer as AI explicit links — markdown links and bare URL lines only.
+      await extractAndSaveExplicitResources(content);
       // Extract and save explicitly shared resources from the AI reply (sanitized — no prose links)
       await extractAndSaveExplicitResources(reply);
 
