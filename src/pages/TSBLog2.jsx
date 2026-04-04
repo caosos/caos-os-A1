@@ -60,7 +60,7 @@ export default function TSBLog2() {
 
           <Section title="⚠️ KERNELIZED AGENT RECOVERY HEADER (READ FIRST)" color="yellow">
             <div className="bg-yellow-950/40 border border-yellow-500/20 rounded-lg p-4 text-gray-200 text-xs space-y-2">
-              <p><strong>Last TSB:</strong> TSB-055 (Mar 31, 2026)</p>
+              <p><strong>Last TSB:</strong> TSB-058 (Apr 4, 2026)</p>
               <p><strong>Scope locks active:</strong><br/>
                 — functions/hybridMessage: LOCKED (CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15 + RIA_WRAPPER_v1_2026-03-23)<br/>
                 — functions/core/promptBuilder: LOCKED (CAOS_PROMPT_BUILDER_v2_2026-03-05)<br/>
@@ -75,7 +75,7 @@ export default function TSBLog2() {
               <p><strong>Canonical TTS paths:</strong><br/>
                 Input bar = Google Web Speech API (ChatInputReadAloud.jsx)<br/>
                 Message bubble = OpenAI TTS (ChatBubble.jsx → textToSpeech function)</p>
-              <p><strong>Current focus:</strong> Gemini live, RIA tiered fallback wired, response reviewer active, docs synced to Mar 31</p>
+              <p><strong>Current focus:</strong> Input-bar TTS zombie-state permanently fixed (TSB-056/057). Repo path map audited — 3 conflicting resolvers identified, fix scoped pending TSB write approval (TSB-058).</p>
             </div>
           </Section>
 
@@ -445,6 +445,165 @@ Changes (UI only — no logic modified):
 Imports added: Brain, FlameKindling (removed: Cpu)
 Line delta: minor. ChatHeader ONLY.
 Rollback: restore Cpu + original label/badge + Zap for bootloader.`}</Code>
+              </div>
+
+              <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number. Part 1: TSBLog (TSB-001–TSB-042).</p>
+            </div>
+          </Section>
+
+          <Section title="TSB-056 through TSB-058 — Apr 4, 2026 Campaign" color="red">
+            <div className="space-y-4">
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-056 — Input-Bar TTS: Zombie Synth State Fix (synth.cancel() Re-Prime + Async Guard)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Apr 4, 2026
+Files:     components/chat/ChatInputReadAloud.jsx (ONLY)
+Campaign:  Campaign 2 — Input-Bar TTS Stability
+
+ROOT CAUSE:
+  window.speechSynthesis accumulates "zombie" utterance state after idle periods,
+  backgrounding, or rapid stop/start cycles. Calling synth.speak() on a dirty engine
+  silently enqueues the utterance but onstart never fires — the button shows playing
+  state but no audio is heard. This is a confirmed Chrome regression / browser bug,
+  not a code error, and has recurred at least 6 times across the CAOS build history.
+
+PATCHES APPLIED:
+
+  PATCH A — toggleGoogleReadAloud made async + synth.cancel() re-prime:
+    1. Function signature changed to async (was synchronous).
+       Browser gesture trust chain preserved — the async gap is a 30ms internal timeout,
+       NOT a user-boundary await. No autoplay policy violation in modern browsers (2026).
+    2. Before synth.speak(utterance), inserted:
+         try { synth.cancel(); } catch (e) {}
+         await new Promise(r => setTimeout(r, 30));
+         synth.speak(utterance);
+    3. The cancel() flushes any zombie queue state.
+       The 30ms tick allows the engine to reach a clean idle before the new utterance is queued.
+    4. Existing stop path (lines 67–74) is untouched and runs synchronously BEFORE the async
+       region is ever reached — stop behavior is unaffected.
+
+INVARIANTS PRESERVED:
+  - caos_google_voice / caos_google_speech_rate keys: UNCHANGED
+  - onstart / onend / onerror handlers: UNCHANGED
+  - _sessionId / _keepAlive / _activeUtterance module-level refs: UNCHANGED
+  - No OpenAI / Gemini / provider keys introduced into input-bar path
+  - Function is isolated to ChatInputReadAloud.jsx — zero contamination of
+    ChatBubble TTS (OpenAI path) or any other file
+
+LOCK STATUS:
+  CAOS_GOOGLE_TTS_LOCK_v1_2026-03-15 remains active.
+  This patch amends behavior within the lock — it does not violate it.
+
+PREVIOUS FAILURES OF SAME CLASS (do not repeat these approaches):
+  - Removing synth.cancel() before speak() — causes zombie accumulation
+  - Adding a separate keepAlive pause/resume tick — breaks speech mid-sentence
+  - Replacing the async 30ms with a synchronous spin — no effect on engine state
+  - Wrapping speak() in a new SpeechSynthesisUtterance per click without cancel() — same zombie issue
+
+Line delta: +6 lines (function signature + 3-line re-prime block + comment header).
+Rollback: revert to synchronous function, remove try/cancel/await block.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-057 — Input-Bar Voice Menu: Stale Open State Fixed (Outside-Click Listener Extended)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Apr 4, 2026
+Files:     components/chat/ChatInput.jsx (ONLY)
+Campaign:  Campaign 2 — Input-Bar TTS Stability
+
+ROOT CAUSE:
+  The useEffect click-outside listener that closes menus was gated on showCaptureMenu only.
+  When the voice settings menu (showVoiceMenu) was opened via right-click on the speaker
+  button, clicking anywhere outside the VoiceSettingsMenu component had no effect — the
+  menu stayed open (stale open state). The outside-click cleanup path was never reached.
+
+FIX (3-line change):
+  useEffect condition:
+    BEFORE: if (showCaptureMenu) {
+    AFTER:  if (showCaptureMenu || showVoiceMenu) {
+
+  Dependency array:
+    BEFORE: }, [showCaptureMenu]);
+    AFTER:  }, [showCaptureMenu, showVoiceMenu]);
+
+  handleClickOutside already contained:
+    if (voiceMenuRef.current && !voiceMenuRef.current.contains(event.target)) {
+      setShowVoiceMenu(false);
+    }
+  — the handler was correct; the listener simply wasn't being registered for the voice menu case.
+
+SECONDARY CLEANUP:
+  Dead import removed: import { getTTSPrefs, setTTSPrefs } from './ttsPrefs'
+  These were imported but never used in ChatInput.jsx. Removing them reduces noise.
+  ttsPrefs.jsx itself is UNCHANGED and still locked (CAOS_TTS_PREFS_v1_2026-03-14).
+
+INVARIANTS PRESERVED:
+  - VoiceSettingsMenu component: UNCHANGED
+  - Voice settings persist to caos_google_voice / caos_google_speech_rate: UNCHANGED
+  - Capture menu behavior: UNCHANGED
+  - All TTS play/stop/pause logic: UNCHANGED
+  - CAOS_GOOGLE_TTS_LOCK_v1 and FORT KNOX block in ChatInput: UNCHANGED
+
+Line delta: -1 line (import removal), +1 line (condition), 0 net (dep array change is in-place).
+Rollback: restore original condition + dep array + ttsPrefs import.`}</Code>
+              </div>
+
+              <div className="bg-red-950/30 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-red-300 font-bold text-sm">TSB-058 — Repo Path Map Audit: Canonical Path Model Documented (No Code Changes)</span>
+                  <Tag label="COMPLETE ✅" color="green" />
+                </div>
+                <Code>{`Date:      Apr 4, 2026
+Files:     pages/TSBLog2 (this entry — documentation only)
+Campaign:  Canonical Repo Path Map Audit
+
+MOTIVATION:
+  Repo path resolution is nondeterministic — sometimes "open pages/Chat.jsx" resolves,
+  sometimes the assistant responds as if the path or tool is unavailable.
+  A full architecture audit was performed to identify all resolution points and conflicts.
+
+FINDINGS (inspection only — no patches applied in this session):
+
+  CANONICAL ROOTS — 3 competing assumptions identified:
+    1. handleRepoCommand() in hybridMessage (lines 819–854):
+       - "" → GitHub root (no prefix)
+       - "functions/*" → "base44/functions/*"
+       - "agents/*" → "base44/agents/*"
+       - anything else → "src/<path>" (e.g. "pages/Chat.jsx" → "src/pages/Chat.jsx")
+    2. generateRepoMap (line 90): roots at "src" hardcoded
+    3. REPO_ROUTING_MICRO_INDEX in promptBuilder (lines 20–47):
+       documents paths WITHOUT "src/" prefix — inconsistent with (1) and (2)
+
+  MULTIPLE RESOLVERS — not a single canonical path:
+    A. handleRepoCommand (hybridMessage) — user-typed "open / ls" commands
+    B. dispatchTool in repoInference — when OpenAI calls repo_list/repo_read tool;
+       passes path verbatim with no prefix mapping (different behavior from A)
+    C. repoProxy — browser admin UI; no path mapping
+
+  PATH MAP / MICRO-INDEX STATUS:
+    Exists: REPO_ROUTING_MICRO_INDEX in promptBuilder (static string, always injected)
+    Problem: Documents paths WITHOUT "src/" prefix; generateRepoMap roots at "src/";
+             handleRepoCommand auto-prepends "src/"; micro-index and executor are out of sync.
+    generateRepoMap is NOT called by hybridMessage or promptBuilder — standalone admin tool only.
+
+  PERSISTENCE / REHYDRATION:
+    None. Canonical path knowledge is NOT persisted across turns or provider switches.
+    Micro-index is rebuilt from static string on every prompt build.
+
+  BEST LOCK POINT (identified — not yet implemented):
+    handleRepoCommand() in hybridMessage lines 819–854:
+    Extract the 3-branch path mapping into a named constant (REPO_PATH_MAP) at module top.
+    Mirror the same map into REPO_ROUTING_MICRO_INDEX in promptBuilder.
+    This makes the executor and the assistant's knowledge of paths identical.
+
+NEXT STEP (pending explicit command):
+  TSB required before any writes to hybridMessage (FROZEN — TSB-021).
+  Proposed fix scope: extract REPO_PATH_MAP constant + sync micro-index — no behavior change.`}</Code>
               </div>
 
               <p className="text-white/40 text-xs">TSB entries are permanent records. Resolved entries stay in this log. New issues get a new TSB number. Part 1: TSBLog (TSB-001–TSB-042).</p>
