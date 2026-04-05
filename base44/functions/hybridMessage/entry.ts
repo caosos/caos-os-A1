@@ -351,7 +351,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     setStage(stage);
     let reply, openaiUsage, degraded = false, fallback_tier = null, providerUsed = provider;
     const inferenceStart = Date.now();
-    const INFERENCE_TIMEOUT_MS = 45000;
+    const INFERENCE_TIMEOUT_MS = 12000;
     const openaiAbort = new AbortController();
     const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
     const timeoutRace = new Promise((_, rej) =>
@@ -494,11 +494,17 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
             throw { ...inferenceError, latency_ms };
         }
         const isTimeout = inferenceError?.name === 'AbortError' || inferenceError?.message?.includes('aborted') || inferenceError?.message?.includes('PROVIDER_TIMEOUT');
-        const errStage = isTimeout ? 'INFERENCE' : stage;
-        const error_code = isTimeout ? 'INFERENCE_TIMEOUT' : 'INFERENCE_FAILED';
+        if (isTimeout) {
+            clearTimeout(openaiTimeout);
+            console.warn('⚠️ [INFERENCE_TIMEOUT_ABSORBED]', { request_id, latency_ms });
+            emitEvent(base44, request_id, session_id, startTime, 'INFERENCE', 'Provider timeout — degraded local reply', { level: 'WARN', code: 'INFERENCE_TIMEOUT', data: { latency_ms } });
+            return { reply: tier3Reply(request_id).content, openaiUsage: null, inferenceMs: Date.now() - inferenceStart, degraded: true, fallback_tier: 'TIER_3_TIMEOUT', provider: 'local' };
+        }
+        const errStage = stage;
+        const error_code = 'INFERENCE_FAILED';
         console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage: errStage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
-        emitEvent(base44, request_id, session_id, startTime, errStage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: isTimeout, latency_ms } });
-        throw { latency_ms, isTimeout, stage: errStage, error_code, message: inferenceError.message };
+        emitEvent(base44, request_id, session_id, startTime, errStage, inferenceError.message, { level: 'ERROR', code: error_code, data: { is_timeout: false, latency_ms } });
+        throw { latency_ms, isTimeout: false, stage: errStage, error_code, message: inferenceError.message };
     }
     const inferenceMs = Date.now() - inferenceStart;
     if (!reply) throw new Error('No response from provider');
