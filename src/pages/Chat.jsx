@@ -479,7 +479,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         },
         duration: 10000
       });
-    }, 300000); // 300 second (5 min) timeout for large messages
+    }, 20000); // 20 second timeout — aligned to 12s backend ceiling + 8s platform buffer
 
     try {
       conversationId = currentConversationId;
