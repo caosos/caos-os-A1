@@ -498,31 +498,26 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   };
 
+  const commitSend = () => {
+    const messageToSend = message.trim();
+    const filesToSend = attachedFiles.map(f => f.url);
+    setMessage('');
+    setAttachedFiles([]);
+    if (draftRafRef.current) { cancelAnimationFrame(draftRafRef.current); draftRafRef.current = null; }
+    latestDraftRef.current = '';
+    onMessageChange?.('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '24px';
+    }
+    onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+  };
+
   const handleSubmit = (e) => {
     e?.preventDefault();
-    
     if (isTranscribing) return;
-    
     if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-      if (isRecording) {
-        stopRecording();
-        return;
-      }
-
-      const messageToSend = message.trim();
-      const filesToSend = attachedFiles.map(f => f.url);
-      
-      setMessage('');
-      setAttachedFiles([]);
-      // Cancel any pending draft rAF and clear parent immediately
-      if (draftRafRef.current) { cancelAnimationFrame(draftRafRef.current); draftRafRef.current = null; }
-      latestDraftRef.current = '';
-      onMessageChange?.('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = '24px';
-      }
-      
-      onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+      if (isRecording) { stopRecording(); return; }
+      commitSend();
     }
   };
 
@@ -598,29 +593,10 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               e.stopPropagation();
-
               if (isTranscribing) return false;
-
               if ((message.trim() || attachedFiles.length > 0) && !isLoading && !uploading) {
-                if (isRecording) {
-                  stopRecording();
-                  return false;
-                }
-
-                const messageToSend = message.trim();
-                const filesToSend = attachedFiles.map(f => f.url);
-
-                setMessage('');
-                setAttachedFiles([]);
-                // Cancel any pending draft rAF and clear parent immediately
-                if (draftRafRef.current) { cancelAnimationFrame(draftRafRef.current); draftRafRef.current = null; }
-                latestDraftRef.current = '';
-                onMessageChange?.('');
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = '24px';
-                }
-
-                onSend(messageToSend, filesToSend, multiAgentMode ? selectedAgents : null);
+                if (isRecording) { stopRecording(); return false; }
+                commitSend();
               }
               return false;
             }
