@@ -351,9 +351,12 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     setStage(stage);
     let reply, openaiUsage, degraded = false, fallback_tier = null, providerUsed = provider;
     const inferenceStart = Date.now();
-    const openaiAbort = new AbortController();
     const INFERENCE_TIMEOUT_MS = 45000;
+    const openaiAbort = new AbortController();
     const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
+    const timeoutRace = new Promise((_, rej) =>
+        openaiAbort.signal.addEventListener('abort', () => rej(new Error('PROVIDER_TIMEOUT')), { once: true })
+    );
     emitEvent(base44, request_id, session_id, startTime, stage, 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length, provider } });
 
     const invokeInference = async (model) => {
@@ -456,7 +459,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
         let tier1Result = null;
         let tier1Error = null;
         try {
-            tier1Result = await invokeInference(RESOLVED_MODEL);
+            tier1Result = await Promise.race([invokeInference(RESOLVED_MODEL), timeoutRace]);
             clearTimeout(openaiTimeout);
         } catch (e) {
             tier1Error = e;
