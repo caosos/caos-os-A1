@@ -26,7 +26,6 @@ const HOT_HEAD = 15;
 const BUDGET_MS = 1500;
 const CTC_HYDRATION_BUDGET_MS = 800;
 const INTENT_MAX_CHARS = 5000;
-const SANITIZER_MAX_CHARS = 8000;
 const MODEL_CONTEXT_WINDOW = {
     'gpt-5.2': 200000, 'gpt-5.4': 200000, 'gpt-5': 200000,
     'gpt-4o': 128000, 'gpt-4o-mini': 128000, 'gpt-4-turbo': 128000,
@@ -72,22 +71,6 @@ function compressHistory(messages) {
     const tail = messages.slice(-HOT_TAIL);
     const middleCount = messages.length - HOT_HEAD - HOT_TAIL;
     return [...head, { role: 'assistant', content: `[CONVERSATION SUMMARY: ${middleCount} earlier messages omitted. First ${HOT_HEAD} and last ${HOT_TAIL} messages shown in full.]` }, ...tail];
-}
-
-// ── OpenAI HTTP call ──────────────────────────────────────────────────────────
-async function openAICall(key, messages, model, maxTokens = 4000, signal = null) {
-    const response = await fetch(OPENAI_API, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages, temperature: 0.7, max_completion_tokens: maxTokens }),
-        ...(signal ? { signal } : {})
-    });
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`OpenAI error: ${err.error?.message || response.statusText}`);
-    }
-    const data = await response.json();
-    return { content: data.choices[0]?.message?.content || '', usage: data.usage || null };
 }
 
 // ── CTC gate ──────────────────────────────────────────────────────────────────
@@ -178,26 +161,6 @@ function detectSaveIntent(input) {
 }
 function detectRecallIntent(input) {
     return MEMORY_RECALL_TRIGGERS.some(p => p.test(input));
-}
-
-// ── Request router (dead code — preserved per TSB-032) ────────────────────────
-const CHEAP_MODEL_NAME = 'gpt-4o-mini';
-function routeRequest(input, hIntent, cogLevel) {
-    const t = (input || '').toLowerCase();
-    const inputLen = input.length;
-    const qualityCritical = (
-        hIntent === 'TECHNICAL_DESIGN' || cogLevel >= 7 ||
-        /\b(debug|debugging|refactor|refactoring|blueprint|tsb|invariant|governance|root cause|diagnose|stack trace|pipeline design|control law|phase \d|tier \d)\b/i.test(input)
-    );
-    if (qualityCritical) return { route: 'GPT_5_2', model: 'gpt-5.2', route_reason: `quality_critical hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)}` };
-    const neverCheap = /\b(debug|fix|refactor|architect|deploy|security|auth|permission|role|blueprint|tsb|invariant|schema|contract|phase|pipeline)\b/i.test(t);
-    const cheapSignal = (
-        (hIntent === 'SUMMARY_COMPACT' && inputLen < 1500) ||
-        /\b(reformat|bullet(ed)?|extract links?|extract urls?|rephrase|copy variant|one sentence|tldr|summarize this|list the links|what links|short version)\b/i.test(t) ||
-        (inputLen < 120 && hIntent === 'GENERAL_QUERY' && cogLevel < 4)
-    );
-    if (cheapSignal && !neverCheap) return { route: 'CHEAP_MODEL', model: CHEAP_MODEL_NAME, route_reason: `low_risk hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)} len=${inputLen}` };
-    return { route: 'GPT_5_2', model: 'gpt-5.2', route_reason: `default hIntent=${hIntent} cogLevel=${cogLevel.toFixed(1)}` };
 }
 
 // ── Repo command detection ────────────────────────────────────────────────────
@@ -369,12 +332,6 @@ const ENABLE_PROVIDER_GUARDRAILS = true;
 // ── RIA Feature Flag ─────────────────────────────────────────────────────────
 // ROLLBACK: set FF_RIA_INFERENCE_SPINE = false
 const FF_RIA_INFERENCE_SPINE = false; // ROLLBACK: set true to re-enable RIA tiers
-
-// Provider / model config
-const PROVIDER_MODELS = {
-    openai: { default: 'gpt-5.2', context: 200000 },
-    grok:   { default: 'grok-3',   context: 131072 },
-};
 
 // Tier 3 — local responder (no provider, always succeeds)
 function tier3Reply(request_id) {
