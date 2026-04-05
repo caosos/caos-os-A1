@@ -360,98 +360,14 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     emitEvent(base44, request_id, session_id, startTime, stage, 'Inference started', { data: { model: RESOLVED_MODEL, message_count: finalMessages.length, provider } });
 
     const invokeInference = async (model) => {
-        // Gemini path — route to geminiInference for any gemini model
-        if (model && (model.startsWith('gemini') || model.includes('gemini'))) {
-            const giRes = await base44.functions.invoke('core/geminiInference', {
-                messages: finalMessages,
-                model,
-                max_tokens: 2000,
-                use_grounding: true,
-            });
-            const giData = giRes?.data || {};
-            if (!giData.ok) throw new Error(giData.error || 'Gemini inference failed');
-            // Append grounding sources to content if present
-            let content = giData.content || '';
-            if (giData.sources?.length > 0) {
-                const srcLines = giData.sources.map(s => `- [${s.title || s.url}](${s.url})`).join('\n');
-                content += `\n\n**Sources:**\n${srcLines}`;
-            }
-            return { content, usage: giData.usage || null };
-        }
-
-        if (user.role === 'admin') {
-            // Admin: full tool access via repoInference (repo_list, repo_read, web_search)
-            const riRes = await base44.functions.invoke('core/repoInference', { messages: finalMessages, model, max_tokens: 4000 });
-            return { content: riRes?.data?.content, usage: riRes?.data?.usage || null };
-        } else {
-            // Non-admin: inlined agentic loop with web_search — no repo access, no function hop
-            const NON_ADMIN_TOOLS = [
-                {
-                    type: 'function',
-                    function: {
-                        name: 'web_search',
-                        description: 'Search the web for current facts, news, documentation, or anything not in training data.',
-                        parameters: {
-                            type: 'object',
-                            properties: { query: { type: 'string', description: 'The search query string.' } },
-                            required: ['query']
-                        }
-                    }
-                }
-            ];
-            const msgs = [...finalMessages];
-            let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
-            for (let round = 0; round < 5; round++) {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 45000);
-                let response;
-                try {
-                    response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model, messages: msgs, temperature: 0.7, max_completion_tokens: 4000, tools: NON_ADMIN_TOOLS, tool_choice: 'auto' }),
-                        signal: controller.signal
-                    });
-                    clearTimeout(timer);
-                } catch (err) {
-                    clearTimeout(timer);
-                    throw err;
-                }
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(`OpenAI ${response.status}: ${err.error?.message || response.statusText}`);
-                }
-                const data = await response.json();
-                if (data.usage) {
-                    totalUsage.prompt_tokens += data.usage.prompt_tokens || 0;
-                    totalUsage.completion_tokens += data.usage.completion_tokens || 0;
-                    totalUsage.total_tokens += data.usage.total_tokens || 0;
-                }
-                const choice = data.choices[0];
-                if (choice.finish_reason === 'stop' || !choice.message.tool_calls) {
-                    return { content: choice.message.content, usage: totalUsage };
-                }
-                msgs.push(choice.message);
-                for (const toolCall of choice.message.tool_calls) {
-                    let toolResult = {};
-                    if (toolCall.function.name === 'web_search') {
-                        let args = {};
-                        try { args = JSON.parse(toolCall.function.arguments); } catch {}
-                        try {
-                            toolResult = await base44.integrations.Core.InvokeLLM({
-                                prompt: `Search the web for: "${args.query}". Return a factual, well-sourced summary with source URLs.`,
-                                add_context_from_internet: true,
-                                model: 'gemini_3_flash'
-                            });
-                        } catch (e) {
-                            toolResult = { error: e.message };
-                        }
-                    }
-                    msgs.push({ role: 'tool', tool_call_id: toolCall.id, content: JSON.stringify(toolResult) });
-                }
-            }
-            return { content: 'Tool loop exhausted.', usage: totalUsage };
-        }
+        const res = await base44.functions.invoke('core/invokeInference', {
+            model,
+            messages: finalMessages,
+            user_role: user.role,
+            openai_key: openaiKey,
+        });
+        if (!res?.data?.ok) throw new Error(res?.data?.error || 'invokeInference failed');
+        return { content: res.data.content, usage: res.data.usage || null };
     };
 
     try {
