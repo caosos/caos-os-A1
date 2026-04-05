@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, Check, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
+import { base44 } from '@/api/base44Client';
 import PointerEventsGuard from './PointerEventsGuard';
 import AgentSelector from './AgentSelector';
 import { toggleGoogleReadAloud, wakeSpeechSynthesis } from './ChatInputReadAloud';
