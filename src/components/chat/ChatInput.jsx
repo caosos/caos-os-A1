@@ -1,21 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Volume2, Send, Plus, X, FileText, Image as ImageIcon, Camera, Monitor, Pause, Check, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { base44 } from '@/api/base44Client';
-import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 import PointerEventsGuard from './PointerEventsGuard';
 import AgentSelector from './AgentSelector';
 import { toggleGoogleReadAloud, wakeSpeechSynthesis } from './ChatInputReadAloud';
 import VoiceSettingsMenu from './VoiceSettingsMenu';
+import { useAttachments } from './useAttachments';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
 
 export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
   if (_DEV) console.count('ChatInput render');
   const [message, setMessage] = useState(messageValue);
-  const [attachedFiles, setAttachedFiles] = useState([]);
-  
+
+  const {
+    attachedFiles,
+    setAttachedFiles,
+    uploading,
+    uploadCancelled,
+    showCaptureMenu,
+    setShowCaptureMenu,
+    captureMenuRef,
+    fileInputRef,
+    cameraInputRef,
+    cancelUpload,
+    handleFileSelect,
+    captureScreen,
+    captureCamera,
+    handleCameraCapture,
+    removeFile,
+  } = useAttachments({ conversationId });
+
   useEffect(() => {
     if (messageValue !== message) setMessage(messageValue);
   }, [messageValue]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -24,21 +40,15 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
   useEffect(() => {
     if (lastAssistantMessage) wakeSpeechSynthesis();
   }, [lastAssistantMessage]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadCancelled, setUploadCancelled] = useState(false);
-  const uploadCancelledRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlayingReadAloud, setIsPlayingReadAloud] = useState(false);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
   const [ttsState, setTtsState] = useState({ status: 'idle', source: null });
   const [googleSpeechProgress, setGoogleSpeechProgress] = useState(0);
-  const [showCaptureMenu, setShowCaptureMenu] = useState(false);
-
   const [selectedAgents, setSelectedAgents] = useState(['all']);
   const [showAgentMenu, setShowAgentMenu] = useState(false); // retained for compat
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
-  const fileInputRef = useRef(null);
   const voiceMenuRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -75,162 +85,6 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     }
   }, [showCaptureMenu, showVoiceMenu]);
   const textareaRef = useRef(null);
-  const cameraInputRef = useRef(null);
-  const captureMenuRef = useRef(null);
-
-  const MAX_FILE_SIZE_MB = 50;
-  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-
-  const cancelUpload = () => {
-    uploadCancelledRef.current = true;
-    setUploadCancelled(true);
-    setUploading(false);
-    toast('Upload cancelled.');
-  };
-
-  const handleFileSelect = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    // Check if adding these files would exceed the limit
-    const totalFiles = attachedFiles.length + files.length;
-    if (totalFiles > 5) {
-      alert(`You can only attach up to 5 files. You currently have ${attachedFiles.length} file(s) attached.`);
-      e.target.value = '';
-      return;
-    }
-
-    // Block oversized files immediately
-    const oversized = files.filter(f => f.size > MAX_FILE_SIZE_BYTES);
-    if (oversized.length > 0) {
-      toast.error(`File too large: ${oversized.map(f => f.name).join(', ')}. Maximum is ${MAX_FILE_SIZE_MB} MB per file.`, { duration: 6000 });
-      e.target.value = '';
-      return;
-    }
-
-    uploadCancelledRef.current = false;
-    setUploadCancelled(false);
-    setUploading(true);
-    try {
-      const uploadedFiles = [];
-      for (const file of files) {
-        if (uploadCancelledRef.current) break;
-        const result = await base44.integrations.Core.UploadFile({ file });
-        if (uploadCancelledRef.current) break;
-        const isImage = file.type.startsWith('image/');
-        
-        uploadedFiles.push({
-          name: file.name,
-          url: result.file_url,
-          type: file.type,
-        });
-        
-        // Save to UserFile entity - organize by conversation
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Uploads';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: isImage ? 'photo' : 'file',
-          folder_path: folderPath,
-          mime_type: file.type,
-          size: file.size
-        });
-      }
-      if (!uploadCancelledRef.current) {
-        setAttachedFiles([...attachedFiles, ...uploadedFiles]);
-      }
-    } catch (error) {
-      if (!uploadCancelledRef.current) {
-        console.error('Error uploading files:', error);
-        toast.error('Upload failed. Try a smaller file.');
-      }
-    }
-    setUploading(false);
-    uploadCancelledRef.current = false;
-    setUploadCancelled(false);
-    e.target.value = '';
-  };
-
-  const captureScreen = async () => {
-    setShowCaptureMenu(false);
-    setUploading(true);
-    try {
-      const canvas = await html2canvas(document.body, {
-        allowTaint: true,
-        useCORS: true,
-        scrollY: -window.scrollY,
-        scrollX: -window.scrollX,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight
-      });
-      
-      canvas.toBlob(async (blob) => {
-        const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
-        const result = await base44.integrations.Core.UploadFile({ file });
-        
-        // Save to UserFile entity - organize by conversation
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Screenshots';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: 'photo',
-          folder_path: folderPath,
-          mime_type: 'image/png',
-          size: blob.size
-        });
-        
-        setAttachedFiles([...attachedFiles, {
-          name: file.name,
-          url: result.file_url,
-          type: 'image/png',
-        }]);
-        setUploading(false);
-      });
-    } catch (error) {
-      console.error('Error capturing screen:', error);
-      setUploading(false);
-    }
-  };
-
-  const captureCamera = () => {
-    setShowCaptureMenu(false);
-    cameraInputRef.current?.click();
-  };
-
-  const handleCameraCapture = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const result = await base44.integrations.Core.UploadFile({ file });
-      
-      // Save to UserFile entity - organize by conversation
-      const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Photos';
-      await base44.entities.UserFile.create({
-        name: file.name,
-        url: result.file_url,
-        type: 'photo',
-        folder_path: folderPath,
-        mime_type: file.type,
-        size: file.size
-      });
-      
-      setAttachedFiles([...attachedFiles, {
-        name: file.name,
-        url: result.file_url,
-        type: file.type,
-      }]);
-    } catch (error) {
-      console.error('Error uploading camera photo:', error);
-    }
-    setUploading(false);
-    e.target.value = '';
-  };
-
-  const removeFile = (index) => {
-    setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
-  };
 
   const scheduleDraftPropagation = (value) => {
     latestDraftRef.current = value;
