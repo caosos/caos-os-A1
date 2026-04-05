@@ -55,9 +55,8 @@ export default function AgentSelector({ multiAgentMode, onSelectionChange }) {
     setCustomAgents(updated);
     localStorage.setItem('caos_custom_agents', JSON.stringify(updated));
     const next = selectedAgents.filter(id => id !== agentId);
-    const resolved = next.length === 0 ? ['all'] : next;
-    setSelectedAgents(resolved);
-    onSelectionChange?.(resolved);
+    setSelectedAgents(next);
+    onSelectionChange?.(next);
   };
 
   const handleAgentRightClick = (e, agentId) => {
