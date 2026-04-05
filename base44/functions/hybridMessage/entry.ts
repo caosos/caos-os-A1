@@ -489,60 +489,8 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime, 
     return { latency: Date.now() - startTime };
 }
 
-// ── WCW Slot Audit ────────────────────────────────────────────────────────────
-function buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAdmin }) {
-    if (!debugMode && !isAdmin) return null;
-    const classifySlot = (msg, idx) => {
-        const c = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
-        if (idx === 0 && msg.role === 'system') return 'system_prompt';
-        if (msg.role === 'system' && c.startsWith('EXECUTION_META_TRH:')) return 'trh_meta';
-        if (msg.role === 'system' && c.startsWith('THREAD RECOVERY EXCERPTS')) return 'mbcr';
-        if (msg.role === 'assistant' && c.startsWith('THREAD SUMMARY')) return 'trh_summary';
-        if (msg.role === 'user') return 'user';
-        if (msg.role === 'system' || msg.role === 'assistant' || msg.role === 'user') return 'history';
-        return 'other';
-    };
-    const simpleHash = (s) => {
-        let h = 0x811c9dc5;
-        for (let i = 0; i < Math.min(s.length, 4096); i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-        return h.toString(16).padStart(8, '0');
-    };
-    const slots = finalMessages.map((msg, idx) => {
-        const c = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '');
-        const slot = { idx, role: msg.role, bucket: classifySlot(msg, idx), chars: c.length, hash: simpleHash(c) };
-        if (debugMode) slot.preview_200 = c.slice(0, 200);
-        return slot;
-    });
-    const charsTotal = slots.reduce((s, sl) => s + sl.chars, 0);
-    const largestSlots = [...slots].sort((a, b) => b.chars - a.chars).slice(0, 5).map(s => ({ idx: s.idx, bucket: s.bucket, chars: s.chars }));
-    return { enabled: true, max_model_wcw_tokens: wcwBudget, prompt_tokens_post_inference: promptTokens, slots, chars_total: charsTotal, largest_slots: largestSlots };
-}
-
-// ── WCW telemetry builders (pure, no I/O) ────────────────────────────────────
-// LOCK_SIGNATURE: CAOS_WCW_TELEMETRY_v1_2026-03-15
-function buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, session_id, request_id, model }) {
-    const pct_used = wcwBudget > 0 ? parseFloat(((promptTokens / wcwBudget) * 100).toFixed(2)) : 0;
-    const pct_remaining = wcwBudget > 0 ? parseFloat(((wcwRemaining / wcwBudget) * 100).toFixed(2)) : 100;
-    return {
-        snapshot_ts: new Date().toISOString(),
-        request_id, session_id: session_id || null, model: model || null,
-        wcw_budget_tokens: wcwBudget, wcw_used_tokens: promptTokens, wcw_remaining_tokens: wcwRemaining,
-        wcw_pct_used: pct_used, wcw_pct_remaining: pct_remaining,
-        completion_tokens: completionTokens || 0, total_tokens: totalTokens || 0,
-        response_time_ms: responseTime,
-        severity: pct_used >= 90 ? 'CRITICAL' : pct_used >= 75 ? 'HIGH' : pct_used >= 50 ? 'MEDIUM' : 'LOW',
-    };
-}
-function buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id }) {
-    const pct_used = wcwBudget > 0 ? parseFloat(((promptTokens / wcwBudget) * 100).toFixed(2)) : 0;
-    return {
-        event_ts: new Date().toISOString(),
-        request_id, session_id: session_id || null, stage: 'PIPELINE_COMPLETE',
-        wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-        wcw_pct_used: pct_used, completion_tokens: completionTokens || 0, total_tokens: totalTokens || 0,
-        inference_ms: inferenceMs || null, total_response_ms: responseTime,
-    };
-}
+// ── WCW builders extracted → core/responsePayloadBuilder ─────────────────────
+// buildWcwAudit, buildWcwStateV1, buildWcwTurnV1 removed. See extraction receipt.
 
 // ── Contract-compliant error response builder ────────────────────────────────
 // Phase 1.2: all hybridMessage failure paths must emit the v1 envelope
@@ -596,59 +544,8 @@ function respondOk({ request_id, correlation_id, stage, degraded, message, data,
     });
 }
 
-// ── Response payload builder ─────────────────────────────────────────────────
-function buildResponsePayload({ reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time, responseTime, execution_meta, wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock, t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn, riaResult }) {
-    // Additive / backward-compat fields (never overwrite contract keys)
-    const additive = {
-        mode: 'GEN',
-        route: routingDecision.route, model_used: RESOLVED_MODEL,
-        server_time, response_time_ms: responseTime, tool_calls: [],
-        execution_meta,
-        wcw_budget: wcwBudget, wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-    };
-    if (debugMode) additive.debug_meta = debug_meta;
-    if (wcw_audit) additive.wcw_audit = wcw_audit;
-    if (wcw_state) additive.wcw_state = wcw_state;
-    if (wcw_turn) additive.wcw_turn = wcw_turn;
-
-    // v1 contract fields
-    const data = { reply, openaiUsage: null, inferenceMs: t_openai_call ?? 0 };
-
-    const diagnostic_receipt = {
-        tool: 'hybridMessage',
-        stage: 'INFERENCE',
-        elapsed_ms: responseTime,
-        provider_elapsed_ms: null,
-        model: RESOLVED_MODEL,
-        fallback_tier: riaResult?.fallback_tier ?? null,
-    };
-
-    const execution_receipt = [
-        { tool: 'resilientInference', ok: true, stage: 'INFERENCE', error_code: null, elapsed_ms: t_openai_call ?? null },
-    ];
-
-    // Legacy full receipt (additive — existing consumers that read execution_receipt fields)
-    additive.legacy_execution_receipt = {
-        request_id, correlation_id, session_id,
-        history_messages: rawHistory.length, recall_executed: matchedMemories.length > 0,
-        matched_memories: matchedMemories.length, heuristics_intent: hIntent,
-        heuristics_depth: hDepth, cognitive_level: cogLevel, elevation_delta: 0.75,
-        model_used: RESOLVED_MODEL, route: routingDecision.route, route_reason: routingDecision.route_reason,
-        latency_ms: responseTime,
-        latency_breakdown: { t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, t_total: responseTime },
-        sanitizer_delta: { context_pre_sanitize_tokens_est, context_post_sanitize_tokens_est, sanitize_reduction_ratio },
-        token_breakdown: tokenBreakdown, wcw_budget: wcwBudget,
-        wcw_used: promptTokens, wcw_remaining: wcwRemaining,
-        ctc_injected: ctcInjectionMeta.length > 0,
-        ctc_seed_ids: ctcInjectionMeta.map(m => m.seed_id),
-        ctc_injection_meta: ctcInjectionMeta,
-        thread_state_used: !!threadStateBlock,
-        thread_state_seq: tsResult?.data?.last_seq || null,
-        provider: riaResult?.provider ?? null,
-    };
-
-    return { data, diagnostic_receipt, execution_receipt, additive };
-}
+// ── buildResponsePayload extracted → core/responsePayloadBuilder ──────────────
+// Removed. See extraction receipt.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 6 — SHORT-CIRCUIT HANDLERS (REPO + MEMORY)
@@ -1219,25 +1116,25 @@ Deno.serve(async (req) => {
         // Phase 3.1: anchor auto-extraction DISABLED (lock active)
         console.log('🔒 [ANCHOR_EXTRACTION_DISABLED] Phase 3.1 lock active');
 
-        const wcw_audit = buildWcwAudit({ finalMessages, wcwBudget, promptTokens, debugMode, isAdmin: user.role === 'admin' });
-
-        // Admin-only WCW telemetry — inline pure calls, zero network overhead
-        // LOCK_SIGNATURE: CAOS_WCW_TELEMETRY_v1_2026-03-15 (builders defined in SECTION 4)
+        // ── RESPONSE_BUILD — delegate to core/responsePayloadBuilder ─────────
         const isAdmin = user.role === 'admin';
-        const _wcwPressureScore = Math.round(100 * promptTokens / wcwBudget);
-        const _wcwZone = _wcwPressureScore >= 85 ? 'red' : _wcwPressureScore >= 70 ? 'yellow' : _wcwPressureScore >= 50 ? 'blue' : 'green';
-        const wcw_state = isAdmin
-            ? { ...buildWcwStateV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, responseTime, request_id, session_id, model: RESOLVED_MODEL }),
-                schema: 'wcw_state.v1', context_pressure_score: _wcwPressureScore, zone: _wcwZone,
-                inventory: [], telemetry_missing_fields: ['inventory', 'sanitizer_delta_tokens'] }
-            : null;
-        const wcw_turn = isAdmin
-            ? { ...buildWcwTurnV1({ wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs, responseTime, request_id, session_id }),
-                schema: 'wcw_turn.v1', context_pressure_score: _wcwPressureScore, zone: _wcwZone }
-            : null;
+        const rpbRes = await base44.functions.invoke('core/responsePayloadBuilder', {
+            reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL,
+            server_time: new Date().toISOString(), responseTime, execution_meta,
+            wcwBudget, promptTokens, completionTokens, totalTokens, wcwRemaining, inferenceMs,
+            hIntent, hDepth, cogLevel,
+            rawHistory_length: rawHistory.length, matchedMemories_length: matchedMemories.length,
+            ctcInjectionMeta, tokenBreakdown, sanitize_reduction_ratio,
+            context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est,
+            session_id, debugMode, debug_meta,
+            thread_state_used: !!threadStateBlock, ts_last_seq: tsResult?.data?.last_seq || null,
+            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages,
+            riaResult, is_admin: isAdmin, finalMessages,
+        });
+        const { data, diagnostic_receipt, execution_receipt, additive,
+                wcw_state, wcw_turn, wcwPressureScore: _wcwPressureScore } = rpbRes.data;
 
-        // PIPELINE_COMPLETE emitEvent — after builders so wcw_turn/wcw_state are in scope
-        // Admin turns include full wcw telemetry; non-admin turns omit keys entirely
+        // PIPELINE_COMPLETE emitEvent
         emitEvent(base44, request_id, session_id, startTime, 'PIPELINE_COMPLETE', 'Pipeline complete', {
             data: {
                 duration_ms: responseTime,
@@ -1247,13 +1144,6 @@ Deno.serve(async (req) => {
             }
         });
         console.log('🎯 [PIPELINE_COMPLETE_v2]', { request_id, correlation_id, duration: responseTime });
-
-        const { data, diagnostic_receipt, execution_receipt, additive } = buildResponsePayload({
-            reply, request_id, correlation_id, routingDecision, RESOLVED_MODEL, server_time: new Date().toISOString(), responseTime, execution_meta,
-            wcwBudget, promptTokens, wcwRemaining, hIntent, hDepth, cogLevel, rawHistory, matchedMemories, ctcInjectionMeta, tokenBreakdown,
-            sanitize_reduction_ratio, context_post_sanitize_tokens_est, context_pre_sanitize_tokens_est, session_id, debugMode, debug_meta, tsResult, threadStateBlock,
-            t_auth, t_profile_and_history_load, t_sanitizer, t_prompt_build, t_openai_call, t_save_messages, wcw_audit, wcw_state, wcw_turn, riaResult
-        });
 
         // Phase 3A: ordered tool_receipts summary (additive)
         additive.tool_receipts = [
