@@ -276,52 +276,59 @@ async function handleCTC({ base44, user, input, startTime, session_id, debugMode
 // ── Thread augmentations (TRH + MBCR) handler ────────────────────────────────
 async function handleThreadAugmentations({ base44, session_id, input, startTime, debugMode }) {
     const execution_meta = { trh: { outcome: 'not_triggered' } };
-    let trhSummaryMessage = null;
-    
-    // TRH stage
+    const NULL_MBCR = { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
+
+    // TRH and MBCR have no data dependency on each other — launch concurrently.
     const TRH_TRIGGER = /\b(pr[23]|rehydrate|catch me up|update summary|what did we decide)\b/i;
-    if (session_id && TRH_TRIGGER.test(input)) {
+    const trhTriggered = session_id && TRH_TRIGGER.test(input);
+
+    const trhPromise = trhTriggered
+        ? Promise.race([
+            base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
+            new Promise(r => setTimeout(() => r(null), 2000))
+          ]).catch(e => ({ _error: e.message }))
+        : Promise.resolve(null);
+
+    const mbcrPromise = session_id
+        ? base44.functions.invoke('core/mbcrEngine', { thread_id: session_id, userText: input, debugMode })
+            .then(r => r?.data ?? NULL_MBCR).catch(() => NULL_MBCR)
+        : Promise.resolve(NULL_MBCR);
+
+    const [trhSettled, mbcrResult] = await Promise.all([trhPromise, mbcrPromise]);
+
+    // Resolve TRH outcome from settled result
+    let trhSummaryMessage = null;
+    if (trhTriggered) {
         execution_meta.trh.triggered = true;
         execution_meta.trh.invoked = true;
-        try {
-            const trhRes = await Promise.race([
-                base44.functions.invoke('threadRehydrate', { thread_id: session_id, user_text: input }),
-                new Promise(r => setTimeout(() => r(null), 2000))
-            ]);
-            if (trhRes === null) {
-                execution_meta.trh.outcome = 'timeout';
-                console.warn('⚠️ [TRH_TIMEOUT]');
-            } else if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
-                execution_meta.trh.outcome = 'wrote_summary';
-                execution_meta.trh.wrote_summary = true;
-                trhSummaryMessage = { role: 'assistant', content: trhRes.data.summary_text };
-                execution_meta.trh.save_attempted = true;
-                base44.asServiceRole.entities.Message.create({
-                    conversation_id: session_id, role: 'assistant',
-                    content: trhRes.data.summary_text,
-                    timestamp: new Date().toISOString(),
-                    metadata_tags: ['THREAD_SUMMARY']
-                }).catch(e => console.warn('⚠️ [TRH_SAVE_NONFATAL]', e.message));
-                if (debugMode) console.log('[TRH_INJECTED]', { chars: trhRes.data.summary_text.length });
-            } else {
-                const skipReason = trhRes?.data?.meta?.skipReason || trhRes?.data?.meta?.reason || null;
-                execution_meta.trh.outcome = skipReason === 'fresh_summary_exists' ? 'skipped_fresh' : 'no_summary';
-                execution_meta.trh.reason = skipReason;
-                if (debugMode) console.log('[TRH_SKIPPED]', { reason: skipReason || 'null_response' });
-            }
-        } catch (e) {
+        const trhRes = trhSettled;
+        if (trhRes === null) {
+            execution_meta.trh.outcome = 'timeout';
+            console.warn('⚠️ [TRH_TIMEOUT]');
+        } else if (trhRes?._error) {
             execution_meta.trh.outcome = 'error';
-            execution_meta.trh.error = e.message;
-            console.warn('⚠️ [TRH_NONFATAL]', e.message);
+            execution_meta.trh.error = trhRes._error;
+            console.warn('⚠️ [TRH_NONFATAL]', trhRes._error);
+        } else if (trhRes?.data?.should_write_summary && trhRes.data.summary_text) {
+            execution_meta.trh.outcome = 'wrote_summary';
+            execution_meta.trh.wrote_summary = true;
+            trhSummaryMessage = { role: 'assistant', content: trhRes.data.summary_text };
+            execution_meta.trh.save_attempted = true;
+            base44.asServiceRole.entities.Message.create({
+                conversation_id: session_id, role: 'assistant',
+                content: trhRes.data.summary_text,
+                timestamp: new Date().toISOString(),
+                metadata_tags: ['THREAD_SUMMARY']
+            }).catch(e => console.warn('⚠️ [TRH_SAVE_NONFATAL]', e.message));
+            if (debugMode) console.log('[TRH_INJECTED]', { chars: trhRes.data.summary_text.length });
+        } else {
+            const skipReason = trhRes?.data?.meta?.skipReason || trhRes?.data?.meta?.reason || null;
+            execution_meta.trh.outcome = skipReason === 'fresh_summary_exists' ? 'skipped_fresh' : 'no_summary';
+            execution_meta.trh.reason = skipReason;
+            if (debugMode) console.log('[TRH_SKIPPED]', { reason: skipReason || 'null_response' });
         }
     }
-    
-    // MBCR stage
-    const NULL_MBCR = { message: null, debug: { triggered: false, tags: [], text_query: '', retrievedCount: 0, injected: false } };
-    const mbcrResult = session_id
-        ? await base44.functions.invoke('core/mbcrEngine', { thread_id: session_id, userText: input, debugMode }).then(r => r?.data ?? NULL_MBCR).catch(() => NULL_MBCR)
-        : NULL_MBCR;
-    
+
     return { trhSummaryMessage, mbcrInjectedMessage: mbcrResult.message, mbcrDebug: mbcrResult.debug, execution_meta };
 }
 
@@ -482,8 +489,10 @@ async function handleMessageSave({ base44, session_id, input, reply, startTime, 
     try {
         const userTags = extractMetadataTags(input);
         const asstTags = extractMetadataTags(reply);
-        await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: [], timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) });
-        await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), inference_provider: provider || 'openai', response_time_ms: Date.now() - startTime, ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) });
+        await Promise.all([
+            base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: [], timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) }),
+            base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), inference_provider: provider || 'openai', response_time_ms: Date.now() - startTime, ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) }),
+        ]);
         console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length, provider });
     } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
     return { latency: Date.now() - startTime };
@@ -657,10 +666,15 @@ Deno.serve(async (req) => {
         console.log('🚀 [START]', { request_id, user: user.email, session_id });
         emitEvent(base44, request_id, session_id, startTime, 'START', 'Pipeline started', { data: { user: user.email, session_id } });
 
-        // ── STAGE: PROFILE_LOAD + HISTORY_LOAD in parallel ────────────────────
+        // ── STAGE: PROFILE_LOAD + HISTORY_LOAD + threadStateBuilder(fetch_only) in parallel ──
         setStage(STAGES.PROFILE_LOAD);
         let userProfile = null;
         let rawHistory = [];
+        // threadStateBuilder(fetch_only) started here — no dependency on profile/history.
+        // Awaited below only at the point threadStateBlock is consumed (post-HISTORY_PREP).
+        const tsResultPromise = session_id
+            ? base44.functions.invoke('core/threadStateBuilder', { session_id, fetch_only: true }).catch(() => null)
+            : Promise.resolve(null);
         try {
             const [profiles, historyMsgs] = await Promise.all([
                 base44.entities.UserProfile.filter({ user_email: user.email }, '-created_date', 1),
@@ -714,8 +728,8 @@ Deno.serve(async (req) => {
         const sanitize_reduction_ratio = preChars > 0 ? parseFloat((1 - postChars / preChars).toFixed(3)) : 0;
         const t_sanitizer = Date.now() - startTime;
 
-        // Thread state: cache-only read — no model call, non-blocking
-        const tsResult = session_id ? await base44.functions.invoke('core/threadStateBuilder', { session_id, fetch_only: true }).catch(() => null) : null;
+        // Thread state: resolve promise started at PROFILE_LOAD — already in-flight
+        const tsResult = await tsResultPromise;
         const tsData = tsResult?.data;
         const threadStateBlock = (tsData?.ok && tsData.last_seq >= rawHistory.length) ? tsData.block : '';
 
@@ -852,11 +866,13 @@ Deno.serve(async (req) => {
 
         // ── RESPONSE REVIEWER (post-inference policy gate) ────────────────────
         // Runs Gemini Flash as a cheap/fast reviewer. Fail-open: never blocks on error.
+        // Hard ceiling: 3000ms. On timeout, pipeline continues with original reply.
         // Swap reviewer model to DeepSeek-R1 on self-hosted migration.
         try {
-            const reviewRes = await base44.functions.invoke('core/responseReviewer', {
-                reply, request_id, session_id
-            });
+            const reviewRes = await Promise.race([
+                base44.functions.invoke('core/responseReviewer', { reply, request_id, session_id }),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('REVIEWER_TIMEOUT')), 3000))
+            ]);
             const reviewData = reviewRes?.data;
             if (reviewData && !reviewData.clean && reviewData.corrected_reply) {
                 console.warn('🚨 [REVIEWER_CORRECTED]', { violations: reviewData.violations, request_id });
@@ -864,7 +880,11 @@ Deno.serve(async (req) => {
             }
         } catch (reviewErr) {
             // Non-fatal — never block the response
-            console.warn('⚠️ [REVIEWER_SKIPPED]', reviewErr?.message);
+            if (reviewErr?.message === 'REVIEWER_TIMEOUT') {
+                console.warn('⚠️ [REVIEWER_TIMEOUT]', { request_id });
+            } else {
+                console.warn('⚠️ [REVIEWER_SKIPPED]', reviewErr?.message);
+            }
         }
 
         // ── PROVIDER GUARDRAILS ENFORCEMENT ──────────────────────────────────
