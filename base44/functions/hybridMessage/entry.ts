@@ -519,35 +519,6 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
             reply = tier1Result.content;
             openaiUsage = tier1Result.usage;
             providerUsed = provider;
-        } else if (FF_RIA_INFERENCE_SPINE) {
-            // ── Tier 2: backup provider (only if RIA enabled) ────────────────
-            const backupProvider = provider === 'openai' ? 'grok' : 'openai';
-            const backupModel = PROVIDER_MODELS[backupProvider]?.default;
-            console.warn('⚠️ [RIA_TIER2]', { reason: tier1Error?.message || 'empty reply', backup: backupProvider });
-            let tier2Result = null;
-            try {
-                tier2Result = await invokeInference(backupModel);
-            } catch (e) {
-                console.warn('⚠️ [RIA_TIER2_FAIL]', e.message);
-            }
-
-            if (tier2Result?.content) {
-                reply = tier2Result.content;
-                openaiUsage = tier2Result.usage;
-                degraded = true;
-                fallback_tier = 2;
-                providerUsed = backupProvider;
-                console.log('✅ [RIA_TIER2_SUCCESS]', { backup: backupProvider });
-            } else {
-                // ── Tier 3: local responder ──────────────────────────────────
-                console.warn('⚠️ [RIA_TIER3]', 'Both providers failed — using local responder');
-                const t3 = tier3Reply(request_id);
-                reply = t3.content;
-                openaiUsage = null;
-                degraded = true;
-                fallback_tier = 3;
-                providerUsed = 'local';
-            }
         } else {
             // RIA disabled — propagate original error
             if (tier1Error) throw tier1Error;
@@ -802,6 +773,19 @@ function buildResponsePayload({ reply, request_id, correlation_id, routingDecisi
 // (Extracted from main handler for readability. Same logic, same I/O.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── GitHub path mapper (inline dedup helper) ──────────────────────────────────
+function mapChatPathToGitPath(cleanPath) {
+    let gitPath = cleanPath;
+    if (gitPath === 'functions' || gitPath.startsWith('functions/')) {
+        gitPath = gitPath.replace(/^functions/, 'base44/functions');
+    } else if (gitPath === 'agents' || gitPath.startsWith('agents/')) {
+        gitPath = gitPath.replace(/^agents/, 'base44/agents');
+    } else if (gitPath !== '' && !gitPath.startsWith('base44/') && !gitPath.startsWith('src/')) {
+        gitPath = `src/${gitPath}`;
+    }
+    return gitPath;
+}
+
 // ── Repo command handler ──────────────────────────────────────────────────────
 async function handleRepoCommand({ repoCmd, base44, user, session_id, input, request_id, correlation_id, startTime }) {
     const ghToken = Deno.env.get('GITHUB_TOKEN');
@@ -821,15 +805,7 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         const cleanPath = repoCmd.path.replace(/^\/+|\/+$/g, '');
 
         if (repoCmd.op === 'list') {
-            // Map 'functions/' to 'base44/functions/' — actual GitHub structure
-            let gitPath = cleanPath;
-            if (gitPath === 'functions' || gitPath.startsWith('functions/')) {
-                gitPath = gitPath.replace(/^functions/, 'base44/functions');
-            } else if (gitPath === 'agents' || gitPath.startsWith('agents/')) {
-                gitPath = gitPath.replace(/^agents/, 'base44/agents');
-            } else if (gitPath !== '' && !gitPath.startsWith('base44/') && !gitPath.startsWith('src/')) {
-                gitPath = `src/${gitPath}`;
-            }
+            const gitPath = mapChatPathToGitPath(cleanPath);
             const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${gitPath}?ref=main`;
             const ghRes = await fetch(url, { headers: ghHeaders });
             if (!ghRes.ok) {
@@ -844,15 +820,7 @@ async function handleRepoCommand({ repoCmd, base44, user, session_id, input, req
         } else {
             const offset = repoCmd.offset || 0;
             const max_bytes = 60000;
-            // Map 'functions/' to 'base44/functions/' — actual GitHub structure
-            let gitPath = cleanPath;
-            if (gitPath === 'functions' || gitPath.startsWith('functions/')) {
-                gitPath = gitPath.replace(/^functions/, 'base44/functions');
-            } else if (gitPath === 'agents' || gitPath.startsWith('agents/')) {
-                gitPath = gitPath.replace(/^agents/, 'base44/agents');
-            } else if (!gitPath.startsWith('base44/') && !gitPath.startsWith('src/')) {
-                gitPath = `src/${gitPath}`;
-            }
+            let gitPath = mapChatPathToGitPath(cleanPath);
             // Try path as-is, then with .js and .ts extensions if it 404s (Base44 functions have no extension in chat commands but GitHub stores them with extensions)
             const pathsToTry = [gitPath, `${gitPath}.js`, `${gitPath}.ts`];
             let metaRes = null;
