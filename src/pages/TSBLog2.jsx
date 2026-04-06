@@ -60,7 +60,7 @@ export default function TSBLog2() {
 
           <Section title="⚠️ KERNELIZED AGENT RECOVERY HEADER (READ FIRST)" color="yellow">
             <div className="bg-yellow-950/40 border border-yellow-500/20 rounded-lg p-4 text-gray-200 text-xs space-y-2">
-              <p><strong>Last TSB:</strong> TSB-061 (Apr 5–6, 2026)</p>
+              <p><strong>Last TSB:</strong> TSB-061 (Apr 5, 2026)</p>
               <p><strong>Scope locks active:</strong><br/>
                 — functions/hybridMessage: LOCKED (CAOS_HYBRID_MESSAGE_SPINE_v4_2026-03-15 + RIA_WRAPPER_v1_2026-03-23)<br/>
                 — functions/core/promptBuilder: LOCKED (CAOS_PROMPT_BUILDER_v2_2026-03-05)<br/>
@@ -612,7 +612,7 @@ NEXT STEP (pending explicit command):
             </div>
           </Section>
 
-          <Section title="TSB-059 through TSB-061 — Apr 5–6, 2026 Campaign" color="blue">
+          <Section title="TSB-059 through TSB-061 — Apr 5, 2026 Campaign" color="blue">
             <div className="space-y-4">
 
               <div className="bg-blue-950/30 border border-blue-500/20 rounded-lg p-4">
@@ -713,7 +713,7 @@ Result: PASS — no drift detected.`}</Code>
                   <span className="text-blue-300 font-bold text-sm">TSB-061 — ChatInput STT Hotfix: base44 Import Restored After Pass B Regression</span>
                   <Tag label="HOTFIX ✅" color="yellow" />
                 </div>
-                <Code>{`Date:      Apr 6, 2026
+                <Code>{`Date:      Apr 5, 2026
 Files:     components/chat/ChatInput (ONLY — 1 line added)
 
 ROOT CAUSE:
