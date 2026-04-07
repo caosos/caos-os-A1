@@ -358,7 +358,7 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
     setStage(stage);
     let reply, openaiUsage, degraded = false, fallback_tier = null, providerUsed = provider;
     const inferenceStart = Date.now();
-    const INFERENCE_TIMEOUT_MS = 30000;
+    const INFERENCE_TIMEOUT_MS = 120000;
     const openaiAbort = new AbortController();
     const openaiTimeout = setTimeout(() => openaiAbort.abort(), INFERENCE_TIMEOUT_MS);
     const timeoutRace = new Promise((_, rej) =>

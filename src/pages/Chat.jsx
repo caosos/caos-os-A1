@@ -450,36 +450,9 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
     };
     localStorage.setItem('caos_last_message_backup', JSON.stringify(backupMessage));
     
-    // Timeout handler - extended for large messages
-    const timeoutId = setTimeout(async () => {
-      setIsLoading(false);
-      
-      // Log timeout error
-      try {
-        if (!isGuestMode) {
-          const errorLog = await base44.entities.ErrorLog.create({
-            user_email: user.email,
-            conversation_id: currentConversationId || 'none',
-            error_type: 'timeout',
-            error_message: 'Message send timed out after 5 minutes',
-            lost_message_content: content,
-            lost_message_files: fileUrls,
-            request_payload: { content, fileUrls, selectedAgents }
-          });
-          errorLogId = errorLog.id;
-        }
-      } catch (logError) {
-        console.error('Failed to log timeout error:', logError);
-      }
-      
-      toast.error('Request timed out. Message saved in error log.', {
-        action: {
-          label: 'Retry',
-          onClick: () => handleSendMessage(content, fileUrls, selectedAgents)
-        },
-        duration: 10000
-      });
-    }, 20000); // 20 second timeout — aligned to 12s backend ceiling + 8s platform buffer
+    // No frontend timeout — backend handles failures natively.
+    // If the provider is slow (e.g. Gemini + images), let it finish.
+    const timeoutId = null;
 
     try {
       conversationId = currentConversationId;
@@ -665,7 +638,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         replyPreview: response?.data?.reply?.substring(0, 150)
       });
 
-      clearTimeout(timeoutId);
       // Use backend-reported response_time_ms if available (most accurate), else measure from inferenceStart
       const responseTime = response?.data?.response_time_ms || response?.data?.data?.response_time_ms || (Date.now() - inferenceStart);
 
@@ -959,7 +931,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       localStorage.removeItem('caos_last_message_backup');
       console.log('Message saved successfully');
     } catch (error) {
-      clearTimeout(timeoutId);
       const classified = classifyError(error, null);
       console.error('❌ SEND ERROR - Message failed:', { error_code: classified.error_code, stage: classified.stage, message: error.message });
 
