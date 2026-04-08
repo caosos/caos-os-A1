@@ -544,7 +544,10 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         }
       }
 
-      const messageText = content || '📎 File(s)';
+      const messageText = content?.trim()
+        || (fileUrls.length > 0
+            ? `📎 ${fileUrls.length} attached file${fileUrls.length === 1 ? '' : 's'}`
+            : '📎 Attachment');
       const fullMessage = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
       
       tempId = 'temp_' + Date.now();
@@ -1337,6 +1340,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   lastAssistantMessage={currentMessages?.filter(m => m.role === 'assistant').slice(-1)[0]?.content}
                   onTypingStart={() => setCloseMenuTrigger(prev => prev + 1)}
                   multiAgentMode={multiAgentMode}
+                  conversationId={currentConversationId}
                   messageValue={messageInputValue}
                   onMessageChange={setMessageInputValue}
                   onHeightChange={setInputHeight}
