@@ -24,6 +24,7 @@ import BottomNavBar from '@/components/mobile/BottomNavBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
+import { persistGeneratedFiles, persistExplicitLinksFromText } from '@/lib/userFilePersistence';
 import { useAuthBootstrap } from '@/components/hooks/useAuthBootstrap';
 import { useConversations } from '@/components/hooks/useConversations';
 import RedScreenOfDeath from '@/components/chat/RedScreenOfDeath';
@@ -49,6 +50,10 @@ export default function Chat() {
     handleRenameConversation,
     handleSessionResume,
   } = useConversations({ user, isGuestMode, messages, setMessages, setWcwState });
+
+  // finalizePendingAssets is provided by useAttachments via ChatInput's internal hook instance.
+  // We hold a stable ref so handleSendMessage can call it after new-thread creation.
+  const finalizePendingAssetsRef = React.useRef(null);
 
   const [showThreads, setShowThreads] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -486,6 +491,10 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           setCurrentConversationId(conversationId);
           setMessages(prev => ({ ...prev, [conversationId]: [] }));
           localStorage.setItem('caos_last_conversation', conversationId);
+          // Finalize any assets uploaded before this thread existed
+          if (finalizePendingAssetsRef.current) {
+            finalizePendingAssetsRef.current(conversationId, user.email).catch(() => {});
+          }
         }
       }
 
@@ -671,55 +680,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         throw new Error('No response data from server');
       }
 
-      // Auto-save files/photos/links from messages to UserFile storage
-      const saveToUserFiles = async (url, type, name, mimeType) => {
-        if (isGuestMode) return;
-        try {
-          const exists = await base44.entities.UserFile.filter({ created_by: user.email, url, type }, '-created_date', 1);
-          if (exists.length === 0) {
-            await base44.entities.UserFile.create({ name: name || url.split('/').pop() || url, url, type, folder_path: '/', mime_type: mimeType || '' });
-          }
-        } catch (e) {
-          console.warn('Could not auto-save to UserFile:', e.message);
-        }
-      };
-
-      // SANITIZER: Only save explicitly shared resources, never prose-embedded links.
-      // Triggers: (1) user-attached fileUrls, (2) AI-generated file attachments (generated_files),
-      // (3) URLs that are clearly a direct resource link on their own line (markdown link or bare URL line).
-      const extractAndSaveExplicitResources = async (text) => {
-        if (isGuestMode || !text) return;
-        // Only match markdown links [text](url) or bare URLs that appear alone on a line
-        // — NOT URLs embedded mid-sentence in prose.
-        const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-        const bareLineUrlRegex = /^(https?:\/\/[^\s]+)$/gm;
-
-        const toSave = [];
-        let m;
-        while ((m = markdownLinkRegex.exec(text)) !== null) {
-          toSave.push({ url: m[2].replace(/[.,;:!?]+$/, ''), label: m[1] });
-        }
-        while ((m = bareLineUrlRegex.exec(text)) !== null) {
-          toSave.push({ url: m[1].replace(/[.,;:!?]+$/, ''), label: null });
-        }
-
-        for (const { url, label } of toSave) {
-          const pathPart = url.split('?')[0];
-          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(pathPart);
-          const isFile = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|txt|csv|mp3|mp4|mov|avi)$/i.test(pathPart);
-          if (isImage) {
-            const fileName = label || pathPart.split('/').pop() || 'image';
-            await saveToUserFiles(url, 'photo', fileName, 'image/jpeg');
-          } else if (isFile) {
-            const fileName = label || pathPart.split('/').pop() || 'file';
-            await saveToUserFiles(url, 'file', fileName, '');
-          } else {
-            const name = label || (() => { try { return new URL(url).hostname.replace('www.', ''); } catch { return url; } })();
-            await saveToUserFiles(url, 'link', name);
-          }
-        }
-      };
-
       // SESSION_RESUME_NOOP: backend acknowledged silently — nothing to display
       if (data.mode === 'SESSION_RESUME_NOOP') {
         clearTimeout(timeoutId);
@@ -757,32 +717,11 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         }
       }
 
-      // Auto-save files/photos from user's attached files
-      if (!isGuestMode && fileUrls) {
-        for (const fileUrl of fileUrls) {
-          const fileName = fileUrl.split('/').pop();
-          if (fileUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i)) {
-            await saveToUserFiles(fileUrl, 'photo', fileName, 'image/jpeg');
-          } else {
-            await saveToUserFiles(fileUrl, 'file', fileName, '');
-          }
-        }
-      }
-      // Extract and save explicitly provided links from the user's own message text.
-      // Uses the same strict sanitizer as AI explicit links — markdown links and bare URL lines only.
-      await extractAndSaveExplicitResources(content);
-      // Extract and save explicitly shared resources from the AI reply (sanitized — no prose links)
-      await extractAndSaveExplicitResources(reply);
-
-      // Persist AI-generated files (generatedFiles array) to UserFile storage.
-      // These are only rendered in the bubble — never previously persisted.
-      // Images → type='photo', all others → type='file'.
-      if (!isGuestMode && data.generatedFiles?.length > 0) {
-        for (const gf of data.generatedFiles) {
-          if (!gf.url) continue;
-          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(gf.url.split('?')[0]) || gf.type?.startsWith('image/');
-          await saveToUserFiles(gf.url, isImage ? 'photo' : 'file', gf.name || gf.url.split('/').pop() || 'generated', gf.type || '');
-        }
+      // Persist thread-scoped assets via shared helper (thread-scoped, deduped)
+      if (!isGuestMode) {
+        await persistExplicitLinksFromText({ text: content, conversationId, userEmail: user.email });
+        await persistExplicitLinksFromText({ text: reply, conversationId, userEmail: user.email });
+        await persistGeneratedFiles({ generatedFiles: data.generatedFiles, conversationId, userEmail: user.email });
       }
 
       // Update WCW meter with real data from backend
@@ -1232,6 +1171,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 conversationId={currentConversationId}
                 messageValue={messageInputValue}
                 onMessageChange={setMessageInputValue}
+                onRegisterFinalize={(fn) => { finalizePendingAssetsRef.current = fn; }}
               />
             </div>
 
@@ -1400,6 +1340,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   messageValue={messageInputValue}
                   onMessageChange={setMessageInputValue}
                   onHeightChange={setInputHeight}
+                  onRegisterFinalize={(fn) => { finalizePendingAssetsRef.current = fn; }}
                 />
               </div>
 

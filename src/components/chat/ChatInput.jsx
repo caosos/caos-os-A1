@@ -11,7 +11,7 @@ import { useAttachments } from './useAttachments';
 
 const _DEV = localStorage.getItem('caos_developer_mode') === 'true';
 
-export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange }) {
+export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onTypingStart, multiAgentMode, conversationId, messageValue = '', onMessageChange, onRegisterFinalize, onHeightChange }) {
   if (_DEV) console.count('ChatInput render');
   const [message, setMessage] = useState(messageValue);
 
@@ -31,7 +31,13 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
     captureCamera,
     handleCameraCapture,
     removeFile,
+    finalizePendingAssets,
   } = useAttachments({ conversationId });
+
+  // Register finalizePendingAssets with parent (Chat.jsx) once on mount
+  useEffect(() => {
+    onRegisterFinalize?.(finalizePendingAssets);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (messageValue !== message) setMessage(messageValue);

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { persistAsset } from '@/lib/userFilePersistence';
 
 const MAX_FILE_SIZE_MB = 50;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -14,6 +15,8 @@ export function useAttachments({ conversationId } = {}) {
   const captureMenuRef = useRef(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  // Pending assets: uploaded before conversationId exists; finalized after first send
+  const pendingAssetsRef = useRef([]);
 
   const cancelUpload = () => {
     uploadCancelledRef.current = true;
@@ -50,16 +53,14 @@ export function useAttachments({ conversationId } = {}) {
         const result = await base44.integrations.Core.UploadFile({ file });
         if (uploadCancelledRef.current) break;
         const isImage = file.type.startsWith('image/');
+        const assetType = isImage ? 'photo' : 'file';
         uploadedFiles.push({ name: file.name, url: result.file_url, type: file.type });
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Uploads';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: isImage ? 'photo' : 'file',
-          folder_path: folderPath,
-          mime_type: file.type,
-          size: file.size
-        });
+        if (conversationId) {
+          await persistAsset({ url: result.file_url, name: file.name, type: assetType, mimeType: file.type, size: file.size, conversationId, userEmail: null });
+        } else {
+          // Queue for finalization after conversation is created
+          pendingAssetsRef.current.push({ url: result.file_url, name: file.name, type: assetType, mimeType: file.type, size: file.size });
+        }
       }
       if (!uploadCancelledRef.current) {
         setAttachedFiles(prev => [...prev, ...uploadedFiles]);
@@ -92,15 +93,11 @@ export function useAttachments({ conversationId } = {}) {
       canvas.toBlob(async (blob) => {
         const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
         const result = await base44.integrations.Core.UploadFile({ file });
-        const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Screenshots';
-        await base44.entities.UserFile.create({
-          name: file.name,
-          url: result.file_url,
-          type: 'photo',
-          folder_path: folderPath,
-          mime_type: 'image/png',
-          size: blob.size
-        });
+        if (conversationId) {
+          await persistAsset({ url: result.file_url, name: file.name, type: 'photo', mimeType: 'image/png', size: blob.size, conversationId, userEmail: null });
+        } else {
+          pendingAssetsRef.current.push({ url: result.file_url, name: file.name, type: 'photo', mimeType: 'image/png', size: blob.size });
+        }
         setAttachedFiles(prev => [...prev, { name: file.name, url: result.file_url, type: 'image/png' }]);
         setUploading(false);
       });
@@ -121,15 +118,11 @@ export function useAttachments({ conversationId } = {}) {
     setUploading(true);
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
-      const folderPath = conversationId ? `/Conversations/${conversationId}` : '/Photos';
-      await base44.entities.UserFile.create({
-        name: file.name,
-        url: result.file_url,
-        type: 'photo',
-        folder_path: folderPath,
-        mime_type: file.type,
-        size: file.size
-      });
+      if (conversationId) {
+        await persistAsset({ url: result.file_url, name: file.name, type: 'photo', mimeType: file.type, size: file.size, conversationId, userEmail: null });
+      } else {
+        pendingAssetsRef.current.push({ url: result.file_url, name: file.name, type: 'photo', mimeType: file.type, size: file.size });
+      }
       setAttachedFiles(prev => [...prev, { name: file.name, url: result.file_url, type: file.type }]);
     } catch (error) {
       console.error('Error uploading camera photo:', error);
@@ -140,6 +133,17 @@ export function useAttachments({ conversationId } = {}) {
 
   const removeFile = (index) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Called by Chat.jsx after conversationId is resolved for a new thread.
+  // Persists any assets that were uploaded before the conversation existed.
+  const finalizePendingAssets = async (resolvedConversationId, userEmail) => {
+    if (!resolvedConversationId || pendingAssetsRef.current.length === 0) return;
+    const pending = [...pendingAssetsRef.current];
+    pendingAssetsRef.current = [];
+    for (const asset of pending) {
+      await persistAsset({ ...asset, conversationId: resolvedConversationId, userEmail });
+    }
   };
 
   return {
@@ -158,5 +162,6 @@ export function useAttachments({ conversationId } = {}) {
     captureCamera,
     handleCameraCapture,
     removeFile,
+    finalizePendingAssets,
   };
 }

@@ -64,7 +64,7 @@ export default function FileManager({ user, viewType = 'files', conversationId =
         name: file.name,
         url: result.file_url,
         type: type,
-        folder_path: '/',
+        folder_path: conversationId ? `/Conversations/${conversationId}` : '/',
         size: file.size,
         mime_type: file.type
       });
