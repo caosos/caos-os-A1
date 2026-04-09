@@ -498,57 +498,11 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
         }
       }
 
-      let fileContents = '';
-      const fileSummary = { text: 0, image: 0, document: 0, other: 0 };
-      
-      if (fileUrls?.length > 0) {
-        for (let i = 0; i < fileUrls.length; i++) {
-          const fileUrl = fileUrls[i];
-          try {
-            const fileName = fileUrl.split('/').pop();
-            const extension = fileName.split('.').pop()?.toLowerCase();
-
-            const textExtensions = ['txt', 'md', 'json', 'csv', 'log', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'html', 'css', 'xml', 'yaml', 'yml'];
-            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-            const documentExtensions = ['pdf', 'doc', 'docx'];
-
-            if (textExtensions.includes(extension)) {
-              const response = await fetch(fileUrl);
-              const fileContent = await response.text();
-              fileContents += `\n\n=== TEXT FILE: ${fileName} ===\n${fileContent}\n=== END TEXT FILE ===\n`;
-              fileSummary.text++;
-            } else if (imageExtensions.includes(extension)) {
-              fileContents += `\n\n[IMAGE ${i + 1}: "${fileName}" - USE VISION TO ANALYZE AND DESCRIBE IN DETAIL]\n`;
-              fileSummary.image++;
-            } else if (documentExtensions.includes(extension)) {
-              fileContents += `\n\n[DOCUMENT ${i + 1}: "${fileName}" - EXTRACT TEXT, SUMMARIZE KEY POINTS]\n`;
-              fileSummary.document++;
-            } else {
-              fileContents += `\n\n[BINARY FILE ${i + 1}: "${fileName}" (${extension}) - PROVIDE METADATA]\n`;
-              fileSummary.other++;
-            }
-          } catch (error) {
-            console.error('Error reading file:', error);
-            fileContents += `\n\n[ERROR: Could not read "${fileUrl.split('/').pop()}"]\n`;
-          }
-        }
-
-        if (fileUrls.length > 1) {
-          const fileTypesList = [];
-          if (fileSummary.text > 0) fileTypesList.push(`${fileSummary.text} text file${fileSummary.text > 1 ? 's' : ''}`);
-          if (fileSummary.image > 0) fileTypesList.push(`${fileSummary.image} image${fileSummary.image > 1 ? 's' : ''}`);
-          if (fileSummary.document > 0) fileTypesList.push(`${fileSummary.document} document${fileSummary.document > 1 ? 's' : ''}`);
-          if (fileSummary.other > 0) fileTypesList.push(`${fileSummary.other} other file${fileSummary.other > 1 ? 's' : ''}`);
-
-          fileContents = `\n\n[MULTI-FILE REQUEST: ${fileUrls.length} files provided - ${fileTypesList.join(', ')}]\n[INSTRUCTION: Analyze each file according to its type, then synthesize findings into a cohesive response]\n` + fileContents;
-        }
-      }
-
       const messageText = content?.trim()
         || (fileUrls.length > 0
             ? `📎 ${fileUrls.length} attached file${fileUrls.length === 1 ? '' : 's'}`
             : '📎 Attachment');
-      const fullMessage = content ? `${content}${fileContents}` : fileContents || 'User sent file(s)';
+      const fullMessage = content?.trim() || (fileUrls.length > 0 ? messageText : 'User sent file(s)');
       
       tempId = 'temp_' + Date.now();
       setMessages(prev => ({
