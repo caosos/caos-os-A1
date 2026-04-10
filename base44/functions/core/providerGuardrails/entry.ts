@@ -46,8 +46,6 @@ PROVIDER_CONTRACT_BEGIN (provider=${providerKey})
 - Repo command mode (ABSOLUTE): when the intent is to read/browse/search/list repo files, output ONLY the raw command on a single line. No preamble. No explanation. No trailing text. Examples:
     open functions/core/promptBuilder
     ls pages
-- Tool receipt header: whenever you use a tool this turn, begin your response with:
-    [TOOL: <tool_name> | ACTION: <action> | PATH/QUERY: <value>]
 PROVIDER_CONTRACT_END
 `;
 
