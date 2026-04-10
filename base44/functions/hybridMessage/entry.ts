@@ -969,16 +969,17 @@ Deno.serve(async (req) => {
         console.log('📊 [WCW]', { wcw_budget: wcwBudget, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length });
 
-        // ── BARE COMMAND INTERCEPT — non-repo-intent turns only ───────────────
-        // If inference emitted a bare repo command on a conversational turn,
-        // execute it internally and synthesize findings before saving or returning.
-        const BARE_CMD_RE = /^(open|read|cat|ls|list)\s+\S+\s*$/i;
-        if (!repoCmd && BARE_CMD_RE.test(reply.trim())) {
+        // ── BARE COMMAND INTERCEPT — non-repo-intent turns only (Step 2: line-level) ────
+        // Catches whole-reply bare commands AND mixed prose+command contaminated replies.
+        const CMD_LINE_RE = /^(open|read|cat|ls|list)\s+\S+\s*$/i;
+        const replyLines = reply.split('\n');
+        const cmdLine = !repoCmd && replyLines.find(l => CMD_LINE_RE.test(l.trim())) || null;
+        if (cmdLine) {
             try {
-                const intercept_cmd = detectRepoCommand(reply.trim());
+                const intercept_cmd = detectRepoCommand(cmdLine.trim());
                 if (intercept_cmd) {
                     const repoRes = await base44.functions.invoke('core/repoCommandHandler', {
-                        repoCmd: intercept_cmd, session_id, input: reply.trim(),
+                        repoCmd: intercept_cmd, session_id, input: cmdLine.trim(),
                         request_id, correlation_id, user_email: user.email, startTime,
                     });
                     const repoContent = repoRes?.data?.reply || repoRes?.data?.content || null;
@@ -995,12 +996,21 @@ Deno.serve(async (req) => {
                         if (synthResult?.reply) {
                             reply = synthResult.reply;
                             console.log('✅ [BARE_CMD_INTERCEPT] Synthesized reply from internal repo execution');
+                        } else {
+                            // Synthesis returned nothing — strip command lines as fallback
+                            reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim();
+                            console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No synthesis reply — command lines stripped');
                         }
+                    } else {
+                        // Repo execution returned no content — strip command lines
+                        reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim();
+                        console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No repo content — command lines stripped');
                     }
                 }
             } catch (interceptErr) {
                 console.warn('⚠️ [BARE_CMD_INTERCEPT_NONFATAL]', interceptErr.message);
-                // Non-fatal — fall through with original reply
+                // Fallback: strip all transport command lines rather than leaking them
+                reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim() || reply;
             }
         }
 
