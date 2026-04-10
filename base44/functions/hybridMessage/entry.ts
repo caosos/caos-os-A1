@@ -488,20 +488,47 @@ async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = fal
     };
 }
 
-// ── Message save handler ─────────────────────────────────────────────────────
+// ── Message save handler (integrity-preserving: sequential, no silent swallow) ──────────────
 async function handleMessageSave({ base44, session_id, input, reply, startTime, provider }) {
     setStage(STAGES.MESSAGE_SAVE);
     if (!session_id) return { latency: Date.now() - startTime };
-    
+
+    const userTags = extractMetadataTags(input);
+    const asstTags = extractMetadataTags(reply);
+
+    // Save user message first. If this fails, nothing was written — throw immediately.
+    let userSaved = null;
     try {
-        const userTags = extractMetadataTags(input);
-        const asstTags = extractMetadataTags(reply);
-        await Promise.all([
-            base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, file_urls: [], timestamp: new Date().toISOString(), ...(userTags.length > 0 ? { metadata_tags: userTags } : {}) }),
-            base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: reply, timestamp: new Date().toISOString(), inference_provider: provider || 'openai', response_time_ms: Date.now() - startTime, ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {}) }),
-        ]);
+        userSaved = await base44.entities.Message.create({
+            conversation_id: session_id, role: 'user', content: input,
+            file_urls: [], timestamp: new Date().toISOString(),
+            ...(userTags.length > 0 ? { metadata_tags: userTags } : {})
+        });
+    } catch (e) {
+        console.error('🔥 [SAVE_USER_FAILED]', e.message);
+        throw Object.assign(new Error('MESSAGE_PERSISTENCE_FAILED'), { stage: 'MESSAGE_SAVE', error_code: 'PERSISTENCE_ERROR', latency_ms: Date.now() - startTime, isTimeout: false });
+    }
+
+    // Save assistant message. If this fails, compensate by deleting the user message
+    // so the thread does not end in a user-last state after refresh.
+    try {
+        await base44.entities.Message.create({
+            conversation_id: session_id, role: 'assistant', content: reply,
+            timestamp: new Date().toISOString(),
+            inference_provider: provider || 'openai',
+            response_time_ms: Date.now() - startTime,
+            ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {})
+        });
         console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length, provider });
-    } catch (e) { console.warn('⚠️ [SAVE_FAILED]', e.message); }
+    } catch (e) {
+        console.error('🔥 [SAVE_ASST_FAILED] Compensating: deleting user message to prevent user-last state', e.message);
+        // Best-effort rollback — non-fatal if compensation also fails
+        if (userSaved?.id) {
+            base44.entities.Message.delete(userSaved.id).catch(ce => console.warn('⚠️ [COMPENSATE_DELETE_FAILED]', ce.message));
+        }
+        throw Object.assign(new Error('MESSAGE_PERSISTENCE_FAILED'), { stage: 'MESSAGE_SAVE', error_code: 'PERSISTENCE_ERROR', latency_ms: Date.now() - startTime, isTimeout: false });
+    }
+
     return { latency: Date.now() - startTime };
 }
 
