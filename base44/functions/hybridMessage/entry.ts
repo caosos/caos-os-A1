@@ -969,6 +969,41 @@ Deno.serve(async (req) => {
         console.log('📊 [WCW]', { wcw_budget: wcwBudget, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length });
 
+        // ── BARE COMMAND INTERCEPT — non-repo-intent turns only ───────────────
+        // If inference emitted a bare repo command on a conversational turn,
+        // execute it internally and synthesize findings before saving or returning.
+        const BARE_CMD_RE = /^(open|read|cat|ls|list)\s+\S+\s*$/i;
+        if (!repoCmd && BARE_CMD_RE.test(reply.trim())) {
+            try {
+                const intercept_cmd = detectRepoCommand(reply.trim());
+                if (intercept_cmd) {
+                    const repoRes = await base44.functions.invoke('core/repoCommandHandler', {
+                        repoCmd: intercept_cmd, session_id, input: reply.trim(),
+                        request_id, correlation_id, user_email: user.email, startTime,
+                    });
+                    const repoContent = repoRes?.data?.reply || repoRes?.data?.content || null;
+                    if (repoContent) {
+                        const synthesisMessages = [
+                            ...finalMessages,
+                            { role: 'system', content: `REPO_RESULT_INJECTED:\n${repoContent}\n\nUsing this content, provide your diagnosis or findings in plain language. Do NOT output a bare command as your reply.` }
+                        ];
+                        const synthResult = await handleInference({
+                            base44, user, finalMessages: synthesisMessages,
+                            RESOLVED_MODEL, request_id, correlation_id, session_id,
+                            startTime, preferredProvider, openaiKey,
+                        });
+                        if (synthResult?.reply) {
+                            reply = synthResult.reply;
+                            console.log('✅ [BARE_CMD_INTERCEPT] Synthesized reply from internal repo execution');
+                        }
+                    }
+                }
+            } catch (interceptErr) {
+                console.warn('⚠️ [BARE_CMD_INTERCEPT_NONFATAL]', interceptErr.message);
+                // Non-fatal — fall through with original reply
+            }
+        }
+
         // ── MESSAGE_SAVE + RESPONSE_BUILD ────────────────────────────────────
         const saveResult = await handleMessageSave({ base44, session_id, input, reply, startTime, provider: preferredProvider });
         const t_save_messages = saveResult.latency;
