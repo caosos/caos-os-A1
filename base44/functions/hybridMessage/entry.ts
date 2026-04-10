@@ -488,48 +488,82 @@ async function resilientInference({ FF_RIA_INFERENCE_SPINE, forceTier1Fail = fal
     };
 }
 
-// ── Message save handler (integrity-preserving: sequential, no silent swallow) ──────────────
+// ── Message save handler ────────────────────────────────────────────
 async function handleMessageSave({ base44, session_id, input, reply, startTime, provider }) {
     setStage(STAGES.MESSAGE_SAVE);
-    if (!session_id) return { latency: Date.now() - startTime };
+
+    if (!session_id) {
+        return { latency: Date.now() - startTime };
+    }
 
     const userTags = extractMetadataTags(input);
     const asstTags = extractMetadataTags(reply);
 
-    // Save user message first. If this fails, nothing was written — throw immediately.
-    let userSaved = null;
+    let userRow = null;
+    let assistantRow = null;
+
     try {
-        userSaved = await base44.entities.Message.create({
-            conversation_id: session_id, role: 'user', content: input,
-            file_urls: [], timestamp: new Date().toISOString(),
+        // Save sequentially so we can compensate on second-write failure.
+        userRow = await base44.entities.Message.create({
+            conversation_id: session_id,
+            role: 'user',
+            content: input,
+            file_urls: [],
+            timestamp: new Date().toISOString(),
             ...(userTags.length > 0 ? { metadata_tags: userTags } : {})
         });
-    } catch (e) {
-        console.error('🔥 [SAVE_USER_FAILED]', e.message);
-        throw Object.assign(new Error('MESSAGE_PERSISTENCE_FAILED'), { stage: 'MESSAGE_SAVE', error_code: 'PERSISTENCE_ERROR', latency_ms: Date.now() - startTime, isTimeout: false });
-    }
 
-    // Save assistant message. If this fails, compensate by deleting the user message
-    // so the thread does not end in a user-last state after refresh.
-    try {
-        await base44.entities.Message.create({
-            conversation_id: session_id, role: 'assistant', content: reply,
-            timestamp: new Date().toISOString(),
-            inference_provider: provider || 'openai',
-            response_time_ms: Date.now() - startTime,
-            ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {})
-        });
-        console.log('✅ [MESSAGES_SAVED]', { user_tags: userTags.length, asst_tags: asstTags.length, provider });
-    } catch (e) {
-        console.error('🔥 [SAVE_ASST_FAILED] Compensating: deleting user message to prevent user-last state', e.message);
-        // Best-effort rollback — non-fatal if compensation also fails
-        if (userSaved?.id) {
-            base44.entities.Message.delete(userSaved.id).catch(ce => console.warn('⚠️ [COMPENSATE_DELETE_FAILED]', ce.message));
+        try {
+            assistantRow = await base44.entities.Message.create({
+                conversation_id: session_id,
+                role: 'assistant',
+                content: reply,
+                timestamp: new Date().toISOString(),
+                inference_provider: provider || 'openai',
+                response_time_ms: Date.now() - startTime,
+                ...(asstTags.length > 0 ? { metadata_tags: asstTags } : {})
+            });
+        } catch (assistantErr) {
+            // Roll back the user row so partial persistence cannot survive refresh.
+            if (userRow?.id) {
+                try {
+                    await base44.entities.Message.delete(userRow.id);
+                    console.warn('⚠️ [SAVE_ROLLBACK_OK]', { session_id, user_message_id: userRow.id });
+                } catch (rollbackErr) {
+                    console.error('🔥 [SAVE_ROLLBACK_FAILED]', {
+                        session_id,
+                        user_message_id: userRow.id,
+                        rollback_error: rollbackErr.message
+                    });
+                }
+            }
+            throw new Error(`ASSISTANT_SAVE_FAILED: ${assistantErr.message}`);
         }
-        throw Object.assign(new Error('MESSAGE_PERSISTENCE_FAILED'), { stage: 'MESSAGE_SAVE', error_code: 'PERSISTENCE_ERROR', latency_ms: Date.now() - startTime, isTimeout: false });
-    }
 
-    return { latency: Date.now() - startTime };
+        console.log('✅ [MESSAGES_SAVED]', {
+            user_tags: userTags.length,
+            asst_tags: asstTags.length,
+            provider,
+            user_message_id: userRow?.id || null,
+            assistant_message_id: assistantRow?.id || null
+        });
+
+        return { latency: Date.now() - startTime };
+    } catch (e) {
+        console.error('🔥 [SAVE_INTEGRITY_FAILED]', {
+            session_id,
+            stage: STAGES.MESSAGE_SAVE,
+            message: e.message
+        });
+
+        throw {
+            latency_ms: Date.now() - startTime,
+            isTimeout: false,
+            stage: STAGES.MESSAGE_SAVE,
+            error_code: 'MESSAGE_SAVE_FAILED',
+            message: e.message || 'Message persistence failed'
+        };
+    }
 }
 
 // ── WCW builders extracted → core/responsePayloadBuilder ─────────────────────
@@ -1040,7 +1074,28 @@ Deno.serve(async (req) => {
         }
 
         // ── MESSAGE_SAVE + RESPONSE_BUILD ────────────────────────────────────
-        const saveResult = await handleMessageSave({ base44, session_id, input, reply, startTime, provider: preferredProvider });
+        let saveResult;
+        try {
+            saveResult = await handleMessageSave({
+                base44,
+                session_id,
+                input,
+                reply,
+                startTime,
+                provider: preferredProvider
+            });
+        } catch (saveError) {
+            return respondError({
+                error_code: saveError.error_code || 'MESSAGE_SAVE_FAILED',
+                stage: saveError.stage || STAGES.MESSAGE_SAVE,
+                message: saveError.message || 'Message persistence failed',
+                retryable: false,
+                request_id,
+                correlation_id,
+                elapsed_ms: saveError.latency_ms || (Date.now() - startTime),
+            });
+        }
+
         const t_save_messages = saveResult.latency;
         const responseTime = Date.now() - startTime;
 
