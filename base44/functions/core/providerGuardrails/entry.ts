@@ -30,7 +30,7 @@ export function providerDefaults(providerKey) {
 export function enforcementRules(providerKey) {
     return {
         repoCommandOnlyLine: true,          // repo intent → single bare command line only
-        requireToolReceiptHeader: true,     // any tool used → response must have [TOOL: ...] header
+        requireRepoReceiptHeader: true,     // repo-intent turns only → response must have [TOOL: repo_access | ...] header
         autoContinueOnTruncation: true,     // TRUNCATED_CONTINUE marker → auto-continuation call
     };
 }

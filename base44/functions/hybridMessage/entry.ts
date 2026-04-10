@@ -924,10 +924,9 @@ Deno.serve(async (req) => {
                 }
             }
 
-            // GATE B: Tool receipt header injection
-            // If repo tool was used (mode=REPO_TOOL), ensure receipt header is present.
-            // For non-repo turns, the model is expected to self-inject per provider addendum.
-            // Platform auto-injects if missing for repo reads.
+            // GATE B: Repo receipt header injection (repo-intent turns only)
+            // If input is a repo intent and reply lacks [TOOL: ...] header, inject one.
+            // This gate is scoped exclusively to isRepoIntent — never fires on normal turns.
             if (isRepoIntent && !reply.startsWith('[TOOL:')) {
                 reply = `[TOOL: repo_access | ACTION: ${/^ls\s/i.test(input.trim()) ? 'list' : 'read'} | PATH: ${input.trim().replace(/^(open|show|read|cat|ls|list)\s+/i, '')}]\n` + reply;
                 console.log('ℹ️ [GUARDRAIL_RECEIPT_INJECTED]');
