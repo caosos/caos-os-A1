@@ -423,6 +423,13 @@ async function handleInference({ base44, user, finalMessages, RESOLVED_MODEL, re
             emitEvent(base44, request_id, session_id, startTime, 'INFERENCE', 'Provider timeout — degraded local reply', { level: 'WARN', code: 'INFERENCE_TIMEOUT', data: { latency_ms } });
             return { reply: tier3Reply(request_id).content, openaiUsage: null, inferenceMs: Date.now() - inferenceStart, degraded: true, fallback_tier: 'TIER_3_TIMEOUT', provider: 'local' };
         }
+        const errMsg = inferenceError?.message || '';
+        const isProviderServerFailure = errMsg.includes('status code 500') || errMsg.includes('OpenAI 500') || errMsg.includes('OPENAI_ERROR') || errMsg.includes('status code 502') || errMsg.includes('status code 503');
+        if (isProviderServerFailure) {
+            console.warn('⚠️ [PROVIDER_500_ABSORBED]', { request_id, latency_ms, message: errMsg });
+            emitEvent(base44, request_id, session_id, startTime, stage, 'Provider server failure — degraded local reply', { level: 'WARN', code: 'PROVIDER_SERVER_FAILURE', data: { is_timeout: false, latency_ms } });
+            return { reply: tier3Reply(request_id).content, openaiUsage: null, inferenceMs: Date.now() - inferenceStart, degraded: true, fallback_tier: 'TIER_3_PROVIDER_500', provider: 'local' };
+        }
         const errStage = stage;
         const error_code = 'INFERENCE_FAILED';
         console.error('🔥 [INFERENCE_ERROR_ENVELOPE]', { stage: errStage, error_code, message: inferenceError.message, request_id, correlation_id, latency_ms });
