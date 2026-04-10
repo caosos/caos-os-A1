@@ -162,14 +162,23 @@ Deno.serve(async (req) => {
         // without a descriptive wrapper, and was inconsistent with Gemini's output.
         // ─────────────────────────────────────────────────────────────────────────
         const COMMAND_ENFORCEMENT_SUFFIX = `
-REPO_COMMAND_MODE_ACTIVE:
-- If the user is asking to read or browse a file, respond with ONLY the raw command on its own line.
-  Examples: "open src/pages/Chat.jsx" or "ls functions/core"
-- Do NOT explain, narrate, or wrap the command in markdown.
-- Do NOT say "I will now..." or "Let me...".
+REPO_COMMAND_MODE — CONTEXT-SENSITIVE:
+
+EXPLICIT OPERATOR/DEV CONTEXT (user sent a bare command directly like "open x" or "ls y"):
+- Output ONLY the raw command on its own line. No preamble. No explanation. No markdown wrapping.
+- Examples: "open src/pages/Chat.jsx" or "ls functions/core"
+
+NORMAL CONVERSATIONAL INSPECTION (user asked a question that requires repo inspection):
+- Give ONE brief orientation sentence stating what you are checking and why.
+- Then issue the raw command on its own line immediately after.
+- Do NOT say "I will now..." as a standalone narration — orient concisely, then act immediately.
+- Example: "I'm checking the hybridMessage return paths first." then on the next line: "open functions/hybridMessage"
+
+BOTH CONTEXTS:
 - After the frontend executes the command and returns results, provide a rich, analytical response.
 - Include a concise receipt at the end: [TOOL: repo_access | ACTION: read|list | PATH: <path> | ok: true]
-- DO NOT include the full file content in the receipt — just confirm what was accessed.`;
+- DO NOT include the full file content in the receipt — just confirm what was accessed.
+- DO NOT dump file content into the response.`;
 
         const augmentedMessages = [
             ...messages,
