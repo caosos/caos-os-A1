@@ -969,17 +969,17 @@ Deno.serve(async (req) => {
         console.log('📊 [WCW]', { wcw_budget: wcwBudget, prompt_tokens: promptTokens, wcw_remaining: wcwRemaining });
         console.log('✅ [INFERENCE_SUCCESS]', { replyLength: reply.length });
 
-        // ── BARE COMMAND INTERCEPT — non-repo-intent turns only (Step 2: line-level) ────
-        // Catches whole-reply bare commands AND mixed prose+command contaminated replies.
-        const CMD_LINE_RE = /^(open|read|cat|ls|list)\s+\S+\s*$/i;
-        const replyLines = reply.split('\n');
-        const cmdLine = !repoCmd && replyLines.find(l => CMD_LINE_RE.test(l.trim())) || null;
-        if (cmdLine) {
+        // ── BARE COMMAND INTERCEPT — non-repo-intent turns only (Step 3: fragment-level) ──
+        // Catches whole-reply, line-level, AND fragment-embedded repo transport commands.
+        const CMD_FRAGMENT_RE = /\b(open|read|cat|ls|list)\s+(\S+)/i;
+        const cmdFragment = !repoCmd && CMD_FRAGMENT_RE.exec(reply) || null;
+        if (cmdFragment) {
+            const rawCmd = cmdFragment[0]; // e.g. "ls pages" or "open functions/hybridMessage"
             try {
-                const intercept_cmd = detectRepoCommand(cmdLine.trim());
+                const intercept_cmd = detectRepoCommand(rawCmd.trim());
                 if (intercept_cmd) {
                     const repoRes = await base44.functions.invoke('core/repoCommandHandler', {
-                        repoCmd: intercept_cmd, session_id, input: cmdLine.trim(),
+                        repoCmd: intercept_cmd, session_id, input: rawCmd.trim(),
                         request_id, correlation_id, user_email: user.email, startTime,
                     });
                     const repoContent = repoRes?.data?.reply || repoRes?.data?.content || null;
@@ -997,20 +997,18 @@ Deno.serve(async (req) => {
                             reply = synthResult.reply;
                             console.log('✅ [BARE_CMD_INTERCEPT] Synthesized reply from internal repo execution');
                         } else {
-                            // Synthesis returned nothing — strip command lines as fallback
-                            reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim();
-                            console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No synthesis reply — command lines stripped');
+                            reply = reply.replace(new RegExp(CMD_FRAGMENT_RE.source, 'gi'), '').trim();
+                            console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No synthesis — fragments stripped');
                         }
                     } else {
-                        // Repo execution returned no content — strip command lines
-                        reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim();
-                        console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No repo content — command lines stripped');
+                        reply = reply.replace(new RegExp(CMD_FRAGMENT_RE.source, 'gi'), '').trim();
+                        console.warn('⚠️ [BARE_CMD_INTERCEPT_STRIPPED] No repo content — fragments stripped');
                     }
                 }
             } catch (interceptErr) {
                 console.warn('⚠️ [BARE_CMD_INTERCEPT_NONFATAL]', interceptErr.message);
-                // Fallback: strip all transport command lines rather than leaking them
-                reply = replyLines.filter(l => !CMD_LINE_RE.test(l.trim())).join('\n').trim() || reply;
+                // Fallback: strip all transport fragments rather than leaking them
+                reply = reply.replace(new RegExp(CMD_FRAGMENT_RE.source, 'gi'), '').trim() || reply;
             }
         }
 
