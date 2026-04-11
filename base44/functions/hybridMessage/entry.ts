@@ -667,8 +667,22 @@ async function handleMemorySave({ memorySaveSignal, userProfile, session_id, inp
     }
 
     if (session_id) {
-        await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
-        await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: confirmReply, timestamp: new Date().toISOString() });
+        let savedUserRow = null;
+        try {
+            savedUserRow = await base44.entities.Message.create({ conversation_id: session_id, role: 'user', content: input, timestamp: new Date().toISOString() });
+            await base44.entities.Message.create({ conversation_id: session_id, role: 'assistant', content: confirmReply, timestamp: new Date().toISOString() });
+        } catch (msgErr) {
+            if (savedUserRow?.id) {
+                try {
+                    await base44.entities.Message.delete(savedUserRow.id);
+                    console.warn('⚠️ [MEMORY_SAVE_MSG_ROLLBACK_OK]', { session_id, user_message_id: savedUserRow.id });
+                } catch (rollbackErr) {
+                    console.error('🔥 [MEMORY_SAVE_MSG_ROLLBACK_FAILED]', { session_id, user_message_id: savedUserRow.id, rollback_error: rollbackErr.message });
+                }
+            }
+            console.error('🔥 [MEMORY_SAVE_MSG_INTEGRITY_FAILED]', { session_id, message: msgErr.message });
+            return Response.json({ reply: 'Memory was saved, but the message log could not be written. Please retry.', mode: 'MEMORY_SAVE_ERROR', memory_saved, request_id, response_time_ms: Date.now() - startTime }, { status: 500 });
+        }
     }
 
     return Response.json({
