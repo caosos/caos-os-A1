@@ -45,6 +45,7 @@ export default function Chat() {
     setConversations,
     currentConversationId,
     setCurrentConversationId,
+    bootCompleted,
     handleNewThread,
     handleDeleteConversation,
     handleRenameConversation,
@@ -906,7 +907,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
     }
   };
 
-  if (!dataLoaded) {
+  if (!dataLoaded || !bootCompleted) {
     return (
       <div className="fixed inset-0 bg-[#0a1628] flex items-center justify-center">
         <StarfieldBackground />
