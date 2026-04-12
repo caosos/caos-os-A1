@@ -15,9 +15,10 @@ import YouTubeEmbed from '@/components/chat/YouTubeEmbed';
 import MemorySaveIndicator, { hasMemorySave, stripMemoryMarker } from './MemorySaveIndicator';
 
 export default function MessageContent({ message, isUser, downloadFile }) {
+  // Hook must be declared before any early returns (Rules of Hooks)
+  const [repoExpanded, setRepoExpanded] = React.useState(false);
+
   // ── STREAMING FAST PATH ───────────────────────────────────────────────────
-  // While streaming, skip all regex parsing and ReactMarkdown re-renders.
-  // Render plain text with a blinking cursor; switch to full render on completion.
   if (message.streaming) {
     return (
       <div className="space-y-3">
@@ -55,7 +56,6 @@ export default function MessageContent({ message, isUser, downloadFile }) {
     const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const markdownLinkRegex = new RegExp(`\\[([^\\]]+)\\]\\(${escapedUrl}\\)`, 'g');
     cleanContent = cleanContent.replace(markdownLinkRegex, '');
-    // Also remove bare URLs on their own line
     const bareLineRegex = new RegExp(`^\\s*${escapedUrl}\\s*$`, 'gm');
     cleanContent = cleanContent.replace(bareLineRegex, '');
   });
@@ -102,17 +102,13 @@ export default function MessageContent({ message, isUser, downloadFile }) {
   }
 
   // ── Repo chunk "Next chunk" button — driven by structured message.repo_tool ──
-  // No text parsing. Backend sets repo_tool.done=false + next_offset when chunk is partial.
   const nextChunk = !isUser && message.repo_tool?.op === 'read' && message.repo_tool?.done === false
     ? { path: message.repo_tool.path, offset: message.repo_tool.next_offset }
     : null;
 
-  // ── REPO OUTPUT GUARD — bounded by default ────────────────────────────────
-  // If a structured repo_tool envelope is present, truncate raw content display.
-  // Full file bodies must not auto-render. Snippet-first only.
+  // ── REPO OUTPUT GUARD ─────────────────────────────────────────────────────
   const REPO_SNIPPET_LIMIT = 800;
   const isRepoOutput = !isUser && message.repo_tool && typeof message.repo_tool === 'object';
-  const [repoExpanded, setRepoExpanded] = React.useState(false);
 
   let displayContent = cleanContent?.trim() || '';
   let repoTruncated = false;
