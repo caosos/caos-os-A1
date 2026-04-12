@@ -14,6 +14,11 @@ import TSBLog1 from './pages/TSBLog';
 import TSBLog2 from './pages/TSBLog2';
 import Console from './pages/Console';
 import MemoryIsolation from './pages/MemoryIsolation';
+import Implementation from './pages/Implementation';
+import News from './pages/News';
+import RequestInspector from './pages/RequestInspector';
+import TerminalBlueprint from './pages/TerminalBlueprint';
+import Logs from './pages/Logs';
 // Note: Individual TSB-041, TSB-042, TSB-043, TSB-044 pages removed from routing.
 // All TSBs consolidated into TSBLog1 (TSB-001–042) and TSBLog2 (TSB-043–048)
 
@@ -55,6 +60,11 @@ const AuthenticatedApp = () => {
       <Route path="/TSBLog2" element={<LayoutWrapper><TSBLog2 /></LayoutWrapper>} />
       <Route path="/Console" element={<LayoutWrapper><Console /></LayoutWrapper>} />
       <Route path="/MemoryIsolation" element={<LayoutWrapper><MemoryIsolation /></LayoutWrapper>} />
+      <Route path="/Implementation" element={<LayoutWrapper><Implementation /></LayoutWrapper>} />
+      <Route path="/News" element={<LayoutWrapper><News /></LayoutWrapper>} />
+      <Route path="/RequestInspector" element={<LayoutWrapper><RequestInspector /></LayoutWrapper>} />
+      <Route path="/TerminalBlueprint" element={<LayoutWrapper><TerminalBlueprint /></LayoutWrapper>} />
+      <Route path="/Logs" element={<LayoutWrapper><Logs /></LayoutWrapper>} />
       {/* Individual TSB pages removed — all content in TSBLog1 + TSBLog2 */}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
