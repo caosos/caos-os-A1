@@ -108,12 +108,22 @@ export default function MessageContent({ message, isUser, downloadFile }) {
 
   // ── REPO OUTPUT GUARD ─────────────────────────────────────────────────────
   const REPO_SNIPPET_LIMIT = 800;
+  const PLAIN_TEXT_SNIPPET_LIMIT = 2000;
   const isRepoOutput = !isUser && message.repo_tool && typeof message.repo_tool === 'object';
 
   let displayContent = cleanContent?.trim() || '';
   let repoTruncated = false;
+
+  const isLargePlainAssistantOutput =
+    !isUser &&
+    !isRepoOutput &&
+    displayContent.length > PLAIN_TEXT_SNIPPET_LIMIT;
+
   if (isRepoOutput && displayContent.length > REPO_SNIPPET_LIMIT && !repoExpanded) {
     displayContent = displayContent.slice(0, REPO_SNIPPET_LIMIT);
+    repoTruncated = true;
+  } else if (isLargePlainAssistantOutput && !repoExpanded) {
+    displayContent = displayContent.slice(0, PLAIN_TEXT_SNIPPET_LIMIT);
     repoTruncated = true;
   }
 
