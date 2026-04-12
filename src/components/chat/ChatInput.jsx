@@ -316,8 +316,9 @@ export default function ChatInput({ onSend, isLoading, lastAssistantMessage, onT
           const audio_base64 = btoa(binary);
           const _resp = await base44.functions.invoke('transcribeAudio', { audio_base64 });
           const data = _resp.data;
-          if (data.ok && data.data?.text) {
-            const updatedMessage = message + (message ? ' ' : '') + data.data.text;
+          const transcriptText = data.data?.text || data.text;
+          if (data.ok && transcriptText) {
+            const updatedMessage = message + (message ? ' ' : '') + transcriptText;
             setMessage(updatedMessage);
             onMessageChange?.(updatedMessage);
 
