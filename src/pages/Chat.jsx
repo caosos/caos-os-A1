@@ -21,6 +21,7 @@ import GameView from '@/components/game/GameView';
 import TokenMeter from '@/components/chat/TokenMeter';
 import LaneSelector from '@/components/chat/LaneSelector';
 import BottomNavBar from '@/components/mobile/BottomNavBar';
+import ModelSwitcherBar from '@/components/chat/ModelSwitcherBar';
 import AppSidebar from '@/components/layout/AppSidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
@@ -1128,6 +1129,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           </AnimatePresence>
 
           <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-auto">
+            <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
             <div>
               <ChatInput 
                 onSend={handleSendMessage} 
@@ -1297,6 +1299,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
             <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-auto" ref={(el) => {
               if (el) setInputHeight(el.offsetHeight);
             }}>
+              <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
               <div>
                 <ChatInput 
                   onSend={handleSendMessage} 
