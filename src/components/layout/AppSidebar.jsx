@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft, Pencil, Trash2, Check } from 'lucide-react';
+import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft, Pencil, Trash2, Check, LogOut, Settings } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 const NAV_ITEMS = [
   { id: 'chat',     label: 'Chat',     icon: MessageSquare },
@@ -85,6 +86,7 @@ export default function AppSidebar({
               {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
+                  title={label}
                   onClick={() => {
                     if (id === 'threads') { onShowThreads?.(); onClose(); return; }
                     onNavSelect?.(id);
@@ -167,12 +169,14 @@ export default function AppSidebar({
                           {conv.title || 'Untitled'}
                         </button>
                         <button
+                          title="Rename thread"
                           onClick={() => { setEditTitle(conv.title || ''); setEditingId(conv.id); }}
                           className="p-1 text-white/0 group-hover:text-white/40 hover:!text-white/80 transition-colors flex-shrink-0"
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
                         <button
+                          title="Delete thread"
                           onClick={() => onDeleteConversation?.(conv.id)}
                           className="p-1 text-white/0 group-hover:text-white/40 hover:!text-red-400 transition-colors flex-shrink-0"
                         >
@@ -185,21 +189,30 @@ export default function AppSidebar({
               )}
             </div>
 
-            {/* Profile entry at bottom */}
+            {/* Profile / Log Out at bottom */}
             <div className="px-3 py-3 border-t border-white/10 flex-shrink-0">
-              <button
-                onClick={() => { onShowProfile?.(); onClose(); }}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors"
-              >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="text-white text-xs font-medium truncate">{user?.full_name || 'Profile'}</p>
-                  <p className="text-white/40 text-[10px] truncate">{user?.email || ''}</p>
-                </div>
-                <User className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  title="Profile & Settings"
+                  onClick={() => { onShowProfile?.(); onClose(); }}
+                  className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors min-w-0"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                    {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-white text-xs font-medium truncate">{user?.full_name || 'Profile'}</p>
+                    <p className="text-white/40 text-[10px] truncate">{user?.email || ''}</p>
+                  </div>
+                </button>
+                <button
+                  title="Log Out"
+                  onClick={() => { localStorage.clear(); sessionStorage.clear(); base44.auth.logout(); }}
+                  className="p-2 rounded-lg hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </motion.aside>
         </>

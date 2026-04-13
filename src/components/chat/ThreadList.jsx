@@ -290,6 +290,7 @@ export default function ThreadList({
                             
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                               <button
+                                title="Rename thread"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditTitle(conv.title);
@@ -301,6 +302,7 @@ export default function ThreadList({
                                 <Edit2 className="w-3.5 h-3.5 text-white" />
                               </button>
                               <button
+                                title="Delete thread"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (window.confirm('Delete this conversation?')) {

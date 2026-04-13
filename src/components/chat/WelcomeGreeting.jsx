@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Image, Upload, Monitor, List, Search, Zap } from 'lucide-react';
+import { Image, Upload, List, Search, Zap } from 'lucide-react';
 
 const CAPABILITIES = [
   {
@@ -16,13 +16,6 @@ const CAPABILITIES = [
     label: 'Upload File',
     hint: null,
     color: 'hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-300',
-  },
-  {
-    id: 'screen',
-    icon: Monitor,
-    label: 'Capture Screen',
-    hint: null,
-    color: 'hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-300',
   },
   {
     id: 'thread',
