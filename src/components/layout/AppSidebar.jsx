@@ -44,7 +44,7 @@ export default function AppSidebar({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             onClick={onClose}
           />
 
@@ -64,6 +64,7 @@ export default function AppSidebar({
               </div>
               <button
                 onClick={onClose}
+                title="Close sidebar"
                 className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
               >
                 <ChevronLeft className="w-4 h-4" />
