@@ -1019,7 +1019,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
             <div className="w-full max-w-2xl mx-auto px-1 sm:px-4 py-2 sm:py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
-                  <WelcomeGreeting />
+                  <WelcomeGreeting onShowThreads={() => setShowThreads(true)} onSetMessage={setMessage} />
                 </div>
               )}
 
@@ -1206,7 +1206,7 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               <div className="max-w-2xl mx-auto px-2 sm:px-4 py-4">
               {currentMessages.length === 0 && !isLoading && (
                 <div className="flex items-center justify-center min-h-[60vh]">
-                  <WelcomeGreeting />
+                  <WelcomeGreeting onShowThreads={() => setShowThreads(true)} onSetMessage={setMessage} />
                 </div>
               )}
 
