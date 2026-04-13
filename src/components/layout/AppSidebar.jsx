@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft, Pencil, Trash2, Check, LogOut, Settings } from 'lucide-react';
+import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft, Pencil, Trash2, Check, LogOut, Settings, ChevronUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const NAV_ITEMS = [
@@ -30,6 +30,7 @@ export default function AppSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const filteredConversations = searchQuery.trim()
     ? conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -191,29 +192,47 @@ export default function AppSidebar({
             </div>
 
             {/* Profile / Log Out at bottom */}
-            <div className="px-3 py-3 border-t border-white/10 flex-shrink-0">
-              <div className="flex items-center gap-1">
-                <button
-                  title="Profile & Settings"
-                  onClick={() => { onShowProfile?.(); onClose(); }}
-                  className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors min-w-0"
-                >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-                    {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-white text-xs font-medium truncate">{user?.full_name || 'Profile'}</p>
-                    <p className="text-white/40 text-[10px] truncate">{user?.email || ''}</p>
-                  </div>
-                </button>
-                <button
-                  title="Log Out"
-                  onClick={() => { localStorage.clear(); sessionStorage.clear(); base44.auth.logout(); }}
-                  className="p-2 rounded-lg hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors flex-shrink-0"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="px-3 py-3 border-t border-white/10 flex-shrink-0 relative">
+              <button
+                onClick={() => setShowProfileMenu(v => !v)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-white text-xs font-medium truncate">{user?.full_name || 'Profile'}</p>
+                  <p className="text-white/40 text-[10px] truncate">{user?.email || ''}</p>
+                </div>
+                <ChevronUp className={`w-3.5 h-3.5 text-white/40 transition-transform flex-shrink-0 ${showProfileMenu ? '' : 'rotate-180'}`} />
+              </button>
+
+              <AnimatePresence>
+                {showProfileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    className="absolute bottom-full left-3 right-3 mb-1 bg-[#0f1f3d] border border-white/15 rounded-xl overflow-hidden shadow-xl"
+                  >
+                    <button
+                      onClick={() => { setShowProfileMenu(false); onShowProfile?.(); onClose(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/8 transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+                    <div className="border-t border-white/10" />
+                    <button
+                      onClick={() => { localStorage.clear(); sessionStorage.clear(); base44.auth.logout(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Log Out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.aside>
         </>
