@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 
 const DEFAULT_RENDER_LIMIT = 40;
 const LOAD_OLDER_CHUNK_SIZE = 40;
-import { X, ArrowDown } from 'lucide-react';
+import { X, ArrowDown, Menu } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -21,6 +21,7 @@ import GameView from '@/components/game/GameView';
 import TokenMeter from '@/components/chat/TokenMeter';
 import LaneSelector from '@/components/chat/LaneSelector';
 import BottomNavBar from '@/components/mobile/BottomNavBar';
+import AppSidebar from '@/components/layout/AppSidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
@@ -80,6 +81,7 @@ export default function Chat() {
   const [inputHeight, setInputHeight] = useState(0);
   const [rsodError, setRsodError] = useState(null);
   const [sessionProvider, setSessionProvider] = useState(() => localStorage.getItem('caos_session_provider') || 'openai');
+  const [showSidebar, setShowSidebar] = useState(false);
 
   const handleProviderToggle = () => {
     const next = sessionProvider === 'openai' ? 'gemini' : 'openai';
@@ -960,6 +962,13 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
       <div className="relative z-30 bg-[#0a1628] flex-shrink-0" style={{ isolation: 'auto' }}>
           <div className="flex items-center justify-between gap-2 px-2 sm:px-4 py-1 sm:py-2">
             <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="chat-icon-btn p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white flex-shrink-0"
+                aria-label="Open sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
               <ChatHeader 
                 user={user}
                 onNewThread={handleNewThread}
@@ -1357,6 +1366,23 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
 
       {/* Bottom Navigation for Mobile */}
       {isMobile && <BottomNavBar currentPage="Chat" user={user} />}
+
+      <AppSidebar
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        onNewThread={handleNewThread}
+        onShowThreads={() => { setShowSidebar(false); setShowThreads(true); }}
+        onShowProfile={() => { setShowSidebar(false); setShowProfile(true); }}
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onSelectConversation={(id) => {
+          setCurrentConversationId(id);
+          localStorage.setItem('caos_last_conversation', id);
+          sessionStorage.setItem('caos_window_conversation', id);
+          handleSessionResume(id);
+        }}
+        user={user}
+      />
 
       <ThreadList
         isOpen={showThreads}
