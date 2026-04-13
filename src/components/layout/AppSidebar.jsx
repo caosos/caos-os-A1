@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft } from 'lucide-react';
+import { MessageSquare, Wand2, Wrench, Cpu, FolderOpen, List, User, Plus, Search, X, ChevronLeft, Pencil, Trash2, Check } from 'lucide-react';
 
 const NAV_ITEMS = [
   { id: 'chat',     label: 'Chat',     icon: MessageSquare },
@@ -22,9 +22,13 @@ export default function AppSidebar({
   conversations = [],
   currentConversationId,
   onSelectConversation,
+  onDeleteConversation,
+  onRenameConversation,
   user,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
 
   const filteredConversations = searchQuery.trim()
     ? conversations.filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -125,17 +129,58 @@ export default function AppSidebar({
                 <p className="text-white/30 text-xs px-2 py-2">No threads yet</p>
               ) : (
                 filteredConversations.map(conv => (
-                  <button
+                  <div
                     key={conv.id}
-                    onClick={() => { onSelectConversation?.(conv.id); onClose(); }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors mb-0.5 truncate ${
+                    className={`group flex items-center gap-1 rounded-lg mb-0.5 pr-1 ${
                       currentConversationId === conv.id
-                        ? 'bg-blue-600/25 text-blue-200 border border-blue-500/25'
-                        : 'text-white/60 hover:text-white hover:bg-white/8'
+                        ? 'bg-blue-600/25 border border-blue-500/25'
+                        : 'hover:bg-white/8'
                     }`}
                   >
-                    {conv.title || 'Untitled'}
-                  </button>
+                    {editingId === conv.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={editTitle}
+                          onChange={e => setEditTitle(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { onRenameConversation?.(conv.id, editTitle); setEditingId(null); }
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className="flex-1 min-w-0 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs focus:outline-none mx-1 my-1"
+                        />
+                        <button onClick={() => { onRenameConversation?.(conv.id, editTitle); setEditingId(null); }} className="p-1 text-green-400 hover:text-green-300 flex-shrink-0">
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="p-1 text-white/40 hover:text-white/70 flex-shrink-0">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => { onSelectConversation?.(conv.id); onClose(); }}
+                          className={`flex-1 min-w-0 text-left px-3 py-2 text-xs truncate ${
+                            currentConversationId === conv.id ? 'text-blue-200' : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          {conv.title || 'Untitled'}
+                        </button>
+                        <button
+                          onClick={() => { setEditTitle(conv.title || ''); setEditingId(conv.id); }}
+                          className="p-1 text-white/0 group-hover:text-white/40 hover:!text-white/80 transition-colors flex-shrink-0"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteConversation?.(conv.id)}
+                          className="p-1 text-white/0 group-hover:text-white/40 hover:!text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ))
               )}
             </div>

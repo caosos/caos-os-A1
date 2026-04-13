@@ -1381,6 +1381,8 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           sessionStorage.setItem('caos_window_conversation', id);
           handleSessionResume(id);
         }}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
         user={user}
       />
 
