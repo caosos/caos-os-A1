@@ -135,29 +135,6 @@ export default function ChatHeader({ user, onNewThread, onShowThreads, onShowPro
             <User className="w-4 h-4 text-blue-400" />
             <span>Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => {
-              const event = new CustomEvent('show-continuity-token');
-              window.dispatchEvent(event);
-            }}
-            className="flex items-center gap-2 px-3 py-3 cursor-pointer text-white hover:bg-white/10 focus:bg-white/10 focus:text-white text-sm"
-          >
-            <Key className="w-4 h-4 text-blue-400" />
-            <span>Session Token</span>
-          </DropdownMenuItem>
-          {onBootloader && (
-            <>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem
-                onClick={onBootloader}
-                disabled={bootloaderDisabled}
-                className="flex items-center gap-2 px-3 py-3 cursor-pointer text-yellow-300 hover:bg-yellow-500/10 focus:bg-yellow-500/10 focus:text-yellow-300 text-sm"
-              >
-                <FlameKindling className="w-4 h-4 text-yellow-400" />
-                <span>Inject Bootloader</span>
-              </DropdownMenuItem>
-            </>
-          )}
           <DropdownMenuSeparator className="bg-white/10" />
           <DropdownMenuItem
             onClick={onProviderToggle}
