@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Image, Upload, List, Search, Zap } from 'lucide-react';
+import { Image, Upload, List, Zap } from 'lucide-react';
 
 const CAPABILITIES = [
   {
@@ -24,13 +24,7 @@ const CAPABILITIES = [
     hint: null,
     color: 'hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-300',
   },
-  {
-    id: 'search',
-    icon: Search,
-    label: 'Search Chats',
-    hint: null,
-    color: 'hover:border-yellow-500/50 hover:bg-yellow-500/10 hover:text-yellow-300',
-  },
+
   {
     id: 'multi',
     icon: Zap,
