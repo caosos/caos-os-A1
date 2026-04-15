@@ -1077,60 +1077,9 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
             </div>
           </div>
 
-          {/* Scroll Buttons */}
-          <AnimatePresence>
-            {showScrollButton && (
-              <>
-                <motion.button
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  onClick={() => scrollByAmount(-300)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const interval = setInterval(() => scrollByAmount(-150), 100);
-                    const handleUp = () => {
-                      clearInterval(interval);
-                      document.removeEventListener('mouseup', handleUp);
-                    };
-                    document.addEventListener('mouseup', handleUp);
-                  }}
-                  className="absolute top-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-3 transition-colors cursor-pointer"
-                  title="Scroll up (hold to scroll more)"
-                >
-                  <ArrowDown className="w-6 h-6 text-white rotate-180" />
-                </motion.button>
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  onClick={scrollToBottom}
-                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-full p-3 transition-colors cursor-pointer"
-                  title="Scroll to bottom"
-                >
-                  <ArrowDown className="w-6 h-6 text-white" />
-                </motion.button>
-              </>
-            )}
-            {showJumpToLatest && !showScrollButton && (
-              <motion.button
-                key="jump-latest-1"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                onClick={() => { scrollToBottom(); setShowJumpToLatest(false); }}
-                className="absolute bottom-28 right-4 z-50 bg-blue-600/80 hover:bg-blue-500/90 backdrop-blur-sm border border-blue-400/40 rounded-full px-4 py-2 transition-colors cursor-pointer flex items-center gap-2 text-white text-sm font-medium"
-                title="Jump to latest"
-              >
-                <ArrowDown className="w-4 h-4" />
-                Latest
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-auto">
-            <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
-            <div>
+          <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none">
+            <div className="pointer-events-auto">
+              <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
               <ChatInput 
                 onSend={handleSendMessage} 
                 isLoading={isLoading}
@@ -1143,8 +1092,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                 onRegisterFinalize={(fn) => { finalizePendingAssetsRef.current = fn; }}
               />
             </div>
-
-
           </div>
             </ResizablePanel>
 
@@ -1266,41 +1213,11 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
               </div>
             </div>
 
-            <AnimatePresence>
-              {showScrollButton && (
-                <motion.button
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  onClick={scrollToBottom}
-                  className="absolute bottom-28 right-4 z-50 bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm border border-white/20 rounded-full p-4 transition-colors touch-manipulation"
-                  style={{ minWidth: '52px', minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ArrowDown className="w-5 h-5 text-white" />
-                </motion.button>
-              )}
-              {showJumpToLatest && !showScrollButton && (
-                <motion.button
-                  key="jump-latest-2"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  onClick={() => { scrollToBottom(); setShowJumpToLatest(false); }}
-                  className="absolute bottom-28 right-4 z-50 bg-blue-600/80 hover:bg-blue-500/90 active:bg-blue-400/90 backdrop-blur-sm border border-blue-400/40 rounded-full px-4 py-3 transition-colors touch-manipulation flex items-center gap-2 text-white text-sm font-medium"
-                  style={{ minHeight: '52px' }}
-                  title="Jump to latest"
-                >
-                  <ArrowDown className="w-4 h-4" />
-                  Latest
-                </motion.button>
-              )}
-            </AnimatePresence>
-
-            <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-auto" ref={(el) => {
+            <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#0a1628] via-[#0a1628] to-transparent pt-3 pb-20 pointer-events-none" ref={(el) => {
               if (el) setInputHeight(el.offsetHeight);
             }}>
-              <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
-              <div>
+              <div className="pointer-events-auto">
+                <ModelSwitcherBar provider={sessionProvider} onProviderToggle={handleProviderToggle} />
                 <ChatInput 
                   onSend={handleSendMessage} 
                   isLoading={isLoading}
@@ -1314,8 +1231,6 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
                   onRegisterFinalize={(fn) => { finalizePendingAssetsRef.current = fn; }}
                 />
               </div>
-
-
             </div>
           </div>
         )}
@@ -1366,6 +1281,38 @@ INSTRUCTION: Acknowledge this bootloader, confirm your current capability state,
           </div>
         )}
       </div>
+
+      {/* Scroll-to-bottom / jump-to-latest buttons — fixed so gradient overlay never blocks them */}
+      <AnimatePresence>
+        {showScrollButton && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            onClick={scrollToBottom}
+            className="fixed right-4 z-[9999] bg-white/15 hover:bg-white/30 active:bg-white/40 backdrop-blur-sm border border-white/20 rounded-full p-4 transition-colors touch-manipulation cursor-pointer"
+            style={{ bottom: `${inputHeight + 16}px`, minWidth: '52px', minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Scroll to bottom"
+          >
+            <ArrowDown className="w-5 h-5 text-white" />
+          </motion.button>
+        )}
+        {showJumpToLatest && !showScrollButton && (
+          <motion.button
+            key="jump-latest-fixed"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            onClick={() => { scrollToBottom(); setShowJumpToLatest(false); }}
+            className="fixed right-4 z-[9999] bg-blue-600/90 hover:bg-blue-500 active:bg-blue-400 backdrop-blur-sm border border-blue-400/40 rounded-full px-4 py-3 transition-colors touch-manipulation flex items-center gap-2 text-white text-sm font-medium cursor-pointer"
+            style={{ bottom: `${inputHeight + 16}px`, minHeight: '52px' }}
+            title="Jump to latest"
+          >
+            <ArrowDown className="w-4 h-4" />
+            Latest
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Navigation for Mobile */}
       {isMobile && <BottomNavBar currentPage="Chat" user={user} />}
