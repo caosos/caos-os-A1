@@ -44,8 +44,9 @@ Deno.serve(async (req) => {
         });
 
         if (!metaRes.ok) {
-            const err = await metaRes.text();
-            return Response.json({ error: `GitHub metadata error: ${metaRes.status}`, details: err }, { status: metaRes.status });
+            const errText = await metaRes.text();
+            const error_code = metaRes.status === 404 ? 'REPO_FILE_NOT_FOUND' : 'REPO_GITHUB_ERROR';
+            return Response.json({ ok: false, error_code, error: `File not found: ${path}`, github_status: metaRes.status, retryable: false, suggestion: 'Try ls on parent directory to verify path.' }, { status: 200 });
         }
 
         const meta = await metaRes.json();

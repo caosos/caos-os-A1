@@ -115,13 +115,63 @@ async function dispatchTool(name, args, base44) {
         return res?.data ?? res;
     }
     if (name === 'repo_read') {
-        const res = await base44.asServiceRole.functions.invoke('core/repoReadChunked', {
-            path:      args.path,
-            ref:       args.ref       ?? 'main',
-            offset:    args.offset    ?? 0,
-            max_bytes: args.max_bytes ?? 200000
-        });
-        return res?.data ?? res;
+        const attempted = [];
+        const tryRead = async (p) => {
+            attempted.push(p);
+            const res = await base44.asServiceRole.functions.invoke('core/repoReadChunked', {
+                path: p, ref: args.ref ?? 'main', offset: args.offset ?? 0, max_bytes: args.max_bytes ?? 200000
+            });
+            return res?.data ?? res;
+        };
+
+        // Attempt 1: exact path
+        let result = await tryRead(args.path);
+        if (result?.ok !== false) return result;
+
+        // Attempt 2: .js ↔ .jsx swap
+        let altPath = null;
+        if (args.path.endsWith('.jsx')) altPath = args.path.slice(0, -4) + '.js';
+        else if (args.path.endsWith('.js')) altPath = args.path.slice(0, -3) + '.jsx';
+        if (altPath) {
+            result = await tryRead(altPath);
+            if (result?.ok !== false) return result;
+        }
+
+        // Attempt 3: src/ prefix variant
+        if (!args.path.startsWith('src/')) {
+            result = await tryRead('src/' + args.path);
+            if (result?.ok !== false) return result;
+            if (altPath) {
+                result = await tryRead('src/' + altPath);
+                if (result?.ok !== false) return result;
+            }
+        }
+
+        // Attempt 4: components/hooks ↔ hooks variant
+        let hooksAlt = null;
+        if (args.path.includes('components/hooks/')) hooksAlt = args.path.replace('components/hooks/', 'hooks/');
+        else if (args.path.includes('/hooks/') && !args.path.includes('components/hooks/')) hooksAlt = args.path.replace('/hooks/', '/components/hooks/');
+        if (hooksAlt) {
+            result = await tryRead(hooksAlt);
+            if (result?.ok !== false) return result;
+        }
+
+        // Attempt 5: parent dir listing
+        const parentPath = args.path.includes('/') ? args.path.substring(0, args.path.lastIndexOf('/')) : '';
+        let parentListing = null;
+        try {
+            const lsRes = await base44.asServiceRole.functions.invoke('core/repoList', { path: parentPath, ref: args.ref ?? 'main' });
+            parentListing = lsRes?.data?.result?.items ?? lsRes?.result?.items ?? null;
+        } catch (_) {}
+
+        return {
+            ok: false,
+            error_code: 'REPO_PATH_NOT_RESOLVABLE',
+            attempted_paths: attempted,
+            parent_dir: parentPath || '(root)',
+            parent_listing: parentListing,
+            message: `None of the attempted paths resolved. Check parent listing for correct filename.`
+        };
     }
     return { error: `Unknown tool: ${name}` };
 }

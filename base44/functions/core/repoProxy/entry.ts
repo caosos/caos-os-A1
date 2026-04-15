@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
             const ghRes = await fetch(url, { headers: ghHeaders });
             if (!ghRes.ok) {
                 const err = await ghRes.text();
-                return Response.json({ ok: false, error: `GitHub ${ghRes.status}: ${err}` }, { status: ghRes.status });
+                const error_code = ghRes.status === 404 ? 'REPO_FILE_NOT_FOUND' : 'REPO_GITHUB_ERROR';
+                return Response.json({ ok: false, error_code, error: `Path not found: ${payload.path || ''}`, github_status: ghRes.status, retryable: false, suggestion: 'Try ls on parent directory to verify path.' }, { status: 200 });
             }
             const data = await ghRes.json();
             const items = (Array.isArray(data) ? data : [data]).map(i => ({
@@ -61,7 +62,10 @@ Deno.serve(async (req) => {
 
             const metaUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${ref}`;
             const metaRes = await fetch(metaUrl, { headers: ghHeaders });
-            if (!metaRes.ok) return Response.json({ ok: false, error: `GitHub meta ${metaRes.status}` }, { status: metaRes.status });
+            if (!metaRes.ok) {
+                const error_code = metaRes.status === 404 ? 'REPO_FILE_NOT_FOUND' : 'REPO_GITHUB_ERROR';
+                return Response.json({ ok: false, error_code, error: `File not found: ${payload.path}`, github_status: metaRes.status, retryable: false, suggestion: 'Try ls on parent directory to verify path.' }, { status: 200 });
+            }
 
             const meta = await metaRes.json();
             if (meta.type !== 'file') return Response.json({ ok: false, error: `Not a file: ${meta.type}` }, { status: 400 });
