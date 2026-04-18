@@ -51,7 +51,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={`/${mainPage}`} replace />} />
+      <Route path="/" element={<Navigate to="/Welcome" replace />} />
       <Route path="/Chat" element={<LayoutWrapper><Chat /></LayoutWrapper>} />
       <Route path="/Welcome" element={<LayoutWrapper><Welcome /></LayoutWrapper>} />
       <Route path="/Admin" element={<LayoutWrapper><Admin /></LayoutWrapper>} />
