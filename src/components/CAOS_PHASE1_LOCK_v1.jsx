@@ -1,4 +1,4 @@
-export default {
+{
   "snapshot_id": "CAOS_PHASE1_LOCK_v1",
   "snapshot_date": "2026-02-28T00:00:00Z",
   "description": "Phase 1 completion checkpoint — Observability and Deterministic Error Control locked. Restore point before Phase 2 work.",
@@ -219,4 +219,4 @@ export default {
   "locked": true,
   "approval_required_for_future_mutations": true,
   "mutation_protocol": "CAOS_MUTATION_PROTOCOL_v1"
-};
+}
